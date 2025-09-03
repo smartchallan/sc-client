@@ -1,0 +1,172 @@
+/* Admin Profile Section Styles */
+.profile-content {
+  padding: 32px 40px;
+  background: #f5f8fa;
+  min-height: 100vh;
+}
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+.profile-avatar {
+  width: 64px;
+  height: 64px;
+  background: #00a651;
+  color: #fff;
+  font-size: 28px;
+  font-weight: bold;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.profile-header h2 {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+.profile-header p {
+  color: #555;
+  font-size: 16px;
+}
+.profile-section {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  padding: 24px;
+  margin-bottom: 32px;
+}
+.profile-section h3 {
+  font-size: 20px;
+  color: #0072ff;
+  margin-bottom: 16px;
+}
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.profile-form label {
+  font-weight: 500;
+  color: #555;
+}
+.profile-form input[type="text"],
+.profile-form input[type="email"],
+.profile-form input[type="password"] {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+}
+.profile-form input:focus {
+  border-color: #0072ff;
+  outline: none;
+}
+.action-btn {
+  background: linear-gradient(135deg, #0072ff, #00a651);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.action-btn:hover {
+  box-shadow: 0 5px 15px rgba(0,114,255,0.15);
+  transform: translateY(-2px);
+}
+.devices-list {
+  margin: 16px 0;
+}
+.device-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+.login-history {
+  margin-top: 16px;
+}
+.login-history h4 {
+  font-size: 16px;
+  color: #0072ff;
+  margin-bottom: 8px;
+}
+.login-history table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.login-history th, .login-history td {
+  padding: 8px 6px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+.login-history th {
+  background: #f5f8fa;
+  color: #0072ff;
+  font-weight: 500;
+}
+.status.paid {
+  background: #d4edda;
+  color: #155724;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.help-list {
+  display: flex;
+  gap: 24px;
+  margin-top: 12px;
+}
+.help-item {
+  background: #f5f8fa;
+  border-radius: 8px;
+  padding: 12px 18px;
+  color: #0072ff;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.help-item:hover {
+  background: #e0f7fa;
+}
+@media (max-width: 900px) {
+  .profile-content {
+    padding: 16px;
+  }
+  .profile-header {
+    gap: 12px;
+  }
+  .profile-section {
+    padding: 12px;
+  }
+}
+@media (max-width: 600px) {
+  .profile-content {
+    padding: 8px;
+  }
+  .profile-header h2 {
+    font-size: 18px;
+  }
+  .profile-header p {
+    font-size: 12px;
+  }
+  .profile-section h3 {
+    font-size: 16px;
+  }
+  .action-btn {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+}

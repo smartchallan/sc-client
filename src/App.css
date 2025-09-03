@@ -1,0 +1,573 @@
+/* Responsive styles */
+@media (max-width: 900px) {
+  .container {
+    width: 100%;
+    padding: 0 16px;
+  }
+  .form-container {
+    max-width: 100%;
+    padding: 24px;
+  }
+  .hero {
+    padding: 40px 0;
+  }
+}
+
+@media (max-width: 600px) {
+  header {
+    padding: 12px 0;
+  }
+  .header-content {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+  .logo-text {
+    font-size: 20px;
+  }
+  nav ul {
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .hero h1 {
+    font-size: 28px;
+  }
+  .form-container {
+    padding: 12px;
+    border-radius: 8px;
+  }
+  .form-header h2 {
+    font-size: 20px;
+  }
+  .register-form button {
+    padding: 12px;
+    font-size: 14px;
+  }
+}
+
+@font-face {
+  font-family: 'AlibabaSans';
+  src: url('https://assets-persist.lovart.ai/agent-static-assets/AlibabaSans-Regular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'AlibabaSans';
+  src: url('https://assets-persist.lovart.ai/agent-static-assets/AlibabaSans-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'AlibabaSans';
+  src: url('https://assets-persist.lovart.ai/agent-static-assets/Alibaba-PuHuiTi-Bold.otf') format('opentype');
+  font-weight: bold;
+  font-style: normal;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'AlibabaSans', sans-serif;
+}
+
+body, .app-container {
+  background-color: #f5f8fa;
+  color: #333;
+  line-height: 1.6;
+  width: 100vw;
+  min-height: 100vh;
+}
+
+.container {
+  width: 1200px;
+  margin: 0 auto;
+}
+
+header {
+  background-color: #fff;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  padding: 20px 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #0072ff, #00c6ff);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 20px;
+}
+
+/* .logo-text {
+  font-size: 24px;
+  font-weight: bold;
+  color: #0072ff;
+} */
+
+.logo-text span {
+  color: #00a651;
+}
+
+nav ul {
+  display: flex;
+  list-style: none;
+  gap: 30px;
+}
+
+nav a {
+  text-decoration: none;
+  color: #555;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+nav a:hover {
+  color: #0072ff;
+}
+
+.hero {
+  padding: 80px 0;
+  background: linear-gradient(135deg, rgba(0,114,255,0.05), rgba(0,198,255,0.05));
+  text-align: center;
+}
+
+.hero h1 {
+  font-size: 42px;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, #0072ff, #00a651);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero p {
+  font-size: 18px;
+  color: #666;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.register-section {
+  padding: 60px 0;
+}
+
+.form-container {
+  background-color: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  padding: 40px;
+  max-width: 600px;
+  margin: 0 auto;
+  transform: translateY(0);
+  transition: transform 0.3s;
+}
+
+.form-container:hover {
+  transform: translateY(-5px);
+}
+
+.form-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.form-header h2 {
+  font-size: 28px;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.form-header p {
+  color: #777;
+}
+
+.register-form .form-group {
+  margin-bottom: 20px;
+  animation: fadeIn 0.5s ease forwards;
+  opacity: 0;
+}
+.register-form .form-group:nth-child(1) { animation-delay: 0.1s; }
+.register-form .form-group:nth-child(2) { animation-delay: 0.2s; }
+.register-form .form-group:nth-child(3) { animation-delay: 0.3s; }
+.register-form .form-group:nth-child(4) { animation-delay: 0.4s; }
+.register-form .form-group:nth-child(5) { animation-delay: 0.5s; }
+.register-form .terms { animation-delay: 0.6s; animation: fadeIn 0.5s ease forwards; opacity: 0; }
+.register-form button { animation-delay: 0.7s; animation: fadeIn 0.5s ease forwards; opacity: 0; }
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #555;
+}
+
+.form-control {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.3s;
+}
+
+.form-control:focus {
+  border-color: #0072ff;
+  box-shadow: 0 0 0 3px rgba(0,114,255,0.1);
+  outline: none;
+}
+
+.password-container {
+  position: relative;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #777;
+  cursor: pointer;
+}
+
+.password-strength {
+  height: 5px;
+  background-color: #eee;
+  border-radius: 3px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.strength-meter {
+  height: 100%;
+  width: 0;
+  border-radius: 3px;
+  transition: width 0.3s, background-color 0.3s;
+}
+
+.strength-text {
+  font-size: 12px;
+  margin-top: 5px;
+  color: #777;
+}
+
+.register-form .terms {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 25px;
+}
+
+.register-form .terms input {
+  margin-top: 5px;
+}
+
+.register-form .terms label {
+  font-size: 14px;
+  color: #666;
+}
+
+.register-form .terms a {
+  color: #0072ff;
+  text-decoration: none;
+}
+
+.register-form button {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #0072ff, #00a651);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.register-form button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0,114,255,0.2);
+}
+
+.register-section p {
+  text-align: center;
+  margin-top: 25px;
+  color: #666;
+}
+
+.register-section p a {
+  color: #0072ff;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  margin: 30px 0;
+  color: #999;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background-color: #eee;
+}
+
+.divider span {
+  padding: 0 15px;
+  font-size: 14px;
+}
+
+.social-login {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 1px solid #eee;
+  background-color: white;
+  color: #555;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.social-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.social-btn.google:hover {
+  color: #DB4437;
+}
+
+.social-btn.facebook:hover {
+  color: #4267B2;
+}
+
+.social-btn.apple:hover {
+  color: #000;
+}
+
+footer {
+  background-color: #fff;
+  padding: 20px 0;
+  text-align: center;
+  color: #777;
+  font-size: 14px;
+  border-top: 1px solid #eee;
+}
+
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Admin Dashboard Styles */
+.admin-dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f8fa;
+}
+
+.admin-sidebar {
+  width: 260px;
+  background: linear-gradient(135deg, #0072ff 60%, #00a651 100%);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 0 0 0;
+  box-shadow: 2px 0 12px rgba(0,0,0,0.05);
+}
+
+.sidebar-logo {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 40px;
+  letter-spacing: 1px;
+}
+.sidebar-logo span {
+  color: #fff200;
+}
+
+.sidebar-nav {
+  width: 100%;
+}
+.sidebar-nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.sidebar-nav li {
+  margin-bottom: 18px;
+}
+.sidebar-nav a {
+  display: block;
+  padding: 12px 32px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 17px;
+  border-radius: 8px 0 0 8px;
+  transition: background 0.2s, color 0.2s;
+}
+.sidebar-nav a.active,
+.sidebar-nav a:hover {
+  background: rgba(255,255,255,0.12);
+  color: #fff200;
+}
+
+.sidebar-user {
+  margin-top: auto;
+  padding: 32px 0;
+  text-align: center;
+}
+.user-avatar {
+  display: inline-block;
+  width: 48px;
+  height: 48px;
+  background: #fff200;
+  color: #0072ff;
+  font-weight: bold;
+  font-size: 22px;
+  border-radius: 50%;
+  line-height: 48px;
+  margin-bottom: 8px;
+}
+.user-name {
+  display: block;
+  font-size: 16px;
+  font-weight: 500;
+}
+.user-role {
+  display: block;
+  font-size: 13px;
+  color: #fff;
+  opacity: 0.8;
+}
+
+.admin-main {
+  flex: 1;
+  padding: 40px 60px;
+  background: #f5f8fa;
+}
+.admin-header {
+  background: none;
+  box-shadow: none;
+  padding: 0 0 24px 0;
+  font-size: 32px;
+  font-weight: bold;
+  color: #0072ff;
+}
+
+.vehicle-form-section {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  padding: 32px 40px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.vehicle-form .form-group {
+  margin-bottom: 22px;
+}
+.vehicle-form .form-group label {
+  font-size: 16px;
+  color: #0072ff;
+  font-weight: 500;
+}
+.vehicle-form .form-control {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 16px;
+}
+.vehicle-form .form-control:focus {
+  border-color: #0072ff;
+  box-shadow: 0 0 0 2px rgba(0,114,255,0.1);
+}
+.form-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 18px;
+}
+.form-actions .btn {
+  background: linear-gradient(135deg, #0072ff, #00a651);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.form-actions .btn:hover {
+  box-shadow: 0 5px 15px rgba(0,114,255,0.15);
+  transform: translateY(-2px);
+}
+.vehicle-format-info {
+  margin-top: 32px;
+  background: #f5f8fa;
+  border-radius: 8px;
+  padding: 18px 24px;
+  color: #333;
+  box-shadow: 0 2px 8px rgba(0,114,255,0.05);
+}
+.vehicle-format-info h3 {
+  color: #0072ff;
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+.vehicle-format-info ul {
+  margin-bottom: 8px;
+  padding-left: 18px;
+}
+.vehicle-format-info li {
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+.vehicle-format-info p {
+  font-size: 15px;
+  color: #0072ff;
+}
