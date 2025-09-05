@@ -2,49 +2,142 @@ import React from "react";
 import "./AdminProfile.css";
 
 export default function AdminProfile() {
+  // Get user info from localStorage
+  const user = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("sc_user"))?.user || {};
+    } catch {
+      return {};
+    }
+  })();
+  const userName = user.name || "John Smith";
+  const userEmail = user.email || "johnsmith@example.com";
+  let userJoined = "June 15, 2023";
+  if (user.created_at) {
+    const date = new Date(user.created_at);
+    if (!isNaN(date)) {
+      userJoined = date.toLocaleString('en-US', {
+        month: 'short', day: '2-digit', year: 'numeric'
+      });
+    }
+  }
+  // Generate initials from username
+  const initials = userName.split(' ').map(w => w[0]).join('').toUpperCase();
+
   return (
-    <div className="profile-content">
-      <h1>User Profile</h1>
-      <div className="profile-header">
-        <div className="profile-avatar">JS</div>
-        <div>
-          <h2>John Smith</h2>
-          <p>johnsmith@example.com</p>
-          <p>Member since: June 15, 2023</p>
+    <div className="profile-content1">
+      <div className="content">
+        <div className="profile-header-profile">
+          <div className="profile-picture">{initials}</div>
+          <div>
+            <h2>{userName}</h2>
+            <p>{userEmail}</p>
+            <p>Member since: {userJoined}</p>
+          </div>
         </div>
-      </div>
       <div className="profile-section">
-        <h3>Personal Information</h3>
+        <div className="card-icon personal">
+            <i className="ri-user-settings-line"></i>
+        </div>
+        <h3 className="card-title">Personal Information</h3>
         <form className="profile-form">
-          <label>Full Name</label>
-          <input type="text" value="John Smith" readOnly />
-          <label>Email Address</label>
-          <input type="email" value="johnsmith@example.com" readOnly />
-          <label>Mobile Number</label>
-          <input type="text" value="+91 9876543210" readOnly />
-          <label>Date Joined</label>
-          <input type="text" value="June 15, 2023" readOnly />
-          <button type="button" className="action-btn" style={{marginTop: '16px'}}>
-            <i className="ri-save-line"></i> Save Changes
-          </button>
+          <div className="form-row">
+                    <div className="form-col">
+                        <div className="form-group">
+                            <label className="form-label">Full Name</label>
+                            <input className="form-control" type="text" value={userName} readOnly />
+                        </div>
+                    </div>
+                    <div className="form-col">
+                        <div className="form-group">
+                            <label className="form-label">Email Address</label>
+                            <input className="form-control" type="email" value={userEmail} readOnly />
+                        </div>
+                    </div>
+                </div>
+          
+          <div className="form-row">
+                    <div className="form-col">
+                        <div className="form-group">
+                            <label className="form-label">Mobile Number</label>
+                             <input className="form-control" type="text" value={user.mobile || "+91 9876543210"} readOnly />
+                        </div>
+                    </div>
+                    <div className="form-col">
+                        <div className="form-group">
+                            <label className="form-label">Date Joined</label>
+                            <input className="form-control" type="text" value={userJoined} readOnly />
+                        </div>
+                    </div>
+                </div>
+          
+          
+         
+          <div style={{textAlign:"right", marginTop:'10px'}}>
+                    <button className="btn btn-primary" fdprocessedid="3zl7hn">Save Changes</button>
+                </div>
         </form>
       </div>
       <div className="profile-section">
         <h3>Account Settings</h3>
         <form className="profile-form">
-          <label>Current Password</label>
-          <input type="password" placeholder="Enter current password" />
-          <label>New Password</label>
-          <input type="password" placeholder="Enter new password" />
-          <label>Confirm New Password</label>
-          <input type="password" placeholder="Confirm new password" />
-          <div style={{margin: '12px 0'}}>
-            <label><input type="checkbox" /> Email Notifications</label>
-            <label><input type="checkbox" /> SMS Notifications</label>
-            <label><input type="checkbox" /> Marketing Communications</label>
+
+          <div className="form-group">
+              <label className="form-label">Current Password</label>
+              <input type="password" class="form-control" placeholder="Enter current password"/>
           </div>
-          <button type="button" className="action-btn" style={{marginRight: '8px'}}>Cancel</button>
-          <button type="button" className="action-btn">Update Settings</button>
+
+          <div className="form-row">
+            <div className="form-col">
+              <div className="form-group">
+                  <label className="form-label">New Password</label>
+                  <input type="password" class="form-control" placeholder="Enter new password" />
+              </div>
+            </div>
+            <div className="form-col">
+              <div className="form-group">
+                  <label className="form-label">Current Password</label>
+                  <input type="password" class="form-control" placeholder="confirm new password" />
+              </div>
+            </div>
+          </div>
+          
+          
+          <div style={{margin: '12px 0'}}>
+           
+            <div className="toggle-container">
+                <div className="toggle-text">Email Notifications</div>
+                <label className="toggle-switch">
+                    <input type="checkbox" checked=""/>
+                    <span className="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div className="toggle-container">
+                <div className="toggle-text">SMS Notifications</div>
+                <label className="toggle-switch">
+                    <input type="checkbox"/>
+                    <span className="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div className="toggle-container">
+                <div className="toggle-text">Marketing Communications</div>
+                <label className="toggle-switch">
+                    <input type="checkbox" checked=""/>
+                    <span className="toggle-slider"></span>
+                </label>
+            </div>
+
+          </div>
+
+          
+
+          <div style={{textAlign:"right", marginTop:'10px'}}>
+            <button type="button" className="btn btn-outline" style={{marginRight: '8px'}}>Cancel</button>
+            <button type="button" className="btn btn-primary">Update Settings</button>
+          </div>
+          
         </form>
       </div>
       <div className="profile-section">
@@ -100,6 +193,8 @@ export default function AdminProfile() {
           <div className="help-item"><i className="ri-feedback-line"></i> Feedback</div>
         </div>
       </div>
+      </div>
+      
     </div>
   );
 }

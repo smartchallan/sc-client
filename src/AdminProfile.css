@@ -1,3 +1,12 @@
+html, body {
+  width: 100vw;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
 /* Admin Profile Section Styles */
 .profile-content {
   padding: 32px 40px;
@@ -22,6 +31,17 @@
   align-items: center;
   justify-content: center;
 }
+
+.profile-header-profile {
+    background-color: white;
+    border-radius: 12px;
+    padding: 30px;
+    display: flex;
+    align-items: center;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
 .profile-header h2 {
   font-size: 28px;
   margin-bottom: 8px;
@@ -63,6 +83,96 @@
   border-color: #0072ff;
   outline: none;
 }
+
+.profile-picture {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background-color: #e9f5ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 30px;
+    position: relative;
+    border: 3px solid #4cceac;
+}
+
+.card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+}
+
+.card-icon.personal {
+    background-color: rgba(26, 58, 143, 0.1);
+    color: #1a3a8f;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.toggle-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+input:checked + .toggle-slider {
+    background-color: #4cceac;
+}
+
+input[type="checkbox" i] {
+    background-color: initial;
+    cursor: default;
+    appearance: auto;
+    box-sizing: border-box;
+    margin: 3px 3px 3px 4px;
+    padding: initial;
+    border: initial;
+}
+
+.card-title {
+    font-size: 18px;
+    font-weight: bold;
+}
+
 .action-btn {
   background: linear-gradient(135deg, #0072ff, #00a651);
   color: white;
@@ -76,6 +186,18 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.profile-form .btn-outline {
+    background-color: transparent;
+    border: 1px solid #ddd;
+    color: #666;
+    margin-right: 8px;
+}
+
+.profile-form .btn-primary {
+    background-color: #1a3a8f;
+    color: white;
 }
 .action-btn:hover {
   box-shadow: 0 5px 15px rgba(0,114,255,0.15);

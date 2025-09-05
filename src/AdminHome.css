@@ -1,3 +1,12 @@
+html, body {
+  width: 100vw;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
 /* Admin Home (Dashboard) right side content styles */
 .admin-home-content {
   padding: 32px 40px;

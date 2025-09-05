@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
@@ -7,8 +6,8 @@ import AdminDashboard from './AdminDashboard';
 import './App.css';
 import './LoginPage.css';
 
-const API_ROOT = "http://localhost:3000";
-const LOGIN_ENDPOINT = "/auth/login";
+const API_ROOT = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+const LOGIN_ENDPOINT = import.meta.env.VITE_LOGIN_ENDPOINT || "/auth/login";
 
 // Toastify used instead of custom Toast
 
@@ -137,7 +136,6 @@ export function LoginPage() {
     </div>
   );
 }
-// ...existing code...
 
 export default function App() {
   return (

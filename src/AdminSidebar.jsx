@@ -2,6 +2,17 @@ import React from "react";
 import "./AdminDashboard.css";
 
 function AdminSidebar({ role, onMenuClick, activeMenu }) {
+  // Get logged in user from localStorage
+  let userName = "John Smith";
+  let initials = "JS";
+  try {
+    const userObj = JSON.parse(localStorage.getItem("sc_user"));
+    if (userObj && userObj.user && userObj.user.name) {
+      userName = userObj.user.name;
+      initials = userName.split(' ').map(w => w[0]).join('').toUpperCase();
+    }
+  } catch {}
+
   // Example: show different menu for admin vs user
   const menu = role === "admin"
     ? [
@@ -30,8 +41,13 @@ function AdminSidebar({ role, onMenuClick, activeMenu }) {
   return (
     <aside className="sidebar" style={{minWidth: '270px'}}>
       <div className="logo-container">
-        <div className="logo">CS</div>
-        <div className="logo-text">SmartChallan</div>
+        {/* <div className="logo">SC</div> */}
+
+        <div class="logo">
+                <i class="ri-shield-check-line"></i>
+                <span>Smart Challan</span>
+            </div>
+        {/* <div className="logo-text">SmartChallan</div> */}
       </div>
       <div className="nav-menu">
         {menu.map((item, idx) => (
@@ -54,8 +70,8 @@ function AdminSidebar({ role, onMenuClick, activeMenu }) {
         ))}
       </div>
       <div className="sidebar-user">
-        <span className="user-avatar">JS</span>
-        <span className="user-name">John Smith</span>
+        <span className="user-avatar">{initials}</span>
+        <span className="user-name">{userName}</span>
         {/* <span className="user-role">{role === "admin" ? "Premium Admin" : "Premium User"}</span> */}
       </div>
     </aside>
