@@ -16,16 +16,16 @@ function AdminSidebar({ role, onMenuClick, activeMenu }) {
   // Example: show different menu for admin vs user
   const menu = role === "admin"
     ? [
-        { icon: "ri-home-4-line", label: "Home" },
+        { icon: "ri-home-4-line", label: "Dashboard" },
         { icon: "ri-user-3-line", label: "Profile" },
+        { icon: "ri-car-line", label: "Register Dealer" },
+        { icon: "ri-user-add-line", label: "Register Client" },
         { icon: "ri-car-line", label: "Register Vehicle" },
-        { icon: "ri-file-list-3-line", label: "Challans" },
-        { icon: "ri-history-line", label: "History" },
         { icon: "ri-settings-3-line", label: "Settings" },
         { icon: "ri-logout-box-r-line", label: "Logout", logout: true },
       ]
     : [
-        { icon: "ri-home-4-line", label: "Home" },
+        { icon: "ri-home-4-line", label: "Dashboard" },
         { icon: "ri-user-3-line", label: "Profile" },
         { icon: "ri-car-line", label: "My Vehicles" },
         { icon: "ri-file-list-3-line", label: "My Challans" },
@@ -41,13 +41,10 @@ function AdminSidebar({ role, onMenuClick, activeMenu }) {
   return (
     <aside className="sidebar" style={{minWidth: '270px'}}>
       <div className="logo-container">
-        {/* <div className="logo">SC</div> */}
-
-        <div class="logo">
-                <i class="ri-shield-check-line"></i>
-                <span>Smart Challan</span>
-            </div>
-        {/* <div className="logo-text">SmartChallan</div> */}
+        <div className="logo">
+          <i className="ri-shield-check-line"></i>
+          <span>Smart Challan</span>
+        </div>
       </div>
       <div className="nav-menu">
         {menu.map((item, idx) => (
@@ -72,7 +69,7 @@ function AdminSidebar({ role, onMenuClick, activeMenu }) {
       <div className="sidebar-user">
         <span className="user-avatar">{initials}</span>
         <span className="user-name">{userName}</span>
-        {/* <span className="user-role">{role === "admin" ? "Premium Admin" : "Premium User"}</span> */}
+        <span className="user-role">{role}</span>
       </div>
     </aside>
   );

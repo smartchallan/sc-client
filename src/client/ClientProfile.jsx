@@ -1,7 +1,7 @@
 import React from "react";
-import "./AdminProfile.css";
+import "./ClientProfile.css";
 
-export default function AdminProfile() {
+export default function ClientProfile() {
   // Get user info from localStorage
   const user = (() => {
     try {

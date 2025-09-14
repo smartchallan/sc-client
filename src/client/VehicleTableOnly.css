@@ -1,0 +1,5 @@
+.latest-table tbody tr:hover {
+  background: #f5f7fa;
+  transition: background 0.2s;
+  cursor: pointer;
+}

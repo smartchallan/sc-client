@@ -145,7 +145,7 @@ export default function UserChallan() {
               <td>No parking zone violation</td>
               <td><span className="status overdue">Overdue</span></td>
               <td>
-                <button className="btn btn-view"><i className="ri-eye-line"></i> Viewsssss</button> 
+                <button className="btn btn-view"><i className="ri-eye-line"></i> View</button> 
                 <button className="btn btn-pay"><i className="ri-wallet-3-line"></i> Pay</button></td>
             </tr>
           </tbody>

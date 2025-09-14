@@ -1,0 +1,38 @@
+/* Admin Profile Section Styles for Admin Dashboard */
+.profile-content1 {
+  padding: 32px 40px;
+  background: #f5f8fa;
+  min-height: 100vh;
+}
+.profile-header-profile {
+  background-color: white;
+  border-radius: 12px;
+  padding: 30px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+.profile-picture {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background-color: #e9f5ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 30px;
+  position: relative;
+  border: 3px solid #4cceac;
+  font-size: 36px;
+  font-weight: bold;
+  color: #0072ff;
+}
+.profile-header-profile h2 {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+.profile-header-profile p {
+  color: #555;
+  font-size: 16px;
+}

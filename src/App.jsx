@@ -2,12 +2,15 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import AdminDashboard from './AdminDashboard';
+import ClientDashboard from './client/ClientDashboard';
+import AdminDashboard from './admin/AdminDashboard';
+import SuperDashboard from './super/SuperDashboard';
+import DealerDashboard from './dealer/DealerDashboard';
 import './App.css';
 import './LoginPage.css';
 
 const API_ROOT = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
-const LOGIN_ENDPOINT = import.meta.env.VITE_LOGIN_ENDPOINT || "/auth/login";
+const LOGIN_ENDPOINT = "/auth/login";
 
 // Toastify used instead of custom Toast
 
@@ -36,13 +39,24 @@ export function LoginPage() {
         throw new Error(data.message || "Login failed");
       }
       toast.success("Login successful!");
-      if (data.user && data.user.user.role === 'admin') {
-        // Store user info in localStorage
+      if (data.user && data.user.user.role === 'superuser') {
         localStorage.setItem('sc_user', JSON.stringify(data.user));
-        console.log('Redirecting to /admin');
-        navigate('/admin', { replace: true });
+        console.log('Redirecting to /superkidboard');
+        navigate('/superkidboard', { replace: true });
+      } else if (data.user && data.user.user.role === 'dealer') {
+        localStorage.setItem('sc_user', JSON.stringify(data.user));
+        console.log('Redirecting to /dealersmartboard');
+        navigate('/dealersmartboard', { replace: true });
+      } else if (data.user && data.user.user.role === 'admin') {
+        localStorage.setItem('sc_user', JSON.stringify(data.user));
+        console.log('Redirecting to /adminsmartboard');
+        navigate('/adminsmartboard', { replace: true });
+      } else if (data.user && data.user.user.role === 'client') {
+        localStorage.setItem('sc_user', JSON.stringify(data.user));
+        console.log('Redirecting to /smartboard');
+        navigate('/smartboard', { replace: true });
       } else {
-        console.log('User role is not admin or user object missing:', data.user);
+        console.log('User role is not recognized or user object missing:', data.user);
       }
     } catch (err) {
       toast.error(err.message);
@@ -142,7 +156,10 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/" element={<LoginPage />} />
-        <Route path="/admin" element={<AdminDashboard />} />
+  <Route path="/smartboard" element={<ClientDashboard />} />
+  <Route path="/adminsmartboard" element={<AdminDashboard />} />
+  <Route path="/superkidboard" element={<SuperDashboard />} />
+  <Route path="/dealersmartboard" element={<DealerDashboard />} />
       </Routes>
     </Router>
   );

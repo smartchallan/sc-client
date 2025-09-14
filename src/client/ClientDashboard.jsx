@@ -1,14 +1,17 @@
 
 import React, { useState } from "react";
-import "./AdminDashboard.css";
-import "./AdminHome.css";
-import AdminSidebar from "./AdminSidebar";
-import AdminProfile from "./AdminProfile";
-import RegisterVehicle from "./RegisterVehicle";
-import UserChallan from "./UserChallan";
+import "./ClientDashboard.css";
+import "./ClientHome.css";
+import ClientSidebar from "./ClientSidebar";
+import ClientProfile from "./ClientProfile";
+
+import RegisterVehicle from "../RegisterVehicle";
+import UserChallan from "../UserChallan";
+import MyVehicles from "./MyVehicles";
+import MyChallans from "./MyChallans";
 
 
-function AdminDashboard() {
+function ClientDashboard() {
   const userRole = "admin";
   const [activeMenu, setActiveMenu] = useState("Home");
   // Get user info from localStorage
@@ -30,7 +33,7 @@ function AdminDashboard() {
 
   return (
     <div className="admin-dashboard-layout" style={{display: 'flex', width: '100vw', minHeight: '100vh'}}>
-      <AdminSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} />
+      <ClientSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} />
       <main className="main-content admin-home-content" style={{flex: 1, minHeight: '100vh'}}>
         {activeMenu === "Home" && (
           <>
@@ -153,18 +156,14 @@ function AdminDashboard() {
             </div>
           </>
         )}
-        {activeMenu === "Profile" && (
-          <AdminProfile />
-        )}
-        {activeMenu === "Register Vehicle" && (
-          <RegisterVehicle />
-        )}
-        {activeMenu === "Challans" && (
-          <UserChallan />
-        )}
+  {activeMenu === "Profile" && <ClientProfile />}
+  {activeMenu === "Register Vehicle" && <RegisterVehicle />}
+  {activeMenu === "My Vehicles" && <MyVehicles />}
+  {activeMenu === "My Challans" && <MyChallans />}
+  {activeMenu === "Challans" && <UserChallan />}
       </main>
     </div>
   );
 }
 
-export default AdminDashboard;
+export default ClientDashboard;
