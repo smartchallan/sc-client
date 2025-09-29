@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { getInitials } from "../utils/getInitials";
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -10,10 +11,17 @@ import RegisterDealer from "./RegisterDealer";
 import RegisterClient from "./RegisterClient";
 import RegisterVehicle from "../RegisterVehicle";
 import AdminRegisterVehicle from "./AdminRegisterVehicle";
+import ClientBillingSettings from "./ClientBillingSettings";
 import UserChallan from "../UserChallan";
+import DealerSettings from "./DealerSettings";
+import CustomModal from "../client/CustomModal";
 
 function AdminDashboard() {
+
   const userRole = "admin";
+  const [supportModal, setSupportModal] = useState(false);
+  const [searchDealer, setSearchDealer] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [activeMenu, setActiveMenu] = useState("Dashboard");
   const [dealers, setDealers] = useState([]);
   const [clients, setClients] = useState([]);
@@ -27,6 +35,24 @@ function AdminDashboard() {
   const chartRef2 = useRef(null); // Clients by Status
   const chartRef3 = useRef(null); // Vehicles by Type
   const chartRef4 = useRef(null); // Challans Settled
+
+  const filteredDealers = Array.isArray(dealers) ? dealers.filter(d => {
+    if (!d) return false;
+    let matchesSearch = true;
+    let matchesStatus = true;
+    if (searchDealer) {
+      const s = searchDealer.toLowerCase();
+      matchesSearch = (d.name && d.name.toLowerCase().includes(s)) ||
+        (d.dealer_name && d.dealer_name.toLowerCase().includes(s)) ||
+        (d.phone && d.phone.toLowerCase().includes(s)) ||
+        (d.mobile && d.mobile.toLowerCase().includes(s)) ||
+        (d.email && d.email.toLowerCase().includes(s));
+    }
+    if (statusFilter) {
+      matchesStatus = d.status && d.status.toLowerCase() === statusFilter.toLowerCase();
+    }
+    return matchesSearch && matchesStatus;
+  }) : [];
 
   // Get user info from localStorage
   const user = (() => {
@@ -325,7 +351,13 @@ function AdminDashboard() {
   {activeMenu === "Dashboard" && (
           <>
             <div className="dashboard-header">
-              <h1 className="dashboard-title">Welcome back{user.user && user.user.name ? `, ${user.user.name}` : '123'}!</h1>
+              <h1 className="dashboard-title">Welcome back{user.user && user.user.name ? `, ${user.user.name}` : '123'}!
+                {user.user && user.user.name && (
+                  <span style={{marginLeft:8, background:'#eee', borderRadius:'50%', padding:'4px 10px', fontWeight:'bold', fontSize:18, color:'#555'}}>
+                    {getInitials(user.user.name)}
+                  </span>
+                )}
+              </h1>
               <p>Here's an overview of your challan status</p>
             </div>
             <div className="dashboard-stats">
@@ -542,8 +574,29 @@ function AdminDashboard() {
               )}
             </div>
             <div className="dashboard-latest">
-              <div className="latest-header">
-                <h2>Smart Challan Network</h2>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16,flexWrap:'wrap',gap:16}}>
+                <h2 style={{margin:0}}>Smart Challan Network</h2>
+                <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+                  <input
+                    type="text"
+                    placeholder="Search dealer name, phone, email..."
+                    value={searchDealer || ''}
+                    onChange={e => setSearchDealer(e.target.value)}
+                    style={{padding:'6px 10px',border:'1px solid #ccc',borderRadius:4,minWidth:180}}
+                  />
+                  <select
+                    value={statusFilter || ''}
+                    onChange={e => setStatusFilter(e.target.value)}
+                    style={{padding:'6px 10px',border:'1px solid #ccc',borderRadius:4,minWidth:120}}
+                  >
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="deleted">Deleted</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{display:'flex',justifyContent:'flex-end',marginBottom:8}}>
                 <a href="#" className="view-all">View All</a>
               </div>
               <table className="latest-table">
@@ -557,7 +610,6 @@ function AdminDashboard() {
                     <th>Status</th>
                   </tr>
                 </thead>
-                
                 <tbody>
                   {loadingAdminData && (
                     <tr><td colSpan={6}>Loading dealers...</td></tr>
@@ -565,35 +617,35 @@ function AdminDashboard() {
                   {adminDataError && (
                     <tr><td colSpan={6} style={{color: 'red'}}>{adminDataError}</td></tr>
                   )}
-                  {!loadingAdminData && !adminDataError && Array.isArray(dealers) && dealers.length > 0 && dealers.filter(Boolean).map((dealer, idx) => {
-                    // Count clients under this dealer
-                    const totalClients = Array.isArray(clients)
-                      ? clients.filter(c => {
-                          const dealerId = c.dealer_id && typeof c.dealer_id === 'object' ? c.dealer_id.id || c.dealer_id._id : c.dealer_id;
-                          const dId = dealer.id || dealer._id || dealer.email;
-                          return dealerId === dId;
-                        }).length
-                      : '-';
-                    const totalVehicles = Array.isArray(vehicles)
-                      ? vehicles.filter(v => {
-                          const vDealerId = v.dealer_id && typeof v.dealer_id === 'object' ? v.dealer_id.id || v.dealer_id._id : v.dealer_id;
-                          const dId = dealer.id || dealer._id || dealer.email;
-                          return vDealerId === dId;
-                        }).length
-                      : '-';
-                    return (
-                      <tr key={dealer.id || idx}>
-                        <td>{dealer.name || dealer.dealer_name || '-'}</td>
-                        <td>{dealer.phone || dealer.mobile || '-'}</td>
-                        <td>{dealer.email || '-'}</td>
-                        <td>{totalClients}</td>
-                        <td>{totalVehicles}</td>
-                        <td><span className={`status ${dealer.status ? dealer.status.toLowerCase() : ''}`}>{dealer.status || '-'}</span></td>
-                      </tr>
-                    );
-                  })}
-                  {!loadingAdminData && !adminDataError && Array.isArray(dealers) && dealers.length === 0 && (
-                    <tr><td colSpan={6}>No dealers found.</td></tr>
+                  {!loadingAdminData && !adminDataError && Array.isArray(dealers) && dealers.length > 0 && (
+                    filteredDealers.length > 0 ? filteredDealers.map((dealer, idx) => {
+                      const totalClients = Array.isArray(clients)
+                        ? clients.filter(c => {
+                            const dealerId = c.dealer_id && typeof c.dealer_id === 'object' ? c.dealer_id.id || c.dealer_id._id : c.dealer_id;
+                            const dId = dealer.id || dealer._id || dealer.email;
+                            return String(dealerId) === String(dId);
+                          }).length
+                        : '-';
+                      const totalVehicles = Array.isArray(vehicles)
+                        ? vehicles.filter(v => {
+                            const vDealerId = v.dealer_id && typeof v.dealer_id === 'object' ? v.dealer_id.id || v.dealer_id._id : v.dealer_id;
+                            const dId = dealer.id || dealer._id || dealer.email;
+                            return String(vDealerId) === String(dId);
+                          }).length
+                        : '-';
+                      return (
+                        <tr key={dealer.id || idx}>
+                          <td>{dealer.name || dealer.dealer_name || '-'}</td>
+                          <td>{dealer.meta && dealer.meta.phone ? dealer.meta.phone : (dealer.phone || dealer.mobile || '-')}</td>
+                          <td>{dealer.email || '-'}</td>
+                          <td>{totalClients}</td>
+                          <td>{totalVehicles}</td>
+                          <td><span className={`status ${dealer.status ? dealer.status.toLowerCase() : ''}`}>{dealer.status || '-'}</span></td>
+                        </tr>
+                      );
+                    }) : (
+                      <tr><td colSpan={6}>No dealers found.</td></tr>
+                    )
                   )}
                 </tbody>
               </table>
@@ -604,7 +656,22 @@ function AdminDashboard() {
                 <button className="action-btn" onClick={handleQuickAddDealer}><i className="ri-add-circle-line"></i> Add New Dealer</button>
                 <button className="action-btn" onClick={handleQuickAddClient}><i className="ri-wallet-3-line"></i>Add New Client</button>
                 <button className="action-btn"><i className="ri-bar-chart-2-line"></i> Generate Reports</button>
-                <button className="action-btn"><i className="ri-customer-service-2-line"></i> Contact Support</button>
+                <button className="action-btn" onClick={() => setSupportModal(true)}><i className="ri-customer-service-2-line"></i> Contact Support</button>
+      <CustomModal
+        open={supportModal}
+        title="Contact Support"
+        onConfirm={() => setSupportModal(false)}
+        onCancel={() => setSupportModal(false)}
+        confirmText="OK"
+        cancelText={null}
+      >
+        <div style={{lineHeight: 1.7, fontSize: 15}}>
+          <div><b>Email:</b> <a href="mailto:support@smartchallan.com">support@smartchallan.com</a></div>
+          <div><b>Phone:</b> <a href="tel:+911234567890">+91-1234-567-890</a></div>
+          <div style={{marginTop: 10}}><b>Support Hours:</b> Mon - Sat, 9 AM to 6 PM</div>
+          <div style={{color: '#b77', marginTop: 4}}>Public holidays: Team is not available. Next working day we will contact you.</div>
+        </div>
+      </CustomModal>
               </div>
             </div>
             <div className="dashboard-due">
@@ -650,7 +717,13 @@ function AdminDashboard() {
           <UserChallan />
         )}
         {activeMenu === "Register Vehicle" && (
-          <AdminRegisterVehicle />
+          <AdminRegisterVehicle dealers={dealers} clients={clients} vehicles={vehicles} />
+        )}
+        {activeMenu === "Settings" && (
+          <>
+            <DealerSettings dealers={dealers} />
+            <ClientBillingSettings clients={clients} />
+          </>
         )}
       </main>
     </div>

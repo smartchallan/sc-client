@@ -1,4 +1,5 @@
 import React from "react";
+import { getInitials } from "../utils/getInitials";
 import "./ClientDashboard.css";
 
 function ClientDashboard({ onMenuClick, activeMenu }) {
@@ -11,7 +12,13 @@ function ClientDashboard({ onMenuClick, activeMenu }) {
     if (userObj && userObj.user) {
       if (userObj.user.name) {
         userName = userObj.user.name;
-        initials = userName.split(' ').map(w => w[0]).join('').toUpperCase();
+        // Get only first two letters from first two words, or first two letters of name
+        const nameParts = userName.trim().split(/\s+/);
+        if (nameParts.length >= 2) {
+          initials = (nameParts[0][0] + nameParts[1][0]).toUpperCase();
+        } else {
+          initials = userName.substring(0,2).toUpperCase();
+        }
       }
       if (userObj.user.role) {
         userRole = userObj.user.role;
@@ -27,7 +34,7 @@ function ClientDashboard({ onMenuClick, activeMenu }) {
     { icon: "ri-car-line", label: "My Vehicles" },
     { icon: "ri-file-list-3-line", label: "My Challans" },
     { icon: "ri-history-line", label: "History" },
-    { icon: "ri-settings-3-line", label: "Settings" },
+    { icon: "ri-money-rupee-circle-line", label: "My Billing" },
     { icon: "ri-logout-box-r-line", label: "Logout", logout: true },
   ];
 
@@ -40,13 +47,10 @@ function ClientDashboard({ onMenuClick, activeMenu }) {
   return (
     <aside className="sidebar" style={{minWidth: '270px'}}>
       <div className="logo-container">
-        {/* <div className="logo">SC</div> */}
-
-        <div class="logo">
-                <i class="ri-shield-check-line"></i>
-                <span>Smart Challan</span>
-            </div>
-        {/* <div className="logo-text">SmartChallan</div> */}
+        <div className="logo">
+          <i className="ri-shield-check-line"></i>
+          <span>Smart Challan</span>
+        </div>
       </div>
       <div className="nav-menu">
         {menu.map((item, idx) => (

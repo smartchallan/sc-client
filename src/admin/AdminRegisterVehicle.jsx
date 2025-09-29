@@ -9,16 +9,12 @@ const FIELD_OPTIONS = [
   { value: "chasis_number", label: "Chasis Number" },
 ];
 
-export default function AdminRegisterVehicle() {
+export default function AdminRegisterVehicle({ dealers = [], clients = [], vehicles = [] }) {
   const [selectedDealer, setSelectedDealer] = useState("");
   const [selectedClient, setSelectedClient] = useState("");
-  const [allClients, setAllClients] = useState([]); // all clients from admindata
-  const [dealers, setDealers] = useState([]);
   const [selectedField, setSelectedField] = useState("");
   const [fieldValue, setFieldValue] = useState("");
   const [loading, setLoading] = useState(false);
-  const [vehicles, setVehicles] = useState([]);
-  const [fetchingVehicles, setFetchingVehicles] = useState(false);
   const [modal, setModal] = useState({ open: false, action: null, vehicle: null });
 
   const API_ROOT = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
@@ -34,46 +30,18 @@ export default function AdminRegisterVehicle() {
     }
   };
 
-  // Fetch all dealers and clients for admin on mount
-  useEffect(() => {
-    const adminId = getAdminId();
-    if (!adminId) return;
-    const fetchAdminData = async () => {
-      try {
-        const res = await fetch(`${API_ROOT}/admindata/${adminId}`);
-        const data = await res.json();
-        setDealers(Array.isArray(data.dealers) ? data.dealers : []);
-        setAllClients(Array.isArray(data.clients) ? data.clients : []);
-      } catch {
-        setDealers([]);
-        setAllClients([]);
-      }
-    };
-    fetchAdminData();
-  }, []);
-
   // Reset selected client when dealer changes
   useEffect(() => {
     setSelectedClient("");
   }, [selectedDealer]);
 
-  // Fetch vehicles for selected client
-  useEffect(() => {
-    if (!selectedClient) {
-      setVehicles([]);
-      return;
-    }
-    setFetchingVehicles(true);
-    fetch(`${API_ROOT}/uservehicle?client_id=${selectedClient}`)
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setVehicles(data);
-        else if (Array.isArray(data.vehicles)) setVehicles(data.vehicles);
-        else setVehicles([]);
+  // No API call for vehicles; filter from props
+  const filteredVehicles = selectedClient
+    ? vehicles.filter(v => {
+        const clientId = v.client_id && typeof v.client_id === 'object' ? v.client_id.id || v.client_id._id : v.client_id;
+        return String(clientId) === String(selectedClient);
       })
-      .catch(() => setVehicles([]))
-      .finally(() => setFetchingVehicles(false));
-  }, [selectedClient]);
+    : [];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -90,6 +58,7 @@ export default function AdminRegisterVehicle() {
       return;
     }
     setLoading(true);
+    let successToastShown = false;
     try {
       const adminId = getAdminId();
       const payload = {
@@ -110,6 +79,7 @@ export default function AdminRegisterVehicle() {
         toast.error(data.message || "Failed to register vehicle");
       } else {
         toast.success("Vehicle registered successfully!");
+        successToastShown = true;
         setFieldValue("");
         setSelectedField("");
         // Fetch vehicles after successful registration
@@ -127,7 +97,7 @@ export default function AdminRegisterVehicle() {
         }
       }
     } catch (err) {
-      toast.error("Error registering vehicle");
+      if (!successToastShown) toast.error("Error registering vehicle");
     } finally {
       setLoading(false);
     }
@@ -151,7 +121,6 @@ export default function AdminRegisterVehicle() {
               onChange={e => {
                 setSelectedDealer(e.target.value);
                 setSelectedClient("");
-                setVehicles([]);
               }}
               required
             >
@@ -175,14 +144,14 @@ export default function AdminRegisterVehicle() {
               disabled={!selectedDealer}
             >
               <option value="">Select Client</option>
-              {allClients.filter(c => {
+              {clients.filter(c => {
                 const dealerId = c.dealer_id && typeof c.dealer_id === 'object' ? c.dealer_id.id || c.dealer_id._id : c.dealer_id;
-                return dealerId === selectedDealer;
+                return String(dealerId) === String(selectedDealer);
               }).length === 0 && selectedDealer && <option disabled>No clients found</option>}
-              {allClients
+              {clients
                 .filter(c => {
                   const dealerId = c.dealer_id && typeof c.dealer_id === 'object' ? c.dealer_id.id || c.dealer_id._id : c.dealer_id;
-                  return dealerId === selectedDealer;
+                  return String(dealerId) === String(selectedDealer);
                 })
                 .map(c => (
                   <option key={c.id || c._id || c.email} value={c.id || c._id || c.email}>
@@ -236,9 +205,9 @@ export default function AdminRegisterVehicle() {
       <div className="dashboard-latest">
         <div style={{marginTop: 32}}>
           <h2 style={{fontSize: '1.2rem', marginBottom: 12}}>Registered Vehicles</h2>
-          {fetchingVehicles ? (
-            <div>Loading vehicles...</div>
-          ) : vehicles.length === 0 ? (
+          {!selectedClient ? (
+            <div style={{color: '#888'}}>Select a client to view registered vehicles.</div>
+          ) : filteredVehicles.length === 0 ? (
             <div style={{color: '#888'}}>No vehicles registered yet.</div>
           ) : (
             <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
@@ -253,7 +222,7 @@ export default function AdminRegisterVehicle() {
                 </tr>
               </thead>
               <tbody>
-                {vehicles.map((v, idx) => {
+                {filteredVehicles.map((v, idx) => {
                   let status = (v.status || 'Not Available').toUpperCase();
                   let statusColor = '#888';
                   if (status === 'ACTIVE') statusColor = 'green';
@@ -276,32 +245,25 @@ export default function AdminRegisterVehicle() {
                         {status === 'INACTIVE' ? (
                           <span
                             title="Activate Vehicle"
-                            style={{ cursor: 'pointer', marginRight: 12, fontSize: 18, color: 'green' }}
+                            style={{color: 'green', cursor: 'pointer', marginRight: 8, fontSize: 20, verticalAlign: 'middle'}}
                             onClick={handleActivate}
-                            role="button"
-                            aria-label="Activate Vehicle"
                           >
-                            ✅
+                            <i className="ri-checkbox-circle-line"></i>
                           </span>
-                        ) : (
+                        ) : status === 'ACTIVE' ? (
                           <span
                             title="Inactivate Vehicle"
-                            style={{ cursor: 'pointer', marginRight: 12, fontSize: 18 }}
+                            style={{color: 'orange', cursor: 'pointer', marginRight: 8, fontSize: 20, verticalAlign: 'middle'}}
                             onClick={handleInactivate}
-                            role="button"
-                            aria-label="Inactivate Vehicle"
                           >
-                            🚫
+                            <i className="ri-close-circle-line"></i>
                           </span>
-                        )}
+                        ) : null}
                         <span
                           title="Delete Vehicle"
-                          style={{ cursor: 'pointer', color: 'red', fontSize: 18 }}
-                          onClick={handleDelete}
-                          role="button"
-                          aria-label="Delete Vehicle"
+                          style={{color: 'red', cursor: 'pointer', fontSize: 20, verticalAlign: 'middle'}} onClick={handleDelete}
                         >
-                          🗑️
+                          <i className="ri-delete-bin-6-line"></i>
                         </span>
                       </td>
                     </tr>

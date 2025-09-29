@@ -1,4 +1,5 @@
 import React from "react";
+import { getInitials } from "../utils/getInitials";
 import "./AdminDashboard.css";
 
 function AdminSidebar({ role, onMenuClick, activeMenu }) {
@@ -68,7 +69,9 @@ function AdminSidebar({ role, onMenuClick, activeMenu }) {
       </div>
       <div className="sidebar-user">
         <span className="user-avatar">{initials}</span>
-        <span className="user-name">{userName}</span>
+            <span className="user-name">{userName}
+              <span className="sidebar-user-initials">{getInitials(userName)}</span>
+            </span>
         <span className="user-role">{role}</span>
       </div>
     </aside>

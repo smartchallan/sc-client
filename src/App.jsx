@@ -24,6 +24,10 @@ export function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    // Show loader for at least 2 seconds
+    const delay = ms => new Promise(res => setTimeout(res, ms));
+    let loginSuccess = false;
+    let loginMessage = "";
     try {
       const response = await fetch(API_ROOT + LOGIN_ENDPOINT, {
         method: "POST",
@@ -35,31 +39,41 @@ export function LoginPage() {
       const data = await response.json();
       console.log('Login API response:', data);
       if (!response.ok) {
-        toast.error(data.message || "Login failed");
-        throw new Error(data.message || "Login failed");
+        loginMessage = data.message || "Login failed";
+        toast.error(loginMessage);
+        throw new Error(loginMessage);
       }
-      toast.success("Login successful!");
+      loginSuccess = true;
+      loginMessage = "Login successful!";
+      toast.success(loginMessage);
       if (data.user && data.user.user.role === 'superuser') {
         localStorage.setItem('sc_user', JSON.stringify(data.user));
         console.log('Redirecting to /superkidboard');
+        await delay(2000);
         navigate('/superkidboard', { replace: true });
       } else if (data.user && data.user.user.role === 'dealer') {
         localStorage.setItem('sc_user', JSON.stringify(data.user));
         console.log('Redirecting to /dealersmartboard');
+        await delay(2000);
         navigate('/dealersmartboard', { replace: true });
       } else if (data.user && data.user.user.role === 'admin') {
         localStorage.setItem('sc_user', JSON.stringify(data.user));
         console.log('Redirecting to /adminsmartboard');
+        await delay(2000);
         navigate('/adminsmartboard', { replace: true });
       } else if (data.user && data.user.user.role === 'client') {
         localStorage.setItem('sc_user', JSON.stringify(data.user));
         console.log('Redirecting to /smartboard');
+        await delay(2000);
         navigate('/smartboard', { replace: true });
       } else {
         console.log('User role is not recognized or user object missing:', data.user);
       }
     } catch (err) {
-      toast.error(err.message);
+      if (!loginSuccess) {
+        await delay(2000);
+      }
+      // toast already shown above
     } finally {
       setLoading(false);
     }

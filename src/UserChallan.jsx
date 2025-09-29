@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import "./UserChallan.css";
+import CustomModal from "./client/CustomModal";
 
 export default function UserChallan() {
+  const [supportModal, setSupportModal] = useState(false);
   return (
     <div className="user-challan-content">
       <div className="dashboard-header">
@@ -157,7 +159,22 @@ export default function UserChallan() {
           <button className="action-btn"><i className="ri-add-circle-line"></i> Add New Vehicle</button>
           <button className="action-btn"><i className="ri-wallet-3-line"></i> Pay Challans</button>
           <button className="action-btn"><i className="ri-bar-chart-2-line"></i> Generate Reports</button>
-          <button className="action-btn"><i className="ri-customer-service-2-line"></i> Contact Support</button>
+          <button className="action-btn" onClick={() => setSupportModal(true)}><i className="ri-customer-service-2-line"></i> Contact Support</button>
+      <CustomModal
+        open={supportModal}
+        title="Contact Support"
+        onConfirm={() => setSupportModal(false)}
+        onCancel={() => setSupportModal(false)}
+        confirmText="OK"
+        cancelText={null}
+      >
+        <div style={{lineHeight: 1.7, fontSize: 15}}>
+          <div><b>Email:</b> <a href="mailto:support@smartchallan.com">support@smartchallan.com</a></div>
+          <div><b>Phone:</b> <a href="tel:+911234567890">+91-1234-567-890</a></div>
+          <div style={{marginTop: 10}}><b>Support Hours:</b> Mon - Sat, 9 AM to 6 PM</div>
+          <div style={{color: '#b77', marginTop: 4}}>Public holidays: Team is not available. Next working day we will contact you.</div>
+        </div>
+      </CustomModal>
         </div>
       </div>
       <div className="dashboard-due">

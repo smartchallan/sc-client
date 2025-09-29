@@ -1,7 +1,18 @@
-import React from "react";
+import React, { useState } from "react";
+import { ToastContainer, toast } from 'react-toastify';
+import { getInitials } from "../utils/getInitials";
 import "./ClientProfile.css";
+import CustomModal from "./CustomModal";
 
 export default function ClientProfile() {
+  const [passwordError, setPasswordError] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  // Notification settings state
+  const [emailNotification, setEmailNotification] = useState(false);
+  const [smsNotification, setSmsNotification] = useState(false);
+  const [marketingNotification, setMarketingNotification] = useState(false);
   // Get user info from localStorage
   const user = (() => {
     try {
@@ -10,6 +21,34 @@ export default function ClientProfile() {
       return {};
     }
   })();
+  const [billing, setBilling] = useState(null);
+  const clientId = user.id || user._id || 3;
+
+  React.useEffect(() => {
+    const fetchBilling = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/userbillingsetting?client_id=${clientId}`);
+        const data = await res.json();
+
+        console.log('Billing data:', data);
+        // Filter for active billing record using billing_plan_status (case-insensitive, trim)
+  // ...existing code...
+        let active = null;
+  let records = Array.isArray(data.billingRecords) ? data.billingRecords : Array.isArray(data) ? data : [];
+  active = records.find(b => String(b.billing_plan_status).trim().toLowerCase() === 'active');
+  console.log('API response:', data);
+  console.log('Active billing found:', active);
+  setBilling(active || null);
+        console.log('Billing response:', data);
+        console.log('Active billing:', active);
+      } catch (err) {
+        setBilling(null);
+      }
+    };
+    fetchBilling();
+  }, [clientId]);
+  // ...existing code...
+  const [supportModal, setSupportModal] = useState(false);
   const userName = user.name || "John Smith";
   const userEmail = user.email || "johnsmith@example.com";
   let userJoined = "June 15, 2023";
@@ -21,11 +60,19 @@ export default function ClientProfile() {
       });
     }
   }
-  // Generate initials from username
-  const initials = userName.split(' ').map(w => w[0]).join('').toUpperCase();
+  // Generate initials: first letters of first two words, or first two letters
+  let initials = "";
+  const nameParts = userName.trim().split(/\s+/);
+  if (nameParts.length >= 2) {
+    initials = (nameParts[0][0] + nameParts[1][0]).toUpperCase();
+  } else {
+    initials = userName.substring(0,2).toUpperCase();
+  }
 
   return (
     <div className="profile-content1">
+      {/* ToastContainer for toast notifications */}
+      <ToastContainer position="top-right" autoClose={2000} hideProgressBar={false} newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover />
       <div className="content">
         <div className="profile-header-profile">
           <div className="profile-picture">{initials}</div>
@@ -45,13 +92,13 @@ export default function ClientProfile() {
                     <div className="form-col">
                         <div className="form-group">
                             <label className="form-label">Full Name</label>
-                            <input className="form-control" type="text" value={userName} readOnly />
+                              <input className="form-control" type="text" value={userName} disabled />
                         </div>
                     </div>
                     <div className="form-col">
                         <div className="form-group">
                             <label className="form-label">Email Address</label>
-                            <input className="form-control" type="email" value={userEmail} readOnly />
+                              <input className="form-control" type="email" value={userEmail} disabled />
                         </div>
                     </div>
                 </div>
@@ -60,13 +107,13 @@ export default function ClientProfile() {
                     <div className="form-col">
                         <div className="form-group">
                             <label className="form-label">Mobile Number</label>
-                             <input className="form-control" type="text" value={user.mobile || "+91 9876543210"} readOnly />
+                               <input className="form-control" type="text" value={user.mobile || "+91 9876543210"} disabled />
                         </div>
                     </div>
                     <div className="form-col">
                         <div className="form-group">
                             <label className="form-label">Date Joined</label>
-                            <input className="form-control" type="text" value={userJoined} readOnly />
+                              <input className="form-control" type="text" value={userJoined} disabled />
                         </div>
                     </div>
                 </div>
@@ -81,23 +128,90 @@ export default function ClientProfile() {
       <div className="profile-section">
         <h3>Account Settings</h3>
         <form className="profile-form">
+          {billing ? (
+            <>
+              {console.log('Billing object:', billing)}
+              <div className="form-row">
+                <div className="form-col" style={{width:'50%'}}>
+                  <div className="form-group">
+                    <label className="form-label">Cost Per Vehicle/Month</label>
+                    <input
+                      className="form-control"
+                      type="text"
+                      value={
+                        billing.cost_per_month_per_vehicle !== undefined && billing.cost_per_month_per_vehicle !== null && String(billing.cost_per_month_per_vehicle).trim() !== ''
+                          ? String(billing.cost_per_month_per_vehicle)
+                          : 'N/A'
+                      }
+                      disabled
+                    />
+                  </div>
+                </div>
+                <div className="form-col" style={{width:'50%'}}>
+                  <div className="form-group">
+                    <label className="form-label">Cost Per Challan Request</label>
+                    <input
+                      className="form-control"
+                      type="text"
+                      value={
+                        billing.cost_per_challan_request !== undefined && billing.cost_per_challan_request !== null && String(billing.cost_per_challan_request).trim() !== ''
+                          ? String(billing.cost_per_challan_request)
+                          : 'N/A'
+                      }
+                      disabled
+                    />
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div style={{color: '#b77'}}>No active billing record found.</div>
+          )}
 
           <div className="form-group">
-              <label className="form-label">Current Password</label>
-              <input type="password" class="form-control" placeholder="Enter current password"/>
+            <label className="form-label">Current Password</label>
+            <input type="password" className="form-control" placeholder="Enter current password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
           </div>
-
           <div className="form-row">
             <div className="form-col">
               <div className="form-group">
-                  <label className="form-label">New Password</label>
-                  <input type="password" class="form-control" placeholder="Enter new password" />
+                <label className="form-label">New Password</label>
+                <input
+                  type="password"
+                  className="form-control"
+                  placeholder="Enter new password"
+                  value={newPassword}
+                  onChange={e => {
+                    setNewPassword(e.target.value);
+                    if (confirmPassword && e.target.value !== confirmPassword) {
+                      setPasswordError("Passwords do not match");
+                    } else {
+                      setPasswordError("");
+                    }
+                  }}
+                />
               </div>
             </div>
             <div className="form-col">
               <div className="form-group">
-                  <label className="form-label">Current Password</label>
-                  <input type="password" class="form-control" placeholder="confirm new password" />
+                <label className="form-label">Confirm New Password</label>
+                <input
+                  type="password"
+                  className="form-control"
+                  placeholder="Confirm new password"
+                  value={confirmPassword}
+                  onChange={e => {
+                    setConfirmPassword(e.target.value);
+                    if (newPassword && e.target.value !== newPassword) {
+                      setPasswordError("Passwords do not match");
+                    } else {
+                      setPasswordError("");
+                    }
+                  }}
+                />
+                {passwordError && (
+                  <div style={{ color: "#d33", fontSize: 13, marginTop: 4 }}>{passwordError}</div>
+                )}
               </div>
             </div>
           </div>
@@ -105,29 +219,41 @@ export default function ClientProfile() {
           
           <div style={{margin: '12px 0'}}>
            
-            <div className="toggle-container">
-                <div className="toggle-text">Email Notifications</div>
-                <label className="toggle-switch">
-                    <input type="checkbox" checked=""/>
-                    <span className="toggle-slider"></span>
-                </label>
-            </div>
-
-            <div className="toggle-container">
-                <div className="toggle-text">SMS Notifications</div>
-                <label className="toggle-switch">
-                    <input type="checkbox"/>
-                    <span className="toggle-slider"></span>
-                </label>
-            </div>
-
-            <div className="toggle-container">
-                <div className="toggle-text">Marketing Communications</div>
-                <label className="toggle-switch">
-                    <input type="checkbox" checked=""/>
-                    <span className="toggle-slider"></span>
-                </label>
-            </div>
+      <div className="form-row">
+        <div className="form-col" style={{width:'33%'}}>
+          <div className="form-group">
+            <label className="form-label">Email Notifications</label>
+            <label className="toggle-switch">
+              <input type="checkbox" checked={emailNotification} onChange={e => setEmailNotification(e.target.checked)} />
+              <span className="toggle-slider">
+                <span className="toggle-circle"></span>
+              </span>
+            </label>
+          </div>
+        </div>
+        <div className="form-col" style={{width:'33%'}}>
+          <div className="form-group">
+            <label className="form-label">SMS Notifications</label>
+            <label className="toggle-switch">
+              <input type="checkbox" checked={smsNotification} onChange={e => setSmsNotification(e.target.checked)} />
+              <span className="toggle-slider">
+                <span className="toggle-circle"></span>
+              </span>
+            </label>
+          </div>
+        </div>
+        <div className="form-col" style={{width:'33%'}}>
+          <div className="form-group">
+            <label className="form-label">Marketing Communications</label>
+            <label className="toggle-switch">
+              <input type="checkbox" checked={marketingNotification} onChange={e => setMarketingNotification(e.target.checked)} />
+              <span className="toggle-slider">
+                <span className="toggle-circle"></span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
 
           </div>
 
@@ -135,7 +261,40 @@ export default function ClientProfile() {
 
           <div style={{textAlign:"right", marginTop:'10px'}}>
             <button type="button" className="btn btn-outline" style={{marginRight: '8px'}}>Cancel</button>
-            <button type="button" className="btn btn-primary">Update Settings</button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={!!passwordError || !newPassword || !confirmPassword}
+              onClick={async () => {
+                if (!newPassword || !confirmPassword) {
+                  toast.info("Please enter and confirm your new password");
+                  return;
+                }
+                if (newPassword !== confirmPassword) {
+                  setPasswordError("Passwords do not match");
+                  toast.error("Passwords do not match");
+                  return;
+                }
+                try {
+                  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/userprofile/update/${clientId}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ password: newPassword })
+                  });
+                  const result = await res.json();
+                  if (res.ok) {
+                    toast.success(result.message || "Password updated successfully");
+                    setCurrentPassword("");
+                    setNewPassword("");
+                    setConfirmPassword("");
+                  } else {
+                    toast.error(result.message || "Failed to update password");
+                  }
+                } catch (err) {
+                  toast.error("Failed to update password");
+                }
+              }}
+            >Update Settings</button>
           </div>
           
         </form>
@@ -188,7 +347,22 @@ export default function ClientProfile() {
       <div className="profile-section">
         <h3>Help & Support</h3>
         <div className="help-list">
-          <div className="help-item"><i className="ri-customer-service-2-line"></i> Contact Support</div>
+          <div className="help-item" style={{cursor:'pointer'}} onClick={() => setSupportModal(true)}><i className="ri-customer-service-2-line"></i> Contact Support</div>
+      <CustomModal
+        open={supportModal}
+        title="Contact Support"
+        onConfirm={() => setSupportModal(false)}
+        onCancel={() => setSupportModal(false)}
+        confirmText="OK"
+        cancelText={null}
+      >
+        <div style={{lineHeight: 1.7, fontSize: 15}}>
+          <div><b>Email:</b> <a href="mailto:support@smartchallan.com">support@smartchallan.com</a></div>
+          <div><b>Phone:</b> <a href="tel:+911234567890">+91-1234-567-890</a></div>
+          <div style={{marginTop: 10}}><b>Support Hours:</b> Mon - Sat, 9 AM to 6 PM</div>
+          <div style={{color: '#b77', marginTop: 4}}>Public holidays: Team is not available. Next working day we will contact you.</div>
+        </div>
+      </CustomModal>
           <div className="help-item"><i className="ri-question-line"></i> FAQ</div>
           <div className="help-item"><i className="ri-feedback-line"></i> Feedback</div>
         </div>

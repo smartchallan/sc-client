@@ -1,7 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
+import { getInitials } from "../utils/getInitials";
 import "./AdminProfile.css";
+import CustomModal from "../client/CustomModal";
 
 export default function AdminProfile() {
+  const [supportModal, setSupportModal] = useState(false);
   // Get user info from localStorage
   const user = (() => {
     try {
@@ -42,19 +45,22 @@ export default function AdminProfile() {
         <h3 className="card-title">Personal Information</h3>
         <form className="profile-form">
           <div className="form-row">
-                    <div className="form-col">
-                        <div className="form-group">
-                            <label className="form-label">Full Name</label>
-                            <input className="form-control" type="text" value={userName} readOnly />
-                        </div>
-                    </div>
-                    <div className="form-col">
-                        <div className="form-group">
-                            <label className="form-label">Email Address</label>
-                            <input className="form-control" type="email" value={userEmail} readOnly />
-                        </div>
-                    </div>
-                </div>
+            <div className="form-col">
+              <div className="form-group">
+                <label className="form-label">Full Name</label>
+                <input className="form-control" type="text" value={userName} readOnly />
+              </div>
+            </div>
+            <div className="form-col">
+              <div className="form-group">
+                <label className="form-label">Email Address</label>
+                <input className="form-control" type="email" value={userEmail} readOnly />
+              </div>
+            </div>
+          </div>
+          <div style={{marginTop: '8px'}}>
+            <span className="profile-user-initials">{getInitials(userName)}</span>
+          </div>
           
           <div className="form-row">
                     <div className="form-col">
@@ -188,7 +194,22 @@ export default function AdminProfile() {
       <div className="profile-section">
         <h3>Help & Support</h3>
         <div className="help-list">
-          <div className="help-item"><i className="ri-customer-service-2-line"></i> Contact Support</div>
+          <div className="help-item" style={{cursor:'pointer'}} onClick={() => setSupportModal(true)}><i className="ri-customer-service-2-line"></i> Contact Support</div>
+      <CustomModal
+        open={supportModal}
+        title="Contact Support"
+        onConfirm={() => setSupportModal(false)}
+        onCancel={() => setSupportModal(false)}
+        confirmText="OK"
+        cancelText={null}
+      >
+        <div style={{lineHeight: 1.7, fontSize: 15}}>
+          <div><b>Email:</b> <a href="mailto:support@smartchallan.com">support@smartchallan.com</a></div>
+          <div><b>Phone:</b> <a href="tel:+911234567890">+91-1234-567-890</a></div>
+          <div style={{marginTop: 10}}><b>Support Hours:</b> Mon - Sat, 9 AM to 6 PM</div>
+          <div style={{color: '#b77', marginTop: 4}}>Public holidays: Team is not available. Next working day we will contact you.</div>
+        </div>
+      </CustomModal>
           <div className="help-item"><i className="ri-question-line"></i> FAQ</div>
           <div className="help-item"><i className="ri-feedback-line"></i> Feedback</div>
         </div>

@@ -8,10 +8,14 @@ import DealerProfile from "./DealerProfile";
 import RegisterClient from "./RegisterClient";
 import "./DealerDashboard.css";
 import "./DealerHome.css";
+
 import DealerRegisterVehicle from "./DealerRegisterVehicle";
+import ClientSettings from "./ClientSettings";
+import CustomModal from "../client/CustomModal";
 
 function DealerDashboard() {
 	const userRole = "dealer";
+	const [supportModal, setSupportModal] = useState(false);
 	const [activeMenu, setActiveMenu] = useState("Home");
 	const [dealers, setDealers] = useState([]);
 	const [loadingDealers, setLoadingDealers] = useState(false);
@@ -363,7 +367,22 @@ function DealerDashboard() {
 							<div className="actions-list">
 								<button className="action-btn"><i className="ri-wallet-3-line"></i>Add New Client</button>
 								<button className="action-btn"><i className="ri-bar-chart-2-line"></i> Generate Reports</button>
-								<button className="action-btn"><i className="ri-customer-service-2-line"></i> Contact Support</button>
+															<button className="action-btn" onClick={() => setSupportModal(true)}><i className="ri-customer-service-2-line"></i> Contact Support</button>
+	<CustomModal
+	  open={supportModal}
+	  title="Contact Support"
+	  onConfirm={() => setSupportModal(false)}
+	  onCancel={() => setSupportModal(false)}
+	  confirmText="OK"
+	  cancelText={null}
+	>
+	  <div style={{lineHeight: 1.7, fontSize: 15}}>
+	    <div><b>Email:</b> <a href="mailto:support@smartchallan.com">support@smartchallan.com</a></div>
+	    <div><b>Phone:</b> <a href="tel:+911234567890">+91-1234-567-890</a></div>
+	    <div style={{marginTop: 10}}><b>Support Hours:</b> Mon - Sat, 9 AM to 6 PM</div>
+	    <div style={{color: '#b77', marginTop: 4}}>Public holidays: Team is not available. Next working day we will contact you.</div>
+	  </div>
+	</CustomModal>
 							</div>
 						</div>
 						<div className="dashboard-due">
@@ -396,15 +415,10 @@ function DealerDashboard() {
 						</div>
 					</>
 				)}
-				{activeMenu === "Profile" && (
-					<DealerProfile />
-				)}
-				{activeMenu === "Register Client" && (
-					<RegisterClient />
-				)}
-				{activeMenu === "Register Vehicle" && (
-					<DealerRegisterVehicle />
-				)}
+				{activeMenu === "Profile" && <DealerProfile />}
+				{activeMenu === "Register Client" && <RegisterClient />}
+				{activeMenu === "Register Vehicle" && <DealerRegisterVehicle />}
+				{activeMenu === "Settings" && <ClientSettings clients={[]} />}
 			</main>
 		</div>
 	);

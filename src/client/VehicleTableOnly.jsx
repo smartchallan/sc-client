@@ -109,6 +109,7 @@ export default function VehicleTableOnly() {
               >
                 Registered Date {sortOrder === 'asc' ? '▲' : '▼'}
               </th>
+                <th>Data</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -132,6 +133,7 @@ export default function VehicleTableOnly() {
                   <td>{v.chasis_number || 'Not Available'}</td>
                   <td style={{ color: statusColor, fontWeight: 600, letterSpacing: 1 }}>{status}</td>
                   <td>{v.registered_at ? new Date(v.registered_at).toLocaleString() : 'Not Available'}</td>
+                    <td><button className="action-btn" style={{padding: '2px 10px', fontSize: 14}}>Get Data <i className="ri-car-line" style={{marginLeft: 6}}></i><i className="ri-information-line" style={{marginLeft: 2}}></i></button></td>
                   <td>
                     {status === 'INACTIVE' ? (
                       <span
