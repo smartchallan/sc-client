@@ -1,0 +1,132 @@
+{
+  "response": {
+    "data": {
+      "Disposed_data": [
+        {
+          "challan_place": "",
+          "sent_to_reg_court": "No",
+          "owner_name": "T**T P*T L*D",
+          "receipt_no": null,
+          "challan_date_time": "11-03-2022 11:38:21",
+          "document_impounded": "",
+          "received_amount": 1,
+          "sent_to_court_on": null,
+          "remark": "NA",
+          "fine_imposed": "1",
+          "amount_of_fine_imposed": null,
+          "challan_no": "KL48648220311113821",
+          "dl_no": null,
+          "name_of_violator": "T**T P*T L*D",
+          "sent_to_virtual_court": "No",
+          "date_of_proceeding": null,
+          "driver_name": "T**T P*T L*D",
+          "court_address": null,
+          "challan_status": "Disposed",
+          "department": "Traffic",
+          "state_code": "KL",
+          "court_name": null,
+          "offence_details": [
+            {
+              "act": "",
+              "name": "test offence 1 rupee"
+            }
+          ]
+        },
+        {
+          "challan_place": "",
+          "sent_to_reg_court": "No",
+          "owner_name": "T**T P*T L*D",
+          "receipt_no": null,
+          "challan_date_time": "25-02-2022 11:20:01",
+          "document_impounded": "",
+          "received_amount": 1,
+          "sent_to_court_on": null,
+          "remark": "NA",
+          "fine_imposed": "1",
+          "amount_of_fine_imposed": null,
+          "challan_no": "KL48648220225112001",
+          "dl_no": null,
+          "name_of_violator": "T**T P*T L*D",
+          "sent_to_virtual_court": "No",
+          "date_of_proceeding": null,
+          "driver_name": "T**T P*T L*D",
+          "court_address": null,
+          "challan_status": "Disposed",
+          "department": "Traffic",
+          "state_code": "KL",
+          "court_name": null,
+          "offence_details": [
+            {
+              "act": "",
+              "name": "test offence 1 rupee"
+            }
+          ]
+        }
+      ],
+      "Pending_data": [
+        {
+          "challan_place": "test",
+          "sent_to_reg_court": "No",
+          "owner_name": "T**T P*T L*D",
+          "challan_date_time": "01-09-2023 17:36:00",
+          "document_impounded": "",
+          "sent_to_court_on": null,
+          "remark": "gdgg",
+          "fine_imposed": "7750",
+          "amount_of_fine_imposed": null,
+          "challan_no": "KL548476230713105383",
+          "dl_no": null,
+          "name_of_violator": "T**T P*T L*D",
+          "sent_to_virtual_court": "No",
+          "date_of_proceeding": null,
+          "driver_name": null,
+          "court_address": null,
+          "rto_distric_name": "Thiruvananthapuram",
+          "challan_status": "Pending",
+          "department": "Traffic",
+          "state_code": "KL",
+          "court_name": null,
+          "offence_details": [
+            {
+              "act": "S130(4)",
+              "name": "Fitness certificate (CF) of a transport vehicle not produced on demand for examination by the officer authorised."
+            },
+            {
+              "act": "S66(1),S84(a) RW S192A(1)",
+              "name": "Driving or causing or allowing to be driven a vehicle as contract carriage without valid permit.(MMV and HMV)"
+            }
+          ]
+        },
+        {
+          "challan_place": "",
+          "sent_to_reg_court": "No",
+          "owner_name": "T**T P*T L*D",
+          "challan_date_time": "11-03-2022 11:49:37",
+          "document_impounded": "",
+          "sent_to_court_on": null,
+          "remark": "NA",
+          "fine_imposed": "1",
+          "amount_of_fine_imposed": null,
+          "challan_no": "KL48648220311114937",
+          "dl_no": null,
+          "name_of_violator": "T**T P*T L*D",
+          "sent_to_virtual_court": "No",
+          "date_of_proceeding": null,
+          "driver_name": "T**T P*T L*D",
+          "court_address": null,
+          "rto_distric_name": "Palakkad",
+          "challan_status": "Pending",
+          "department": "Traffic",
+          "state_code": "KL",
+          "court_name": null,
+          "offence_details": [
+            {
+              "act": "",
+              "name": "test offence 1 rupee"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
