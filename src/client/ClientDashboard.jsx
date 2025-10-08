@@ -11,6 +11,7 @@ import ClientProfile from "./ClientProfile";
 import RegisterVehicle from "../RegisterVehicle";
 import UserChallan from "../UserChallan";
 import MyVehicles from "./MyVehicles";
+import VehicleDataTable from "./VehicleDataTable";
 import MyChallans from "./MyChallans";
 import MyBilling from "./MyBilling";
 import UserSettings from "./UserSettings";
@@ -26,6 +27,10 @@ const user = (() => {
 })();
 
 function ClientDashboard() {
+  // State for vehicle RTO data
+  const [vehicleRTOData, setVehicleRTOData] = useState(null);
+  const [loadingVehicleRTO, setLoadingVehicleRTO] = useState(false);
+  const [vehicleRTOError, setVehicleRTOError] = useState("");
   // Loader state
   const [showLoader, setShowLoader] = useState(false);
 
@@ -198,6 +203,10 @@ function ClientDashboard() {
     };
   }, [clientData, activeMenu]);
   // Sidebar click handler
+  // State for vehicle challan data
+  const [vehicleChallanData, setVehicleChallanData] = useState([]);
+  const [loadingVehicleChallan, setLoadingVehicleChallan] = useState(false);
+  const [vehicleChallanError, setVehicleChallanError] = useState("");
   const handleMenuClick = (label) => {
     setShowLoader(true);
     setTimeout(() => {
@@ -412,7 +421,64 @@ function ClientDashboard() {
                           <td style={{ color: statusColor, fontWeight: 600, letterSpacing: 1 }}>{status}</td>
                           <td>{v.registered_at ? new Date(v.registered_at).toLocaleString() : 'Not Available'}</td>
                           <td>
-                            <button className="action-btn" style={{padding: '2px 10px', fontSize: 14}}>Get Data <i className="ri-car-line" style={{marginLeft: 6}}></i><i className="ri-information-line" style={{marginLeft: 2}}></i></button>
+                            <button className="action-btn" style={{padding: '2px 10px', fontSize: 14}}
+                              onClick={async () => {
+                                setLoadingVehicleChallan(true);
+                                setVehicleChallanError("");
+                                try {
+                                  const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+                                  const clientId = user && user.user && (user.user.id || user.user._id || user.user.client_id);
+                                  const payload = {
+                                    vehicleNumber: v.vehicle_number,
+                                    clientID: clientId
+                                  };
+                                  const res = await fetch(`${baseUrl}/getvehicleechallandata`, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify(payload)
+                                  });
+                                  const data = await res.json();
+                                  if (Array.isArray(data.challans)) {
+                                    setVehicleChallanData(data.challans);
+                                  } else if (Array.isArray(data)) {
+                                    setVehicleChallanData(data);
+                                  } else {
+                                    setVehicleChallanData([]);
+                                  }
+                                } catch {
+                                  setVehicleChallanError("Failed to fetch vehicle challan data.");
+                                  setVehicleChallanData([]);
+                                } finally {
+                                  setLoadingVehicleChallan(false);
+                                }
+                              }}
+                            >Challan Data <i className="ri-information-line" style={{marginLeft: 2}}></i></button>
+                            <button className="action-btn" style={{padding: '2px 10px', fontSize: 14, marginLeft: 8}}
+                              onClick={async () => {
+                                setLoadingVehicleRTO(true);
+                                setVehicleRTOError("");
+                                try {
+                                  const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+                                  const clientId = user && user.user && (user.user.id || user.user._id || user.user.client_id);
+                                  const payload = {
+                                    vehicleNumber: v.vehicle_number,
+                                    clientID: clientId
+                                  };
+                                  const res = await fetch(`${baseUrl}/getvehiclertodata`, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify(payload)
+                                  });
+                                  const data = await res.json();
+                                  setVehicleRTOData(data);
+                                } catch {
+                                  setVehicleRTOError("Failed to fetch vehicle RTO data.");
+                                  setVehicleRTOData(null);
+                                } finally {
+                                  setLoadingVehicleRTO(false);
+                                }
+                              }}
+                            >Vehicle Data <i className="ri-car-line" style={{marginLeft: 6}}></i></button>
                           </td>
                           <td>
                             {status === 'INACTIVE' ? (
@@ -508,7 +574,12 @@ function ClientDashboard() {
           </div>
         )}
         {activeMenu === "Register Vehicle" && <RegisterVehicle />}
-        {activeMenu === "My Vehicles" && <MyVehicles />}
+        {activeMenu === "My Vehicles" && (
+          <>
+            <MyVehicles />
+            <VehicleDataTable clientId={user.user && (user.user.id || user.user._id || user.user.client_id)} />
+          </>
+        )}
         {activeMenu === "My Challans" && <MyChallans />}
         {activeMenu === "Challans" && <UserChallan />}
         {activeMenu === "My Billing" && <MyBilling clientId={user.user && (user.user.id || user.user._id)} />}
