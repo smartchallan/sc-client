@@ -1,0 +1,35 @@
+.traffic-light-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60px;
+  width: 24px;
+  margin: 0 auto;
+}
+.traffic-light-loader .light {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  margin: 2px 0;
+  opacity: 0.5;
+  animation: blink 1.2s infinite alternate;
+}
+.traffic-light-loader .red {
+  background: #e74c3c;
+  animation-delay: 0s;
+}
+.traffic-light-loader .yellow {
+  background: #f1c40f;
+  animation-delay: 0.4s;
+}
+.traffic-light-loader .green {
+  background: #2ecc40;
+  animation-delay: 0.8s;
+}
+@keyframes blink {
+  to {
+    opacity: 1;
+    box-shadow: 0 0 8px 2px rgba(0,0,0,0.2);
+  }
+}
