@@ -34,6 +34,8 @@ function ClientDashboard({ onMenuClick, activeMenu }) {
     { icon: "ri-car-line", label: "My Vehicles" },
     { icon: "ri-file-list-3-line", label: "My Challans" },
     { icon: "ri-history-line", label: "History" },
+    { icon: "ri-id-card-line", label: "Driver Verification" },
+    { icon: "ri-bank-card-line", label: "Vehicle Fastag" },
     { icon: "ri-money-rupee-circle-line", label: "My Billing" },
     { icon: "ri-logout-box-r-line", label: "Logout", logout: true },
   ];

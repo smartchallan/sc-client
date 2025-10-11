@@ -1,57 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./VehicleTableOnly.css";
 
-// Static challan data (replace with API if needed)
-const challanData = {
-  Disposed_data: [
-    {
-      challan_no: "KL48648220311113821",
-      challan_date_time: "11-03-2022 11:38:21",
-      owner_name: "T**T P*T L*D",
-      fine_imposed: "1",
-      challan_status: "Disposed",
-      offence_details: [
-        { name: "test offence 1 rupee" }
-      ]
-    },
-    {
-      challan_no: "KL48648220225112001",
-      challan_date_time: "25-02-2022 11:20:01",
-      owner_name: "T**T P*T L*D",
-      fine_imposed: "1",
-      challan_status: "Disposed",
-      offence_details: [
-        { name: "test offence 1 rupee" }
-      ]
-    }
-  ],
-  Pending_data: [
-    {
-      challan_no: "KL548476230713105383",
-      challan_date_time: "01-09-2023 17:36:00",
-      owner_name: "T**T P*T L*D",
-      fine_imposed: "7750",
-      challan_status: "Pending",
-      offence_details: [
-        { name: "Fitness certificate (CF) of a transport vehicle not produced on demand for examination by the officer authorised." },
-        { name: "Driving or causing or allowing to be driven a vehicle as contract carriage without valid permit.(MMV and HMV)" }
-      ]
-    },
-    {
-      challan_no: "KL48648220311114937",
-      challan_date_time: "11-03-2022 11:49:37",
-      owner_name: "T**T P*T L*D",
-      fine_imposed: "1",
-      challan_status: "Pending",
-      offence_details: [
-        { name: "test offence 1 rupee" }
-      ]
-    }
-  ]
-};
-
 function ChallanTable({ title, data }) {
-  // For showing full text on click
   const [showFull, setShowFull] = useState({});
   const handleShowFull = (rowIdx, col) => {
     setShowFull(prev => ({ ...prev, [rowIdx + '-' + col]: !prev[rowIdx + '-' + col] }));
@@ -164,9 +114,46 @@ function ChallanTable({ title, data }) {
 }
 
 export default function MyChallans() {
+  const [challanData, setChallanData] = useState({ Disposed_data: [], Pending_data: [] });
+  useEffect(() => {
+    async function fetchChallans() {
+      try {
+        const API_ROOT = import.meta.env.VITE_API_BASE_URL;
+        if (!API_ROOT) {
+          throw new Error('VITE_API_BASE_URL is not set. Please check your .env file and restart the dev server.');
+        }
+        const clientId = 5;
+        const url = `${API_ROOT}/getvehicleechallandata?clientId=${clientId}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        // Flatten all pending and disposed challans from all vehicles
+        const allPending = [];
+        const allDisposed = [];
+        if (Array.isArray(data)) {
+          data.forEach(vehicle => {
+            if (Array.isArray(vehicle.pending_data)) {
+              allPending.push(...vehicle.pending_data);
+            }
+            if (Array.isArray(vehicle.disposed_data)) {
+              allDisposed.push(...vehicle.disposed_data);
+            }
+          });
+        }
+        setChallanData({
+          Disposed_data: allDisposed,
+          Pending_data: allPending
+        });
+      } catch (err) {
+        setChallanData({ Disposed_data: [], Pending_data: [] });
+      }
+    }
+    fetchChallans();
+  }, []);
+
   return (
     <div className="my-challans-content">
-      <h1>My Challans</h1>
+      <h1 className="page-title">My Challans</h1>
+      <p className="page-subtitle">View and manage your Settled and Disposed challans</p>
       <style>{`
         .cell-ellipsis {
           overflow: hidden;

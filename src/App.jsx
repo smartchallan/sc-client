@@ -1,3 +1,4 @@
+import scLogo from './assets/sc-logo.png';
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
@@ -86,15 +87,16 @@ export function LoginPage() {
         <div className="container">
           <div className="header-content">
             <div className="logo">
-              <div className="logo-icon">
+              {/* <div className="logo-icon">
                 <i className="ri-car-line"></i>
-              </div>
-              <div className="logo-text">Smart<span>Challan</span></div>
+              </div> */}
+              {/* <div className="logo-text">Smart<span>Challan</span></div> */}
+              <img src={scLogo} alt="App Logo" style={{height:70, marginBottom:8}} />
             </div>
             <nav>
               <ul>
-                <li><a href="#">Home</a></li>
-                <li><a href="#">Services</a></li>
+                <li><a href="https://www.smartchallan.com/">Home</a></li>
+                <li><a href="#services">Services</a></li>
                 <li><a href="#">About Us</a></li>
                 <li><a href="#">Contact</a></li>
                 <li><a href="#" style={{ color: '#0072ff' }}>Login</a></li>
@@ -114,6 +116,9 @@ export function LoginPage() {
           <div className="container">
             <div className="form-container">
               <div className="form-header">
+                {/* <div style={{textAlign:'center', marginBottom:16}}>
+                  <img src={scLogo} alt="App Logo" style={{height:100, marginBottom:8}} />
+                </div> */}
                 <h2>Login to your account</h2>
               </div>
               <form className="register-form" onSubmit={handleSubmit}>

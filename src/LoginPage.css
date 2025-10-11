@@ -1,3 +1,30 @@
+@media (max-width: 900px) {
+  .login-form {
+    padding: 16px 8px;
+    font-size: 15px;
+  }
+  .login-form input, .login-form button {
+    font-size: 15px;
+    padding: 8px 6px;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 600px) {
+  .login-form {
+    padding: 8px 2px;
+    font-size: 13px;
+  }
+  .login-form input, .login-form button {
+    font-size: 13px;
+    padding: 6px 4px;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
 /* Responsive styles */
 @media (max-width: 900px) {
   .container {
@@ -212,6 +239,107 @@ nav a:hover {
 .form-header h2 {
   font-size: 28px;
   color: #333;
+
+/* Extra responsive styles for landing/login page */
+@media (max-width: 900px) {
+  .login-app-container {
+    padding: 0;
+  }
+  header, footer {
+    padding: 12px 0;
+  }
+  .container {
+    width: 100%;
+    padding: 0 12px;
+    min-width: 0;
+  }
+  .hero {
+    padding: 32px 0;
+  }
+  .register-section, .registration-section {
+    padding: 32px 0 !important;
+  }
+  .form-container {
+    max-width: 100%;
+    padding: 18px;
+    border-radius: 10px;
+  }
+  .form-header h2 {
+    font-size: 18px;
+  }
+  .register-form button {
+    padding: 10px;
+    font-size: 14px;
+  }
+  .register-form input, .register-form select, .register-form button {
+    font-size: 15px;
+    padding: 8px 6px;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 600px) {
+  .login-app-container {
+    padding: 0;
+  }
+  header, footer {
+    padding: 8px 0;
+  }
+  .container {
+    width: 100%;
+    padding: 0 4px;
+    min-width: 0;
+  }
+  .header-content {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+  .logo-text {
+    font-size: 16px;
+  }
+  nav ul {
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 13px;
+  }
+  .hero {
+    padding: 18px 0;
+  }
+  .hero h1 {
+    font-size: 20px;
+  }
+  .register-section, .registration-section {
+    padding: 18px 0 !important;
+  }
+  .form-container {
+    padding: 8px;
+    border-radius: 6px;
+  }
+  .form-header h2 {
+    font-size: 15px;
+  }
+  .register-form button {
+    padding: 8px;
+    font-size: 13px;
+  }
+  .register-form input, .register-form select, .register-form button {
+    font-size: 13px;
+    padding: 6px 4px;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  footer p {
+    font-size: 12px;
+  }
+}
   margin-bottom: 10px;
 }
 

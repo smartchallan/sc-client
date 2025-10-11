@@ -53,6 +53,26 @@ html, body {
   min-height: 100vh;
 }
 
+@media (max-width: 900px) {
+  .client-profile-section-isolated .profile-content1 {
+    padding: 8px 4px;
+  }
+}
+
+@media (max-width: 600px) {
+  .client-profile-section-isolated .profile-content1 {
+    padding: 4px 2px;
+  }
+  .toggle-switch {
+    width: 36px;
+    height: 18px;
+  }
+  .toggle-circle {
+    width: 14px;
+    height: 14px;
+  }
+}
+
 .client-profile-section-isolated .content {
   padding: 0px 0px;
 }

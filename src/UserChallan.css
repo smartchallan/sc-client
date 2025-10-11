@@ -1,0 +1,26 @@
+
+@media (max-width: 900px) {
+	.challan-table {
+		font-size: 15px;
+		width: 100%;
+		overflow-x: auto;
+		display: block;
+	}
+	.challan-table th, .challan-table td {
+		padding: 8px 6px;
+	}
+}
+
+@media (max-width: 600px) {
+	.challan-table {
+		font-size: 13px;
+		min-width: 480px;
+		width: 100%;
+		overflow-x: auto;
+		display: block;
+	}
+	.challan-table th, .challan-table td {
+		padding: 6px 4px;
+		font-size: 13px;
+	}
+}

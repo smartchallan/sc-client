@@ -24,6 +24,50 @@
     width: 100vw;
     padding: 8px 0;
     align-items: center;
+    overflow-x: auto;
+  }
+  .logo-container {
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .logo {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+  .logo-text {
+    font-size: 14px;
+  }
+  .nav-item {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+  .main-content {
+    padding: 8px;
+  }
+  .header {
+    padding: 0 8px;
+    font-size: 14px;
+  }
+  .header-title {
+    font-size: 14px;
+  }
+  .content {
+    padding: 8px;
+  }
+  .card {
+    padding: 12px;
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 600px) {
+  .sidebar {
+    flex-direction: column;
+    width: 100vw;
+    padding: 8px 0;
+    align-items: center;
   }
   .logo-container {
     flex-direction: column;

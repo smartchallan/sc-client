@@ -1,1 +1,63 @@
+@media (max-width: 900px) {
+	.super-dashboard-layout {
+		flex-direction: column;
+	}
+	.super-sidebar {
+		width: 100%;
+		min-width: unset;
+		flex-direction: row;
+		padding: 12px 0;
+		align-items: flex-start;
+		overflow-x: auto;
+	}
+	.super-main-content {
+		width: 100vw;
+		min-height: unset;
+		padding: 16px;
+	}
+}
+
+@media (max-width: 600px) {
+	.super-sidebar {
+		flex-direction: column;
+		width: 100vw;
+		padding: 8px 0;
+		align-items: center;
+		overflow-x: auto;
+	}
+	.super-logo-container {
+		flex-direction: column;
+		gap: 8px;
+		margin-bottom: 16px;
+	}
+	.super-logo {
+		width: 32px;
+		height: 32px;
+		font-size: 16px;
+	}
+	.super-logo-text {
+		font-size: 14px;
+	}
+	.super-nav-item {
+		padding: 8px 12px;
+		font-size: 14px;
+	}
+	.super-main-content {
+		padding: 8px;
+	}
+	.super-header {
+		padding: 0 8px;
+		font-size: 14px;
+	}
+	.super-header-title {
+		font-size: 14px;
+	}
+	.super-content {
+		padding: 8px;
+	}
+	.super-card {
+		padding: 12px;
+		border-radius: 8px;
+	}
+}
 @import '../admin/AdminDashboard.css';

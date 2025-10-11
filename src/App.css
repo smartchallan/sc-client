@@ -1,5 +1,103 @@
 /* Responsive styles */
 @media (max-width: 900px) {
+  .login-app-container {
+    padding: 0;
+  }
+  header, footer {
+    padding: 12px 0;
+  }
+  .container {
+    width: 100%;
+    padding: 0 12px;
+    min-width: 0;
+  }
+  .hero {
+    padding: 32px 0;
+  }
+  .registration-section {
+    padding: 32px 0 !important;
+  }
+  .form-container {
+    max-width: 100%;
+    padding: 18px;
+  }
+  .form-header h2 {
+    font-size: 18px;
+  }
+  .register-form button {
+    padding: 10px;
+    font-size: 14px;
+  }
+  .register-form input, .register-form select, .register-form button {
+    font-size: 15px;
+    padding: 8px 6px;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 600px) {
+  .login-app-container {
+    padding: 0;
+  }
+  header, footer {
+    padding: 8px 0;
+  }
+  .container {
+    width: 100%;
+    padding: 0 4px;
+    min-width: 0;
+  }
+  .header-content {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+  .logo-text {
+    font-size: 16px;
+  }
+  nav ul {
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 13px;
+  }
+  .hero {
+    padding: 18px 0;
+  }
+  .hero h1 {
+    font-size: 20px;
+  }
+  .registration-section {
+    padding: 18px 0 !important;
+  }
+  .form-container {
+    padding: 8px;
+    border-radius: 6px;
+  }
+  .form-header h2 {
+    font-size: 15px;
+  }
+  .register-form button {
+    padding: 8px;
+    font-size: 13px;
+  }
+  .register-form input, .register-form select, .register-form button {
+    font-size: 13px;
+    padding: 6px 4px;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  footer p {
+    font-size: 12px;
+  }
+}
+@media (max-width: 900px) {
   .container {
     width: 100%;
     padding: 0 16px;
@@ -46,6 +144,23 @@
   .register-form button {
     padding: 12px;
     font-size: 14px;
+  }
+
+  @media (max-width: 480px) {
+    .form-container {
+      padding: 6px;
+      border-radius: 6px;
+    }
+    .register-form input, .register-form select, .register-form button {
+      font-size: 13px;
+      padding: 8px 6px;
+      min-width: 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .form-header h2 {
+      font-size: 16px;
+    }
   }
 }
 

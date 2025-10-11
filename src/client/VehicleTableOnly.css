@@ -3,3 +3,33 @@
   transition: background 0.2s;
   cursor: pointer;
 }
+
+/* Responsive table styles */
+@media (max-width: 900px) {
+  .latest-table {
+    font-size: 15px;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+  }
+  .latest-table th, .latest-table td {
+    padding: 8px 6px;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-latest {
+    padding: 8px;
+  }
+  .latest-table {
+    font-size: 13px;
+    min-width: 480px;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+  }
+  .latest-table th, .latest-table td {
+    padding: 6px 4px;
+    font-size: 13px;
+  }
+}

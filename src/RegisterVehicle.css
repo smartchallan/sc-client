@@ -1,0 +1,27 @@
+@media (max-width: 900px) {
+	.register-vehicle-form {
+		padding: 16px 8px;
+		font-size: 15px;
+	}
+	.register-vehicle-form input, .register-vehicle-form select, .register-vehicle-form button {
+		font-size: 15px;
+		padding: 8px 6px;
+		min-width: 0;
+		width: 100%;
+		box-sizing: border-box;
+	}
+}
+
+@media (max-width: 600px) {
+	.register-vehicle-form {
+		padding: 8px 2px;
+		font-size: 13px;
+	}
+	.register-vehicle-form input, .register-vehicle-form select, .register-vehicle-form button {
+		font-size: 13px;
+		padding: 6px 4px;
+		min-width: 0;
+		width: 100%;
+		box-sizing: border-box;
+	}
+}

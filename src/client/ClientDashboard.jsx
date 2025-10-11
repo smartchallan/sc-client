@@ -1,4 +1,12 @@
-import React, { useState, useRef, useEffect } from "react";
+// ...existing imports...
+// ...other imports...
+import TrafficLightLoader from "../assets/TrafficLightLoader";
+
+// Fetch all client challans on dashboard load
+// (move this after imports and inside ClientDashboard function)
+import React, { useState, useRef, useEffect, lazy, Suspense } from "react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 // Chart.js for stat card graphs
 // Install with: npm install chart.js
 // Import Chart.js dynamically in useEffect
@@ -26,60 +34,16 @@ const user = (() => {
   }
 })();
 
-function ClientDashboard() {
-  // State for vehicle RTO data
-  const [vehicleRTOData, setVehicleRTOData] = useState(null);
-  const [loadingVehicleRTO, setLoadingVehicleRTO] = useState(false);
-  const [vehicleRTOError, setVehicleRTOError] = useState("");
-  // Loader state
-  const [showLoader, setShowLoader] = useState(false);
+const DriverVerification = lazy(() => import("./DriverVerification"));
+const LazyVehicleFastag = lazy(() => import("./VehicleFastag"));
 
-  // Custom loader component
-  const TrafficLightLoader = () => (
-    <div style={{position:'fixed', top:0, left:0, width:'100vw', height:'100vh', background:'linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center'}}>
-      <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
-        {/* Realistic traffic light UI */}
-        <div style={{width:90, height:260, background:'#222', borderRadius:28, boxShadow:'0 8px 32px #aaa', display:'flex', flexDirection:'column', justifyContent:'space-between', alignItems:'center', padding:28, position:'relative', border:'6px solid #444'}}>
-          {/* Top cap */}
-          <div style={{position:'absolute', top:-24, left:'50%', transform:'translateX(-50%)', width:60, height:24, background:'#444', borderRadius:'30px 30px 0 0'}}></div>
-          {/* Bottom cap */}
-          <div style={{position:'absolute', bottom:-24, left:'50%', transform:'translateX(-50%)', width:60, height:24, background:'#444', borderRadius:'0 0 30px 30px'}}></div>
-          {/* Lights */}
-          <div className="traffic-light" style={{width:44, height:44, borderRadius:'50%', background:'radial-gradient(circle at 60% 40%, #ff6b6b 70%, #c0392b 100%)', boxShadow:'0 0 24px #e74c3c, 0 0 0 #fff', border:'4px solid #b71c1c', animation:'pulseRed 1.2s infinite alternate', marginBottom:10}}></div>
-          <div className="traffic-light" style={{width:44, height:44, borderRadius:'50%', background:'radial-gradient(circle at 60% 40%, #ffe066 70%, #f1c40f 100%)', boxShadow:'0 0 24px #f1c40f, 0 0 0 #fff', border:'4px solid #b59f3b', animation:'pulseYellow 1.2s infinite alternate', marginBottom:10}}></div>
-          <div className="traffic-light" style={{width:44, height:44, borderRadius:'50%', background:'radial-gradient(circle at 60% 40%, #6bff6b 70%, #27ae60 100%)', boxShadow:'0 0 24px #2ecc40, 0 0 0 #fff', border:'4px solid #1b5e20', animation:'pulseGreen 1.2s infinite alternate'}}></div>
-          {/* Animated car icon moving left to right */}
-          <div style={{position:'absolute', bottom:-70, left:0, width:'100%', height:60, overflow:'visible'}}>
-            <div style={{position:'absolute', left:0, top:0, width:'100%', height:'100%', animation:'carMove 2s linear infinite'}}>
-              <svg width="70" height="44" viewBox="0 0 70 44" style={{display:'block'}}>
-                <ellipse cx="35" cy="39" rx="26" ry="7" fill="#bbb" />
-                <rect x="12" y="18" width="46" height="18" rx="9" fill="#4e79a7" />
-                <rect x="22" y="12" width="26" height="14" rx="7" fill="#fff" />
-                <circle cx="22" cy="37" r="6" fill="#222" stroke="#888" strokeWidth="2" />
-                <circle cx="48" cy="37" r="6" fill="#222" stroke="#888" strokeWidth="2" />
-                <rect x="12" y="32" width="46" height="7" rx="3.5" fill="#e74c3c" />
-                {/* Headlights */}
-                <ellipse cx="12" cy="25" rx="3" ry="2" fill="#ffe066" opacity="0.7" />
-                <ellipse cx="58" cy="25" rx="3" ry="2" fill="#ffe066" opacity="0.7" />
-              </svg>
-            </div>
-          </div>
-        </div>
-        <div style={{marginTop:48, fontSize:24, color:'#333', fontWeight:700, letterSpacing:1}}>Loading, please wait...</div>
-        <div style={{marginTop:10, fontSize:16, color:'#666'}}>SmartChallan is fetching your data</div>
-        <style>{`
-          @keyframes pulseRed { 0%{box-shadow:0 0 24px #e74c3c,0 0 0 #fff;} 100%{box-shadow:0 0 48px #e74c3c,0 0 12px #fff;} }
-          @keyframes pulseYellow { 0%{box-shadow:0 0 24px #f1c40f,0 0 0 #fff;} 100%{box-shadow:0 0 48px #f1c40f,0 0 12px #fff;} }
-          @keyframes pulseGreen { 0%{box-shadow:0 0 24px #2ecc40,0 0 0 #fff;} 100%{box-shadow:0 0 48px #2ecc40,0 0 12px #fff;} }
-          @keyframes carMove { 0%{left:0;} 100%{left:calc(100% - 70px);} }
-        `}</style>
-      </div>
-    </div>
-  );
-  const userRole = "client";
-  const [activeMenu, setActiveMenu] = useState("Dashboard");
-  const [clientData, setClientData] = useState(null);
-  const [loadingClient, setLoadingClient] = useState(true);
+function ClientDashboard() {
+  // User role for sidebar
+  const userRole = 'client';
+  // Per-row loader state for RTO/Challan API calls
+  const [rtoLoadingId, setRtoLoadingId] = useState(null);
+  const [challanLoadingId, setChallanLoadingId] = useState(null);
+  // Modal state for confirmation
   const [modal, setModal] = useState({ open: false, action: null, vehicle: null });
   const [infoModal, setInfoModal] = useState({ open: false, message: '' });
   const [supportModal, setSupportModal] = useState(false);
@@ -88,6 +52,79 @@ function ClientDashboard() {
   const chartRefActive = useRef(null);
   const chartRefPaid = useRef(null);
   const chartRefAmount = useRef(null);
+  // Client data
+  const [clientData, setClientData] = useState(null);
+  const [loadingClient, setLoadingClient] = useState(true);
+  // Vehicle challan data
+  const [vehicleChallanData, setVehicleChallanData] = useState([]);
+  const [loadingVehicleChallan, setLoadingVehicleChallan] = useState(false);
+  const [vehicleChallanError, setVehicleChallanError] = useState("");
+  // Loader state
+  const [showLoader, setShowLoader] = useState(false);
+  // Active menu
+  const [activeMenu, setActiveMenu] = useState("Dashboard");
+
+  // Modal confirmation logic for RTO/Challan requests
+  const handleModalConfirm = async () => {
+    if (modal.action === 'info') {
+      setModal({ open: false, action: null, vehicle: null });
+      return;
+    }
+    if (!modal.vehicle) return setModal({ open: false, action: null, vehicle: null });
+    setModal({ open: false, action: null, vehicle: null });
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+    // RTO/Challan loader
+    if (modal.action === 'getRTO') {
+      setRtoLoadingId(modal.vehicle.id || modal.vehicle._id);
+      return;
+    }
+    if (modal.action === 'getChallan') {
+      setChallanLoadingId(modal.vehicle.id || modal.vehicle._id);
+      return;
+    }
+    // Vehicle status update API
+    if (["activate", "inactivate", "delete"].includes(modal.action)) {
+      setShowLoader(true);
+      try {
+        const statusValue = modal.action === "activate" ? "active" : modal.action === "inactivate" ? "inactive" : "deleted";
+        const res = await fetch(`${baseUrl}/updatevehiclestatus`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            vehicle_id: modal.vehicle.id || modal.vehicle._id,
+            status: statusValue
+          })
+        });
+        const data = await res.json();
+        // Success detection: check for success, status, or updated vehicle
+        const isSuccess = data && (data.success === true || data.status === "success" || data.updated_vehicle || data.vehicle);
+        if (isSuccess) {
+          toast.success(data && data.message ? data.message : "Vehicle status updated successfully.");
+          // Use updated vehicle from response if available, else update locally
+          setClientData(prev => {
+            if (!prev || !Array.isArray(prev.vehicles)) return prev;
+            const updatedVehicles = prev.vehicles.map(v => {
+              if ((v.id || v._id) === (modal.vehicle.id || modal.vehicle._id)) {
+                // Prefer API response for updated vehicle
+                if (data.updated_vehicle) return { ...v, ...data.updated_vehicle };
+                if (data.vehicle) return { ...v, ...data.vehicle };
+                return { ...v, status: statusValue.toUpperCase() };
+              }
+              return v;
+            });
+            return { ...prev, vehicles: updatedVehicles };
+          });
+        } else {
+          toast.error(data && data.message ? data.message : "Failed to update vehicle status.");
+        }
+      } catch (err) {
+        toast.error("Error updating vehicle status.");
+      } finally {
+        setShowLoader(false);
+      }
+    }
+  };
+
   // Fetch client data on mount
   useEffect(() => {
     const fetchData = async () => {
@@ -125,77 +162,119 @@ function ClientDashboard() {
   // Draw charts for stat cards
   useEffect(() => {
     if (activeMenu !== "Dashboard") return;
-    if (!chartRefTotal.current || !chartRefActive.current || !chartRefPaid.current || !chartRefAmount.current) return;
-    Promise.all([
-      import('chart.js/auto')
-    ]).then(([{ default: Chart }]) => {
-      // Registered Vehicles (doughnut)
-      let active = 0, inactive = 0, deleted = 0;
-      if (clientData && Array.isArray(clientData.vehicles)) {
-        clientData.vehicles.forEach(v => {
-          const status = (v.status || '').toLowerCase();
-          if (status === 'active') active++;
-          else if (status === 'inactive') inactive++;
-          else if (status === 'deleted') deleted++;
+    // Delay chart drawing to ensure canvas refs are mounted
+    const timeout = setTimeout(() => {
+      if (!chartRefTotal.current || !chartRefActive.current || !chartRefPaid.current || !chartRefAmount.current) return;
+      Promise.all([
+        import('chart.js/auto')
+      ]).then(([{ default: Chart }]) => {
+        // Registered Vehicles (doughnut)
+        let active = 0, inactive = 0, deleted = 0;
+        if (clientData && Array.isArray(clientData.vehicles)) {
+          clientData.vehicles.forEach(v => {
+            const status = (v.status || '').toLowerCase();
+            if (status === 'active') active++;
+            else if (status === 'inactive') inactive++;
+            else if (status === 'deleted') deleted++;
+          });
+        }
+        const ctxTotal = chartRefTotal.current.getContext('2d');
+        if (window._clientTotalChart) window._clientTotalChart.destroy();
+        window._clientTotalChart = new Chart(ctxTotal, {
+          type: 'doughnut',
+          data: {
+            labels: ['Active', 'Inactive', 'Deleted'],
+            datasets: [{
+              data: [active, inactive, deleted],
+              backgroundColor: ['#42a5f5', '#ffa726', '#e15759'],
+            }],
+          },
+          options: { plugins: { legend: { display: false } }, cutout: '70%' }
         });
-      }
-      const ctxTotal = chartRefTotal.current.getContext('2d');
-      if (window._clientTotalChart) window._clientTotalChart.destroy();
-      window._clientTotalChart = new Chart(ctxTotal, {
-        type: 'doughnut',
-        data: {
-          labels: ['Active', 'Inactive', 'Deleted'],
-          datasets: [{
-            data: [active, inactive, deleted],
-            backgroundColor: ['#42a5f5', '#ffa726', '#e15759'],
-          }],
-        },
-        options: { plugins: { legend: { display: false } }, cutout: '70%' }
+        // Active Challans (pending vs disposed)
+        const ctxActive = chartRefActive.current.getContext('2d');
+        if (window._clientActiveChart) window._clientActiveChart.destroy();
+        let activePendingCount = 0, activeDisposedCount = 0;
+        if (Array.isArray(vehicleChallanData)) {
+          vehicleChallanData.forEach(item => {
+            activePendingCount += Array.isArray(item.pending_data) ? item.pending_data.length : 0;
+            activeDisposedCount += Array.isArray(item.disposed_data) ? item.disposed_data.length : 0;
+          });
+        }
+        const totalChallans = activePendingCount + activeDisposedCount;
+        window._clientActiveChart = new Chart(ctxActive, {
+          type: 'pie',
+          data: {
+            labels: ['Pending', 'Disposed'],
+            datasets: [{
+              label: 'Active Challans',
+              data: [activePendingCount, activeDisposedCount],
+              backgroundColor: ['#ffa726', '#66bb6a'],
+            }],
+          },
+          options: {
+            plugins: { legend: { display: true } }
+          }
+        });
+        // Challans Fetched (spider/radar chart: pending vs disposed)
+        const ctxPaid = chartRefPaid.current.getContext('2d');
+        if (window._clientPaidChart) window._clientPaidChart.destroy();
+        let pendingCount = 0, disposedCount = 0;
+        if (Array.isArray(vehicleChallanData)) {
+          vehicleChallanData.forEach(item => {
+            pendingCount += Array.isArray(item.pending_data) ? item.pending_data.length : 0;
+            disposedCount += Array.isArray(item.disposed_data) ? item.disposed_data.length : 0;
+          });
+        }
+        window._clientPaidChart = new Chart(ctxPaid, {
+          type: 'bar',
+          data: {
+            labels: ['Pending', 'Disposed'],
+            datasets: [{
+              label: 'Challans',
+              data: [pendingCount, disposedCount],
+              backgroundColor: ['#ffa726', '#66bb6a'],
+              borderColor: ['#ffa726', '#66bb6a'],
+              borderWidth: 2,
+            }],
+          },
+          options: {
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { display: true, title: { display: true, text: 'Status' } },
+              y: { display: true, beginAtZero: true, title: { display: true, text: 'Count' } }
+            }
+          }
+        });
+        // Amount Due (bar) - red: pending, green: paid
+        let pendingFine = 0, disposedFine = 0;
+        if (Array.isArray(vehicleChallanData)) {
+          vehicleChallanData.forEach(item => {
+            if (Array.isArray(item.pending_data)) {
+              pendingFine += item.pending_data.reduce((sum, c) => sum + (parseFloat(c.fine_imposed) || 0), 0);
+            }
+            if (Array.isArray(item.disposed_data)) {
+              disposedFine += item.disposed_data.reduce((sum, c) => sum + (parseFloat(c.fine_imposed) || 0), 0);
+            }
+          });
+        }
+        const ctxAmount = chartRefAmount.current.getContext('2d');
+        if (window._clientAmountChart) window._clientAmountChart.destroy();
+        window._clientAmountChart = new Chart(ctxAmount, {
+          type: 'bar',
+          data: {
+            labels: ['Pending', 'Paid'],
+            datasets: [{
+              data: [pendingFine, disposedFine],
+              backgroundColor: ['#e15759', '#66bb6a'],
+            }],
+          },
+          options: { plugins: { legend: { display: false } }, scales: { x: { display: true }, y: { display: true, beginAtZero: true } } }
+        });
       });
-      // Active Challans (pie)
-      const ctxActive = chartRefActive.current.getContext('2d');
-      if (window._clientActiveChart) window._clientActiveChart.destroy();
-      window._clientActiveChart = new Chart(ctxActive, {
-        type: 'pie',
-        data: {
-          labels: ['Active', 'Other'],
-          datasets: [{
-            data: [5, 19],
-            backgroundColor: ['#ffa726', '#bdbdbd'],
-          }],
-        },
-        options: { plugins: { legend: { display: false } } }
-      });
-      // Paid Challans (doughnut)
-      const ctxPaid = chartRefPaid.current.getContext('2d');
-      if (window._clientPaidChart) window._clientPaidChart.destroy();
-      window._clientPaidChart = new Chart(ctxPaid, {
-        type: 'doughnut',
-        data: {
-          labels: ['Paid', 'Other'],
-          datasets: [{
-            data: [19, 10],
-            backgroundColor: ['#66bb6a', '#bdbdbd'],
-          }],
-        },
-        options: { plugins: { legend: { display: false } }, cutout: '70%' }
-      });
-      // Amount Due (bar)
-      const ctxAmount = chartRefAmount.current.getContext('2d');
-      if (window._clientAmountChart) window._clientAmountChart.destroy();
-      window._clientAmountChart = new Chart(ctxAmount, {
-        type: 'bar',
-        data: {
-          labels: ['Due', 'Paid'],
-          datasets: [{
-            data: [3250, 5000],
-            backgroundColor: ['#e15759', '#66bb6a'],
-          }],
-        },
-        options: { plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
-      });
-    });
+    }, 50); // 50ms delay to ensure DOM is ready
     return () => {
+      clearTimeout(timeout);
       if (window._clientTotalChart) window._clientTotalChart.destroy();
       if (window._clientActiveChart) window._clientActiveChart.destroy();
       if (window._clientPaidChart) window._clientPaidChart.destroy();
@@ -203,10 +282,6 @@ function ClientDashboard() {
     };
   }, [clientData, activeMenu]);
   // Sidebar click handler
-  // State for vehicle challan data
-  const [vehicleChallanData, setVehicleChallanData] = useState([]);
-  const [loadingVehicleChallan, setLoadingVehicleChallan] = useState(false);
-  const [vehicleChallanError, setVehicleChallanError] = useState("");
   const handleMenuClick = (label) => {
     setShowLoader(true);
     setTimeout(() => {
@@ -225,22 +300,67 @@ function ClientDashboard() {
       headerInitials = user.user.name.substring(0,2).toUpperCase();
     }
   }
+
+  useEffect(() => {
+    if (activeMenu !== "Dashboard") return;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+    const clientId = user && user.user && (user.user.id || user.user._id || user.user.client_id);
+    if (!clientId) return;
+    setLoadingVehicleChallan(true);
+    setVehicleChallanError("");
+    fetch(`${baseUrl}/getvehicleechallandata?clientId=${clientId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setVehicleChallanData(data);
+        else if (Array.isArray(data.challans)) setVehicleChallanData(data.challans);
+        else setVehicleChallanData([]);
+      })
+      .catch(() => setVehicleChallanData([]))
+      .finally(() => setLoadingVehicleChallan(false));
+  }, [activeMenu]);
+
   return (
+    <>
+    <ToastContainer position="top-right" autoClose={2000} />
     <div className="admin-dashboard-layout" style={{display: 'flex', width: '100vw', minHeight: '100vh'}}>
       {showLoader && <TrafficLightLoader />}
       <ClientSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} />
       <main className="main-content admin-home-content" style={{flex: 1, minHeight: '100vh'}}>
+        <div className="header" style={{marginBottom: 24}}>
+          <div className="header-left" style={{display:'flex',alignItems:'center',gap:16}}>
+            <div className="menu-toggle" style={{fontSize:22,cursor:'pointer'}}>
+              <i className="ri-menu-line"></i>
+            </div>
+            <div className="header-title" style={{fontWeight:600,fontSize:20}}>
+              {activeMenu === 'Dashboard' ? 'Dashboard'
+                : activeMenu === 'Profile' ? 'Profile'
+                : activeMenu === 'Registered Vehicles' ? 'Registered Vehicles'
+                : activeMenu === 'Challans' ? 'My Challans'
+                : activeMenu === 'Billing' ? 'My Billing'
+                : activeMenu === 'Settings' ? 'Settings'
+                : activeMenu}
+            </div>
+          </div>
+          <div className="header-right" style={{display:'flex',alignItems:'center',gap:18}}>
+            <div className="notification-icon" style={{position:'relative',fontSize:22,cursor:'pointer'}}>
+              <i className="ri-notification-3-line"></i>
+              <div className="notification-badge" style={{position:'absolute',top:-6,right:-8,background:'#e74c3c',color:'#fff',borderRadius:'50%',fontSize:12,padding:'2px 6px',fontWeight:600}}>3</div>
+            </div>
+            <div className="header-profile" style={{marginLeft:8}}>
+              <div className="header-avatar" style={{background:'#0072ff',color:'#fff',borderRadius:'50%',width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:600,fontSize:16}}>{headerInitials || 'JS'}</div>
+            </div>
+          </div>
+        </div>
         {activeMenu === "Dashboard" && (
           <>
-            <div className="dashboard-header">
-              <h1 className="dashboard-title">Welcome back{user.user && user.user.name ? `, ${user.user.name}` : '123'}!
-                {/* {headerInitials && (
-                  <span style={{marginLeft:8, background:'#eee', borderRadius:'50%', padding:'4px 10px', fontWeight:'bold', fontSize:18, color:'#555'}}>
-                    {headerInitials}
-                  </span>
-                )} */}
-              </h1>
-              <p>Here's an overview of your challan status</p>
+            <div className="dashboard-header" style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+              <div>
+                <h1 className="dashboard-title">Welcome back{user.user && user.user.name ? `, ${user.user.name}` : '123'}!</h1>
+                <p>Here's an overview of your challan status</p>
+              </div>
+              <div className="header-profile">
+                <span className="header-avatar">{headerInitials || 'JS'}</span>
+              </div>
             </div>
             <div className="dashboard-stats">
               <div className="stat-card">
@@ -249,32 +369,86 @@ function ClientDashboard() {
                 <div className="stat-value">
                   {loadingClient ? '...' : (clientData && Array.isArray(clientData.vehicles) ? clientData.vehicles.length : 0)}
                 </div>
-                <div className="stat-chart-container" style={{maxWidth: 80, margin: '12px auto'}}>
-                  <canvas ref={chartRefTotal} width={80} height={80} />
+                <div className="stat-chart-container" style={{maxWidth: 160, margin: '12px auto'}}>
+                  <canvas ref={chartRefTotal} width={160} height={160} />
                 </div>
               </div>
               <div className="stat-card">
                 <i className="ri-error-warning-line"></i>
                 <div>Active Challans</div>
-                <div className="stat-value">5</div>
-                <div className="stat-chart-container" style={{maxWidth: 80, margin: '12px auto'}}>
-                  <canvas ref={chartRefActive} width={80} height={80} />
+                <div className="stat-value">
+                  {loadingVehicleChallan
+                    ? '...'
+                    : (() => {
+                        let pending = 0, disposed = 0;
+                        if (Array.isArray(vehicleChallanData)) {
+                          vehicleChallanData.forEach(item => {
+                            pending += Array.isArray(item.pending_data) ? item.pending_data.length : 0;
+                            disposed += Array.isArray(item.disposed_data) ? item.disposed_data.length : 0;
+                          });
+                        }
+                        return (
+                          <>
+                            <span style={{color: 'red', fontWeight: 600}}>{pending}</span>
+                            {' / '}
+                            <span>{disposed}</span>
+                          </>
+                        );
+                      })()
+                  }
+                </div>
+                <div className="stat-chart-container" style={{maxWidth: 160, margin: '12px auto'}}>
+                  <canvas ref={chartRefActive} width={160} height={160} />
                 </div>
               </div>
               <div className="stat-card">
                 <i className="ri-checkbox-circle-line"></i>
-                <div>Paid Challans</div>
-                <div className="stat-value">19</div>
-                <div className="stat-chart-container" style={{maxWidth: 80, margin: '12px auto'}}>
-                  <canvas ref={chartRefPaid} width={80} height={80} />
+                <div>Challans Fetched</div>
+                <div className="stat-value">
+                  {loadingVehicleChallan
+                    ? '...'
+                    : Array.isArray(vehicleChallanData)
+                      ? vehicleChallanData.reduce((total, item) => {
+                          const pending = Array.isArray(item.pending_data) ? item.pending_data.length : 0;
+                          const disposed = Array.isArray(item.disposed_data) ? item.disposed_data.length : 0;
+                          return total + pending + disposed;
+                        }, 0)
+                      : 0}
+                </div>
+                <div className="stat-chart-container" style={{maxWidth: 280, margin: '12px auto'}}>
+                  <canvas ref={chartRefPaid} width={280} height={280} />
                 </div>
               </div>
               <div className="stat-card">
                 <i className="ri-money-rupee-circle-line"></i>
-                <div>Total Amount Due</div>
-                <div className="stat-value">₹3,250</div>
-                <div className="stat-chart-container" style={{maxWidth: 80, margin: '12px auto'}}>
-                  <canvas ref={chartRefAmount} width={80} height={80} />
+                <div>Challan Amount</div>
+                <div className="stat-value">
+                  {loadingVehicleChallan
+                    ? '...'
+                    : (() => {
+                        let pendingFine = 0, disposedFine = 0;
+                        if (Array.isArray(vehicleChallanData)) {
+                          vehicleChallanData.forEach(item => {
+                            if (Array.isArray(item.pending_data)) {
+                              pendingFine += item.pending_data.reduce((sum, c) => sum + (parseFloat(c.fine_imposed) || 0), 0);
+                            }
+                            if (Array.isArray(item.disposed_data)) {
+                              disposedFine += item.disposed_data.reduce((sum, c) => sum + (parseFloat(c.fine_imposed) || 0), 0);
+                            }
+                          });
+                        }
+                        return (
+                          <>
+                            <span style={{color: 'red', fontWeight: 600}}>Pending: ₹{pendingFine.toLocaleString()}</span>
+                            {' | '}
+                            <span>Paid: ₹{disposedFine.toLocaleString()}</span>
+                          </>
+                        );
+                      })()
+                  }
+                </div>
+                <div className="stat-chart-container" style={{maxWidth: 160, margin: '12px auto'}}>
+                  <canvas ref={chartRefAmount} width={160} height={160} />
                 </div>
               </div>
             </div>
@@ -283,105 +457,146 @@ function ClientDashboard() {
                 <h2>Latest Challans</h2>
                 <a href="#" className="view-all">View All</a>
               </div>
-              {/* Use the same sample data and structure as MyChallans */}
-              <table className="latest-table" style={{ width: '100%', marginTop: 8, tableLayout: 'fixed' }}>
-                <colgroup>
-                  <col style={{ width: '20%' }} />
-                  <col style={{ width: '18%' }} />
-                  <col style={{ width: '18%' }} />
-                  <col style={{ width: '12%' }} />
-                  <col style={{ width: '12%' }} />
-                  <col style={{ width: '20%' }} />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th>Challan No</th>
-                    <th>Date/Time</th>
-                    <th>Owner</th>
-                    <th>Fine Imposed</th>
-                    <th>Status</th>
-                    <th>Offence Details</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* Pending challans first, then disposed */}
-                  {[
-                    ...[
-                      {
-                        challan_no: "KL548476230713105383",
-                        challan_date_time: "01-09-2023 17:36:00",
-                        owner_name: "T**T P*T L*D",
-                        fine_imposed: "7750",
-                        challan_status: "Pending",
-                        offence_details: [
-                          { name: "Fitness certificate (CF) of a transport vehicle not produced on demand for examination by the officer authorised." },
-                          { name: "Driving or causing or allowing to be driven a vehicle as contract carriage without valid permit.(MMV and HMV)" }
-                        ]
-                      },
-                      {
-                        challan_no: "KL48648220311114937",
-                        challan_date_time: "11-03-2022 11:49:37",
-                        owner_name: "T**T P*T L*D",
-                        fine_imposed: "1",
-                        challan_status: "Pending",
-                        offence_details: [
-                          { name: "test offence 1 rupee" }
-                        ]
+              {/* Challan table from API */}
+              {loadingVehicleChallan ? (
+                <div>Loading challans...</div>
+              ) : vehicleChallanError ? (
+                <div style={{color:'#d32f2f'}}>Error loading challans.</div>
+              ) : (
+                <table className="latest-table" style={{ width: '100%', marginTop: 8, tableLayout: 'fixed' }}>
+                  <colgroup>
+                    <col style={{ width: '10%' }} />
+                    <col style={{ width: '10%' }} />
+                    <col style={{ width: '10%' }} />
+                    <col style={{ width: '6%' }} />
+                    <col style={{ width: '10%' }} />
+                    <col style={{ width: '10%' }} />
+                    <col style={{ width: '10%' }} />
+                  </colgroup>
+                    <thead>
+                      <tr>
+                        <th style={{textAlign:'center'}}>Vehicle Number</th>
+                        <th style={{textAlign:'center'}}>Challan No</th>
+                        <th style={{textAlign:'center'}}>Date/Time</th>
+                        <th style={{textAlign:'center'}}>Location</th>
+                        <th style={{textAlign:'center'}}>Challan Act</th>
+                        <th style={{textAlign:'center'}}>Fine Imposed</th>
+                        <th style={{textAlign:'center'}}>Status</th>
+                        <th style={{textAlign:'center'}}>Offence Details</th>
+                        <th style={{textAlign:'center'}}>Action</th>
+                      </tr>
+                    </thead>
+                  <tbody>
+                    {(() => {
+                      // Collect all challans with vehicle info
+                      let allChallans = [];
+                      if (Array.isArray(vehicleChallanData)) {
+                        vehicleChallanData.forEach(item => {
+                          if (Array.isArray(item.pending_data)) {
+                            item.pending_data.forEach(c => {
+                              allChallans.push({ ...c, vehicle_number: item.vehicle_number, statusType: 'Pending' });
+                            });
+                          }
+                          if (Array.isArray(item.disposed_data)) {
+                            item.disposed_data.forEach(c => {
+                              allChallans.push({ ...c, vehicle_number: item.vehicle_number, statusType: 'Disposed' });
+                            });
+                          }
+                        });
                       }
-                    ],
-                    ...[
-                      {
-                        challan_no: "KL48648220311113821",
-                        challan_date_time: "11-03-2022 11:38:21",
-                        owner_name: "T**T P*T L*D",
-                        fine_imposed: "1",
-                        challan_status: "Disposed",
-                        offence_details: [
-                          { name: "test offence 1 rupee" }
-                        ]
-                      },
-                      {
-                        challan_no: "KL48648220225112001",
-                        challan_date_time: "25-02-2022 11:20:01",
-                        owner_name: "T**T P*T L*D",
-                        fine_imposed: "1",
-                        challan_status: "Disposed",
-                        offence_details: [
-                          { name: "test offence 1 rupee" }
-                        ]
+                      // Sort by challan_date_time descending
+                      allChallans.sort((a, b) => {
+                        const dateA = new Date(a.challan_date_time);
+                        const dateB = new Date(b.challan_date_time);
+                        return dateB - dateA;
+                      });
+                      // Take only 5 latest
+                      const latestChallans = allChallans.slice(0, 5);
+                      if (latestChallans.length === 0) {
+                        return <tr><td colSpan={7} style={{textAlign:'center',color:'#888'}}>No challans found.</td></tr>;
                       }
-                    ]
-                  ].flat().map((c, idx) => (
-                    <tr key={c.challan_no || idx}>
-                      <td>
-                        <div className="cell-ellipsis" title={c.challan_no}>{c.challan_no}</div>
-                      </td>
-                      <td>
-                        <div className="cell-ellipsis" title={c.challan_date_time}>{c.challan_date_time}</div>
-                      </td>
-                      <td>
-                        <div className="cell-ellipsis" title={c.owner_name}>{c.owner_name}</div>
-                      </td>
-                      <td>{c.fine_imposed}</td>
-                      <td>
-                        <span className={
-                          c.challan_status === 'Pending' ? 'status pending' :
-                          c.challan_status === 'Disposed' ? 'status paid' : ''
-                        }>
-                          {c.challan_status}
-                        </span>
-                      </td>
-                      <td>
-                        <ul style={{ margin: 0, paddingLeft: 18 }}>
-                          {Array.isArray(c.offence_details) && c.offence_details.map((o, i) => (
-                            <li key={i} className="cell-ellipsis" title={o.name}>{o.name}</li>
-                          ))}
-                        </ul>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      return latestChallans.map((c, idx) => (
+                        <tr key={`${c.statusType}-${c.vehicle_number}-${c.challan_no}-${idx}`}>
+                          <td>{c.vehicle_number}</td>
+                          <td>
+                            <span title={c.challan_no} style={{cursor:'pointer'}}>
+                              {c.challan_no && c.challan_no.length > 10 ? c.challan_no.slice(0,10) + '...' : c.challan_no}
+                            </span>
+                          </td>
+                          <td>
+                            <span title={c.challan_date_time} style={{cursor:'pointer'}}>
+                              {c.challan_date_time && c.challan_date_time.length > 10 ? c.challan_date_time.slice(0,10) + '...' : c.challan_date_time}
+                            </span>
+                          </td>
+                          <td>
+                            {(() => {
+                              const loc = c.challan_place || c.location || c.challan_location;
+                              if (loc && typeof loc === 'string' && loc.trim()) {
+                                const openMap = (address) => {
+                                  setInfoModal({
+                                    open: true,
+                                    message: (
+                                      <iframe
+                                        title="Google Maps"
+                                        width="910"
+                                        height="500"
+                                        style={{ border: 0, borderRadius: 12 }}
+                                        src={`https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`}
+                                        allowFullScreen
+                                      />
+                                    )
+                                  });
+                                };
+                                return (
+                                  <span
+                                    style={{ cursor: 'pointer', color: '#4285F4', fontSize: 24, verticalAlign: 'middle' }}
+                                    title="View on Google Maps"
+                                    onClick={() => {
+                                      // Try original address first
+                                      const testImg = new window.Image();
+                                      testImg.src = `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(loc)}&zoom=15&size=200x200&key=AIzaSyDUMMYKEY`;
+                                      testImg.onload = () => openMap(loc);
+                                      testImg.onerror = () => {
+                                        // Remove flat/unit from start and retry
+                                        const simplified = loc.replace(/^([\w-]+,?\s*)/, '');
+                                        openMap(simplified);
+                                      };
+                                      // Fallback: open original immediately (for embed)
+                                      setTimeout(() => openMap(loc), 500);
+                                    }}
+                                  >
+                                    <i className="ri-map-pin-2-fill" />
+                                  </span>
+                                );
+                              }
+                              return '-';
+                            })()}
+                          </td>
+                          <td>{Array.isArray(c.offence_details) && c.offence_details.length > 0 ? c.offence_details[0].act : ''}</td>
+                          <td>{c.fine_imposed}</td>
+                          <td><span className={c.challan_status === 'Pending' ? 'status pending' : c.challan_status === 'Disposed' ? 'status paid' : ''}>{c.challan_status}</span></td>
+                          <td>
+                            <ul style={{ margin: 0, paddingLeft: 18 }}>
+                              {Array.isArray(c.offence_details) && c.offence_details.map((o, j) => (
+                                <li key={j} className="cell-ellipsis" title={o.name}>{o.name}</li>
+                              ))}
+                            </ul>
+                          </td>
+                          <td>
+                            <button
+                              className="action-btn flat-btn"
+                              // style={{padding: '12px 32px', fontSize: 18, border: 'none', borderRadius: 6, background: '#f5f5f5', color: '#222', boxShadow: 'none', fontWeight: 600, transition: 'background 0.2s'}}
+                              onClick={() => setInfoModal({ open: true, message: `View Challan: ${c.challan_no}` })}
+                            >
+                              View Challan
+                            </button>
+                          </td>
+                        </tr>
+                      ));
+                    })()}
+                  </tbody>
+                </table>
+              )}
             </div>
             <div className="dashboard-latest">
               <h2 style={{ fontSize: '1.2rem', marginBottom: 12 }}>Registered Vehicles</h2>
@@ -421,64 +636,60 @@ function ClientDashboard() {
                           <td style={{ color: statusColor, fontWeight: 600, letterSpacing: 1 }}>{status}</td>
                           <td>{v.registered_at ? new Date(v.registered_at).toLocaleString() : 'Not Available'}</td>
                           <td>
-                            <button className="action-btn" style={{padding: '2px 10px', fontSize: 14}}
-                              onClick={async () => {
-                                setLoadingVehicleChallan(true);
-                                setVehicleChallanError("");
-                                try {
-                                  const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
-                                  const clientId = user && user.user && (user.user.id || user.user._id || user.user.client_id);
-                                  const payload = {
-                                    vehicleNumber: v.vehicle_number,
-                                    clientID: clientId
-                                  };
-                                  const res = await fetch(`${baseUrl}/getvehicleechallandata`, {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify(payload)
-                                  });
-                                  const data = await res.json();
-                                  if (Array.isArray(data.challans)) {
-                                    setVehicleChallanData(data.challans);
-                                  } else if (Array.isArray(data)) {
-                                    setVehicleChallanData(data);
+                            <div style={{display:'flex',gap:8}}>
+                              <button
+                                className="action-btn flat-btn"
+                                // style={{padding: '12px 32px', fontSize: 18, border: 'none', borderRadius: 6, background: '#f5f5f5', color: '#222', boxShadow: 'none', fontWeight: 600, opacity: status === 'INACTIVE' ? 0.6 : 1, cursor: status === 'INACTIVE' ? 'not-allowed' : 'pointer', transition: 'background 0.2s'}}
+                                disabled={rtoLoadingId === (v.id || v._id)}
+                                onClick={() => {
+                                  if (status === 'INACTIVE') {
+                                    setInfoModal({ open: true, message: 'Your vehicle is inactive. Please activate your vehicle to get the RTO data.' });
                                   } else {
-                                    setVehicleChallanData([]);
+                                    setModal({ open: true, action: 'getRTO', vehicle: v });
                                   }
-                                } catch {
-                                  setVehicleChallanError("Failed to fetch vehicle challan data.");
-                                  setVehicleChallanData([]);
-                                } finally {
-                                  setLoadingVehicleChallan(false);
-                                }
-                              }}
-                            >Challan Data <i className="ri-information-line" style={{marginLeft: 2}}></i></button>
-                            <button className="action-btn" style={{padding: '2px 10px', fontSize: 14, marginLeft: 8}}
-                              onClick={async () => {
-                                setLoadingVehicleRTO(true);
-                                setVehicleRTOError("");
-                                try {
-                                  const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
-                                  const clientId = user && user.user && (user.user.id || user.user._id || user.user.client_id);
-                                  const payload = {
-                                    vehicleNumber: v.vehicle_number,
-                                    clientID: clientId
-                                  };
-                                  const res = await fetch(`${baseUrl}/getvehiclertodata`, {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify(payload)
-                                  });
-                                  const data = await res.json();
-                                  setVehicleRTOData(data);
-                                } catch {
-                                  setVehicleRTOError("Failed to fetch vehicle RTO data.");
-                                  setVehicleRTOData(null);
-                                } finally {
-                                  setLoadingVehicleRTO(false);
-                                }
-                              }}
-                            >Vehicle Data <i className="ri-car-line" style={{marginLeft: 6}}></i></button>
+                                }}
+                              >
+                                {rtoLoadingId === (v.id || v._id) ? 'Loading...' : 'Get RTO Data'}
+                              </button>
+                              <button
+                                className="action-btn flat-btn"
+                                // style={{padding: '12px 32px', fontSize: 18, border: 'none', borderRadius: 6, background: '#f5f5f5', color: '#222', boxShadow: 'none', fontWeight: 600, opacity: status === 'INACTIVE' ? 0.6 : 1, cursor: status === 'INACTIVE' ? 'not-allowed' : 'pointer', transition: 'background 0.2s'}}
+                                disabled={challanLoadingId === (v.id || v._id)}
+                                onClick={() => {
+                                  if (status === 'INACTIVE') {
+                                    setInfoModal({ open: true, message: 'Your vehicle is inactive. Please activate your vehicle to get the Challan data.' });
+                                  } else {
+                                    setModal({ open: true, action: 'getChallan', vehicle: v });
+                                  }
+                                }}
+                              >
+                                {challanLoadingId === (v.id || v._id) ? 'Loading...' : 'Get Challan Data'}
+                              </button>
+                            </div>
+  {/* Confirmation Modal for RTO/Challan requests */}
+  <CustomModal
+    open={modal.open}
+    title={
+      modal.action === 'getRTO' ? 'Are you sure you want to request vehicle RTO data?'
+      : modal.action === 'getChallan' ? 'Are you sure you want to request vehicle Challan data?'
+      : modal.action === 'inactivate' ? 'Are you sure you want to inactivate this vehicle?'
+      : modal.action === 'activate' ? 'Are you sure you want to activate this vehicle?'
+      : modal.action === 'delete' ? 'Are you sure you want to delete this vehicle?'
+      : modal.action === 'info' ? 'Vehicle Inactive'
+      : ''
+    }
+    onConfirm={handleModalConfirm}
+    onCancel={() => setModal({ open: false, action: null, vehicle: null })}
+    confirmText={modal.action === 'delete' ? 'Delete' : modal.action === 'activate' ? 'Activate' : modal.action === 'inactivate' ? 'Inactivate' : modal.action === 'info' ? 'OK' : 'Yes'}
+    cancelText={modal.action === 'info' ? null : 'Cancel'}
+  >
+    {modal.action === 'delete' && (
+      <span style={{color:'red', fontWeight:600}}>This action is non-reversible.<br/>Your vehicle and all related RTO, challan data will be deleted permanently.</span>
+    )}
+    {modal.action === 'info' && (
+      <span style={{color:'#d35400', fontWeight:500}}>Please activate your vehicle first to get RTO and Challan data.</span>
+    )}
+  </CustomModal>
                           </td>
                           <td>
                             {status === 'INACTIVE' ? (
@@ -512,22 +723,6 @@ function ClientDashboard() {
                 </table>
               )}
               {/* Custom Modal for confirmation */}
-              <CustomModal
-                open={modal.open}
-                title={
-                  modal.action === 'inactivate' ? 'Are you sure you want to inactivate this vehicle?'
-                  : modal.action === 'activate' ? 'Are you sure you want to activate this vehicle?'
-                  : modal.action === 'delete' ? 'Are you sure you want to delete this vehicle?'
-                  : ''
-                }
-                onConfirm={() => {
-                  setModal({ open: false, action: null, vehicle: null });
-                  // TODO: Implement actual API call for action here
-                }}
-                onCancel={() => setModal({ open: false, action: null, vehicle: null })}
-                confirmText={modal.action === 'delete' ? 'Delete' : modal.action === 'activate' ? 'Activate' : modal.action === 'inactivate' ? 'Inactivate' : 'Yes'}
-                cancelText="Cancel"
-              />
             </div>
             <div className="dashboard-actions">
               <h2>Quick Actions</h2>
@@ -584,6 +779,16 @@ function ClientDashboard() {
         {activeMenu === "Challans" && <UserChallan />}
         {activeMenu === "My Billing" && <MyBilling clientId={user.user && (user.user.id || user.user._id)} />}
         {activeMenu === "Settings" && <UserSettings users={[]} />}
+        {activeMenu === "Driver Verification" && (
+          <Suspense fallback={<div>Loading...</div>}>
+            <DriverVerification />
+          </Suspense>
+        )}
+        {activeMenu === "Vehicle Fastag" && (
+          <Suspense fallback={<div>Loading...</div>}>
+            <LazyVehicleFastag />
+          </Suspense>
+        )}
       </main>
       <CustomModal
         open={infoModal.open}
@@ -609,6 +814,7 @@ function ClientDashboard() {
         </div>
       </CustomModal>
     </div>
+    </>
   );
 }
 

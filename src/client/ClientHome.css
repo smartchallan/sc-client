@@ -21,6 +21,46 @@ html, body {
   font-weight: bold;
   /* color: #0072ff; */
 }
+
+@media (max-width: 900px) {
+  .admin-home-content {
+    padding: 16px 8px;
+  }
+  .dashboard-header h1 {
+    font-size: 24px;
+  }
+  .dashboard-header p {
+    font-size: 15px;
+  }
+  .dashboard-stats {
+    gap: 12px;
+  }
+  .stat-card {
+    padding: 16px 12px;
+    min-width: 120px;
+  }
+}
+
+@media (max-width: 600px) {
+  .admin-home-content {
+    padding: 8px 2px;
+  }
+  .dashboard-header h1 {
+    font-size: 18px;
+  }
+  .dashboard-header p {
+    font-size: 13px;
+  }
+  .dashboard-stats {
+    gap: 8px;
+    flex-direction: column;
+  }
+  .stat-card {
+    padding: 10px 6px;
+    min-width: 80px;
+    font-size: 13px;
+  }
+}
 .dashboard-header p {
   color: #555;
   font-size: 18px;

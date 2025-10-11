@@ -304,27 +304,25 @@ function AdminDashboard() {
     import('chart.js/auto').then(({ default: Chart }) => {
       const ctx = chartRef4.current.getContext('2d');
       ctx.clearRect(0, 0, chartRef4.current.width, chartRef4.current.height);
-      // Sample data for Challans Settled
+      // Sample data for Challans Settled (radial chart)
       const data = {
         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
         datasets: [{
           label: 'Challans Settled',
           data: [1200, 1500, 1100, 1800, 1700, 2000],
-          backgroundColor: '#42a5f5',
+          backgroundColor: [
+            '#42a5f5', '#66bb6a', '#ffa726', '#ab47bc', '#bdbdbd', '#ffb74d'
+          ],
         }],
       };
       if (window._challansBarChart) window._challansBarChart.destroy();
       window._challansBarChart = new Chart(ctx, {
-        type: 'bar',
+        type: 'polarArea',
         data,
         options: {
           plugins: {
-            legend: { display: false },
+            legend: { display: true },
             title: { display: false },
-          },
-          scales: {
-            x: { beginAtZero: true },
-            y: { beginAtZero: true },
           },
         },
       });

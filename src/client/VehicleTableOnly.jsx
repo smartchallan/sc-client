@@ -3,6 +3,7 @@
 
 
 import React, { useState, useEffect } from "react";
+import { toast } from 'react-toastify';
 import "./VehicleTableOnly.css";
 import CustomModal from "./CustomModal";
 
@@ -133,7 +134,22 @@ export default function VehicleTableOnly() {
                   <td>{v.chasis_number || 'Not Available'}</td>
                   <td style={{ color: statusColor, fontWeight: 600, letterSpacing: 1 }}>{status}</td>
                   <td>{v.registered_at ? new Date(v.registered_at).toLocaleString() : 'Not Available'}</td>
-                    <td><button className="action-btn" style={{padding: '2px 10px', fontSize: 14}}>Get Data <i className="ri-car-line" style={{marginLeft: 6}}></i><i className="ri-information-line" style={{marginLeft: 2}}></i></button></td>
+                    <td>
+                      <button
+                        className="action-btn"
+                        style={{padding: '2px 10px', fontSize: 14, opacity: status === 'INACTIVE' ? 0.6 : 1, cursor: status === 'INACTIVE' ? 'not-allowed' : 'pointer'}}
+                        disabled={status === 'INACTIVE'}
+                        onClick={() => {
+                          if (status === 'INACTIVE') {
+                            setModal({ open: true, action: 'info', vehicle: v });
+                          } else {
+                            // ...existing get data logic...
+                          }
+                        }}
+                      >
+                        Get Data <i className="ri-car-line" style={{marginLeft: 6}}></i><i className="ri-information-line" style={{marginLeft: 2}}></i>
+                      </button>
+                    </td>
                   <td>
                     {status === 'INACTIVE' ? (
                       <span
@@ -179,19 +195,48 @@ export default function VehicleTableOnly() {
           modal.action === 'inactivate' ? 'Are you sure you want to inactivate this vehicle?'
           : modal.action === 'activate' ? 'Are you sure you want to activate this vehicle?'
           : modal.action === 'delete' ? 'Are you sure you want to delete this vehicle?'
+          : modal.action === 'info' ? 'Vehicle Inactive' 
           : ''
         }
-        onConfirm={() => {
+        onConfirm={async () => {
+          if (modal.action === 'info') {
+            setModal({ open: false, action: null, vehicle: null });
+            return;
+          }
+          if (!modal.vehicle) return setModal({ open: false, action: null, vehicle: null });
+          let status = '';
+          if (modal.action === 'inactivate') status = 'inactive';
+          else if (modal.action === 'activate') status = 'active';
+          else if (modal.action === 'delete') status = 'delete';
+          try {
+            const res = await fetch(`${API_ROOT}/updatevehiclestatus`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ vehicle_id: modal.vehicle.id || modal.vehicle._id, status })
+            });
+            if (res.ok) {
+              toast.success('Vehicle status updated successfully');
+              fetchVehicles(getClientId());
+            } else {
+              const data = await res.json();
+              toast.error(data.message || 'Failed to update vehicle status');
+            }
+          } catch (err) {
+            toast.error('API call failed');
+          }
           setModal({ open: false, action: null, vehicle: null });
-          // TODO: Implement actual API call for action here
-          if (modal.action === 'inactivate') alert('Inactivate action confirmed');
-          if (modal.action === 'activate') alert('Activate action confirmed');
-          if (modal.action === 'delete') alert('Delete action confirmed');
         }}
         onCancel={() => setModal({ open: false, action: null, vehicle: null })}
-        confirmText={modal.action === 'delete' ? 'Delete' : modal.action === 'activate' ? 'Activate' : modal.action === 'inactivate' ? 'Inactivate' : 'Yes'}
-        cancelText="Cancel"
-      />
+        confirmText={modal.action === 'delete' ? 'Delete' : modal.action === 'activate' ? 'Activate' : modal.action === 'inactivate' ? 'Inactivate' : modal.action === 'info' ? 'OK' : 'Yes'}
+        cancelText={modal.action === 'info' ? null : 'Cancel'}
+      >
+        {modal.action === 'delete' && (
+          <span style={{color:'red', fontWeight:600}}>This action is non-reversible.<br/>Your vehicle and all related RTO, challan data will be deleted permanently.</span>
+        )}
+        {modal.action === 'info' && (
+          <span style={{color:'#d35400', fontWeight:500}}>Please activate your vehicle first.</span>
+        )}
+      </CustomModal>
     </div>
   );
 }
