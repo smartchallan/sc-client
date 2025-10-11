@@ -1,39 +1,59 @@
+
 import React, { useState, useEffect } from "react";
-import "./VehicleTableOnly.css";
+import CustomModal from "./CustomModal";
 
 function ChallanTable({ title, data }) {
   const [showFull, setShowFull] = useState({});
+  const [selectedChallan, setSelectedChallan] = useState(null);
   const handleShowFull = (rowIdx, col) => {
     setShowFull(prev => ({ ...prev, [rowIdx + '-' + col]: !prev[rowIdx + '-' + col] }));
   };
+  // Props: search, sortAsc
+  // Filter and sort data using props
+  let filtered = data.filter(c =>
+    (!arguments[0]?.search?.vehicle || (c.vehicle_number && c.vehicle_number.toLowerCase().includes(arguments[0].search.vehicle.toLowerCase()))) &&
+    (!arguments[0]?.search?.challan || (c.challan_no && c.challan_no.toLowerCase().includes(arguments[0].search.challan.toLowerCase())))
+  );
+  filtered = filtered.slice().sort((a, b) => {
+    const dateA = new Date(a.challan_date_time.replace(/(\d{2})-(\d{2})-(\d{4})/, '$2/$1/$3'));
+    const dateB = new Date(b.challan_date_time.replace(/(\d{2})-(\d{2})-(\d{4})/, '$2/$1/$3'));
+    return arguments[0]?.sortAsc ? dateA - dateB : dateB - dateA;
+  });
   return (
     <div className="dashboard-latest" style={{ marginBottom: 32, overflowX: 'auto' }}>
       <h2 style={{ fontSize: '1.2rem', marginBottom: 12 }}>{title}</h2>
-      {data.length === 0 ? (
+      {filtered.length === 0 ? (
         <div style={{ color: '#888' }}>No challans found.</div>
       ) : (
         <table className="latest-table" style={{ width: '900px', minWidth: '100%', marginTop: 8, tableLayout: 'fixed' }}>
           <colgroup>
-            <col style={{ width: '18%' }} />
-            <col style={{ width: '16%' }} />
-            <col style={{ width: '18%' }} />
-            <col style={{ width: '10%' }} />
-            <col style={{ width: '10%' }} />
-            <col style={{ width: '28%' }} />
+            <col style={{ width: '12%' }} />
+            <col style={{ width: '13%' }} />
+            <col style={{ width: '13%' }} />
+            <col style={{ width: '13%' }} />
+            <col style={{ width: '9%' }} />
+            <col style={{ width: '9%' }} />
+            <col style={{ width: '22%' }} />
+            <col style={{ width: '9%' }} />
           </colgroup>
           <thead>
             <tr>
+              <th>Vehicle No</th>
               <th>Challan No</th>
               <th>Date/Time</th>
               <th>Owner</th>
               <th>Fine</th>
               <th>Status</th>
               <th>Offence Details</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            {data.map((c, idx) => (
+            {filtered.map((c, idx) => (
               <tr key={c.challan_no || idx}>
+                <td>
+                  <div className="cell-ellipsis" title={c.vehicle_number}>{c.vehicle_number || '-'}</div>
+                </td>
                 <td>
                   <div
                     className={`cell-ellipsis${showFull[idx+'-challan_no'] ? ' cell-wrap' : ''}`}
@@ -81,11 +101,65 @@ function ChallanTable({ title, data }) {
                     ))}
                   </ul>
                 </td>
+                <td style={{textAlign:'center'}}>
+                  <button className="action-btn flat-btn" onClick={() => setSelectedChallan(c)}>
+                    View Challan
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
+      <CustomModal
+        open={!!selectedChallan}
+        title={selectedChallan ? `Challan Details: ${selectedChallan.challan_no}` : ''}
+        onConfirm={() => setSelectedChallan(null)}
+        onCancel={() => setSelectedChallan(null)}
+        confirmText="Close"
+        cancelText={null}
+      >
+        {selectedChallan && (
+          <div style={{lineHeight:1.7, fontSize:15}}>
+            <div><b>Status:</b> {selectedChallan.challan_status}</div>
+            <div><b>Vehicle Number:</b> {selectedChallan.vehicle_number}</div>
+            <div><b>Challan No:</b> {selectedChallan.challan_no}</div>
+            <div><b>Date/Time:</b> {selectedChallan.challan_date_time}</div>
+            <div><b>Location:</b> {selectedChallan.challan_place || selectedChallan.location || selectedChallan.challan_location}</div>
+            <div><b>Owner Name:</b> {selectedChallan.owner_name}</div>
+            <div><b>Driver Name:</b> {selectedChallan.driver_name}</div>
+            <div><b>Name of Violator:</b> {selectedChallan.name_of_violator}</div>
+            <div><b>Department:</b> {selectedChallan.department}</div>
+            <div><b>State Code:</b> {selectedChallan.state_code}</div>
+            <div><b>RTO District Name:</b> {selectedChallan.rto_distric_name}</div>
+            <div><b>Remark:</b> {selectedChallan.remark}</div>
+            <div><b>Document Impounded:</b> {selectedChallan.document_impounded}</div>
+            <div><b>Sent to Court On:</b> {selectedChallan.sent_to_court_on}</div>
+            <div><b>Sent to Reg Court:</b> {selectedChallan.sent_to_reg_court}</div>
+            <div><b>Sent to Virtual Court:</b> {selectedChallan.sent_to_virtual_court}</div>
+            <div><b>Court Name:</b> {selectedChallan.court_name}</div>
+            <div><b>Court Address:</b> {selectedChallan.court_address}</div>
+            <div><b>Date of Proceeding:</b> {selectedChallan.date_of_proceeding}</div>
+            <div><b>DL No:</b> {selectedChallan.dl_no}</div>
+            {selectedChallan.challan_status === 'Disposed' && (
+              <>
+                <div><b>Receipt No:</b> {selectedChallan.receipt_no}</div>
+                <div><b>Received Amount:</b> {selectedChallan.received_amount}</div>
+              </>
+            )}
+            <div><b>Fine Imposed:</b> {selectedChallan.fine_imposed}</div>
+            <div><b>Amount of Fine Imposed:</b> {selectedChallan.amount_of_fine_imposed}</div>
+            <div><b>Act:</b> {Array.isArray(selectedChallan.offence_details) && selectedChallan.offence_details.length > 0 ? selectedChallan.offence_details[0].act : ''}</div>
+            <div><b>Offence Details:</b>
+              <ul style={{margin:0,paddingLeft:18}}>
+                {Array.isArray(selectedChallan.offence_details) && selectedChallan.offence_details.map((o, j) => (
+                  <li key={j} className="cell-ellipsis" title={o.name}>{o.name}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+      </CustomModal>
       <style>{`
         .cell-ellipsis {
           overflow: hidden;
@@ -126,16 +200,20 @@ export default function MyChallans() {
         const url = `${API_ROOT}/getvehicleechallandata?clientId=${clientId}`;
         const res = await fetch(url);
         const data = await res.json();
-        // Flatten all pending and disposed challans from all vehicles
+        // Flatten all pending and disposed challans from all vehicles, and add vehicle_number to each challan
         const allPending = [];
         const allDisposed = [];
         if (Array.isArray(data)) {
           data.forEach(vehicle => {
             if (Array.isArray(vehicle.pending_data)) {
-              allPending.push(...vehicle.pending_data);
+              vehicle.pending_data.forEach(c => {
+                allPending.push({ ...c, vehicle_number: vehicle.vehicle_number });
+              });
             }
             if (Array.isArray(vehicle.disposed_data)) {
-              allDisposed.push(...vehicle.disposed_data);
+              vehicle.disposed_data.forEach(c => {
+                allDisposed.push({ ...c, vehicle_number: vehicle.vehicle_number });
+              });
             }
           });
         }
@@ -150,24 +228,37 @@ export default function MyChallans() {
     fetchChallans();
   }, []);
 
+  const [search, setSearch] = useState({ vehicle: '', challan: '' });
+  const [sortAsc, setSortAsc] = useState(true);
   return (
     <div className="my-challans-content">
       <h1 className="page-title">My Challans</h1>
       <p className="page-subtitle">View and manage your Settled and Disposed challans</p>
-      <style>{`
-        .cell-ellipsis {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          max-width: 100%;
-          display: block;
-        }
-        .latest-table td, .latest-table th {
-          vertical-align: top;
-        }
-      `}</style>
-      <ChallanTable title="Settled Challans" data={challanData.Disposed_data} />
-      <ChallanTable title="Pending Challans" data={challanData.Pending_data} />
+      <div style={{display:'flex',gap:16,marginBottom:12}}>
+        <input
+          type="text"
+          placeholder="Search Vehicle Number"
+          value={search.vehicle}
+          onChange={e => setSearch(s => ({ ...s, vehicle: e.target.value }))}
+          style={{padding:'6px 12px',fontSize:15,borderRadius:4,border:'1px solid #ccc',width:180}}
+        />
+        <input
+          type="text"
+          placeholder="Search Challan Number"
+          value={search.challan}
+          onChange={e => setSearch(s => ({ ...s, challan: e.target.value }))}
+          style={{padding:'6px 12px',fontSize:15,borderRadius:4,border:'1px solid #ccc',width:180}}
+        />
+        <button
+          className="action-btn flat-btn"
+          style={{padding:'6px 16px',fontSize:15,borderRadius:4,border:'1px solid #ccc',background:'#f5f5f5',color:'#222'}}
+          onClick={() => setSortAsc(s => !s)}
+        >
+          Sort Date {sortAsc ? '▲' : '▼'}
+        </button>
+      </div>
+      <ChallanTable title="Settled Challans" data={challanData.Disposed_data} search={search} sortAsc={sortAsc} />
+      <ChallanTable title="Pending Challans" data={challanData.Pending_data} search={search} sortAsc={sortAsc} />
     </div>
   );
 }

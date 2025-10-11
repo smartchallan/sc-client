@@ -1,5 +1,6 @@
 // ...existing imports...
 // ...other imports...
+import LatestChallansTable from "./LatestChallansTable";
 import TrafficLightLoader from "../assets/TrafficLightLoader";
 
 // Fetch all client challans on dashboard load
@@ -38,6 +39,11 @@ const DriverVerification = lazy(() => import("./DriverVerification"));
 const LazyVehicleFastag = lazy(() => import("./VehicleFastag"));
 
 function ClientDashboard() {
+  // Handler for 'View All' in Latest Challans Table
+  React.useEffect(() => {
+    window.handleViewAllChallans = () => setActiveMenu('My Challans');
+    return () => { delete window.handleViewAllChallans; };
+  }, []);
   // User role for sidebar
   const userRole = 'client';
   // Per-row loader state for RTO/Challan API calls
@@ -63,6 +69,7 @@ function ClientDashboard() {
   const [showLoader, setShowLoader] = useState(false);
   // Active menu
   const [activeMenu, setActiveMenu] = useState("Dashboard");
+  const [selectedChallan, setSelectedChallan] = useState(null);
 
   // Modal confirmation logic for RTO/Challan requests
   const handleModalConfirm = async () => {
@@ -319,6 +326,114 @@ function ClientDashboard() {
       .finally(() => setLoadingVehicleChallan(false));
   }, [activeMenu]);
 
+  // Calculate latestChallanRows for LatestChallansTable
+  let latestChallanRows = [];
+  if (Array.isArray(vehicleChallanData)) {
+    let allChallans = [];
+    vehicleChallanData.forEach(item => {
+      if (Array.isArray(item.pending_data)) {
+        item.pending_data.forEach(c => {
+          allChallans.push({ ...c, vehicle_number: item.vehicle_number, statusType: 'Pending' });
+        });
+      }
+      if (Array.isArray(item.disposed_data)) {
+        item.disposed_data.forEach(c => {
+          allChallans.push({ ...c, vehicle_number: item.vehicle_number, statusType: 'Disposed' });
+        });
+      }
+    });
+    // Sort by challan_date_time descending
+    allChallans.sort((a, b) => {
+      const dateA = new Date(a.challan_date_time);
+      const dateB = new Date(b.challan_date_time);
+      return dateB - dateA;
+    });
+    // Take only 5 latest
+    const latestChallans = allChallans.slice(0, 5);
+    if (latestChallans.length === 0) {
+      latestChallanRows = [<tr key="no-challans"><td colSpan={9} style={{textAlign:'center',color:'#888'}}>No challans found.</td></tr>];
+    } else {
+      latestChallanRows = latestChallans.map((c, idx) => (
+        <tr key={`${c.statusType}-${c.vehicle_number}-${c.challan_no}-${idx}`}>
+          <td>{c.vehicle_number}</td>
+          <td>
+            <span title={c.challan_no} style={{cursor:'pointer'}}>
+              {c.challan_no && c.challan_no.length > 10 ? c.challan_no.slice(0,10) + '...' : c.challan_no}
+            </span>
+          </td>
+          <td>
+            <span title={c.challan_date_time} style={{cursor:'pointer'}}>
+              {c.challan_date_time && c.challan_date_time.length > 10 ? c.challan_date_time.slice(0,10) + '...' : c.challan_date_time}
+            </span>
+          </td>
+          <td>
+            {/* Google Maps icon logic */}
+            {(() => {
+              const loc = c.challan_place || c.location || c.challan_location;
+              if (loc && typeof loc === 'string' && loc.trim()) {
+                const openMap = (address) => {
+                  setInfoModal({
+                    open: true,
+                    message: (
+                      <iframe
+                        title="Google Maps"
+                        width="910"
+                        height="500"
+                        style={{ border: 0, borderRadius: 12 }}
+                        src={`https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`}
+                        allowFullScreen
+                      />
+                    )
+                  });
+                };
+                return (
+                  <span
+                    style={{ cursor: 'pointer', color: '#4285F4', fontSize: 24, verticalAlign: 'middle' }}
+                    title="View on Google Maps"
+                    onClick={() => {
+                      // Try original address first
+                      const testImg = new window.Image();
+                      testImg.src = `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(loc)}&zoom=15&size=200x200&key=AIzaSyDUMMYKEY`;
+                      testImg.onload = () => openMap(loc);
+                      testImg.onerror = () => {
+                        // Remove flat/unit from start and retry
+                        const simplified = loc.replace(/^([\w-]+,?\s*)/, '');
+                        openMap(simplified);
+                      };
+                      // Fallback: open original immediately (for embed)
+                      setTimeout(() => openMap(loc), 500);
+                    }}
+                  >
+                    <i className="ri-map-pin-2-fill" />
+                  </span>
+                );
+              }
+              return '-';
+            })()}
+          </td>
+          <td>{Array.isArray(c.offence_details) && c.offence_details.length > 0 ? c.offence_details[0].act : ''}</td>
+          <td style={{ textAlign: "center"}}>{c.fine_imposed}</td>
+          <td><span className={c.challan_status === 'Pending' ? 'status pending' : c.challan_status === 'Disposed' ? 'status paid' : ''}>{c.challan_status}</span></td>
+          <td>
+            <ul style={{ margin: 0, paddingLeft: 18 }}>
+              {Array.isArray(c.offence_details) && c.offence_details.map((o, j) => (
+                <li key={j} className="cell-ellipsis" title={o.name}>{o.name}</li>
+              ))}
+            </ul>
+          </td>
+          <td style={{ textAlign: "center"}}>
+            <button
+              className="action-btn flat-btn"
+              onClick={() => setSelectedChallan(c)}
+            >
+              View Challan
+            </button>
+          </td>
+        </tr>
+      ));
+    }
+  }
+
   return (
     <>
     <ToastContainer position="top-right" autoClose={2000} />
@@ -452,152 +567,11 @@ function ClientDashboard() {
                 </div>
               </div>
             </div>
-            <div className="dashboard-latest">
-              <div className="latest-header">
-                <h2>Latest Challans</h2>
-                <a href="#" className="view-all">View All</a>
-              </div>
-              {/* Challan table from API */}
-              {loadingVehicleChallan ? (
-                <div>Loading challans...</div>
-              ) : vehicleChallanError ? (
-                <div style={{color:'#d32f2f'}}>Error loading challans.</div>
-              ) : (
-                <table className="latest-table" style={{ width: '100%', marginTop: 8, tableLayout: 'fixed' }}>
-                  <colgroup>
-                    <col style={{ width: '10%' }} />
-                    <col style={{ width: '10%' }} />
-                    <col style={{ width: '10%' }} />
-                    <col style={{ width: '6%' }} />
-                    <col style={{ width: '10%' }} />
-                    <col style={{ width: '10%' }} />
-                    <col style={{ width: '10%' }} />
-                  </colgroup>
-                    <thead>
-                      <tr>
-                        <th style={{textAlign:'center'}}>Vehicle Number</th>
-                        <th style={{textAlign:'center'}}>Challan No</th>
-                        <th style={{textAlign:'center'}}>Date/Time</th>
-                        <th style={{textAlign:'center'}}>Location</th>
-                        <th style={{textAlign:'center'}}>Challan Act</th>
-                        <th style={{textAlign:'center'}}>Fine Imposed</th>
-                        <th style={{textAlign:'center'}}>Status</th>
-                        <th style={{textAlign:'center'}}>Offence Details</th>
-                        <th style={{textAlign:'center'}}>Action</th>
-                      </tr>
-                    </thead>
-                  <tbody>
-                    {(() => {
-                      // Collect all challans with vehicle info
-                      let allChallans = [];
-                      if (Array.isArray(vehicleChallanData)) {
-                        vehicleChallanData.forEach(item => {
-                          if (Array.isArray(item.pending_data)) {
-                            item.pending_data.forEach(c => {
-                              allChallans.push({ ...c, vehicle_number: item.vehicle_number, statusType: 'Pending' });
-                            });
-                          }
-                          if (Array.isArray(item.disposed_data)) {
-                            item.disposed_data.forEach(c => {
-                              allChallans.push({ ...c, vehicle_number: item.vehicle_number, statusType: 'Disposed' });
-                            });
-                          }
-                        });
-                      }
-                      // Sort by challan_date_time descending
-                      allChallans.sort((a, b) => {
-                        const dateA = new Date(a.challan_date_time);
-                        const dateB = new Date(b.challan_date_time);
-                        return dateB - dateA;
-                      });
-                      // Take only 5 latest
-                      const latestChallans = allChallans.slice(0, 5);
-                      if (latestChallans.length === 0) {
-                        return <tr><td colSpan={7} style={{textAlign:'center',color:'#888'}}>No challans found.</td></tr>;
-                      }
-                      return latestChallans.map((c, idx) => (
-                        <tr key={`${c.statusType}-${c.vehicle_number}-${c.challan_no}-${idx}`}>
-                          <td>{c.vehicle_number}</td>
-                          <td>
-                            <span title={c.challan_no} style={{cursor:'pointer'}}>
-                              {c.challan_no && c.challan_no.length > 10 ? c.challan_no.slice(0,10) + '...' : c.challan_no}
-                            </span>
-                          </td>
-                          <td>
-                            <span title={c.challan_date_time} style={{cursor:'pointer'}}>
-                              {c.challan_date_time && c.challan_date_time.length > 10 ? c.challan_date_time.slice(0,10) + '...' : c.challan_date_time}
-                            </span>
-                          </td>
-                          <td>
-                            {(() => {
-                              const loc = c.challan_place || c.location || c.challan_location;
-                              if (loc && typeof loc === 'string' && loc.trim()) {
-                                const openMap = (address) => {
-                                  setInfoModal({
-                                    open: true,
-                                    message: (
-                                      <iframe
-                                        title="Google Maps"
-                                        width="910"
-                                        height="500"
-                                        style={{ border: 0, borderRadius: 12 }}
-                                        src={`https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`}
-                                        allowFullScreen
-                                      />
-                                    )
-                                  });
-                                };
-                                return (
-                                  <span
-                                    style={{ cursor: 'pointer', color: '#4285F4', fontSize: 24, verticalAlign: 'middle' }}
-                                    title="View on Google Maps"
-                                    onClick={() => {
-                                      // Try original address first
-                                      const testImg = new window.Image();
-                                      testImg.src = `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(loc)}&zoom=15&size=200x200&key=AIzaSyDUMMYKEY`;
-                                      testImg.onload = () => openMap(loc);
-                                      testImg.onerror = () => {
-                                        // Remove flat/unit from start and retry
-                                        const simplified = loc.replace(/^([\w-]+,?\s*)/, '');
-                                        openMap(simplified);
-                                      };
-                                      // Fallback: open original immediately (for embed)
-                                      setTimeout(() => openMap(loc), 500);
-                                    }}
-                                  >
-                                    <i className="ri-map-pin-2-fill" />
-                                  </span>
-                                );
-                              }
-                              return '-';
-                            })()}
-                          </td>
-                          <td>{Array.isArray(c.offence_details) && c.offence_details.length > 0 ? c.offence_details[0].act : ''}</td>
-                          <td>{c.fine_imposed}</td>
-                          <td><span className={c.challan_status === 'Pending' ? 'status pending' : c.challan_status === 'Disposed' ? 'status paid' : ''}>{c.challan_status}</span></td>
-                          <td>
-                            <ul style={{ margin: 0, paddingLeft: 18 }}>
-                              {Array.isArray(c.offence_details) && c.offence_details.map((o, j) => (
-                                <li key={j} className="cell-ellipsis" title={o.name}>{o.name}</li>
-                              ))}
-                            </ul>
-                          </td>
-                          <td>
-                            <button
-                              className="action-btn flat-btn"
-                              // style={{padding: '12px 32px', fontSize: 18, border: 'none', borderRadius: 6, background: '#f5f5f5', color: '#222', boxShadow: 'none', fontWeight: 600, transition: 'background 0.2s'}}
-                              onClick={() => setInfoModal({ open: true, message: `View Challan: ${c.challan_no}` })}
-                            >
-                              View Challan
-                            </button>
-                          </td>
-                        </tr>
-                      ));
-                    })()}
-                  </tbody>
-                </table>
-              )}
-            </div>
+            <LatestChallansTable
+              latestChallanRows={latestChallanRows}
+              loadingVehicleChallan={loadingVehicleChallan}
+              vehicleChallanError={vehicleChallanError}
+            />
             <div className="dashboard-latest">
               <h2 style={{ fontSize: '1.2rem', marginBottom: 12 }}>Registered Vehicles</h2>
               {loadingClient ? (
@@ -812,6 +786,55 @@ function ClientDashboard() {
           <div style={{marginTop: 10}}><b>Support Hours:</b> Mon - Sat, 9 AM to 6 PM</div>
           <div style={{color: '#b77', marginTop: 4}}>Public holidays: Team is not available. Next working day we will contact you.</div>
         </div>
+      </CustomModal>
+      <CustomModal
+        open={!!selectedChallan}
+        title={selectedChallan ? `Challan Details: ${selectedChallan.challan_no}` : ''}
+        onConfirm={() => setSelectedChallan(null)}
+        onCancel={() => setSelectedChallan(null)}
+        confirmText="Close"
+        cancelText={null}
+      >
+        {selectedChallan && (
+          <div style={{lineHeight:1.7, fontSize:15}}>
+            <div><b>Status:</b> {selectedChallan.challan_status}</div>
+            <div><b>Vehicle Number:</b> {selectedChallan.vehicle_number}</div>
+            <div><b>Challan No:</b> {selectedChallan.challan_no}</div>
+            <div><b>Date/Time:</b> {selectedChallan.challan_date_time}</div>
+            <div><b>Location:</b> {selectedChallan.challan_place || selectedChallan.location || selectedChallan.challan_location}</div>
+            <div><b>Owner Name:</b> {selectedChallan.owner_name}</div>
+            <div><b>Driver Name:</b> {selectedChallan.driver_name}</div>
+            <div><b>Name of Violator:</b> {selectedChallan.name_of_violator}</div>
+            <div><b>Department:</b> {selectedChallan.department}</div>
+            <div><b>State Code:</b> {selectedChallan.state_code}</div>
+            <div><b>RTO District Name:</b> {selectedChallan.rto_distric_name}</div>
+            <div><b>Remark:</b> {selectedChallan.remark}</div>
+            <div><b>Document Impounded:</b> {selectedChallan.document_impounded}</div>
+            <div><b>Sent to Court On:</b> {selectedChallan.sent_to_court_on}</div>
+            <div><b>Sent to Reg Court:</b> {selectedChallan.sent_to_reg_court}</div>
+            <div><b>Sent to Virtual Court:</b> {selectedChallan.sent_to_virtual_court}</div>
+            <div><b>Court Name:</b> {selectedChallan.court_name}</div>
+            <div><b>Court Address:</b> {selectedChallan.court_address}</div>
+            <div><b>Date of Proceeding:</b> {selectedChallan.date_of_proceeding}</div>
+            <div><b>DL No:</b> {selectedChallan.dl_no}</div>
+            {selectedChallan.challan_status === 'Disposed' && (
+              <>
+                <div><b>Receipt No:</b> {selectedChallan.receipt_no}</div>
+                <div><b>Received Amount:</b> {selectedChallan.received_amount}</div>
+              </>
+            )}
+            <div><b>Fine Imposed:</b> {selectedChallan.fine_imposed}</div>
+            <div><b>Amount of Fine Imposed:</b> {selectedChallan.amount_of_fine_imposed}</div>
+            <div><b>Act:</b> {Array.isArray(selectedChallan.offence_details) && selectedChallan.offence_details.length > 0 ? selectedChallan.offence_details[0].act : ''}</div>
+            <div><b>Offence Details:</b>
+              <ul style={{margin:0,paddingLeft:18}}>
+                {Array.isArray(selectedChallan.offence_details) && selectedChallan.offence_details.map((o, j) => (
+                  <li key={j} className="cell-ellipsis" title={o.name}>{o.name}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
       </CustomModal>
     </div>
     </>
