@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./ClientDashboard.css";
+import CustomModal from "./CustomModal";
 
 export default function VehicleDataTable({ clientId }) {
   // Helper to format expiry columns with color logic (red <=30 days, amber <=60 days, default otherwise)
@@ -23,7 +24,7 @@ export default function VehicleDataTable({ clientId }) {
     if (!useColor) return formatted;
     const now = new Date();
     const diffDays = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
-  let color = '';
+  let color = 'green';
   let fontWeight = 'bold';
   if (diffDays <= 60) color = 'red';
   else if (diffDays <= 90) color = 'orange';
@@ -70,6 +71,7 @@ export default function VehicleDataTable({ clientId }) {
       });
   }, [clientId]);
 
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
   return (
     <div className="dashboard-latest" style={{marginTop:32}}>
       <h2 style={{fontSize:'1.2rem', marginBottom:12}}>Vehicle Data</h2>
@@ -84,11 +86,12 @@ export default function VehicleDataTable({ clientId }) {
             <th>Road Tax Exp</th>
             <th>Fitness Exp</th>
             <th>Pollution Exp</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
           {vehicleData.length === 0 ? (
-            <tr><td colSpan={6}>No vehicle data found.</td></tr>
+            <tr><td colSpan={7}>No vehicle data found.</td></tr>
           ) : (
             vehicleData.map((v, idx) => (
               <tr key={v.rc_regn_no || idx}>
@@ -98,11 +101,46 @@ export default function VehicleDataTable({ clientId }) {
                 <td>{formatExpiry(v.road_tax_exp || v.rc_tax_upto, true)}</td>
                 <td>{formatExpiry(v.fitness_exp || v.rc_fit_upto, true)}</td>
                 <td>{formatExpiry(v.pollution_exp || v.rc_pucc_upto, true)}</td>
+                <td style={{textAlign:'center'}}>
+                  <button className="action-btn flat-btn" style={{padding:'4px 10px',fontSize:14}} onClick={() => setSelectedVehicle(v)}>
+                    View Vehicle
+                  </button>
+                </td>
               </tr>
             ))
           )}
         </tbody>
       </table>
+      <CustomModal
+        open={!!selectedVehicle}
+        title={selectedVehicle ? `Vehicle RTO Data: ${selectedVehicle.rc_regn_no}` : ''}
+        onConfirm={() => setSelectedVehicle(null)}
+        onCancel={() => setSelectedVehicle(null)}
+        confirmText="Close"
+        cancelText={null}
+      >
+        {selectedVehicle && (
+          <div style={{lineHeight:1.7, fontSize:15}}>
+            <div><b>Vehicle No:</b> {selectedVehicle.rc_regn_no}</div>
+            <div><b>Owner Name:</b> {selectedVehicle.rc_owner_name}</div>
+            <div><b>Registration Date:</b> {formatExpiry(selectedVehicle.rc_regn_dt, false)}</div>
+            <div><b>Insurance Expiry:</b> {formatExpiry(selectedVehicle.insurance_exp || selectedVehicle.rc_insurance_upto, false)}</div>
+            <div><b>Road Tax Expiry:</b> {formatExpiry(selectedVehicle.road_tax_exp || selectedVehicle.rc_tax_upto, false)}</div>
+            <div><b>Fitness Expiry:</b> {formatExpiry(selectedVehicle.fitness_exp || selectedVehicle.rc_fit_upto, false)}</div>
+            <div><b>Pollution Expiry:</b> {formatExpiry(selectedVehicle.pollution_exp || selectedVehicle.rc_pucc_upto, false)}</div>
+            <div><b>Chassis No:</b> {selectedVehicle.rc_chasi_no}</div>
+            <div><b>Engine No:</b> {selectedVehicle.rc_engine_no}</div>
+            <div><b>Vehicle Class:</b> {selectedVehicle.rc_vh_class_desc}</div>
+            <div><b>Fuel Type:</b> {selectedVehicle.rc_fuel_desc}</div>
+            <div><b>Maker:</b> {selectedVehicle.rc_maker_desc}</div>
+            <div><b>Model:</b> {selectedVehicle.rc_maker_model}</div>
+            <div><b>RTO:</b> {selectedVehicle.rc_off_cd}</div>
+            <div><b>State:</b> {selectedVehicle.rc_state_cd}</div>
+            <div><b>Mobile No:</b> {selectedVehicle.rc_mobile_no}</div>
+            <div><b>Address:</b> {selectedVehicle.rc_present_address}</div>
+          </div>
+        )}
+      </CustomModal>
     </div>
   );
 }

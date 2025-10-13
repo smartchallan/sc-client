@@ -408,7 +408,7 @@ function ClientDashboard() {
                   </span>
                 );
               }
-              return '-';
+              return 'Not Available';
             })()}
           </td>
           <td>{Array.isArray(c.offence_details) && c.offence_details.length > 0 ? c.offence_details[0].act : ''}</td>

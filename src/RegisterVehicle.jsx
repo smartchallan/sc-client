@@ -223,6 +223,7 @@ export default function RegisterVehicle() {
                     const handleInactivate = () => setModal({ open: true, action: 'inactivate', vehicle: v });
                     const handleActivate = () => setModal({ open: true, action: 'activate', vehicle: v });
                     const handleDelete = () => setModal({ open: true, action: 'delete', vehicle: v });
+                    const setInfoModal = (vehicle, lastAction) => setModal({ open: true, action: 'info', vehicle: { ...vehicle, lastAction } });
                     return (
                       <tr key={v.id || v._id || idx}>
                         <td>{v.vehicle_number || 'Not Available'}</td>
@@ -234,11 +235,10 @@ export default function RegisterVehicle() {
                           <div style={{display:'flex',gap:8}}>
                             <button
                               className="action-btn flat-btn"
-                              style={{padding: '12px 32px', fontSize: 18, border: 'none', borderRadius: 6, background: '#f5f5f5', color: '#222', boxShadow: 'none', fontWeight: 600, opacity: status === 'INACTIVE' ? 0.6 : 1, cursor: status === 'INACTIVE' ? 'not-allowed' : 'pointer', transition: 'background 0.2s'}}
                               disabled={status === 'INACTIVE' || rtoLoadingId === v.id}
                               onClick={() => {
                                 if (status === 'INACTIVE') {
-                                  setModal({ open: true, action: 'info', vehicle: v });
+                                  setInfoModal(v, 'getRTO');
                                 } else {
                                   setModal({ open: true, action: 'getRTO', vehicle: v });
                                 }
@@ -248,11 +248,10 @@ export default function RegisterVehicle() {
                             </button>
                             <button
                               className="action-btn flat-btn"
-                              style={{padding: '12px 32px', fontSize: 18, border: 'none', borderRadius: 6, background: '#f5f5f5', color: '#222', boxShadow: 'none', fontWeight: 600, opacity: status === 'INACTIVE' ? 0.6 : 1, cursor: status === 'INACTIVE' ? 'not-allowed' : 'pointer', transition: 'background 0.2s'}}
                               disabled={status === 'INACTIVE' || challanLoadingId === v.id}
                               onClick={() => {
                                 if (status === 'INACTIVE') {
-                                  setModal({ open: true, action: 'info', vehicle: v });
+                                  setInfoModal(v, 'getChallan');
                                 } else {
                                   setModal({ open: true, action: 'getChallan', vehicle: v });
                                 }
@@ -394,7 +393,17 @@ export default function RegisterVehicle() {
                     <span style={{color:'red', fontWeight:600}}>This action is non-reversible.<br/>Your vehicle and all related RTO, challan data will be deleted permanently.</span>
                   )}
                   {modal.action === 'info' && (
-                    <span style={{color:'#d35400', fontWeight:500}}>Please activate your vehicle first to get RTO and Challan data.</span>
+                    <span style={{color:'#d35400', fontWeight:500}}>
+                      {modal.vehicle && modal.vehicle.lastAction === 'getRTO' && (
+                        'Selected vehicle is currently inactive. Please activate first to get RTO data.'
+                      )}
+                      {modal.vehicle && modal.vehicle.lastAction === 'getChallan' && (
+                        'Selected vehicle is currently inactive. Please activate first to get Challan data.'
+                      )}
+                      {modal.vehicle && !modal.vehicle.lastAction && (
+                        'Please activate your vehicle first to get RTO and Challan data.'
+                      )}
+                    </span>
                   )}
                 </CustomModal>
               </tbody>
