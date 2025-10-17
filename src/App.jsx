@@ -1,6 +1,6 @@
 import scLogo from './assets/sc-logo.png';
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ClientDashboard from './client/ClientDashboard';
@@ -63,10 +63,18 @@ export function LoginPage() {
         await delay(2000);
         navigate('/adminsmartboard', { replace: true });
       } else if (data.user && data.user.user.role === 'client') {
-        localStorage.setItem('sc_user', JSON.stringify(data.user));
+        localStorage.setItem('sc_user', JSON.stringify({
+          user: data.user.user,
+          token: data.token
+        }));
         console.log('Redirecting to /smartboard');
         await delay(2000);
-        navigate('/smartboard', { replace: true });
+        try {
+          navigate('/smartboard', { replace: true });
+        } catch (e) {
+          // HashRouter expects hash based navigation
+          try { window.location.hash = '/smartboard'; } catch (_) { window.location.replace('/#/smartboard'); }
+        }
       } else {
         console.log('User role is not recognized or user object missing:', data.user);
       }
