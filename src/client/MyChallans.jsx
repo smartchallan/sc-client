@@ -5,6 +5,7 @@ import CustomModal from "./CustomModal";
 function ChallanTable({ title, data }) {
   const [showFull, setShowFull] = useState({});
   const [selectedChallan, setSelectedChallan] = useState(null);
+  const [visibleCount, setVisibleCount] = useState(5);
   const handleShowFull = (rowIdx, col) => {
     setShowFull(prev => ({ ...prev, [rowIdx + '-' + col]: !prev[rowIdx + '-' + col] }));
   };
@@ -19,12 +20,20 @@ function ChallanTable({ title, data }) {
     const dateB = new Date(b.challan_date_time.replace(/(\d{2})-(\d{2})-(\d{4})/, '$2/$1/$3'));
     return arguments[0]?.sortAsc ? dateA - dateB : dateB - dateA;
   });
+  // Only show up to visibleCount rows; allow loading more
+  const limited = filtered.slice(0, visibleCount);
+  const hasMore = filtered.length > limited.length;
+
+  const countColor = title && title.toLowerCase().includes('pending') ? '#d9534f' : (title && (title.toLowerCase().includes('settled') || title.toLowerCase().includes('disposed')) ? '#28a745' : '#666');
   return (
     <div className="dashboard-latest" style={{ marginBottom: 32, overflowX: 'auto' }}>
-      <h2 style={{ fontSize: '1.2rem', marginBottom: 12 }}>{title}</h2>
+      <h2 style={{ fontSize: '1.2rem', marginBottom: 12 }}>
+        {title} <span style={{fontSize:21, color: countColor, marginLeft:8, fontWeight:600}}>({filtered.length})</span>
+      </h2>
       {filtered.length === 0 ? (
         <div style={{ color: '#888' }}>No challans found.</div>
       ) : (
+        <>
         <table className="latest-table" style={{ width: '900px', minWidth: '100%', marginTop: 8, tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: '12%' }} />
@@ -49,7 +58,7 @@ function ChallanTable({ title, data }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((c, idx) => (
+            {limited.map((c, idx) => (
               <tr key={c.challan_no || idx}>
                 <td>
                   <div className="cell-ellipsis" title={c.vehicle_number}>{c.vehicle_number || '-'}</div>
@@ -110,6 +119,14 @@ function ChallanTable({ title, data }) {
             ))}
           </tbody>
         </table>
+        <div style={{marginTop:12, textAlign:'center'}}>
+          {hasMore ? (
+            <button className="action-btn flat-btn" onClick={() => setVisibleCount(v => v + 5)}>Load more challans</button>
+          ) : (
+            <button className="action-btn flat-btn" disabled style={{opacity:0.7}}>No more challans</button>
+          )}
+        </div>
+        </>
       )}
       <CustomModal
         open={!!selectedChallan}
@@ -257,8 +274,8 @@ export default function MyChallans() {
           Sort Date {sortAsc ? '▲' : '▼'}
         </button>
       </div>
-      <ChallanTable title="Settled Challans" data={challanData.Disposed_data} search={search} sortAsc={sortAsc} />
-      <ChallanTable title="Pending Challans" data={challanData.Pending_data} search={search} sortAsc={sortAsc} />
+  <ChallanTable title="Pending Challans" data={challanData.Pending_data} search={search} sortAsc={sortAsc} />
+  <ChallanTable title="Settled Challans" data={challanData.Disposed_data} search={search} sortAsc={sortAsc} />
     </div>
   );
 }
