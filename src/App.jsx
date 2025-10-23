@@ -20,6 +20,7 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -95,12 +96,10 @@ export function LoginPage() {
         <div className="container">
           <div className="header-content">
             <div className="logo">
-              {/* <div className="logo-icon">
-                <i className="ri-car-line"></i>
-              </div> */}
-              {/* <div className="logo-text">Smart<span>Challan</span></div> */}
-              <img src={scLogo} alt="App Logo" style={{height:70, marginBottom:8}} />
+              <img src={scLogo} alt="App Logo" />
             </div>
+            
+            {/* Desktop Navigation */}
             <nav>
               <ul>
                 <li><a href="https://www.smartchallan.com/">Home</a></li>
@@ -110,9 +109,38 @@ export function LoginPage() {
                 <li><a href="#" style={{ color: '#0072ff' }}>Login</a></li>
               </ul>
             </nav>
+            
+            {/* Burger Menu Button */}
+            <button 
+              className={`burger-menu ${mobileMenuOpen ? 'active' : ''}`}
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle menu"
+            >
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
           </div>
         </div>
       </header>
+      
+      {/* Mobile Navigation Overlay */}
+      <div 
+        className={`nav-overlay ${mobileMenuOpen ? 'active' : ''}`}
+        onClick={() => setMobileMenuOpen(false)}
+      ></div>
+      
+      {/* Mobile Navigation Menu */}
+      <nav className={`mobile-nav ${mobileMenuOpen ? 'active' : ''}`}>
+        <ul>
+          <li><a href="https://www.smartchallan.com/" onClick={() => setMobileMenuOpen(false)}>Home</a></li>
+          <li><a href="#services" onClick={() => setMobileMenuOpen(false)}>Services</a></li>
+          <li><a href="#" onClick={() => setMobileMenuOpen(false)}>About Us</a></li>
+          <li><a href="#" onClick={() => setMobileMenuOpen(false)}>Contact</a></li>
+          <li><a href="#" style={{ color: '#0072ff' }} onClick={() => setMobileMenuOpen(false)}>Login</a></li>
+        </ul>
+      </nav>
+      
       <main>
         <section className="hero">
           <div className="container">

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./ClientDashboard.css";
 import CustomModal from "./CustomModal";
 
-export default function VehicleDataTable({ clientId }) {
+export default function VehicleDataTable({ clientId, onViewAll, limit = 10, searchText = '' }) {
   // Helper to format expiry columns with color logic (red <=30 days, amber <=60 days, default otherwise)
   const formatExpiry = (dateStr, useColor = true) => {
     if (!dateStr || dateStr === '-') return '-';
@@ -62,6 +62,15 @@ export default function VehicleDataTable({ clientId }) {
             }
           }
         }
+        // Sort records by created date descending (newest first). Support several common field names.
+        const getCreatedTime = (item) => {
+          // Prefer explicit `created_at` field as source of truth
+          if (item && item.created_at) return new Date(item.created_at).getTime();
+          // Fallback to registration date if created_at is missing
+          if (item && item.rc_regn_dt) return new Date(item.rc_regn_dt).getTime();
+          return 0;
+        };
+        arr.sort((a, b) => (getCreatedTime(b) || 0) - (getCreatedTime(a) || 0));
         setVehicleData(arr);
         setLoading(false);
       })
@@ -72,12 +81,26 @@ export default function VehicleDataTable({ clientId }) {
   }, [clientId]);
 
   const [selectedVehicle, setSelectedVehicle] = useState(null);
+  // Filter by vehicle number (case-insensitive) then apply optional limit (0 means no limit).
+  const filtered = searchText.trim() === '' ? vehicleData : vehicleData.filter(v => (v.rc_regn_no || '').toString().toUpperCase().includes(searchText.trim().toUpperCase()));
+  const displayed = limit > 0 ? filtered.slice(0, limit) : filtered;
+
   return (
     <div className="dashboard-latest" style={{marginTop:32}}>
-      <h2 style={{fontSize:'1.2rem', marginBottom:12}}>Vehicle Data</h2>
-      {loading && <div>Loading vehicle data...</div>}
-      {error && <div style={{color:'red'}}>{error}</div>}
-      <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
+      <div className="latest-header">
+          <h2>Vehicle RTO Data</h2>
+        </div>
+  {loading && <div>Loading vehicle data...</div>}
+  {error && <div style={{color:'red'}}>{error}</div>}
+  <div className="table-caption-row">
+    <div />
+    {limit > 0 ? (
+      <div className="table-caption">Showing {displayed.length} of {filtered.length}{searchText ? ` (filtered from ${vehicleData.length})` : ''}</div>
+    ) : (
+      <div className="table-total">Total RTO Records fetched: {filtered.length}{searchText ? ` (filtered from ${vehicleData.length})` : ''}</div>
+    )}
+  </div>
+  <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
         <thead>
           <tr>
             <th>Vehicle No.</th>
@@ -90,10 +113,10 @@ export default function VehicleDataTable({ clientId }) {
           </tr>
         </thead>
         <tbody>
-          {vehicleData.length === 0 ? (
+          {displayed.length === 0 ? (
             <tr><td colSpan={7}>No vehicle data found.</td></tr>
           ) : (
-            vehicleData.map((v, idx) => (
+            displayed.map((v, idx) => (
               <tr key={v.rc_regn_no || idx}>
                 <td>{v.rc_regn_no || '-'}</td>
                 <td>{formatExpiry(v.rc_regn_dt, false)}</td>
@@ -111,6 +134,27 @@ export default function VehicleDataTable({ clientId }) {
           )}
         </tbody>
       </table>
+      {/* If more than 10 records exist show a View All button that navigates to the full Vehicle RTO Data page */}
+      {(limit > 0 && vehicleData.length > limit) && (
+        <div style={{ textAlign: 'right', marginTop: 12 }}>
+          <button
+            className="action-btn"
+            onClick={e => {
+              e.preventDefault();
+              // Prefer a provided handler (prop) to navigate; fall back to global window handler for backward compatibility
+              if (typeof onViewAll === 'function') return onViewAll();
+              if (typeof window !== 'undefined' && window.handleViewAllRtoData) {
+                return window.handleViewAllRtoData();
+              }
+              // As a last resort, attempt to set a menu hash (non-breaking fallback)
+              try { window.location.hash = '#Vehicle%20RTO%20Data'; } catch (_) {}
+            }}
+          >
+            View All
+          </button>
+        </div>
+      )}
+
       <CustomModal
         open={!!selectedVehicle}
         title={selectedVehicle ? `Vehicle RTO Data: ${selectedVehicle.rc_regn_no}` : ''}

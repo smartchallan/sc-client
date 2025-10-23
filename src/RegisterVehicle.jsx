@@ -15,10 +15,12 @@ export default function RegisterVehicle() {
   // Registration form state
   const [registerField, setRegisterField] = useState("");
   const [registerValue, setRegisterValue] = useState("");
+  const [registerError, setRegisterError] = useState("");
   // Table search/filter state
   const [searchValue, setSearchValue] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sortDesc, setSortDesc] = useState(true); // true => newest first
   const [vehicles, setVehicles] = useState([]);
   const [fetchingVehicles, setFetchingVehicles] = useState(false);
   const [modal, setModal] = useState({ open: false, action: null, vehicle: null });
@@ -69,6 +71,15 @@ export default function RegisterVehicle() {
     if (!registerField || !registerValue) {
       toast.error("Please select a field and enter a value.");
       return;
+    }
+    // Additional validation for vehicle number field
+    if (registerField === 'vehicle_number') {
+      const re = /^[A-Z0-9]{5,11}$/; // input is uppercased
+      if (!re.test(registerValue)) {
+        setRegisterError('Vehicle number must be 5-11 alphanumeric characters (no spaces).');
+        toast.error('Invalid vehicle number.');
+        return;
+      }
     }
     setLoading(true);
     try {
@@ -123,7 +134,14 @@ export default function RegisterVehicle() {
             >
               <option value="">Select Field</option>
               {FIELD_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                <option
+                  key={opt.value}
+                  value={opt.value}
+                  disabled={opt.value !== 'vehicle_number'}
+                  style={opt.value !== 'vehicle_number' ? { color: '#999' } : {}}
+                >
+                  {opt.label}
+                </option>
               ))}
             </select>
           </div>
@@ -134,24 +152,43 @@ export default function RegisterVehicle() {
                 type="text"
                 id="field_value"
                 name="field_value"
-                className="form-control"
+                className={"form-control" + (registerField === 'vehicle_number' ? (registerError ? ' input-invalid' : (registerValue.length >= 5 ? ' input-valid' : '')) : '')}
                 value={registerValue}
-                onChange={e => setRegisterValue(e.target.value.toUpperCase())}
+                onChange={e => {
+                  const v = e.target.value.toUpperCase();
+                  setRegisterValue(v);
+                  // validate vehicle number format when that field is selected
+                  if (registerField === 'vehicle_number') {
+                    const re = /^[A-Z0-9]{0,11}$/; // allow partial input up to 11 for UX
+                    if (!re.test(v)) {
+                      setRegisterError('Only alphanumeric characters allowed (max 11).');
+                    } else if (v.length > 0 && (v.length < 5 || v.length > 11)) {
+                      setRegisterError('Vehicle number must be 5-11 characters long.');
+                    } else {
+                      setRegisterError('');
+                    }
+                  } else {
+                    setRegisterError('');
+                  }
+                }}
                 style={{textTransform: 'uppercase'}}
                 placeholder={`Enter ${FIELD_OPTIONS.find(f => f.value === registerField)?.label?.toLowerCase()}`}
               />
+              {registerField === 'vehicle_number' && registerError && (
+                <div style={{color: 'red', marginTop: 6, fontSize: 13}}>{registerError}</div>
+              )}
             </div>
           )}
           <div className="button-group" style={{width: '100%'}}>
-            <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? "Adding..." : "Add New Vehicle"}</button>
+            <button type="submit" className="btn btn-primary" disabled={loading || !!registerError}>{loading ? "Adding..." : "Add New Vehicle"}</button>
           </div>
         </form>
       </div>
       {/* Vehicle table below form */}
 
       <div className="dashboard-latest">
-        <div style={{marginTop: 32}}>
-          <h2 style={{fontSize: '1.2rem', marginBottom: 12}}>Registered Vehicles</h2>
+          <div style={{marginTop: 32}}>
+          <h2 style={{fontSize: '1.2rem', marginBottom: 12}}>Registered Vehicles {vehicles && vehicles.length ? `(${vehicles.length})` : ''}</h2>
           {/* Search and status filter controls */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
             <input
@@ -188,8 +225,8 @@ export default function RegisterVehicle() {
                   <th>Status</th>
                   <th>
                     Registered At
-                    <span style={{marginLeft:6, cursor:'pointer', fontSize:16}} onClick={() => setLoading(!loading)}>
-                      {loading ? <i className="ri-arrow-down-s-line" title="Sort: Newest First"></i> : <i className="ri-arrow-up-s-line" title="Sort: Oldest First"></i>}
+                    <span style={{marginLeft:6, cursor:'pointer', fontSize:16}} onClick={() => setSortDesc(s => !s)}>
+                      {sortDesc ? <i className="ri-arrow-down-s-line" title="Sort: Newest First"></i> : <i className="ri-arrow-up-s-line" title="Sort: Oldest First"></i>}
                     </span>
                   </th>
                   <th>Data</th>
@@ -212,7 +249,7 @@ export default function RegisterVehicle() {
                   .sort((a, b) => {
                     const dateA = a.registered_at ? new Date(a.registered_at) : new Date(0);
                     const dateB = b.registered_at ? new Date(b.registered_at) : new Date(0);
-                    return loading ? dateB - dateA : dateA - dateB;
+                    return sortDesc ? dateB - dateA : dateA - dateB;
                   })
                   .map((v, idx) => {
                     let status = (v.status || 'Not Available').toUpperCase();

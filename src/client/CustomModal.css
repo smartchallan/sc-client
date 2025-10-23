@@ -15,7 +15,7 @@
   min-width: 320px;
   max-width: 90vw;
   text-align: center;
-  animation: modalIn 0.2s;
+  animation: modalIn 0.22s cubic-bezier(.2,.9,.3,1);
 }
 
 @media (max-width: 900px) {
@@ -50,6 +50,36 @@
 @keyframes modalIn {
   from { transform: scale(0.95); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
+}
+.custom-modal-overlay {
+  animation: overlayFade 0.18s ease;
+}
+@keyframes overlayFade {
+  from { background: rgba(0,0,0,0); }
+  to { background: rgba(0,0,0,0.25); }
+}
+.custom-modal-icon {
+  width: 56px;
+  height: 56px;
+  margin: -36px auto 8px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  font-size: 26px;
+  color: #ff5252;
+  animation: iconPop 0.28s cubic-bezier(.2,.9,.3,1);
+}
+@keyframes iconPop {
+  from { transform: translateY(-8px) scale(0.9); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+.custom-modal-desc {
+  color: #555;
+  margin-bottom: 12px;
+  font-size: 0.98rem;
 }
 .custom-modal-title {
   font-size: 1.2rem;

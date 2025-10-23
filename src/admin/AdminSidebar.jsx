@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { getInitials } from "../utils/getInitials";
 import "./AdminDashboard.css";
+import CustomModal from "../client/CustomModal";
 
 function AdminSidebar({ role, onMenuClick, activeMenu }) {
+  const [logoutOpen, setLogoutOpen] = useState(false);
   // Get logged in user from localStorage
   let userName = "John Smith";
   let initials = "JS";
@@ -33,11 +35,16 @@ function AdminSidebar({ role, onMenuClick, activeMenu }) {
         { icon: "ri-logout-box-r-line", label: "Logout", logout: true },
       ];
 
-  const handleLogout = () => {
+  const handleLogout = () => setLogoutOpen(true);
+
+  const confirmLogout = () => {
     localStorage.clear();
     sessionStorage.clear();
-    window.location.href = "/";
+    setLogoutOpen(false);
+    window.location.replace("/");
   };
+
+  const cancelLogout = () => setLogoutOpen(false);
 
   return (
     <aside className="sidebar" style={{minWidth: '270px'}}>
@@ -74,6 +81,8 @@ function AdminSidebar({ role, onMenuClick, activeMenu }) {
             </span>
         <span className="user-role">{role}</span>
       </div>
+      <CustomModal open={logoutOpen} title="Confirm logout" description="Are you sure you want to sign out? Any unsaved changes will be lost." icon="ri-logout-box-r-line" onConfirm={confirmLogout} onCancel={cancelLogout} confirmText="Logout" cancelText="Stay">
+      </CustomModal>
     </aside>
   );
 }

@@ -26,23 +26,38 @@ import MyBilling from "./MyBilling";
 import UserSettings from "./UserSettings";
 import CustomModal from "./CustomModal";
 
-// Get user info from localStorage
-const user = (() => {
-  try {
-    return JSON.parse(localStorage.getItem('sc_user')) || {};
-  } catch {
-    return {};
-  }
-})();
+// NOTE: do not read `sc_user` at module load time (causes stale user after login)
+// ClientDashboard will read `sc_user` from localStorage when the component mounts.
 
 const DriverVerification = lazy(() => import("./DriverVerification"));
 const LazyVehicleFastag = lazy(() => import("./VehicleFastag"));
 
 function ClientDashboard() {
+  // Read current logged-in user from localStorage when component mounts.
+  const [user, setUser] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('sc_user')) || {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Keep `user` in sync if other tabs update localStorage
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === 'sc_user') {
+        try { setUser(JSON.parse(e.newValue) || {}); } catch { setUser({}); }
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
   // Handler for 'View All' in Latest Challans Table
   React.useEffect(() => {
-    window.handleViewAllChallans = () => setActiveMenu('My Challans');
-    return () => { delete window.handleViewAllChallans; };
+    window.handleViewAllChallans = () => setActiveMenu('Vehicle Challan Data');
+    // Also provide a handler for Vehicle RTO Data view all from VehicleDataTable
+    window.handleViewAllRtoData = () => setActiveMenu('Vehicle RTO Data');
+    return () => { delete window.handleViewAllChallans; delete window.handleViewAllRtoData; };
   }, []);
   // User role for sidebar
   const userRole = 'client';
@@ -65,6 +80,11 @@ function ClientDashboard() {
   const [vehicleChallanData, setVehicleChallanData] = useState([]);
   const [loadingVehicleChallan, setLoadingVehicleChallan] = useState(false);
   const [vehicleChallanError, setVehicleChallanError] = useState("");
+  // Vehicle RTO data for expiry tracking
+  const [vehicleRtoData, setVehicleRtoData] = useState([]);
+  const [loadingVehicleRto, setLoadingVehicleRto] = useState(false);
+  // Vehicle search text (lifted state so MyVehicles can render the input and VehicleDataTable can filter)
+  const [vehicleSearchText, setVehicleSearchText] = useState('');
   // Loader state
   const [showLoader, setShowLoader] = useState(false);
   // Active menu
@@ -166,6 +186,124 @@ function ClientDashboard() {
     };
     fetchData();
   }, [user]);
+
+  // Fetch vehicle RTO data for expiry tracking
+  useEffect(() => {
+    const fetchVehicleRtoData = async () => {
+      const clientId = user && user.user && (user.user.id || user.user._id || user.user.client_id);
+      if (!clientId) return;
+
+      setLoadingVehicleRto(true);
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+      
+      try {
+        const res = await fetch(`${baseUrl}/getvehiclertodata?clientId=${clientId}`);
+        const data = await res.json();
+        let rtoData = [];
+        if (Array.isArray(data)) {
+          rtoData = data.map(item => item.rto_data && item.rto_data.VehicleDetails ? item.rto_data.VehicleDetails : null).filter(Boolean);
+        } else if (Array.isArray(data.vehicleDetails)) {
+          rtoData = data.vehicleDetails;
+        }
+        setVehicleRtoData(rtoData);
+      } catch (error) {
+        console.error("Failed to fetch vehicle RTO data:", error);
+        setVehicleRtoData([]);
+      } finally {
+        setLoadingVehicleRto(false);
+      }
+    };
+    
+    fetchVehicleRtoData();
+  }, [user]);
+
+  // Calculate expiry statistics with color-based categorization (matching VehicleDataTable logic)
+  const calculateExpiryStats = () => {
+    if (!Array.isArray(vehicleRtoData)) return { 
+      red: { pollution: 0, insurance: 0, roadTax: 0, fitness: 0, total: 0 },
+      orange: { pollution: 0, insurance: 0, roadTax: 0, fitness: 0, total: 0 },
+      green: { pollution: 0, insurance: 0, roadTax: 0, fitness: 0, total: 0 },
+      total: { pollution: 0, insurance: 0, roadTax: 0, fitness: 0, total: 0 }
+    };
+    
+    const now = new Date();
+    
+    const parseDate = (dateStr) => {
+      if (!dateStr || dateStr === '-') return null;
+      
+      // Handle different date formats
+      if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(dateStr)) {
+        return new Date(dateStr.replace(/-/g, ' '));
+      } else if (/\d{2}-\d{2}-\d{4}/.test(dateStr)) {
+        const [day, month, year] = dateStr.split('-');
+        return new Date(`${year}-${month}-${day}`);
+      } else if (/\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+        return new Date(dateStr);
+      }
+      return new Date(dateStr);
+    };
+    
+    const getExpiryCategory = (dateStr) => {
+      const date = parseDate(dateStr);
+      if (!date || isNaN(date.getTime())) return null;
+      const diffDays = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
+      
+      if (diffDays <= 60) return 'red';
+      else if (diffDays <= 90) return 'orange';
+      else return 'green';
+    };
+    
+    let stats = {
+      red: { pollution: 0, insurance: 0, roadTax: 0, fitness: 0, total: 0 },
+      orange: { pollution: 0, insurance: 0, roadTax: 0, fitness: 0, total: 0 },
+      green: { pollution: 0, insurance: 0, roadTax: 0, fitness: 0, total: 0 },
+      total: { pollution: 0, insurance: 0, roadTax: 0, fitness: 0, total: 0 }
+    };
+    
+    vehicleRtoData.forEach(vehicle => {
+      // Pollution expiry
+      const pollutionCategory = getExpiryCategory(vehicle.pollution_exp);
+      if (pollutionCategory) {
+        stats[pollutionCategory].pollution++;
+        stats.total.pollution++;
+      }
+      
+      // Insurance expiry
+      const insuranceCategory = getExpiryCategory(vehicle.insurance_exp);
+      if (insuranceCategory) {
+        stats[insuranceCategory].insurance++;
+        stats.total.insurance++;
+      }
+      
+      // Road tax expiry
+      const roadTaxCategory = getExpiryCategory(vehicle.road_tax_exp);
+      if (roadTaxCategory) {
+        stats[roadTaxCategory].roadTax++;
+        stats.total.roadTax++;
+      }
+      
+      // Fitness expiry
+      const fitnessCategory = getExpiryCategory(vehicle.fitness_exp);
+      if (fitnessCategory) {
+        stats[fitnessCategory].fitness++;
+        stats.total.fitness++;
+      }
+    });
+    
+    // Calculate totals for each category
+    Object.keys(stats).forEach(category => {
+      if (category !== 'total') {
+        stats[category].total = stats[category].pollution + stats[category].insurance + 
+                               stats[category].roadTax + stats[category].fitness;
+      }
+    });
+    
+    stats.total.total = stats.total.pollution + stats.total.insurance + 
+                       stats.total.roadTax + stats.total.fitness;
+    
+    return stats;
+  };
+
   // Draw charts for stat cards
   useEffect(() => {
     if (activeMenu !== "Dashboard") return;
@@ -216,39 +354,34 @@ function ClientDashboard() {
             datasets: [{
               label: 'Active Challans',
               data: [activePendingCount, activeDisposedCount],
-              backgroundColor: ['#ffa726', '#66bb6a'],
+              backgroundColor: ['#e74c3c', '#66bb6a'],
             }],
           },
           options: {
             plugins: { legend: { display: true } }
           }
         });
-        // Challans Fetched (spider/radar chart: pending vs disposed)
+        // Vehicle Expiry Statistics (bar chart: pollution, insurance, road tax, fitness)
         const ctxPaid = chartRefPaid.current.getContext('2d');
         if (window._clientPaidChart) window._clientPaidChart.destroy();
-        let pendingCount = 0, disposedCount = 0;
-        if (Array.isArray(vehicleChallanData)) {
-          vehicleChallanData.forEach(item => {
-            pendingCount += Array.isArray(item.pending_data) ? item.pending_data.length : 0;
-            disposedCount += Array.isArray(item.disposed_data) ? item.disposed_data.length : 0;
-          });
-        }
+        const expiryStats = calculateExpiryStats();
+        const expiryPeriodDays = import.meta.env.VITE_EXPIRY_PERIOD_DAYS || '60';
         window._clientPaidChart = new Chart(ctxPaid, {
           type: 'bar',
           data: {
-            labels: ['Pending', 'Disposed'],
+            labels: ['Pollution', 'Insurance', 'Road Tax', 'Fitness'],
             datasets: [{
-              label: 'Challans',
-              data: [pendingCount, disposedCount],
-              backgroundColor: ['#ffa726', '#66bb6a'],
-              borderColor: ['#ffa726', '#66bb6a'],
+              label: `Expiring in ${expiryPeriodDays} Days`,
+              data: [expiryStats.pollution, expiryStats.insurance, expiryStats.roadTax, expiryStats.fitness],
+              backgroundColor: ['#e74c3c', '#f39c12', '#9b59b6', '#3498db'],
+              borderColor: ['#e74c3c', '#f39c12', '#9b59b6', '#3498db'],
               borderWidth: 2,
             }],
           },
           options: {
             plugins: { legend: { display: false } },
             scales: {
-              x: { display: true, title: { display: true, text: 'Status' } },
+              x: { display: true, title: { display: true, text: 'Expiry Type' } },
               y: { display: true, beginAtZero: true, title: { display: true, text: 'Count' } }
             }
           }
@@ -328,6 +461,21 @@ function ClientDashboard() {
 
   // Calculate latestChallanRows for LatestChallansTable
   let latestChallanRows = [];
+  let totalChallans = 0;
+
+  const formatRegCourtValue = (v) => {
+    if (v === null || v === undefined || v === '') return '-';
+    if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+    if (typeof v === 'string') {
+      const s = v.trim();
+      if (!s) return '-';
+      if (s.toLowerCase() === 'yes' || s.toLowerCase() === 'no') return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+      // If it's a date-like string, shorten to YYYY-MM-DD or first 10 chars
+      if (/\d{4}-\d{2}-\d{2}/.test(s) || /\d{2}-\d{2}-\d{4}/.test(s) || /\d{2}-[A-Za-z]{3}-\d{4}/.test(s)) return s.length > 10 ? s.slice(0, 10) : s;
+      return s;
+    }
+    return String(v);
+  };
   if (Array.isArray(vehicleChallanData)) {
     let allChallans = [];
     vehicleChallanData.forEach(item => {
@@ -342,16 +490,20 @@ function ClientDashboard() {
         });
       }
     });
-    // Sort by challan_date_time descending
-    allChallans.sort((a, b) => {
-      const dateA = new Date(a.challan_date_time);
-      const dateB = new Date(b.challan_date_time);
-      return dateB - dateA;
-    });
+    totalChallans = allChallans.length;
+    // Sort by newest first. Prefer `created_at`, then `createdAt`, then fallback to `challan_date_time`.
+    const getChallanTime = (c) => {
+      if (!c) return 0;
+      if (c.created_at) return new Date(c.created_at).getTime();
+      if (c.createdAt) return new Date(c.createdAt).getTime();
+      if (c.challan_date_time) return new Date(c.challan_date_time).getTime();
+      return 0;
+    };
+    allChallans.sort((a, b) => (getChallanTime(b) || 0) - (getChallanTime(a) || 0));
     // Take only 5 latest
     const latestChallans = allChallans.slice(0, 5);
     if (latestChallans.length === 0) {
-      latestChallanRows = [<tr key="no-challans"><td colSpan={9} style={{textAlign:'center',color:'#888'}}>No challans found.</td></tr>];
+      latestChallanRows = [<tr key="no-challans"><td colSpan={10} style={{textAlign:'center',color:'#888'}}>No challans found.</td></tr>];
     } else {
       latestChallanRows = latestChallans.map((c, idx) => (
         <tr key={`${c.statusType}-${c.vehicle_number}-${c.challan_no}-${idx}`}>
@@ -366,7 +518,7 @@ function ClientDashboard() {
               {c.challan_date_time && c.challan_date_time.length > 10 ? c.challan_date_time.slice(0,10) + '...' : c.challan_date_time}
             </span>
           </td>
-          <td>
+          <td style={{ textAlign: 'center' }}>
             {/* Google Maps icon logic */}
             {(() => {
               const loc = c.challan_place || c.location || c.challan_location;
@@ -411,7 +563,8 @@ function ClientDashboard() {
               return 'Not Available';
             })()}
           </td>
-          <td>{Array.isArray(c.offence_details) && c.offence_details.length > 0 ? c.offence_details[0].act : ''}</td>
+          <td style={{ textAlign: 'center' }}>{formatRegCourtValue(c.sent_to_reg_court ?? c.sent_to_court_on ?? c.sent_to_court)}</td>
+          <td style={{ textAlign: 'center' }}>{formatRegCourtValue(c.sent_to_virtual_court ?? c.sent_to_virtual)}</td>
           <td style={{ textAlign: "center"}}>{c.fine_imposed}</td>
           <td><span className={c.challan_status === 'Pending' ? 'status pending' : c.challan_status === 'Disposed' ? 'status paid' : ''}>{c.challan_status}</span></td>
           <td>
@@ -450,17 +603,13 @@ function ClientDashboard() {
               {activeMenu === 'Dashboard' ? 'Dashboard'
                 : activeMenu === 'Profile' ? 'Profile'
                 : activeMenu === 'Registered Vehicles' ? 'Registered Vehicles'
-                : activeMenu === 'Challans' ? 'My Challans'
+                : activeMenu === 'Challans' ? 'Vehicle Challan Data'
                 : activeMenu === 'Billing' ? 'My Billing'
                 : activeMenu === 'Settings' ? 'Settings'
                 : activeMenu}
             </div>
           </div>
           <div className="header-right" style={{display:'flex',alignItems:'center',gap:18}}>
-            <div className="notification-icon" style={{position:'relative',fontSize:22,cursor:'pointer'}}>
-              <i className="ri-notification-3-line"></i>
-              <div className="notification-badge" style={{position:'absolute',top:-6,right:-8,background:'#e74c3c',color:'#fff',borderRadius:'50%',fontSize:12,padding:'2px 6px',fontWeight:600}}>3</div>
-            </div>
             <div className="header-profile" style={{marginLeft:8}}>
               <div className="header-avatar" style={{background:'#0072ff',color:'#fff',borderRadius:'50%',width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:600,fontSize:16}}>{headerInitials || 'JS'}</div>
             </div>
@@ -471,7 +620,7 @@ function ClientDashboard() {
             <div className="dashboard-header" style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
               <div>
                 <h1 className="dashboard-title">Welcome back{user.user && user.user.name ? `, ${user.user.name}` : '123'}!</h1>
-                <p>Here's an overview of your challan status</p>
+                <p>Here's an overview of your Fleet status</p>
               </div>
               <div className="header-profile">
                 <span className="header-avatar">{headerInitials || 'JS'}</span>
@@ -517,18 +666,63 @@ function ClientDashboard() {
                 </div>
               </div>
               <div className="stat-card">
-                <i className="ri-checkbox-circle-line"></i>
-                <div>Challans Fetched</div>
+                <i className="ri-alarm-warning-line"></i>
+                <div>Vehicle Expiry Status</div>
                 <div className="stat-value">
-                  {loadingVehicleChallan
+                  {loadingVehicleRto
                     ? '...'
-                    : Array.isArray(vehicleChallanData)
-                      ? vehicleChallanData.reduce((total, item) => {
-                          const pending = Array.isArray(item.pending_data) ? item.pending_data.length : 0;
-                          const disposed = Array.isArray(item.disposed_data) ? item.disposed_data.length : 0;
-                          return total + pending + disposed;
-                        }, 0)
-                      : 0}
+                    : (() => {
+                        const stats = calculateExpiryStats();
+                        return (
+                          <>
+                            <div style={{ fontSize: '13px', marginBottom: '6px', display: 'flex', justifyContent: 'space-between' }}>
+                              <span style={{ color: '#e74c3c', fontWeight: 600 }}>Critical (≤60d): {stats.red.total}</span>
+                              <span style={{ color: '#f39c12', fontWeight: 600 }}>Warning (≤90d): {stats.orange.total}</span>
+                            </div>
+                            <div style={{ fontSize: '13px', marginBottom: '8px', textAlign: 'center' }}>
+                              <span style={{ color: '#27ae60', fontWeight: 600 }}>Safe (&gt;90d): {stats.green.total}</span>
+                            </div>
+                            <div style={{ fontSize: '12px', marginBottom: '6px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                                <span>Pollution:</span>
+                                <span>
+                                  <span style={{ color: '#e74c3c' }}>{stats.red.pollution}</span>/
+                                  <span style={{ color: '#f39c12' }}>{stats.orange.pollution}</span>/
+                                  <span style={{ color: '#27ae60' }}>{stats.green.pollution}</span>
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                                <span>Insurance:</span>
+                                <span>
+                                  <span style={{ color: '#e74c3c' }}>{stats.red.insurance}</span>/
+                                  <span style={{ color: '#f39c12' }}>{stats.orange.insurance}</span>/
+                                  <span style={{ color: '#27ae60' }}>{stats.green.insurance}</span>
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                                <span>Road Tax:</span>
+                                <span>
+                                  <span style={{ color: '#e74c3c' }}>{stats.red.roadTax}</span>/
+                                  <span style={{ color: '#f39c12' }}>{stats.orange.roadTax}</span>/
+                                  <span style={{ color: '#27ae60' }}>{stats.green.roadTax}</span>
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span>Fitness:</span>
+                                <span>
+                                  <span style={{ color: '#e74c3c' }}>{stats.red.fitness}</span>/
+                                  <span style={{ color: '#f39c12' }}>{stats.orange.fitness}</span>/
+                                  <span style={{ color: '#27ae60' }}>{stats.green.fitness}</span>
+                                </span>
+                              </div>
+                            </div>
+                            <div style={{ fontSize: '14px', marginTop: '6px', fontWeight: 700, textAlign: 'center' }}>
+                              Total Vehicles: {stats.total.total}
+                            </div>
+                          </>
+                        );
+                      })()
+                  }
                 </div>
                 <div className="stat-chart-container" style={{maxWidth: 280, margin: '12px auto'}}>
                   <canvas ref={chartRefPaid} width={280} height={280} />
@@ -571,133 +765,10 @@ function ClientDashboard() {
               latestChallanRows={latestChallanRows}
               loadingVehicleChallan={loadingVehicleChallan}
               vehicleChallanError={vehicleChallanError}
+              totalCount={totalChallans}
+              limit={5}
             />
-            <div className="dashboard-latest">
-              <h2 style={{ fontSize: '1.2rem', marginBottom: 12 }}>Registered Vehicles</h2>
-              {loadingClient ? (
-                <div>Loading vehicles...</div>
-              ) : !clientData || !Array.isArray(clientData.vehicles) || clientData.vehicles.length === 0 ? (
-                <div style={{ color: '#888' }}>No vehicles registered yet.</div>
-              ) : (
-                <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
-                  <thead>
-                    <tr>
-                      <th>Vehicle Number</th>
-                      <th>Engine Number</th>
-                      <th>Chasis Number</th>
-                      <th>Status</th>
-                      <th>Registered At</th>
-                      <th>Data</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {clientData.vehicles.map((v, idx) => {
-                      let status = (v.status || 'Not Available').toUpperCase();
-                      let statusColor = '#888';
-                      if (status === 'ACTIVE') statusColor = 'green';
-                      else if (status === 'INACTIVE') statusColor = 'orange';
-                      else if (status === 'DELETED') statusColor = 'red';
-                      // Action handlers
-                      const handleInactivate = () => setModal({ open: true, action: 'inactivate', vehicle: v });
-                      const handleActivate = () => setModal({ open: true, action: 'activate', vehicle: v });
-                      const handleDelete = () => setModal({ open: true, action: 'delete', vehicle: v });
-                      return (
-                        <tr key={v.id || v._id || idx}>
-                          <td>{v.vehicle_number || 'Not Available'}</td>
-                          <td>{v.engine_number || 'Not Available'}</td>
-                          <td>{v.chasis_number || 'Not Available'}</td>
-                          <td style={{ color: statusColor, fontWeight: 600, letterSpacing: 1 }}>{status}</td>
-                          <td>{v.registered_at ? new Date(v.registered_at).toLocaleString() : 'Not Available'}</td>
-                          <td>
-                            <div style={{display:'flex',gap:8}}>
-                              <button
-                                className="action-btn flat-btn"
-                                // style={{padding: '12px 32px', fontSize: 18, border: 'none', borderRadius: 6, background: '#f5f5f5', color: '#222', boxShadow: 'none', fontWeight: 600, opacity: status === 'INACTIVE' ? 0.6 : 1, cursor: status === 'INACTIVE' ? 'not-allowed' : 'pointer', transition: 'background 0.2s'}}
-                                disabled={rtoLoadingId === (v.id || v._id)}
-                                onClick={() => {
-                                  if (status === 'INACTIVE') {
-                                    setInfoModal({ open: true, message: 'Your vehicle is inactive. Please activate your vehicle to get the RTO data.' });
-                                  } else {
-                                    setModal({ open: true, action: 'getRTO', vehicle: v });
-                                  }
-                                }}
-                              >
-                                {rtoLoadingId === (v.id || v._id) ? 'Loading...' : 'Get RTO Data'}
-                              </button>
-                              <button
-                                className="action-btn flat-btn"
-                                // style={{padding: '12px 32px', fontSize: 18, border: 'none', borderRadius: 6, background: '#f5f5f5', color: '#222', boxShadow: 'none', fontWeight: 600, opacity: status === 'INACTIVE' ? 0.6 : 1, cursor: status === 'INACTIVE' ? 'not-allowed' : 'pointer', transition: 'background 0.2s'}}
-                                disabled={challanLoadingId === (v.id || v._id)}
-                                onClick={() => {
-                                  if (status === 'INACTIVE') {
-                                    setInfoModal({ open: true, message: 'Your vehicle is inactive. Please activate your vehicle to get the Challan data.' });
-                                  } else {
-                                    setModal({ open: true, action: 'getChallan', vehicle: v });
-                                  }
-                                }}
-                              >
-                                {challanLoadingId === (v.id || v._id) ? 'Loading...' : 'Get Challan Data'}
-                              </button>
-                            </div>
-  {/* Confirmation Modal for RTO/Challan requests */}
-  <CustomModal
-    open={modal.open}
-    title={
-      modal.action === 'getRTO' ? 'Are you sure you want to request vehicle RTO data?'
-      : modal.action === 'getChallan' ? 'Are you sure you want to request vehicle Challan data?'
-      : modal.action === 'inactivate' ? 'Are you sure you want to inactivate this vehicle?'
-      : modal.action === 'activate' ? 'Are you sure you want to activate this vehicle?'
-      : modal.action === 'delete' ? 'Are you sure you want to delete this vehicle?'
-      : modal.action === 'info' ? 'Vehicle Inactive'
-      : ''
-    }
-    onConfirm={handleModalConfirm}
-    onCancel={() => setModal({ open: false, action: null, vehicle: null })}
-    confirmText={modal.action === 'delete' ? 'Delete' : modal.action === 'activate' ? 'Activate' : modal.action === 'inactivate' ? 'Inactivate' : modal.action === 'info' ? 'OK' : 'Yes'}
-    cancelText={modal.action === 'info' ? null : 'Cancel'}
-  >
-    {modal.action === 'delete' && (
-      <span style={{color:'red', fontWeight:600}}>This action is non-reversible.<br/>Your vehicle and all related RTO, challan data will be deleted permanently.</span>
-    )}
-    {modal.action === 'info' && (
-      <span style={{color:'#d35400', fontWeight:500}}>Please activate your vehicle first to get RTO and Challan data.</span>
-    )}
-  </CustomModal>
-                          </td>
-                          <td>
-                            {status === 'INACTIVE' ? (
-                              <span
-                                title="Activate Vehicle"
-                                style={{color: 'green', cursor: 'pointer', marginRight: 8, fontSize: 20, verticalAlign: 'middle'}}
-                                onClick={handleActivate}
-                              >
-                                <i className="ri-checkbox-circle-line"></i>
-                              </span>
-                            ) : status === 'ACTIVE' ? (
-                              <span
-                                title="Inactivate Vehicle"
-                                style={{color: 'orange', cursor: 'pointer', marginRight: 8, fontSize: 20, verticalAlign: 'middle'}}
-                                onClick={handleInactivate}
-                              >
-                                <i className="ri-close-circle-line"></i>
-                              </span>
-                            ) : null}
-                            <span
-                              title="Delete Vehicle"
-                              style={{color: 'red', cursor: 'pointer', fontSize: 20, verticalAlign: 'middle'}} onClick={handleDelete}
-                            >
-                              <i className="ri-delete-bin-6-line"></i>
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-              {/* Custom Modal for confirmation */}
-            </div>
+            <VehicleDataTable clientId={user.user && (user.user.id || user.user._id || user.user.client_id)} onViewAll={() => setActiveMenu('Vehicle RTO Data')} limit={10} searchText={vehicleSearchText} />
             <div className="dashboard-actions">
               <h2>Quick Actions</h2>
               <div className="actions-list">
@@ -707,34 +778,7 @@ function ClientDashboard() {
                 <button className="action-btn" onClick={() => setSupportModal(true)}><i className="ri-customer-service-2-line"></i> Contact Support</button>
               </div>
             </div>
-            <div className="dashboard-due">
-              <h2>Challans Due Today</h2>
-              <div className="due-list">
-                <div className="due-item">
-                  <div className="due-date">18 JUN</div>
-                  <div className="due-info">Speeding Violation <span>MH02AB1234</span> <span>₹1,000</span></div>
-                </div>
-                <div className="due-item">
-                  <div className="due-date">18 JUN</div>
-                  <div className="due-info">No Parking Zone <span>MH02CD5678</span> <span>₹500</span></div>
-                </div>
-              </div>
-              <h2>Upcoming Due Dates</h2>
-              <div className="due-list">
-                <div className="due-item">
-                  <div className="due-date">22 JUN</div>
-                  <div className="due-info">Red Light Violation <span>MH02AB1234</span> <span>₹1,500</span></div>
-                </div>
-                <div className="due-item">
-                  <div className="due-date">25 JUN</div>
-                  <div className="due-info">Improper Parking <span>MH02CD5678</span> <span>₹750</span></div>
-                </div>
-                <div className="due-item">
-                  <div className="due-date">30 JUN</div>
-                  <div className="due-info">No Helmet <span>MH02AB1234</span> <span>₹500</span></div>
-                </div>
-              </div>
-            </div>
+            {/* Removed dashboard 'due' data section as requested */}
           </>
         )}
         {activeMenu === "Profile" && (
@@ -743,13 +787,13 @@ function ClientDashboard() {
           </div>
         )}
         {activeMenu === "Register Vehicle" && <RegisterVehicle />}
-        {activeMenu === "My Vehicles" && (
+        {activeMenu === "Vehicle RTO Data" && (
           <>
-            <MyVehicles />
-            <VehicleDataTable clientId={user.user && (user.user.id || user.user._id || user.user.client_id)} />
+            <MyVehicles searchText={vehicleSearchText} setSearchText={setVehicleSearchText} />
+            <VehicleDataTable clientId={user.user && (user.user.id || user.user._id || user.user.client_id)} onViewAll={() => setActiveMenu('Vehicle RTO Data')} limit={0} searchText={vehicleSearchText} />
           </>
         )}
-        {activeMenu === "My Challans" && <MyChallans />}
+        {activeMenu === "Vehicle Challan Data" && <MyChallans />}
         {activeMenu === "Challans" && <UserChallan />}
         {activeMenu === "My Billing" && <MyBilling clientId={user.user && (user.user.id || user.user._id)} />}
         {activeMenu === "Settings" && <UserSettings users={[]} />}

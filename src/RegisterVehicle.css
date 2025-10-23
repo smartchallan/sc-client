@@ -25,3 +25,21 @@
 		box-sizing: border-box;
 	}
 }
+
+/* Real-time validation input styles */
+.form-control.input-valid {
+  border: 2px solid #2ecc71 !important; /* green */
+  box-shadow: 0 0 6px rgba(46,204,113,0.15);
+}
+.form-control.input-invalid {
+  border: 2px solid #e74c3c !important; /* red */
+  box-shadow: 0 0 6px rgba(231,76,60,0.12);
+}
+.form-control.input-valid:focus, .form-control.input-invalid:focus {
+  outline: none;
+}
+
+/* Make disabled-looking options in select appear faded */
+.register-vehicle-content select option[disabled] {
+	color: #999;
+}

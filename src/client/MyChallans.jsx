@@ -2,23 +2,37 @@
 import React, { useState, useEffect } from "react";
 import CustomModal from "./CustomModal";
 
-function ChallanTable({ title, data }) {
+function ChallanTable({ title, data, search = {}, sortAsc = true }) {
   const [showFull, setShowFull] = useState({});
   const [selectedChallan, setSelectedChallan] = useState(null);
   const [visibleCount, setVisibleCount] = useState(5);
+  const [infoModal, setInfoModal] = useState({ open: false, message: '' });
   const handleShowFull = (rowIdx, col) => {
     setShowFull(prev => ({ ...prev, [rowIdx + '-' + col]: !prev[rowIdx + '-' + col] }));
   };
-  // Props: search, sortAsc
   // Filter and sort data using props
-  let filtered = data.filter(c =>
-    (!arguments[0]?.search?.vehicle || (c.vehicle_number && c.vehicle_number.toLowerCase().includes(arguments[0].search.vehicle.toLowerCase()))) &&
-    (!arguments[0]?.search?.challan || (c.challan_no && c.challan_no.toLowerCase().includes(arguments[0].search.challan.toLowerCase())))
+  const formatRegCourtValue = (v) => {
+    if (v === null || v === undefined || v === '') return '-';
+    if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+    if (typeof v === 'string') {
+      const s = v.trim();
+      if (!s) return '-';
+      if (s.toLowerCase() === 'yes' || s.toLowerCase() === 'no') return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+      if (/\d{4}-\d{2}-\d{2}/.test(s) || /\d{2}-\d{2}-\d{4}/.test(s) || /\d{2}-[A-Za-z]{3}-\d{4}/.test(s)) return s.length > 10 ? s.slice(0, 10) : s;
+      return s;
+    }
+    return String(v);
+  };
+
+  let filtered = (Array.isArray(data) ? data : []).filter(c =>
+    (!search?.vehicle || (c.vehicle_number && c.vehicle_number.toLowerCase().includes(search.vehicle.toLowerCase()))) &&
+    (!search?.challan || (c.challan_no && c.challan_no.toLowerCase().includes(search.challan.toLowerCase())))
   );
   filtered = filtered.slice().sort((a, b) => {
-    const dateA = new Date(a.challan_date_time.replace(/(\d{2})-(\d{2})-(\d{4})/, '$2/$1/$3'));
-    const dateB = new Date(b.challan_date_time.replace(/(\d{2})-(\d{2})-(\d{4})/, '$2/$1/$3'));
-    return arguments[0]?.sortAsc ? dateA - dateB : dateB - dateA;
+    const parse = s => s ? new Date(String(s).replace(/(\d{2})-(\d{2})-(\d{4})/, '$2/$1/$3')) : new Date(0);
+    const dateA = parse(a.challan_date_time || a.created_at || a.createdAt);
+    const dateB = parse(b.challan_date_time || b.created_at || b.createdAt);
+    return sortAsc ? dateA - dateB : dateB - dateA;
   });
   // Only show up to visibleCount rows; allow loading more
   const limited = filtered.slice(0, visibleCount);
@@ -34,24 +48,28 @@ function ChallanTable({ title, data }) {
         <div style={{ color: '#888' }}>No challans found.</div>
       ) : (
         <>
-        <table className="latest-table" style={{ width: '900px', minWidth: '100%', marginTop: 8, tableLayout: 'fixed' }}>
+        <table className="latest-table" style={{ width: '100%', minWidth: '900px', marginTop: 8, tableLayout: 'fixed' }}>
           <colgroup>
+            <col style={{ width: '10%' }} />
             <col style={{ width: '12%' }} />
-            <col style={{ width: '13%' }} />
-            <col style={{ width: '13%' }} />
-            <col style={{ width: '13%' }} />
-            <col style={{ width: '9%' }} />
-            <col style={{ width: '9%' }} />
-            <col style={{ width: '22%' }} />
-            <col style={{ width: '9%' }} />
+            <col style={{ width: '12%' }} />
+            <col style={{ width: '18%' }} />
+            <col style={{ width: '8%' }} />
+            <col style={{ width: '8%' }} />
+            <col style={{ width: '8%' }} />
+            <col style={{ width: '10%' }} />
+            <col style={{ width: '14%' }} />
+            <col style={{ width: '8%' }} />
           </colgroup>
           <thead>
             <tr>
-              <th>Vehicle No</th>
+              <th>Vehicle Number</th>
               <th>Challan No</th>
               <th>Date/Time</th>
-              <th>Owner</th>
-              <th>Fine</th>
+              <th style={{ textAlign: 'center' }}>Location</th>
+              <th>Sent to Reg Court</th>
+              <th>Sent to Virtual Court</th>
+              <th>Fine Imposed</th>
               <th>Status</th>
               <th>Offence Details</th>
               <th>Action</th>
@@ -70,31 +88,48 @@ function ChallanTable({ title, data }) {
                     onClick={() => handleShowFull(idx, 'challan_no')}
                     style={{ cursor: c.challan_no && c.challan_no.length > 16 ? 'pointer' : 'default' }}
                   >
-                    {showFull[idx+'-challan_no'] ? c.challan_no : <span>{c.challan_no.length > 16 ? c.challan_no.slice(0, 16) + '…' : c.challan_no}</span>}
+                    {showFull[idx+'-challan_no'] ? c.challan_no : <span>{c.challan_no && c.challan_no.length > 16 ? c.challan_no.slice(0, 16) + '…' : c.challan_no}</span>}
                   </div>
                 </td>
                 <td>
-                  <div className="cell-ellipsis" title={c.challan_date_time}>{c.challan_date_time}</div>
+                  <div className="cell-ellipsis" title={c.challan_date_time || c.created_at || c.createdAt}>{c.challan_date_time || c.created_at || c.createdAt}</div>
                 </td>
-                <td>
-                  <div
-                    className={`cell-ellipsis${showFull[idx+'-owner'] ? ' cell-wrap' : ''}`}
-                    title={c.owner_name}
-                    onClick={() => handleShowFull(idx, 'owner')}
-                    style={{ cursor: c.owner_name && c.owner_name.length > 14 ? 'pointer' : 'default' }}
-                  >
-                    {showFull[idx+'-owner'] ? c.owner_name : <span>{c.owner_name.length > 14 ? c.owner_name.slice(0, 14) + '…' : c.owner_name}</span>}
-                  </div>
+                <td style={{ textAlign: 'center' }}>
+                  {(() => {
+                    const loc = c.challan_place || c.location || c.challan_location || c.address || c.owner_address;
+                    if (loc && typeof loc === 'string' && loc.trim()) {
+                      const openMap = (address) => {
+                        setInfoModal({
+                          open: true,
+                          message: (
+                            <iframe
+                              title="Google Maps"
+                              width="910"
+                              height="500"
+                              style={{ border: 0, borderRadius: 12 }}
+                              src={`https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`}
+                              allowFullScreen
+                            />
+                          )
+                        });
+                      };
+                      return (
+                        <span
+                          style={{ cursor: 'pointer', color: '#4285F4', fontSize: 20, verticalAlign: 'middle' }}
+                          title={loc}
+                          onClick={() => openMap(loc)}
+                        >
+                          <i className="ri-map-pin-2-fill" />
+                        </span>
+                      );
+                    }
+                    return 'Not Available';
+                  })()}
                 </td>
-                <td>{c.fine_imposed}</td>
-                <td>
-                  <span className={
-                    c.challan_status === 'Pending' ? 'status pending' :
-                    c.challan_status === 'Disposed' ? 'status paid' : ''
-                  }>
-                    {c.challan_status}
-                  </span>
-                </td>
+                <td style={{ textAlign: 'center' }}>{formatRegCourtValue(c.sent_to_reg_court ?? c.sent_to_court_on ?? c.sent_to_court)}</td>
+                <td style={{ textAlign: 'center' }}>{formatRegCourtValue(c.sent_to_virtual_court ?? c.sent_to_virtual)}</td>
+                <td style={{ textAlign: "center"}}>{c.fine_imposed}</td>
+                <td><span className={c.challan_status === 'Pending' ? 'status pending' : c.challan_status === 'Disposed' ? 'status paid' : ''}>{c.challan_status}</span></td>
                 <td>
                   <ul style={{ margin: 0, paddingLeft: 18 }}>
                     {Array.isArray(c.offence_details) && c.offence_details.map((o, i) => (
@@ -128,6 +163,16 @@ function ChallanTable({ title, data }) {
         </div>
         </>
       )}
+      <CustomModal
+        open={infoModal.open}
+        title={"Location"}
+        onConfirm={() => setInfoModal({ open: false, message: '' })}
+        onCancel={() => setInfoModal({ open: false, message: '' })}
+        confirmText="OK"
+        cancelText={null}
+      >
+        {infoModal.message}
+      </CustomModal>
       <CustomModal
         open={!!selectedChallan}
         title={selectedChallan ? `Challan Details: ${selectedChallan.challan_no}` : ''}
@@ -275,7 +320,7 @@ export default function MyChallans() {
         </button>
       </div>
   <ChallanTable title="Pending Challans" data={challanData.Pending_data} search={search} sortAsc={sortAsc} />
-  <ChallanTable title="Settled Challans" data={challanData.Disposed_data} search={search} sortAsc={sortAsc} />
+  <ChallanTable title="Disposed Challans" data={challanData.Disposed_data} search={search} sortAsc={sortAsc} />
     </div>
   );
 }

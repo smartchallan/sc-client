@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { getInitials } from "../utils/getInitials";
+import CustomModal from "./CustomModal";
 import "./ClientDashboard.css";
 
 function ClientDashboard({ onMenuClick, activeMenu }) {
+  const [logoutOpen, setLogoutOpen] = useState(false);
   // Get logged in user from localStorage
   let userName = "John Smith";
   let initials = "JS";
@@ -29,22 +31,31 @@ function ClientDashboard({ onMenuClick, activeMenu }) {
   // Always show client menu for client sidebar
   const menu = [
     { icon: "ri-home-4-line", label: "Dashboard" },
-    { icon: "ri-user-3-line", label: "Profile" },
     { icon: "ri-car-line", label: "Register Vehicle" },
-    { icon: "ri-car-line", label: "My Vehicles" },
-    { icon: "ri-file-list-3-line", label: "My Challans" },
-    { icon: "ri-history-line", label: "History" },
+    { icon: "ri-car-line", label: "Vehicle RTO Data" },
+    { icon: "ri-file-list-3-line", label: "Vehicle Challan Data" },
     { icon: "ri-id-card-line", label: "Driver Verification" },
     { icon: "ri-bank-card-line", label: "Vehicle Fastag" },
     { icon: "ri-money-rupee-circle-line", label: "My Billing" },
+    { icon: "ri-user-3-line", label: "Profile" },
     { icon: "ri-logout-box-r-line", label: "Logout", logout: true },
   ];
 
   const handleLogout = () => {
+    // open confirmation modal
+    setLogoutOpen(true);
+  };
+
+  const confirmLogout = () => {
     localStorage.clear();
     sessionStorage.clear();
-    window.location.href = "/";
+    // close modal then redirect
+    setLogoutOpen(false);
+    // replace history entry so back button doesn't return to the dashboard template
+    window.location.replace("/");
   };
+
+  const cancelLogout = () => setLogoutOpen(false);
 
   return (
     <aside className="sidebar" style={{minWidth: '270px'}}>
@@ -79,6 +90,8 @@ function ClientDashboard({ onMenuClick, activeMenu }) {
         <span className="user-name">{userName}</span>
         <span className="user-role">{userRole.charAt(0).toUpperCase() + userRole.slice(1)}</span>
       </div>
+      <CustomModal open={logoutOpen} title="Confirm logout" description="You will be signed out of Smart Challan and returned to the login page." icon="ri-logout-box-r-line" onConfirm={confirmLogout} onCancel={cancelLogout} confirmText="Logout" cancelText="Stay">
+      </CustomModal>
     </aside>
   );
 }

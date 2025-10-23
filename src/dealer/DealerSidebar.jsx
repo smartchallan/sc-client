@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import "../admin/AdminDashboard.css";
+import CustomModal from "../client/CustomModal";
 
 function DealerSidebar({ role = "dealer", onMenuClick, activeMenu }) {
+	const [logoutOpen, setLogoutOpen] = useState(false);
 	// Get logged in user from localStorage
 	let userName = "John Smith";
 	let initials = "JS";
@@ -23,11 +25,16 @@ function DealerSidebar({ role = "dealer", onMenuClick, activeMenu }) {
 		{ icon: "ri-logout-box-r-line", label: "Logout", logout: true },
 	];
 
-	const handleLogout = () => {
-		localStorage.clear();
-		sessionStorage.clear();
-		window.location.href = "/";
-	};
+		const handleLogout = () => setLogoutOpen(true);
+
+		const confirmLogout = () => {
+			localStorage.clear();
+			sessionStorage.clear();
+			setLogoutOpen(false);
+				window.location.replace("/");
+		};
+
+		const cancelLogout = () => setLogoutOpen(false);
 
 	return (
 		<aside className="sidebar" style={{minWidth: '270px'}}>
@@ -56,11 +63,13 @@ function DealerSidebar({ role = "dealer", onMenuClick, activeMenu }) {
 					)
 				))}
 			</div>
-			<div className="sidebar-user">
+					<div className="sidebar-user">
 				<span className="user-avatar">{initials}</span>
 				<span className="user-name">{userName}</span>
 				<span className="user-role">{role}</span>
 			</div>
+							<CustomModal open={logoutOpen} title="Confirm logout" description="Signing out will end your session and return you to the login screen." icon="ri-logout-box-r-line" onConfirm={confirmLogout} onCancel={cancelLogout} confirmText="Logout" cancelText="Stay">
+							</CustomModal>
 		</aside>
 	);
 }
