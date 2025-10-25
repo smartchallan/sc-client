@@ -255,7 +255,7 @@ nav.mobile-nav ul li a {
 .logo-text {
   font-size: 26px; /* 24px * 1.5 = 36px */
   font-weight: bold;
-  color: #0072ff;
+  /* color: #0072ff; */
 }
 .logo-text span {
   color: #00a651;
