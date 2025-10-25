@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -260,7 +258,7 @@ export default function RegisterVehicle() {
                     const handleInactivate = () => setModal({ open: true, action: 'inactivate', vehicle: v });
                     const handleActivate = () => setModal({ open: true, action: 'activate', vehicle: v });
                     const handleDelete = () => setModal({ open: true, action: 'delete', vehicle: v });
-                    const setInfoModal = (vehicle, lastAction) => setModal({ open: true, action: 'info', vehicle: { ...vehicle, lastAction } });
+                    const setInfoModal = (vehicle, lastAction) => setModal({ open: true, action: 'info', vehicle: { ...vehicle, lastAction, status: (vehicle.status || '').toUpperCase() } });
                     return (
                       <tr key={v.id || v._id || idx}>
                         <td>{v.vehicle_number || 'Not Available'}</td>
@@ -272,63 +270,75 @@ export default function RegisterVehicle() {
                           <div style={{display:'flex',gap:8}}>
                             <button
                               className="action-btn flat-btn"
-                              disabled={status === 'INACTIVE' || rtoLoadingId === v.id}
+                              disabled={rtoLoadingId === v.id}
                               onClick={() => {
-                                if (status === 'INACTIVE') {
+                                // Allow clicks even when vehicle is INACTIVE/DELETED so we can show the info modal.
+                                if (status === 'INACTIVE' || status === 'DELETED') {
                                   setInfoModal(v, 'getRTO');
                                 } else {
                                   setModal({ open: true, action: 'getRTO', vehicle: v });
                                 }
                               }}
+                              style={{ opacity: status === 'DELETED' ? 0.6 : status === 'INACTIVE' ? 0.85 : 1 }}
+                              title={rtoLoadingId === v.id ? 'Loading...' : (status === 'DELETED' ? 'Vehicle deleted' : status === 'INACTIVE' ? 'Vehicle inactive' : 'Get RTO Data')}
                             >
                               {rtoLoadingId === v.id ? 'Loading...' : 'Get RTO Data'}
                             </button>
                             <button
                               className="action-btn flat-btn"
-                              disabled={status === 'INACTIVE' || challanLoadingId === v.id}
+                              disabled={challanLoadingId === v.id}
                               onClick={() => {
-                                if (status === 'INACTIVE') {
+                                // Allow clicks to show info modal for INACTIVE/DELETED states.
+                                if (status === 'INACTIVE' || status === 'DELETED') {
                                   setInfoModal(v, 'getChallan');
                                 } else {
                                   setModal({ open: true, action: 'getChallan', vehicle: v });
                                 }
                               }}
+                              style={{ opacity: status === 'DELETED' ? 0.6 : status === 'INACTIVE' ? 0.85 : 1 }}
+                              title={challanLoadingId === v.id ? 'Loading...' : (status === 'DELETED' ? 'Vehicle deleted' : status === 'INACTIVE' ? 'Vehicle inactive' : 'Get Challan Data')}
                             >
                               {challanLoadingId === v.id ? 'Loading...' : 'Get Challan Data'}
                             </button>
                           </div>
                         </td>
                         <td>
-                          {status === 'INACTIVE' ? (
-                            <span
-                              title="Activate Vehicle"
-                              style={{ cursor: 'pointer', marginRight: 12, fontSize: 18, color: 'green' }}
-                              onClick={handleActivate}
-                              role="button"
-                              aria-label="Activate Vehicle"
-                            >
-                              ✅
-                            </span>
+                          {status === 'DELETED' ? (
+                            <span style={{ color: '#999' }}>—</span>
                           ) : (
-                            <span
-                              title="Inactivate Vehicle"
-                              style={{ cursor: 'pointer', marginRight: 12, fontSize: 18 }}
-                              onClick={handleInactivate}
-                              role="button"
-                              aria-label="Inactivate Vehicle"
-                            >
-                              🚫
-                            </span>
+                            <>
+                              {status === 'INACTIVE' ? (
+                                <span
+                                  title="Activate Vehicle"
+                                  style={{ cursor: 'pointer', marginRight: 12, fontSize: 18, color: 'green' }}
+                                  onClick={handleActivate}
+                                  role="button"
+                                  aria-label="Activate Vehicle"
+                                >
+                                  ✅
+                                </span>
+                              ) : (
+                                <span
+                                  title="Inactivate Vehicle"
+                                  style={{ cursor: 'pointer', marginRight: 12, fontSize: 18 }}
+                                  onClick={handleInactivate}
+                                  role="button"
+                                  aria-label="Inactivate Vehicle"
+                                >
+                                  🚫
+                                </span>
+                              )}
+                              <span
+                                title="Delete Vehicle"
+                                style={{ cursor: 'pointer', color: 'red', fontSize: 18 }}
+                                onClick={handleDelete}
+                                role="button"
+                                aria-label="Delete Vehicle"
+                              >
+                                🗑️
+                              </span>
+                            </>
                           )}
-                          <span
-                            title="Delete Vehicle"
-                            style={{ cursor: 'pointer', color: 'red', fontSize: 18 }}
-                            onClick={handleDelete}
-                            role="button"
-                            aria-label="Delete Vehicle"
-                          >
-                            🗑️
-                          </span>
                         </td>
                       </tr>
                     );
@@ -342,7 +352,7 @@ export default function RegisterVehicle() {
                     : modal.action === 'inactivate' ? 'Are you sure you want to inactivate this vehicle?'
                     : modal.action === 'activate' ? 'Are you sure you want to activate this vehicle?'
                     : modal.action === 'delete' ? 'Are you sure you want to delete this vehicle?'
-                    : modal.action === 'info' ? 'Vehicle Inactive' 
+                    : modal.action === 'info' ? (modal.vehicle && ((modal.vehicle.status || '').toUpperCase() === 'DELETED') ? 'Vehicle Deleted' : 'Vehicle Inactive')
                     : ''
                   }
                   onConfirm={async () => {
@@ -430,17 +440,36 @@ export default function RegisterVehicle() {
                     <span style={{color:'red', fontWeight:600}}>This action is non-reversible.<br/>Your vehicle and all related RTO, challan data will be deleted permanently.</span>
                   )}
                   {modal.action === 'info' && (
-                    <span style={{color:'#d35400', fontWeight:500}}>
-                      {modal.vehicle && modal.vehicle.lastAction === 'getRTO' && (
-                        'Selected vehicle is currently inactive. Please activate first to get RTO data.'
-                      )}
-                      {modal.vehicle && modal.vehicle.lastAction === 'getChallan' && (
-                        'Selected vehicle is currently inactive. Please activate first to get Challan data.'
-                      )}
-                      {modal.vehicle && !modal.vehicle.lastAction && (
-                        'Please activate your vehicle first to get RTO and Challan data.'
-                      )}
-                    </span>
+                    (() => {
+                      const statusStr = modal.vehicle && modal.vehicle.status ? String(modal.vehicle.status).toUpperCase() : '';
+                      const lastAct = modal.vehicle && modal.vehicle.lastAction ? String(modal.vehicle.lastAction).toLowerCase() : '';
+                      if (statusStr === 'DELETED') {
+                        return (
+                          <span style={{color:'#d35400', fontWeight:500}}>
+                            RTO / Challan data can not be requested for deleted vehicles. Please contact admin to activate vehicle again.
+                          </span>
+                        );
+                      }
+                      if (lastAct === 'getrto') {
+                        return (
+                          <span style={{color:'#d35400', fontWeight:500}}>
+                            Selected vehicle is currently inactive. Please activate first to get RTO data.
+                          </span>
+                        );
+                      }
+                      if (lastAct === 'getchallan') {
+                        return (
+                          <span style={{color:'#d35400', fontWeight:500}}>
+                            Selected vehicle is currently inactive. Please activate first to get Challan data.
+                          </span>
+                        );
+                      }
+                      return (
+                        <span style={{color:'#d35400', fontWeight:500}}>
+                          Please activate your vehicle first to get RTO and Challan data.
+                        </span>
+                      );
+                    })()
                   )}
                 </CustomModal>
               </tbody>

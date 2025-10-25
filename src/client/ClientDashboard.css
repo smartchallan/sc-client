@@ -132,28 +132,75 @@
       box-sizing: border-box;
       font-family: 'AlibabaSans', sans-serif;
     }
+    /* Reduce overall font-size across the app by ~20% */
+    html {
+      font-size: 85%; /* browsers default 16px -> now 12.8px */
+    }
     body {
       background-color: #f5f7fa;
       color: #333;
-      width: 100vw;
+      /* Use 100% instead of 100vw to avoid horizontal overflow caused by scrollbars */
+      width: 100%;
       min-height: 100vh;
       margin: 0;
+      /* use flex so sidebar + main layout can share the viewport naturally */
       display: flex;
+      flex-direction: column;
+    }
+
+    .dashboard-header h1 {
+        font-size: 32px;
+        font-weight: bold;
+        /* color: #0072ff; */
+    }
+
+    .dashboard-header p {
+    color: #555;
+    font-size: 18px;
+}
+.dashboard-header {
+    margin-bottom: 32px;
+}
+    /* Center the main app and constrain maximum width for better responsiveness */
+    .admin-dashboard-layout {
+      display: flex;
+      width: 100%;
+      /* allow full width on all screens (no fixed max) so layout fits smaller laptops */
+      max-width: none;
+      margin: 0;
+      align-items: flex-start;
+      min-height: 100vh;
     }
     .admin-dashboard-layout .sidebar {
       width: 270px;
       background: linear-gradient(180deg, #1a3a8f 0%, #0f5a7a 100%);
       color: white;
-      /* height: 100vh; */
-      /* position: fixed; */
-      left: calc(50% - 600px);
-      top: 0;
       padding: 20px 0;
       display: flex;
       flex-direction: column;
       box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
       z-index: 10;
+      /* position: relative; */
     }
+    /* collapsed / mobile hidden state */
+    .admin-dashboard-layout .sidebar.closed {
+      transform: translateX(-100%);
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100vh;
+      transition: transform 0.25s ease;
+    }
+    .admin-dashboard-layout .sidebar.open { transform: translateX(0); }
+    .sidebar-collapse-btn { display: none; }
+
+@media (max-width: 900px) {
+  .sidebar-collapse-btn { display: inline-flex; }
+  /* make main-content take full width when sidebar is hidden */
+  .admin-dashboard-layout .sidebar.closed + .main-content {
+    margin-left: 0;
+  }
+}
     .admin-dashboard-layout .logo-container {
       display: flex;
       align-items: center;
@@ -253,7 +300,8 @@
     }
     .main-content {
       /* margin-left: 270px; */
-      width: calc(100vw - 270px);
+      /* Use percentage-based width to avoid issues with scrollbars and viewport units */
+      width: calc(100% - 270px);
       min-height: 100vh;
     }
     .header {
@@ -537,3 +585,75 @@
       color: #0f5a7a;
       font-weight: 600;
     }
+
+/* Dashboard stat cards layout */
+.dashboard-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.06);
+  flex: 1 1 260px; /* grow, shrink, base width */
+  min-width: 220px;
+  max-width: calc(25% - 13px); /* show up to 4 cards in a row on wide screens */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-card i {
+  font-size: 22px;
+  margin-bottom: 8px;
+  color: #6b7280;
+}
+
+.stat-chart-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Reduce dashboard stat charts by ~20% (keep ratio and responsive behavior).
+   First three stat cards used 220px -> reduce to 176px; the 4th used 160px -> reduce to 128px. */
+.dashboard-stats .stat-card:nth-child(1) .stat-chart-container,
+.dashboard-stats .stat-card:nth-child(2) .stat-chart-container,
+.dashboard-stats .stat-card:nth-child(3) .stat-chart-container {
+  max-width: 176px !important;
+  margin: 6px auto 0 !important;
+}
+.dashboard-stats .stat-card:nth-child(4) .stat-chart-container {
+  max-width: 176px !important;
+  margin: 12px auto !important;
+}
+
+/* Ensure canvases fill the reduced container size and remain responsive */
+.stat-chart-container canvas {
+  width: 100% !important;
+  height: auto !important;
+  max-height: 100% !important;
+  display: block;
+}
+
+/* Responsive breakpoints for stat cards */
+@media (max-width: 1200px) {
+  .stat-card { max-width: calc(33.333% - 12px); }
+}
+
+@media (max-width: 900px) {
+  .dashboard-stats { gap: 12px; }
+  .stat-card { max-width: 48%; flex: 1 1 48%; }
+}
+
+@media (max-width: 600px) {
+  .stat-card { max-width: 100%; flex: 1 1 100%; }
+  .stat-chart-container { margin-top: 8px; }
+}

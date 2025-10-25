@@ -3,7 +3,7 @@ import { getInitials } from "../utils/getInitials";
 import CustomModal from "./CustomModal";
 import "./ClientDashboard.css";
 
-function ClientDashboard({ onMenuClick, activeMenu }) {
+function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }) {
   const [logoutOpen, setLogoutOpen] = useState(false);
   // Get logged in user from localStorage
   let userName = "John Smith";
@@ -58,17 +58,20 @@ function ClientDashboard({ onMenuClick, activeMenu }) {
   const cancelLogout = () => setLogoutOpen(false);
 
   return (
-    <aside className="sidebar" style={{minWidth: '270px'}}>
+    <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`} style={{minWidth: '270px'}}>
       <div className="logo-container">
         <div className="logo">
           <i className="ri-shield-check-line"></i>
-          <span>Smart Challan</span>
+          <span className="logo-text">Smart Challan</span>
         </div>
+        <button className="sidebar-collapse-btn" onClick={onToggleSidebar} aria-label="Toggle sidebar" style={{marginLeft: 'auto', background:'transparent', border:'none', color:'#fff', cursor:'pointer'}}>
+          <i className="ri-menu-3-line" />
+        </button>
       </div>
       <div className="nav-menu">
         {menu.map((item, idx) => (
           item.logout ? (
-            <div className="nav-item" key={item.label} onClick={handleLogout} style={{color: '#ff5252', cursor: 'pointer'}}>
+              <div className="nav-item" key={item.label} onClick={handleLogout} style={{color: '#ff5252', cursor: 'pointer'}}>
               <i className={item.icon}></i>
               <span>{item.label}</span>
             </div>
@@ -96,4 +99,4 @@ function ClientDashboard({ onMenuClick, activeMenu }) {
   );
 }
 
-export default ClientDashboard;
+export default ClientSidebar;

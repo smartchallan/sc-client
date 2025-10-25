@@ -75,6 +75,7 @@ function ClientDashboard() {
   const chartRefAmount = useRef(null);
   // Client data
   const [clientData, setClientData] = useState(null);
+  const [selectedVehicleStatus, setSelectedVehicleStatus] = useState(null);
   const [loadingClient, setLoadingClient] = useState(true);
   // Vehicle challan data
   const [vehicleChallanData, setVehicleChallanData] = useState([]);
@@ -90,6 +91,8 @@ function ClientDashboard() {
   // Active menu
   const [activeMenu, setActiveMenu] = useState("Dashboard");
   const [selectedChallan, setSelectedChallan] = useState(null);
+  // Sidebar open state: open by default on wide screens, closed on small screens
+  const [sidebarOpen, setSidebarOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth > 900 : true));
 
   // Modal confirmation logic for RTO/Challan requests
   const handleModalConfirm = async () => {
@@ -309,11 +312,11 @@ function ClientDashboard() {
     if (activeMenu !== "Dashboard") return;
     // Delay chart drawing to ensure canvas refs are mounted
     const timeout = setTimeout(() => {
-      if (!chartRefTotal.current || !chartRefActive.current || !chartRefPaid.current || !chartRefAmount.current) return;
+    if (!chartRefTotal.current || !chartRefActive.current || !chartRefAmount.current) return;
       Promise.all([
         import('chart.js/auto')
       ]).then(([{ default: Chart }]) => {
-        // Registered Vehicles (doughnut)
+  // Registered Vehicles (doughnut) - compute counts and draw interactive chart
         let active = 0, inactive = 0, deleted = 0;
         if (clientData && Array.isArray(clientData.vehicles)) {
           clientData.vehicles.forEach(v => {
@@ -325,16 +328,31 @@ function ClientDashboard() {
         }
         const ctxTotal = chartRefTotal.current.getContext('2d');
         if (window._clientTotalChart) window._clientTotalChart.destroy();
+        const totalData = [active, inactive, deleted];
         window._clientTotalChart = new Chart(ctxTotal, {
           type: 'doughnut',
           data: {
             labels: ['Active', 'Inactive', 'Deleted'],
             datasets: [{
-              data: [active, inactive, deleted],
+              data: totalData,
               backgroundColor: ['#42a5f5', '#ffa726', '#e15759'],
             }],
           },
-          options: { plugins: { legend: { display: false } }, cutout: '70%' }
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            cutout: '60%',
+            onClick: (evt, elements) => {
+              if (elements && elements.length > 0) {
+                const idx = elements[0].index;
+                const label = ['active','inactive','deleted'][idx];
+                try { setSelectedVehicleStatus(label); } catch (e) {}
+                // navigate to Registered Vehicles view for details
+                try { setActiveMenu('Registered Vehicles'); } catch(e) {}
+              }
+            }
+          }
         });
         // Active Challans (pending vs disposed)
         const ctxActive = chartRefActive.current.getContext('2d');
@@ -358,34 +376,42 @@ function ClientDashboard() {
             }],
           },
           options: {
-            plugins: { legend: { display: true } }
-          }
-        });
-        // Vehicle Expiry Statistics (bar chart: pollution, insurance, road tax, fitness)
-        const ctxPaid = chartRefPaid.current.getContext('2d');
-        if (window._clientPaidChart) window._clientPaidChart.destroy();
-        const expiryStats = calculateExpiryStats();
-        const expiryPeriodDays = import.meta.env.VITE_EXPIRY_PERIOD_DAYS || '60';
-        window._clientPaidChart = new Chart(ctxPaid, {
-          type: 'bar',
-          data: {
-            labels: ['Pollution', 'Insurance', 'Road Tax', 'Fitness'],
-            datasets: [{
-              label: `Expiring in ${expiryPeriodDays} Days`,
-              data: [expiryStats.pollution, expiryStats.insurance, expiryStats.roadTax, expiryStats.fitness],
-              backgroundColor: ['#e74c3c', '#f39c12', '#9b59b6', '#3498db'],
-              borderColor: ['#e74c3c', '#f39c12', '#9b59b6', '#3498db'],
-              borderWidth: 2,
-            }],
-          },
-          options: {
+            responsive: true,
+            maintainAspectRatio: false,
             plugins: { legend: { display: false } },
-            scales: {
-              x: { display: true, title: { display: true, text: 'Expiry Type' } },
-              y: { display: true, beginAtZero: true, title: { display: true, text: 'Count' } }
-            }
+            cutout: '20%'
           }
         });
+        // Vehicle Expiry Statistics (horizontal bar showing counts per expiry type)
+        const ctxPaid = chartRefPaid.current && chartRefPaid.current.getContext('2d');
+        if (ctxPaid) {
+          // Use a polar area chart for clearer proportion view of expiry counts
+          if (window._clientPaidChart) window._clientPaidChart.destroy();
+          const paidData = [
+            (expiryCounts.insurance || 0),
+            (expiryCounts.roadTax || 0),
+            (expiryCounts.fitness || 0),
+            (expiryCounts.pollution || 0)
+          ];
+          window._clientPaidChart = new Chart(ctxPaid, {
+            type: 'polarArea',
+            data: {
+              labels: ['Insurance', 'Road Tax', 'Fitness', 'Pollution'],
+              datasets: [{
+                data: paidData,
+                backgroundColor: ['#ff5252', '#ff8a65', '#f4b400', '#42a5f5'],
+                borderColor: '#ffffff',
+                borderWidth: 1
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: { r: { ticks: { precision: 0, beginAtZero: true } } }
+            }
+          });
+        }
         // Amount Due (bar) - red: pending, green: paid
         let pendingFine = 0, disposedFine = 0;
         if (Array.isArray(vehicleChallanData)) {
@@ -400,16 +426,44 @@ function ClientDashboard() {
         }
         const ctxAmount = chartRefAmount.current.getContext('2d');
         if (window._clientAmountChart) window._clientAmountChart.destroy();
+        // Create gentle vertical gradients for Pending and Paid slices
+        const pendingGradient = ctxAmount.createLinearGradient(0, 0, 0, 160);
+        pendingGradient.addColorStop(0, '#ff8a80');
+        pendingGradient.addColorStop(1, '#e15759');
+        const paidGradient = ctxAmount.createLinearGradient(0, 0, 0, 160);
+        paidGradient.addColorStop(0, '#a5d6a7');
+        paidGradient.addColorStop(1, '#66bb6a');
+
         window._clientAmountChart = new Chart(ctxAmount, {
-          type: 'bar',
+          type: 'polarArea',
           data: {
             labels: ['Pending', 'Paid'],
             datasets: [{
               data: [pendingFine, disposedFine],
-              backgroundColor: ['#e15759', '#66bb6a'],
+              backgroundColor: [pendingGradient, paidGradient],
+              borderColor: '#ffffff',
+              borderWidth: 1,
             }],
           },
-          options: { plugins: { legend: { display: false } }, scales: { x: { display: true }, y: { display: true, beginAtZero: true } } }
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (context) => {
+                    const label = context.label || '';
+                    const value = Number(context.raw || 0);
+                    return `${label}: ₹${value.toLocaleString()}`;
+                  }
+                }
+              }
+            },
+            scales: {
+              r: { ticks: { beginAtZero: true, precision: 0 } }
+            }
+          }
         });
       });
     }, 50); // 50ms delay to ensure DOM is ready
@@ -420,15 +474,19 @@ function ClientDashboard() {
       if (window._clientPaidChart) window._clientPaidChart.destroy();
       if (window._clientAmountChart) window._clientAmountChart.destroy();
     };
-  }, [clientData, activeMenu]);
+  }, [clientData, vehicleChallanData, vehicleRtoData, activeMenu]);
   // Sidebar click handler
   const handleMenuClick = (label) => {
     setShowLoader(true);
     setTimeout(() => {
       setActiveMenu(label);
       setShowLoader(false);
-    }, 1000);
+      // on small screens, close sidebar after selecting a menu
+      if (window.innerWidth <= 900) setSidebarOpen(false);
+    }, 300);
   };
+
+  const toggleSidebar = () => setSidebarOpen(s => !s);
 
   // Get initials for header (first two letters from first two words, or first two letters)
   let headerInitials = "";
@@ -587,16 +645,57 @@ function ClientDashboard() {
     }
   }
 
+  // Counts for dashboard stat card: pending and disposed
+  let dashboardPendingCount = 0, dashboardDisposedCount = 0;
+  if (Array.isArray(vehicleChallanData)) {
+    vehicleChallanData.forEach(item => {
+      dashboardPendingCount += Array.isArray(item.pending_data) ? item.pending_data.length : 0;
+      dashboardDisposedCount += Array.isArray(item.disposed_data) ? item.disposed_data.length : 0;
+    });
+  }
+  const dashboardTotalChallans = dashboardPendingCount + dashboardDisposedCount;
+
+  // Vehicle RTO expiry counts (expiring soon) - compute from vehicleRtoData
+  const expiryThresholdDays = parseInt(import.meta.env.VITE_EXPIRY_PERIOD_DAYS || '60', 10) || 60;
+  const expiryCounts = { insurance: 0, roadTax: 0, fitness: 0, pollution: 0 };
+  if (Array.isArray(vehicleRtoData)) {
+    const now = new Date();
+    const parseDateStr = (dateStr) => {
+      if (!dateStr || dateStr === '-') return null;
+      // Handle common formats used earlier
+      if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(dateStr)) return new Date(dateStr.replace(/-/g, ' '));
+      if (/\d{2}-\d{2}-\d{4}/.test(dateStr)) {
+        const [d, m, y] = dateStr.split('-');
+        return new Date(`${y}-${m}-${d}`);
+      }
+      if (/\d{4}-\d{2}-\d{2}/.test(dateStr)) return new Date(dateStr);
+      return new Date(dateStr);
+    };
+    const withinThreshold = (dateStr) => {
+      const d = parseDateStr(dateStr);
+      if (!d || isNaN(d.getTime())) return false;
+      const diffDays = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+      // Include already-passed dates (expired) as well as upcoming dates within threshold
+      return diffDays <= expiryThresholdDays;
+    };
+    vehicleRtoData.forEach(v => {
+      if (withinThreshold(v.insurance_exp || v.insuranceUpto || v.rc_insurance_upto)) expiryCounts.insurance++;
+      if (withinThreshold(v.road_tax_exp || v.roadTaxExp || v.rc_tax_upto)) expiryCounts.roadTax++;
+      if (withinThreshold(v.fitness_exp || v.fitnessUpto || v.rc_fit_upto)) expiryCounts.fitness++;
+      if (withinThreshold(v.pollution_exp || v.pollutionUpto || v.rc_pucc_upto)) expiryCounts.pollution++;
+    });
+  }
+
   return (
     <>
     <ToastContainer position="top-right" autoClose={2000} />
-    <div className="admin-dashboard-layout" style={{display: 'flex', width: '100vw', minHeight: '100vh'}}>
+  <div className="admin-dashboard-layout" style={{display: 'flex', width: '100%', minHeight: '100vh'}}>
       {showLoader && <TrafficLightLoader />}
-      <ClientSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} />
+  <ClientSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
       <main className="main-content admin-home-content" style={{flex: 1, minHeight: '100vh'}}>
         <div className="header" style={{marginBottom: 24}}>
           <div className="header-left" style={{display:'flex',alignItems:'center',gap:16}}>
-            <div className="menu-toggle" style={{fontSize:22,cursor:'pointer'}}>
+            <div className="menu-toggle" style={{fontSize:22,cursor:'pointer'}} onClick={toggleSidebar}>
               <i className="ri-menu-line"></i>
             </div>
             <div className="header-title" style={{fontWeight:600,fontSize:20}}>
@@ -628,104 +727,91 @@ function ClientDashboard() {
             </div>
             <div className="dashboard-stats">
               <div className="stat-card">
-                <i className="ri-car-line"></i>
-                <div>Registered Vehicles</div>
-                <div className="stat-value">
-                  {loadingClient ? '...' : (clientData && Array.isArray(clientData.vehicles) ? clientData.vehicles.length : 0)}
+                  <i className="ri-car-line"></i>
+                  <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center'}}>
+                    <div>Registered Vehicles</div>
+                    <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                      {loadingClient ? '...' : (clientData && Array.isArray(clientData.vehicles) ? clientData.vehicles.length : 0)}
+                    </div>
+                  </div>
+                  {/* Show active/inactive/deleted counts as badges */}
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 8 }}>
+                    {(() => {
+                      const counts = { active: 0, inactive: 0, deleted: 0 };
+                      if (clientData && Array.isArray(clientData.vehicles)) {
+                        clientData.vehicles.forEach(v => {
+                          const s = (v.status || '').toLowerCase();
+                          if (s === 'active') counts.active++;
+                          else if (s === 'inactive') counts.inactive++;
+                          else if (s === 'deleted') counts.deleted++;
+                        });
+                      }
+                      return [
+                        <div key="act" className={`status-badge`} style={{ cursor: 'pointer' }} onClick={() => { setSelectedVehicleStatus('active'); setActiveMenu('Registered Vehicles'); }}>
+                          <div style={{ color: '#42a5f5', fontWeight: 700 }}>{counts.active}</div>
+                          <div style={{ fontSize: 12, color: '#666' }}>Active</div>
+                        </div>,
+                        <div key="inact" className={`status-badge`} style={{ cursor: 'pointer' }} onClick={() => { setSelectedVehicleStatus('inactive'); setActiveMenu('Registered Vehicles'); }}>
+                          <div style={{ color: '#ffa726', fontWeight: 700 }}>{counts.inactive}</div>
+                          <div style={{ fontSize: 12, color: '#666' }}>Inactive</div>
+                        </div>,
+                        <div key="del" className={`status-badge`} style={{ cursor: 'pointer' }} onClick={() => { setSelectedVehicleStatus('deleted'); setActiveMenu('Registered Vehicles'); }}>
+                          <div style={{ color: '#e15759', fontWeight: 700 }}>{counts.deleted}</div>
+                          <div style={{ fontSize: 12, color: '#666' }}>Deleted</div>
+                        </div>
+                      ];
+                    })()}
+                  </div>
+                    <div className="stat-chart-container" style={{maxWidth: 220, margin: '6px auto 0'}}>
+                    <canvas ref={chartRefTotal} />
+                  </div>
                 </div>
-                <div className="stat-chart-container" style={{maxWidth: 160, margin: '12px auto'}}>
-                  <canvas ref={chartRefTotal} width={160} height={160} />
-                </div>
-              </div>
               <div className="stat-card">
                 <i className="ri-error-warning-line"></i>
-                <div>Active Challans</div>
-                <div className="stat-value">
-                  {loadingVehicleChallan
-                    ? '...'
-                    : (() => {
-                        let pending = 0, disposed = 0;
-                        if (Array.isArray(vehicleChallanData)) {
-                          vehicleChallanData.forEach(item => {
-                            pending += Array.isArray(item.pending_data) ? item.pending_data.length : 0;
-                            disposed += Array.isArray(item.disposed_data) ? item.disposed_data.length : 0;
-                          });
-                        }
-                        return (
-                          <>
-                            <span style={{color: 'red', fontWeight: 600}}>{pending}</span>
-                            {' / '}
-                            <span>{disposed}</span>
-                          </>
-                        );
-                      })()
-                  }
+                <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center'}}>
+                  <div>Challans Fetched</div>
+                  <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                    {loadingVehicleChallan ? '...' : dashboardTotalChallans}
+                  </div>
                 </div>
-                <div className="stat-chart-container" style={{maxWidth: 160, margin: '12px auto'}}>
-                  <canvas ref={chartRefActive} width={160} height={160} />
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 8 }}>
+                  <div key="pending" className={`status-badge`} style={{ cursor: 'default' }}>
+                    <div style={{ color: '#e74c3c', fontWeight: 700 }}>{loadingVehicleChallan ? '...' : dashboardPendingCount}</div>
+                    <div style={{ fontSize: 12, color: '#666' }}>Pending</div>
+                  </div>
+                  <div key="disposed" className={`status-badge`} style={{ cursor: 'default' }}>
+                    <div style={{ color: '#66bb6a', fontWeight: 700 }}>{loadingVehicleChallan ? '...' : dashboardDisposedCount}</div>
+                    <div style={{ fontSize: 12, color: '#666' }}>Disposed</div>
+                  </div>
+                </div>
+                <div className="stat-chart-container" style={{maxWidth: 220, margin: '6px auto 0'}}>
+                  <canvas ref={chartRefActive} />
                 </div>
               </div>
               <div className="stat-card">
                 <i className="ri-alarm-warning-line"></i>
-                <div>Vehicle Expiry Status</div>
-                <div className="stat-value">
-                  {loadingVehicleRto
-                    ? '...'
-                    : (() => {
-                        const stats = calculateExpiryStats();
-                        return (
-                          <>
-                            <div style={{ fontSize: '13px', marginBottom: '6px', display: 'flex', justifyContent: 'space-between' }}>
-                              <span style={{ color: '#e74c3c', fontWeight: 600 }}>Critical (≤60d): {stats.red.total}</span>
-                              <span style={{ color: '#f39c12', fontWeight: 600 }}>Warning (≤90d): {stats.orange.total}</span>
-                            </div>
-                            <div style={{ fontSize: '13px', marginBottom: '8px', textAlign: 'center' }}>
-                              <span style={{ color: '#27ae60', fontWeight: 600 }}>Safe (&gt;90d): {stats.green.total}</span>
-                            </div>
-                            <div style={{ fontSize: '12px', marginBottom: '6px' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                                <span>Pollution:</span>
-                                <span>
-                                  <span style={{ color: '#e74c3c' }}>{stats.red.pollution}</span>/
-                                  <span style={{ color: '#f39c12' }}>{stats.orange.pollution}</span>/
-                                  <span style={{ color: '#27ae60' }}>{stats.green.pollution}</span>
-                                </span>
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                                <span>Insurance:</span>
-                                <span>
-                                  <span style={{ color: '#e74c3c' }}>{stats.red.insurance}</span>/
-                                  <span style={{ color: '#f39c12' }}>{stats.orange.insurance}</span>/
-                                  <span style={{ color: '#27ae60' }}>{stats.green.insurance}</span>
-                                </span>
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                                <span>Road Tax:</span>
-                                <span>
-                                  <span style={{ color: '#e74c3c' }}>{stats.red.roadTax}</span>/
-                                  <span style={{ color: '#f39c12' }}>{stats.orange.roadTax}</span>/
-                                  <span style={{ color: '#27ae60' }}>{stats.green.roadTax}</span>
-                                </span>
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span>Fitness:</span>
-                                <span>
-                                  <span style={{ color: '#e74c3c' }}>{stats.red.fitness}</span>/
-                                  <span style={{ color: '#f39c12' }}>{stats.orange.fitness}</span>/
-                                  <span style={{ color: '#27ae60' }}>{stats.green.fitness}</span>
-                                </span>
-                              </div>
-                            </div>
-                            <div style={{ fontSize: '14px', marginTop: '6px', fontWeight: 700, textAlign: 'center' }}>
-                              Total Vehicles: {stats.total.total}
-                            </div>
-                          </>
-                        );
-                      })()
-                  }
+                <div>Vehicle Renewals</div>
+                <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 10 }}>
+                  <div className={`status-badge`} style={{ cursor: 'default' }}>
+                    <div style={{ color: '#ff5252', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.insurance}</div>
+                    <div style={{ fontSize: 12, color: '#666' }}>Insurance</div>
+                  </div>
+                  <div className={`status-badge`} style={{ cursor: 'default' }}>
+                    <div style={{ color: '#ff8a65', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.roadTax}</div>
+                    <div style={{ fontSize: 12, color: '#666' }}>Road Tax</div>
+                  </div>
+                  <div className={`status-badge`} style={{ cursor: 'default' }}>
+                    <div style={{ color: '#f4b400', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.fitness}</div>
+                    <div style={{ fontSize: 12, color: '#666' }}>Fitness</div>
+                  </div>
+                  <div className={`status-badge`} style={{ cursor: 'default' }}>
+                    <div style={{ color: '#42a5f5', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.pollution}</div>
+                    <div style={{ fontSize: 12, color: '#666' }}>Pollution</div>
+                  </div>
                 </div>
-                <div className="stat-chart-container" style={{maxWidth: 280, margin: '12px auto'}}>
-                  <canvas ref={chartRefPaid} width={280} height={280} />
+                {/* Info line (threshold) intentionally hidden to save vertical space */}
+                <div className="stat-chart-container" style={{maxWidth: 220, margin: '6px auto 0'}}>
+                  <canvas ref={chartRefPaid} />
                 </div>
               </div>
               <div className="stat-card">
@@ -748,16 +834,16 @@ function ClientDashboard() {
                         }
                         return (
                           <>
-                            <span style={{color: 'red', fontWeight: 600}}>Pending: ₹{pendingFine.toLocaleString()}</span>
-                            {' | '}
-                            <span>Paid: ₹{disposedFine.toLocaleString()}</span>
+                            <span style={{color: 'red', fontWeight: 600, fontSize: '0.55em'}}>Pending: ₹{pendingFine.toLocaleString()}</span>
+                            <span style={{margin: '0 6px', color: '#999', fontSize: '0.55em'}}>|</span>
+                            <span style={{fontSize: '0.55em'}}>Paid: ₹{disposedFine.toLocaleString()}</span>
                           </>
                         );
                       })()
                   }
                 </div>
-                <div className="stat-chart-container" style={{maxWidth: 160, margin: '12px auto'}}>
-                  <canvas ref={chartRefAmount} width={160} height={160} />
+                <div className="stat-chart-container" style={{maxWidth: 176, margin: '12px auto'}}>
+                  <canvas ref={chartRefAmount} />
                 </div>
               </div>
             </div>

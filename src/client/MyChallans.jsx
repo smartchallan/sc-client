@@ -258,7 +258,21 @@ export default function MyChallans() {
         if (!API_ROOT) {
           throw new Error('VITE_API_BASE_URL is not set. Please check your .env file and restart the dev server.');
         }
-        const clientId = 5;
+        // Determine clientId from logged-in user stored in localStorage (sc_user)
+        let clientId = null;
+        try {
+          const stored = JSON.parse(localStorage.getItem('sc_user')) || {};
+          if (stored && stored.user) {
+            clientId = stored.user.id || stored.user._id || stored.user.client_id || null;
+          }
+        } catch (e) {
+          clientId = null;
+        }
+        if (!clientId) {
+          // If client id not available, avoid making the API call and clear data
+          setChallanData({ Disposed_data: [], Pending_data: [] });
+          return;
+        }
         const url = `${API_ROOT}/getvehicleechallandata?clientId=${clientId}`;
         const res = await fetch(url);
         const data = await res.json();

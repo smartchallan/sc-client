@@ -5,7 +5,9 @@ export default function CustomModal({ open, title, description, icon, onConfirm,
   if (!open) return null;
   return (
     <div className="custom-modal-overlay">
-      <div className="custom-modal">
+      <div className="custom-modal" role="dialog" aria-modal="true">
+        {/* Top-right close button for easier closing on small screens */}
+        <button className="custom-modal-close" onClick={onCancel} aria-label="Close modal">×</button>
         {icon ? <div className="custom-modal-icon"><i className={icon}></i></div> : null}
         <div className="custom-modal-title">{title}</div>
         {description ? <div className="custom-modal-desc">{description}</div> : null}

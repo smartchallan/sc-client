@@ -14,8 +14,35 @@
   padding: 32px 28px 24px 28px;
   min-width: 320px;
   max-width: 90vw;
+  /* Keep modal within viewport height and allow internal scrolling for large content */
+  max-height: 90vh;
+  overflow: auto;
+  box-sizing: border-box;
   text-align: center;
   animation: modalIn 0.22s cubic-bezier(.2,.9,.3,1);
+}
+
+/* Close button in top-right of modal */
+.custom-modal {
+  position: relative;
+}
+.custom-modal-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 20px;
+  line-height: 1;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.12s, color 0.12s;
+}
+.custom-modal-close:hover {
+  background: rgba(0,0,0,0.06);
+  color: #111;
 }
 
 @media (max-width: 900px) {
@@ -91,6 +118,11 @@
   gap: 16px;
   justify-content: center;
   margin-top: 18px;
+  /* Keep buttons visible when content scrolls by making the button row sticky to modal bottom */
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,0.95));
+  padding-top: 8px;
 }
 .custom-modal-btn {
   padding: 8px 22px;
@@ -114,4 +146,20 @@
 }
 .custom-modal-btn.cancel:hover {
   background: #e0e0e0;
+}
+
+/* New: ensure modal content and embedded media scale and do not force modal overflow */
+.custom-modal-content {
+  width: 100%;
+}
+
+.custom-modal-content iframe,
+.custom-modal-content img,
+.custom-modal-content video {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: calc(80vh);
+  display: block;
+  margin: 0 auto;
 }
