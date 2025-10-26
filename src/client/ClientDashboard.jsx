@@ -2,6 +2,7 @@
 // ...other imports...
 import LatestChallansTable from "./LatestChallansTable";
 import TrafficLightLoader from "../assets/TrafficLightLoader";
+import QuickActions from "./QuickActions";
 
 // Fetch all client challans on dashboard load
 // (move this after imports and inside ClientDashboard function)
@@ -68,6 +69,7 @@ function ClientDashboard() {
   const [modal, setModal] = useState({ open: false, action: null, vehicle: null });
   const [infoModal, setInfoModal] = useState({ open: false, message: '' });
   const [supportModal, setSupportModal] = useState(false);
+  const [reportsModal, setReportsModal] = useState({ open: false });
   // Chart refs
   const chartRefTotal = useRef(null);
   const chartRefActive = useRef(null);
@@ -584,10 +586,11 @@ function ClientDashboard() {
     // Take only 5 latest
     const latestChallans = allChallans.slice(0, 5);
     if (latestChallans.length === 0) {
-      latestChallanRows = [<tr key="no-challans"><td colSpan={10} style={{textAlign:'center',color:'#888'}}>No challans found.</td></tr>];
+      latestChallanRows = [<tr key="no-challans"><td colSpan={11} style={{textAlign:'center',color:'#888'}}>No challans found.</td></tr>];
     } else {
       latestChallanRows = latestChallans.map((c, idx) => (
         <tr key={`${c.statusType}-${c.vehicle_number}-${c.challan_no}-${idx}`}>
+          <td>{idx + 1}</td>
           <td>{c.vehicle_number}</td>
           <td>
             <span title={c.challan_no} style={{cursor:'pointer'}}>
@@ -709,7 +712,59 @@ function ClientDashboard() {
     });
   }
 
-  return (
+    // Helper: convert array of objects to CSV string
+    const arrayToCsv = (arr) => {
+      if (!Array.isArray(arr) || arr.length === 0) return '';
+      const headers = Array.from(arr.reduce((set, item) => { Object.keys(item || {}).forEach(k => set.add(k)); return set; }, new Set()));
+      const rows = arr.map(obj => headers.map(h => {
+        let val = obj[h] == null ? '' : obj[h];
+        if (typeof val === 'object') val = JSON.stringify(val);
+        val = String(val).replace(/"/g, '""');
+        if (/[,"\n]/.test(val)) val = `"${val}"`;
+        return val;
+      }).join(','));
+      return [headers.join(','), ...rows].join('\n');
+    };
+
+    const downloadCsv = (csv, filename) => {
+      if (!csv) { toast.info('No data available for export'); return; }
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success('Report download started');
+      setReportsModal({ open: false });
+    };
+
+    const generateRtoReport = () => {
+      if (!Array.isArray(vehicleRtoData) || vehicleRtoData.length === 0) { toast.info('No RTO data available to export'); return; }
+      const rows = vehicleRtoData.map(r => ({ ...r }));
+      const csv = arrayToCsv(rows);
+      const name = `rto-data-report-${new Date().toISOString().slice(0,10)}.csv`;
+      downloadCsv(csv, name);
+    };
+
+    const generateChallanReport = () => {
+      let rows = [];
+      if (Array.isArray(vehicleChallanData)) {
+        vehicleChallanData.forEach(item => {
+          const vnum = item.vehicle_number || item.vehicle_no || item.registration_no || '';
+          if (Array.isArray(item.pending_data)) item.pending_data.forEach(c => rows.push({ ...c, vehicle_number: vnum, statusType: 'Pending' }));
+          if (Array.isArray(item.disposed_data)) item.disposed_data.forEach(c => rows.push({ ...c, vehicle_number: vnum, statusType: 'Disposed' }));
+        });
+      }
+      if (rows.length === 0) { toast.info('No challan data available to export'); return; }
+      const csv = arrayToCsv(rows);
+      const name = `challan-data-report-${new Date().toISOString().slice(0,10)}.csv`;
+      downloadCsv(csv, name);
+    };
+
+    return (
     <>
     <ToastContainer position="top-right" autoClose={2000} />
   <div className="admin-dashboard-layout" style={{display: 'flex', width: '100%', minHeight: '100vh'}}>
@@ -736,7 +791,10 @@ function ClientDashboard() {
             </div>
           </div>
           <div className="header-right" style={{display:'flex',alignItems:'center',gap:18,cursor:'pointer'}} onClick={() => setActiveMenu('Profile')} role="button" aria-label="Open profile">
-            <div className="header-profile" style={{marginLeft:8}}>
+            <button className="header-more" title="Hide / Show sidebar" onClick={(e)=>{ e.stopPropagation(); setSidebarOpen(s => !s); }} style={{background:'transparent',border:'none',cursor:'pointer',color:'#333',fontSize:20}}>
+              <i className="ri-more-2-fill" />
+            </button>
+            <div className="header-profile" style={{marginLeft:8}} onClick={(e)=>{ e.stopPropagation(); setActiveMenu('Profile'); }} role="button">
               <div className="header-avatar" style={{background:'#0072ff',color:'#fff',borderRadius:'50%',width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:600,fontSize:16}}>{headerInitials || 'JS'}</div>
             </div>
           </div>
@@ -882,15 +940,7 @@ function ClientDashboard() {
               limit={5}
             />
             <VehicleDataTable clientId={user.user && (user.user.id || user.user._id || user.user.client_id)} onViewAll={() => setActiveMenu('Vehicle RTO Data')} limit={10} searchText={vehicleSearchText} />
-            <div className="dashboard-actions">
-              <h2>Quick Actions</h2>
-              <div className="actions-list">
-                <button className="action-btn" onClick={() => setActiveMenu('Register Vehicle')}><i className="ri-add-circle-line"></i> Add New Vehicle</button>
-                <button className="action-btn" onClick={() => setInfoModal({ open: true, message: 'Feature not rolled back yet. Stay tuned. We will notify you.' })}><i className="ri-wallet-3-line"></i> Pay Challans</button>
-                <button className="action-btn" onClick={() => setInfoModal({ open: true, message: 'Feature not rolled back yet. Stay tuned. We will notify you.' })}><i className="ri-bar-chart-2-line"></i> Generate Reports</button>
-                <button className="action-btn" onClick={() => setSupportModal(true)}><i className="ri-customer-service-2-line"></i> Contact Support</button>
-              </div>
-            </div>
+            {/* QuickActions moved to a shared component rendered below so it's available on every page */}
             {/* Removed dashboard 'due' data section as requested */}
           </>
         )}
@@ -920,6 +970,17 @@ function ClientDashboard() {
             <LazyVehicleFastag />
           </Suspense>
         )}
+      {/* Shared quick actions bar available on every page (placed inside main so it flows under content) */}
+      <div className="main-quick-actions-wrapper" style={{ padding: '0 30px 30px 30px' }}>
+        <QuickActions
+          title="Quick Actions"
+          sticky={true}
+          onAddVehicle={() => setActiveMenu('Register Vehicle')}
+          onPay={() => setInfoModal({ open: true, message: 'Feature not rolled back yet. Stay tuned. We will notify you.' })}
+          onReports={() => setReportsModal({ open: true })}
+          onContact={() => setSupportModal(true)}
+        />
+      </div>
       </main>
       <CustomModal
         open={infoModal.open}
@@ -942,6 +1003,24 @@ function ClientDashboard() {
           <div><b>Phone:</b> <a href="tel:+911234567890">+91-1234-567-890</a></div>
           <div style={{marginTop: 10}}><b>Support Hours:</b> Mon - Sat, 9 AM to 6 PM</div>
           <div style={{color: '#b77', marginTop: 4}}>Public holidays: Team is not available. Next working day we will contact you.</div>
+        </div>
+      </CustomModal>
+      <CustomModal
+        open={reportsModal.open}
+        title="Generate Reports"
+        description="Choose which report you want to generate and download as CSV."
+        onConfirm={() => setReportsModal({ open: false })}
+        onCancel={() => setReportsModal({ open: false })}
+        confirmText="Close"
+        cancelText={null}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ color: '#333' }}>Select a report to generate and download:</div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button className="action-btn" onClick={generateRtoReport} title="Generate RTO Data Report">Generate RTO Data Report</button>
+            <button className="action-btn" onClick={generateChallanReport} title="Generate Challan Data Report">Generate Challan Data Report</button>
+          </div>
+          <div style={{ fontSize: 13, color: '#666' }}>Files will download as CSV. If your browser blocks downloads, allow downloads for this site.</div>
         </div>
       </CustomModal>
       <CustomModal

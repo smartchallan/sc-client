@@ -217,6 +217,7 @@ export default function RegisterVehicle() {
             <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
               <thead>
                 <tr>
+                  <th>S. No.</th>
                   <th>Vehicle Number</th>
                   <th>Engine Number</th>
                   <th>Chasis Number</th>
@@ -260,8 +261,9 @@ export default function RegisterVehicle() {
                     const handleDelete = () => setModal({ open: true, action: 'delete', vehicle: v });
                     const setInfoModal = (vehicle, lastAction) => setModal({ open: true, action: 'info', vehicle: { ...vehicle, lastAction, status: (vehicle.status || '').toUpperCase() } });
                     return (
-                      <tr key={v.id || v._id || idx}>
-                        <td>{v.vehicle_number || 'Not Available'}</td>
+                          <tr key={v.id || v._id || idx}>
+                            <td>{idx + 1}</td>
+                            <td>{v.vehicle_number || 'Not Available'}</td>
                         <td>{v.engine_number || 'Not Available'}</td>
                         <td>{v.chasis_number || 'Not Available'}</td>
                         <td style={{ color: statusColor, fontWeight: 600, letterSpacing: 1 }}>{status}</td>

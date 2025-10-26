@@ -103,6 +103,7 @@ export default function VehicleDataTable({ clientId, onViewAll, limit = 10, sear
   <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
         <thead>
           <tr>
+            <th>S. No.</th>
             <th>Vehicle No.</th>
             <th>Registration Date</th>
             <th>Insurance Exp</th>
@@ -114,10 +115,11 @@ export default function VehicleDataTable({ clientId, onViewAll, limit = 10, sear
         </thead>
         <tbody>
           {displayed.length === 0 ? (
-            <tr><td colSpan={7}>No vehicle data found.</td></tr>
+            <tr><td colSpan={8}>No vehicle data found.</td></tr>
           ) : (
             displayed.map((v, idx) => (
               <tr key={v.rc_regn_no || idx}>
+                <td>{idx + 1}</td>
                 <td>{v.rc_regn_no || '-'}</td>
                 <td>{formatExpiry(v.rc_regn_dt, false)}</td>
                 <td>{formatExpiry(v.insurance_exp || v.rc_insurance_upto, true)}</td>

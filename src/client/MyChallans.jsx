@@ -50,19 +50,21 @@ function ChallanTable({ title, data, search = {}, sortAsc = true }) {
         <>
         <table className="latest-table" style={{ width: '100%', minWidth: '900px', marginTop: 8, tableLayout: 'fixed' }}>
           <colgroup>
-            <col style={{ width: '10%' }} />
-            <col style={{ width: '12%' }} />
-            <col style={{ width: '12%' }} />
-            <col style={{ width: '18%' }} />
+            <col style={{ width: '4%' }} />
             <col style={{ width: '8%' }} />
+            <col style={{ width: '11%' }} />
+            <col style={{ width: '11%' }} />
+            <col style={{ width: '7%' }} />
+            <col style={{ width: '6%' }} />
+            <col style={{ width: '6%' }} />
             <col style={{ width: '8%' }} />
+            <col style={{ width: '9%' }} />
             <col style={{ width: '8%' }} />
-            <col style={{ width: '10%' }} />
-            <col style={{ width: '14%' }} />
-            <col style={{ width: '8%' }} />
+            <col style={{ width: '4%' }} />
           </colgroup>
           <thead>
             <tr>
+              <th>S. No.</th>
               <th>Vehicle Number</th>
               <th>Challan No</th>
               <th>Date/Time</th>
@@ -78,6 +80,7 @@ function ChallanTable({ title, data, search = {}, sortAsc = true }) {
           <tbody>
             {limited.map((c, idx) => (
               <tr key={c.challan_no || idx}>
+                <td>{idx + 1}</td>
                 <td>
                   <div className="cell-ellipsis" title={c.vehicle_number}>{c.vehicle_number || '-'}</div>
                 </td>
@@ -165,14 +168,12 @@ function ChallanTable({ title, data, search = {}, sortAsc = true }) {
       )}
       <CustomModal
         open={infoModal.open}
-        title={"Location"}
+        title={infoModal.message}
         onConfirm={() => setInfoModal({ open: false, message: '' })}
         onCancel={() => setInfoModal({ open: false, message: '' })}
         confirmText="OK"
         cancelText={null}
-      >
-        {infoModal.message}
-      </CustomModal>
+      />
       <CustomModal
         open={!!selectedChallan}
         title={selectedChallan ? `Challan Details: ${selectedChallan.challan_no}` : ''}

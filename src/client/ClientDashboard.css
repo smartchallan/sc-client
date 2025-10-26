@@ -198,13 +198,14 @@
       justify-content: flex-start;
       box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
       z-index: 1000;
-      /* Make the sidebar fixed so it stays while main scrolls */
-      position: fixed;
-      top: 0;
-      left: 0;
-      margin-left: 0; /* ensure no gap from viewport */
-      padding-left: 0; /* inner padding handled by children (.logo-container) */
-      height: 100vh;
+  /* Make the sidebar fixed so it stays while main scrolls */
+  position: fixed;
+  top: 0;
+  left: 0;
+  margin-left: 0; /* ensure no gap from viewport */
+  padding-left: 0; /* inner padding handled by children (.logo-container) */
+  height: 100vh;
+  transition: transform 0.3s ease, width 0.3s ease;
       /* allow internal stacking (logo, menu, user) */
       align-self: stretch;
     }
@@ -216,7 +217,7 @@
       left: 0;
       top: 0;
       height: 100vh;
-      transition: transform 0.25s ease;
+      transition: transform 0.35s cubic-bezier(.2,.9,.2,1);
     }
     .admin-dashboard-layout .sidebar.open { transform: translateX(0); }
     .sidebar-collapse-btn { display: none; }
@@ -250,7 +251,7 @@
       display: flex;
       align-items: center;
       padding: 8px 12px; /* reduce inner left padding so content sits closer to edge */
-      margin-bottom: 24px;
+      /* margin-bottom: 24px; */
       background-color: #fbfbf7; /* off-white background for logo area */
       /* border-radius: 0 12px 12px 0; */
     }
@@ -267,14 +268,120 @@
       font-weight: bold;
     }
 
-    .logo img {
-      height: 50px;
+    /* Quick Actions bar placed at bottom of page content (full-width card matching theme) */
+    .main-quick-actions-wrapper {
+      width: 100%;
+      margin-top: 18px;
     }
+    .main-quick-actions-wrapper .quick-actions-bar {
+      width: 100%;
+      background: #ffffff; /* card background */
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(17,24,39,0.06);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-sizing: border-box;
+    }
+    /* When sidebar is closed, adjust sticky quick actions to fit full width area */
+    .admin-dashboard-layout .sidebar.closed + .main-content .main-quick-actions-wrapper.quick-actions-sticky .quick-actions-bar {
+      left: 16px !important;
+      right: 16px !important;
+      max-width: none !important;
+    }
+    /* Sticky variant: fix to bottom of viewport and align with main content area */
+    .main-quick-actions-wrapper.quick-actions-sticky .quick-actions-bar {
+      position: fixed;
+      bottom: 16px;
+      left: calc(270px + 30px); /* sidebar width + main padding */
+      right: 30px; /* main right padding */
+      z-index: 1400;
+      width: auto;
+      max-width: calc(100% - (270px + 60px));
+      box-shadow: 0 12px 40px rgba(17,24,39,0.12);
+    }
+    /* When sidebar collapses or on narrow screens, ensure sticky element fits viewport */
+    @media (max-width: 900px) {
+      .main-quick-actions-wrapper.quick-actions-sticky .quick-actions-bar {
+        left: 16px;
+        right: 16px;
+        max-width: none;
+      }
+    }
+    /* Heading should match other card titles */
+    .main-quick-actions-wrapper .quick-actions-heading {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1a3a8f;
+      margin: 0;
+      padding: 0 8px 0 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .main-quick-actions-wrapper .quick-actions-list {
+      display: flex;
+      gap: 10px;
+      background: transparent; /* buttons sit inside card */
+      padding: 0;
+      border-radius: 8px;
+      align-items: center;
+      margin-left: auto; /* push buttons to the right when space available */
+    }
+    .main-quick-actions-wrapper .quick-actions-list .action-btn {
+      padding: 8px 12px;
+      font-size: 0.95em;
+      border-radius: 8px;
+      background: transparent;
+      color: #1a3a8f;
+      border: 1px solid rgba(26,58,143,0.08);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    /* Primary emphasis for the first action (Add New Vehicle) */
+    .main-quick-actions-wrapper .quick-actions-list .action-btn:first-child {
+      background: linear-gradient(180deg,#1a3a8f,#0f5a7a);
+      color: #fff;
+      border: none;
+    }
+    /* Make quick actions responsive: stack on small screens */
+    @media (max-width: 600px) {
+      .main-quick-actions-wrapper .quick-actions-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+      .main-quick-actions-wrapper .quick-actions-list {
+        justify-content: space-between;
+        margin-left: 0;
+        flex-wrap: wrap;
+      }
+      .main-quick-actions-wrapper .quick-actions-list .action-btn {
+        flex: 1 1 calc(50% - 8px);
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .quick-actions-bar { padding: 0 12px; }
+    }
+
+    @media (max-width: 420px) {
+      .quick-actions-bar { padding: 0 8px; }
+      .quick-actions-list { width: 100%; justify-content: space-between; }
+    }
+
+    /* .logo img {
+      height: 50px;
+    } */
     /* logo image styling when using sc-logo asset */
     .admin-dashboard-layout .logo .logo-img {
       /* height: 36px; */
       width: auto;
-      border-radius: 6px;
+      /* border-radius: 6px; */
       margin-right: 8px;
       display: inline-block;
     }
@@ -397,6 +504,13 @@
       margin-left: 270px;
       width: calc(100% - 270px);
       min-height: 100vh;
+      transition: margin-left 0.35s cubic-bezier(.2,.9,.2,1), width 0.35s cubic-bezier(.2,.9,.2,1);
+    }
+
+    /* When sidebar is closed, expand main content to full width with smooth transition */
+    .admin-dashboard-layout .sidebar.closed + .main-content {
+      margin-left: 0;
+      width: 100%;
     }
     .header {
       height: 70px;
@@ -844,11 +958,11 @@ input[type="submit"],
     font-size: 13px;
     table-layout: fixed;
   }
-  /* Hide columns: Location(4), Sent to Reg Court(5), Sent to Virtual Court(6), Offence Details(9) */
-  .latest-table th:nth-child(4), .latest-table td:nth-child(4),
+  /* Hide columns: Location(5), Sent to Reg Court(6), Sent to Virtual Court(7), Offence Details(10) */
   .latest-table th:nth-child(5), .latest-table td:nth-child(5),
   .latest-table th:nth-child(6), .latest-table td:nth-child(6),
-  .latest-table th:nth-child(9), .latest-table td:nth-child(9) {
+  .latest-table th:nth-child(7), .latest-table td:nth-child(7),
+  .latest-table th:nth-child(10), .latest-table td:nth-child(10) {
     display: none;
   }
   .latest-table th, .latest-table td {
