@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import scLogo from "../assets/sc-logo.png";
 import { getInitials } from "../utils/getInitials";
 import CustomModal from "./CustomModal";
 import "./ClientDashboard.css";
@@ -58,16 +59,18 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
   const cancelLogout = () => setLogoutOpen(false);
 
   return (
-    <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`} style={{minWidth: '270px'}}>
+    <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`} style={{minWidth: '270px', left: 0}}>
       <div className="logo-container">
         <div className="logo">
-          <i className="ri-shield-check-line"></i>
-          <span className="logo-text">Smart Challan</span>
+          <img src={scLogo} alt="Smart Challan" className="logo-img" />
+          {/* <span className="logo-text">Smart Challan</span> */}
         </div>
-        <button className="sidebar-collapse-btn" onClick={onToggleSidebar} aria-label="Toggle sidebar" style={{marginLeft: 'auto', background:'transparent', border:'none', color:'#fff', cursor:'pointer'}}>
+        <button className="sidebar-collapse-btn" onClick={onToggleSidebar} aria-label="Toggle sidebar" style={{marginLeft: 'auto', background:'transparent', border:'none', color:'#0f5a7a', cursor:'pointer'}}>
           <i className="ri-menu-3-line" />
         </button>
       </div>
+      
+
       <div className="nav-menu">
         {menu.map((item, idx) => (
           item.logout ? (
@@ -88,11 +91,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
           )
         ))}
       </div>
-      <div className="sidebar-user">
-        <span className="user-avatar">{initials}</span>
-        <span className="user-name">{userName}</span>
-        <span className="user-role">{userRole.charAt(0).toUpperCase() + userRole.slice(1)}</span>
-      </div>
+      
       <CustomModal open={logoutOpen} title="Confirm logout" description="You will be signed out of Smart Challan and returned to the login page." icon="ri-logout-box-r-line" onConfirm={confirmLogout} onCancel={cancelLogout} confirmText="Logout" cancelText="Stay">
       </CustomModal>
     </aside>

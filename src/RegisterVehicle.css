@@ -43,3 +43,11 @@
 .register-vehicle-content select option[disabled] {
 	color: #999;
 }
+
+/* Compact buttons on Register Vehicle page (match dashboard ~85% sizing) */
+.register-vehicle-content .btn,
+.register-vehicle-content .btn-primary,
+.register-vehicle-content .action-btn {
+	font-size: 0.85em;
+	padding: 8px 12px;
+}

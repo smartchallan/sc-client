@@ -1,9 +1,11 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import "./CustomModal.css";
 
 export default function CustomModal({ open, title, description, icon, onConfirm, onCancel, confirmText = "Yes", cancelText = "Cancel", children }) {
   if (!open) return null;
-  return (
+
+  const modal = (
     <div className="custom-modal-overlay">
       <div className="custom-modal" role="dialog" aria-modal="true">
         {/* Top-right close button for easier closing on small screens */}
@@ -21,4 +23,10 @@ export default function CustomModal({ open, title, description, icon, onConfirm,
       </div>
     </div>
   );
+
+  // Render modal into document.body to avoid being affected by parent stacking contexts or transforms
+  if (typeof document !== 'undefined' && document.body) {
+    return createPortal(modal, document.body);
+  }
+  return modal;
 }

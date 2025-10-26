@@ -293,6 +293,18 @@ export default function MyChallans() {
             }
           });
         }
+        // Sort pending and disposed challans by newest first (based on created_at / createdAt / challan_date_time)
+        const parseDate = s => s ? new Date(String(s).replace(/(\d{2})-(\d{2})-(\d{4})/, '$2/$1/$3')).getTime() : 0;
+        allPending.sort((a, b) => {
+          const aTime = parseDate(a.created_at || a.createdAt || a.challan_date_time);
+          const bTime = parseDate(b.created_at || b.createdAt || b.challan_date_time);
+          return (bTime || 0) - (aTime || 0);
+        });
+        allDisposed.sort((a, b) => {
+          const aTime = parseDate(a.created_at || a.createdAt || a.challan_date_time);
+          const bTime = parseDate(b.created_at || b.createdAt || b.challan_date_time);
+          return (bTime || 0) - (aTime || 0);
+        });
         setChallanData({
           Disposed_data: allDisposed,
           Pending_data: allPending
@@ -305,7 +317,8 @@ export default function MyChallans() {
   }, []);
 
   const [search, setSearch] = useState({ vehicle: '', challan: '' });
-  const [sortAsc, setSortAsc] = useState(true);
+  // Default to newest-first (created_at descending)
+  const [sortAsc, setSortAsc] = useState(false);
   return (
     <div className="my-challans-content">
       <h1 className="page-title">My Challans</h1>

@@ -509,9 +509,33 @@ function ClientDashboard() {
     fetch(`${baseUrl}/getvehicleechallandata?clientId=${clientId}`)
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data)) setVehicleChallanData(data);
-        else if (Array.isArray(data.challans)) setVehicleChallanData(data.challans);
-        else setVehicleChallanData([]);
+        // Helper to parse various date formats and return epoch time
+        const parse = s => s ? new Date(String(s).replace(/(\d{2})-(\d{2})-(\d{4})/, '$2/$1/$3')).getTime() : 0;
+        const sortByCreatedDesc = (arr) => {
+          if (!Array.isArray(arr)) return arr || [];
+          return arr.slice().sort((a, b) => {
+            const aT = parse(a.created_at || a.createdAt || a.challan_date_time);
+            const bT = parse(b.created_at || b.createdAt || b.challan_date_time);
+            return (bT || 0) - (aT || 0);
+          });
+        };
+
+        if (Array.isArray(data)) {
+          // For each vehicle, sort its pending and disposed arrays by newest first
+          const processed = data.map(vehicle => ({
+            ...vehicle,
+            pending_data: sortByCreatedDesc(vehicle.pending_data),
+            disposed_data: sortByCreatedDesc(vehicle.disposed_data)
+          }));
+          setVehicleChallanData(processed);
+        } else if (Array.isArray(data.challans)) {
+          const processed = data.challans.map(vehicle => ({
+            ...vehicle,
+            pending_data: sortByCreatedDesc(vehicle.pending_data),
+            disposed_data: sortByCreatedDesc(vehicle.disposed_data)
+          }));
+          setVehicleChallanData(processed);
+        } else setVehicleChallanData([]);
       })
       .catch(() => setVehicleChallanData([]))
       .finally(() => setLoadingVehicleChallan(false));
@@ -549,15 +573,14 @@ function ClientDashboard() {
       }
     });
     totalChallans = allChallans.length;
-    // Sort by newest first. Prefer `created_at`, then `createdAt`, then fallback to `challan_date_time`.
-    const getChallanTime = (c) => {
-      if (!c) return 0;
-      if (c.created_at) return new Date(c.created_at).getTime();
-      if (c.createdAt) return new Date(c.createdAt).getTime();
-      if (c.challan_date_time) return new Date(c.challan_date_time).getTime();
-      return 0;
-    };
-    allChallans.sort((a, b) => (getChallanTime(b) || 0) - (getChallanTime(a) || 0));
+    // Sort by newest first using the same parsing logic as MyChallans
+    // Prefer `created_at`, then `createdAt`, then fallback to `challan_date_time`.
+    const parseDate = s => s ? new Date(String(s).replace(/(\d{2})-(\d{2})-(\d{4})/, '$2/$1/$3')).getTime() : 0;
+    allChallans.sort((a, b) => {
+      const aTime = parseDate(a.created_at || a.createdAt || a.challan_date_time);
+      const bTime = parseDate(b.created_at || b.createdAt || b.challan_date_time);
+      return (bTime || 0) - (aTime || 0);
+    });
     // Take only 5 latest
     const latestChallans = allChallans.slice(0, 5);
     if (latestChallans.length === 0) {
@@ -690,15 +713,19 @@ function ClientDashboard() {
     <>
     <ToastContainer position="top-right" autoClose={2000} />
   <div className="admin-dashboard-layout" style={{display: 'flex', width: '100%', minHeight: '100vh'}}>
-      {showLoader && <TrafficLightLoader />}
+      {showLoader && (
+        <div className="page-loader-overlay">
+          <TrafficLightLoader />
+        </div>
+      )}
   <ClientSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
       <main className="main-content admin-home-content" style={{flex: 1, minHeight: '100vh'}}>
         <div className="header" style={{marginBottom: 24}}>
-          <div className="header-left" style={{display:'flex',alignItems:'center',gap:16}}>
+            <div className="header-left" style={{display:'flex',alignItems:'center',gap:16}}>
             <div className="menu-toggle" style={{fontSize:22,cursor:'pointer'}} onClick={toggleSidebar}>
               <i className="ri-menu-line"></i>
             </div>
-            <div className="header-title" style={{fontWeight:600,fontSize:20}}>
+            <div className="header-title" style={{fontWeight:600}}>
               {activeMenu === 'Dashboard' ? 'Dashboard'
                 : activeMenu === 'Profile' ? 'Profile'
                 : activeMenu === 'Registered Vehicles' ? 'Registered Vehicles'
@@ -708,7 +735,7 @@ function ClientDashboard() {
                 : activeMenu}
             </div>
           </div>
-          <div className="header-right" style={{display:'flex',alignItems:'center',gap:18}}>
+          <div className="header-right" style={{display:'flex',alignItems:'center',gap:18,cursor:'pointer'}} onClick={() => setActiveMenu('Profile')} role="button" aria-label="Open profile">
             <div className="header-profile" style={{marginLeft:8}}>
               <div className="header-avatar" style={{background:'#0072ff',color:'#fff',borderRadius:'50%',width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:600,fontSize:16}}>{headerInitials || 'JS'}</div>
             </div>
@@ -721,9 +748,9 @@ function ClientDashboard() {
                 <h1 className="dashboard-title">Welcome back{user.user && user.user.name ? `, ${user.user.name}` : '123'}!</h1>
                 <p>Here's an overview of your Fleet status</p>
               </div>
-              <div className="header-profile">
+              {/* <div className="header-profile">
                 <span className="header-avatar">{headerInitials || 'JS'}</span>
-              </div>
+              </div> */}
             </div>
             <div className="dashboard-stats">
               <div className="stat-card">

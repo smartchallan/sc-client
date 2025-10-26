@@ -148,17 +148,32 @@
       flex-direction: column;
     }
 
-    .dashboard-header h1 {
-        font-size: 32px;
-        font-weight: bold;
-        /* color: #0072ff; */
-    }
-
-    .dashboard-header p {
-    color: #555;
-    font-size: 18px;
+.admin-dashboard-layout .dashboard-header {
+  /* Base scaling for header children — set to 0.85rem as requested */
+  font-size: 0.85rem;
 }
-.dashboard-header {
+
+.admin-dashboard-layout.dashboard-header h1 {
+  /* 2rem here = 2 * root-font-size. With root reduced globally, this matches ~85% of original px size */
+  font-size: 2rem;
+  font-weight: bold;
+  /* color: #0072ff; */
+}
+
+.admin-dashboard-layout .dashboard-header p {
+  color: #555;
+  /* 1.125rem approximates the previous scaled size (18px * 0.85 = ~15.3px) */
+  font-size: 1.125rem;
+}
+
+/* Dashboard title (used in ClientDashboard.jsx as .dashboard-title) */
+.dashboard-title {
+  margin: 0;
+  font-size: 2rem; /* scales with root; matches ~85% of previous 32px */
+  font-weight: 700;
+  color: #1a3a8f;
+}
+.admin-dashboard-layout .dashboard-header {
     margin-bottom: 32px;
 }
     /* Center the main app and constrain maximum width for better responsiveness */
@@ -168,24 +183,36 @@
       /* allow full width on all screens (no fixed max) so layout fits smaller laptops */
       max-width: none;
       margin: 0;
-      align-items: flex-start;
+      /* stretch children so sidebar background covers full height of the page */
+      align-items: stretch;
       min-height: 100vh;
     }
     .admin-dashboard-layout .sidebar {
       width: 270px;
       background: linear-gradient(180deg, #1a3a8f 0%, #0f5a7a 100%);
       color: white;
-      padding: 20px 0;
+      padding: 0px 0 20px 0;
       display: flex;
       flex-direction: column;
+      /* keep content anchored at the top */
+      justify-content: flex-start;
       box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-      z-index: 10;
-      /* position: relative; */
+      z-index: 1000;
+      /* Make the sidebar fixed so it stays while main scrolls */
+      position: fixed;
+      top: 0;
+      left: 0;
+      margin-left: 0; /* ensure no gap from viewport */
+      padding-left: 0; /* inner padding handled by children (.logo-container) */
+      height: 100vh;
+      /* allow internal stacking (logo, menu, user) */
+      align-self: stretch;
     }
     /* collapsed / mobile hidden state */
     .admin-dashboard-layout .sidebar.closed {
       transform: translateX(-100%);
-      position: absolute;
+      /* keep fixed when hidden so transform works predictably */
+      position: fixed;
       left: 0;
       top: 0;
       height: 100vh;
@@ -194,22 +221,42 @@
     .admin-dashboard-layout .sidebar.open { transform: translateX(0); }
     .sidebar-collapse-btn { display: none; }
 
+    /* Page loader overlay used on ClientDashboard when showLoader is true */
+    .page-loader-overlay {
+      position: fixed;
+      inset: 0; /* top:0; right:0; bottom:0; left:0 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.7);
+      z-index: 2000; /* above header and sidebar */
+      pointer-events: all;
+    }
+    .page-loader-overlay .traffic-light-loader {
+      /* slightly larger and centered */
+      width: 48px;
+      height: 140px;
+    }
+
 @media (max-width: 900px) {
   .sidebar-collapse-btn { display: inline-flex; }
   /* make main-content take full width when sidebar is hidden */
   .admin-dashboard-layout .sidebar.closed + .main-content {
     margin-left: 0;
+    width: 100%;
   }
 }
     .admin-dashboard-layout .logo-container {
       display: flex;
       align-items: center;
-      padding: 0 20px;
-      margin-bottom: 40px;
+      padding: 8px 12px; /* reduce inner left padding so content sits closer to edge */
+      margin-bottom: 24px;
+      background-color: #fbfbf7; /* off-white background for logo area */
+      /* border-radius: 0 12px 12px 0; */
     }
     .admin-dashboard-layout .logo {
       /* width: 40px; */
-      height: 40px;
+      height: 100px;
       /* background-color: #4CAF50; */
       border-radius: 8px;
       display: flex;
@@ -218,6 +265,18 @@
       margin-right: 10px;
       font-size: 20px;
       font-weight: bold;
+    }
+
+    .logo img {
+      height: 50px;
+    }
+    /* logo image styling when using sc-logo asset */
+    .admin-dashboard-layout .logo .logo-img {
+      /* height: 36px; */
+      width: auto;
+      border-radius: 6px;
+      margin-right: 8px;
+      display: inline-block;
     }
 
     /* [class^=ri-] {
@@ -238,11 +297,21 @@
       font-weight: bold;
       letter-spacing: 0.5px;
     }
-    .admin-dashboard-layout .nav-menu {
-      flex-grow: 1;
+  .admin-dashboard-layout .nav-menu {
+      /* Keep menu items stacked at the top; do not grow to fill space */
+      flex: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 8px 12px;
+      overflow: visible;
+      /* normal spacing under the logo */
+      margin-top: 4px;
+      align-items: stretch;
+      justify-content: flex-start;
     }
     .nav-item {
-      padding: 12px 20px;
+      padding: 12px 12px; /* reduce left padding so icons align nearer the left edge */
       display: flex;
       align-items: center;
       cursor: pointer;
@@ -269,12 +338,37 @@
       margin-right: 12px;
       font-size: 20px;
     }
-    .user-profile {
-      padding: 20px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    /* sidebar user block removed (client sidebar no longer shows user initials/name/role) */
+    .sidebar-user .user-avatar {
+      width: 40px;
+      height: 40px;
+      background-color: #e0f2f1;
+      color: #0f5a7a;
+      border-radius: 50%;
       display: flex;
       align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 16px;
     }
+    .sidebar-user .user-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #ffffff;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 220px;
+    }
+    .sidebar-user .user-role {
+      font-size: 12px;
+      opacity: 0.85;
+      color: rgba(255,255,255,0.9);
+      text-transform: capitalize;
+    }
+    /* keep legacy .user-profile styles in case used elsewhere */
+    .user-profile { display: none; }
     .user-avatar {
       width: 36px;
       height: 36px;
@@ -299,8 +393,8 @@
       opacity: 0.7;
     }
     .main-content {
-      /* margin-left: 270px; */
-      /* Use percentage-based width to avoid issues with scrollbars and viewport units */
+      /* Reserve space for the fixed sidebar */
+      margin-left: 270px;
       width: calc(100% - 270px);
       min-height: 100vh;
     }
@@ -506,6 +600,57 @@
     .btn-danger:hover {
       background-color: rgba(255, 82, 82, 0.1);
     }
+
+/* Reduce button sizes globally to ~85% (font + padding) for a more compact UI */
+button,
+input[type="button"],
+input[type="submit"],
+.btn,
+.action-btn,
+.custom-modal-btn,
+.sidebar-collapse-btn {
+  font-size: 0.85em; /* scale down font */
+}
+
+/* Slightly reduced paddings to match the smaller font */
+.btn {
+  padding: 10px 20px; /* was 12px 24px */
+}
+.action-btn {
+  /* action buttons used across many components (smaller CTA style) */
+  padding: 6px 12px;
+  font-size: 0.85em;
+}
+.custom-modal-btn {
+  padding: 7px 18px; /* slightly smaller than before */
+  font-size: 0.85em;
+}
+.btn-danger {
+  padding: 6px 12px;
+  font-size: 0.85em;
+}
+
+/* Keep small flat action buttons compact as well */
+.action-btn.flat-btn {
+  padding: 6px 10px;
+  font-size: 0.85em;
+}
+
+/* Ensure dashboard-specific buttons (View All, Quick Actions) are compact and not overridden
+   Use higher specificity and !important to avoid other component CSS from changing size. */
+.admin-dashboard-layout .action-btn,
+.admin-dashboard-layout .action-btn.flat-btn,
+.admin-dashboard-layout .dashboard-actions .action-btn,
+.admin-dashboard-layout .dashboard-latest .action-btn,
+.admin-dashboard-layout .latest-table + div .action-btn {
+  font-size: 0.85em !important;
+  padding: 8px 14px !important;
+}
+
+/* Specifically compact View All link/button area on latest tables */
+.dashboard-latest .action-btn {
+  padding: 6px 12px !important;
+}
     .button-group {
       display: flex;
       justify-content: space-between;
@@ -650,10 +795,148 @@
 
 @media (max-width: 900px) {
   .dashboard-stats { gap: 12px; }
-  .stat-card { max-width: 48%; flex: 1 1 48%; }
+  .stat-card { max-width: 48%; flex: 1 1 48%; width:100%}
 }
 
 @media (max-width: 600px) {
-  .stat-card { max-width: 100%; flex: 1 1 100%; }
+  .stat-card { max-width: 100%; flex: 1 1 100%; width:100%}
   .stat-chart-container { margin-top: 8px; }
+}
+
+/* Extra small screens (phones like iPhone 12 Pro ~390px) - make dashboard responsive */
+/* Portrait phones (e.g. iPhone 12 Pro portrait ~390px) - full-width cards with large charts */
+@media (max-width: 420px) {
+  .dashboard-stats {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .stat-card {
+    max-width: 100%;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 12px;
+  }
+  /* Chart fills the card width and has a consistent height for readability */
+  .stat-chart-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 220px !important; /* portrait chart height */
+    margin: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .stat-chart-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+  }
+
+  /* Reduce text density */
+  .stat-card div { font-size: 13px; }
+  .stat-card .stat-value { font-size: 14px; }
+
+  /* Tables: hide less-important columns to fit narrow screens but keep action column visible */
+  .latest-table {
+    font-size: 13px;
+    table-layout: fixed;
+  }
+  /* Hide columns: Location(4), Sent to Reg Court(5), Sent to Virtual Court(6), Offence Details(9) */
+  .latest-table th:nth-child(4), .latest-table td:nth-child(4),
+  .latest-table th:nth-child(5), .latest-table td:nth-child(5),
+  .latest-table th:nth-child(6), .latest-table td:nth-child(6),
+  .latest-table th:nth-child(9), .latest-table td:nth-child(9) {
+    display: none;
+  }
+  .latest-table th, .latest-table td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 8px 6px;
+  }
+  .latest-table td:last-child, .latest-table th:last-child {
+    white-space: nowrap; /* keep action visible */
+    text-align: center;
+    width: 1%; /* shrink to content */
+  }
+  .dashboard-actions .action-btn {
+    display: inline-flex;
+    padding: 8px 10px !important;
+    font-size: 0.85em !important;
+  }
+}
+
+/* Strong override: ensure charts fill the available card width on small portrait phones */
+@media (max-width: 420px) {
+  .admin-dashboard-layout .dashboard-stats .stat-card .stat-chart-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 220px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+  .admin-dashboard-layout .dashboard-stats .stat-card .stat-chart-container canvas {
+    width: 100% !important;
+    height: 220px !important;
+    max-height: 220px !important;
+    display: block !important;
+  }
+  /* Remove any left/right negative margins that might prevent full-bleed */
+  .admin-dashboard-layout .stat-card { padding-left: 12px !important; padding-right: 12px !important; }
+}
+
+/* Small-to-medium widths (including phone landscape & small tablets) - show two cards per row with fixed square charts */
+@media (min-width: 421px) and (max-width: 900px) {
+  .dashboard-stats {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .stat-card {
+    flex: 1 1 calc(50% - 12px);
+    max-width: calc(50% - 12px);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px;
+  }
+  /* Fixed square charts for two-column layout */
+  .stat-chart-container {
+    max-width: 160px !important;
+    width: 160px !important;
+    height: 160px !important;
+    flex: 0 0 160px;
+    margin: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .stat-chart-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+  }
+}
+
+/* Responsive override: when the sidebar collapses into a row (mobile), keep the
+   user block in the normal flow so it doesn't overlap other items. */
+@media (max-width: 900px) {
+  .sidebar-user {
+    position: static;
+    top: auto;
+    left: auto;
+    right: auto;
+    padding: 8px 10px;
+    border-top: none;
+    gap: 4px;
+  }
+  .admin-dashboard-layout .nav-menu {
+    margin-top: 4px;
+  }
 }
