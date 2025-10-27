@@ -713,18 +713,53 @@ function ClientDashboard() {
   }
 
     // Helper: convert array of objects to CSV string
-    const arrayToCsv = (arr) => {
-      if (!Array.isArray(arr) || arr.length === 0) return '';
-      const headers = Array.from(arr.reduce((set, item) => { Object.keys(item || {}).forEach(k => set.add(k)); return set; }, new Set()));
-      const rows = arr.map(obj => headers.map(h => {
-        let val = obj[h] == null ? '' : obj[h];
-        if (typeof val === 'object') val = JSON.stringify(val);
-        val = String(val).replace(/"/g, '""');
-        if (/[,"\n]/.test(val)) val = `"${val}"`;
-        return val;
-      }).join(','));
-      return [headers.join(','), ...rows].join('\n');
-    };
+      const arrayToCsv = (arr) => {
+        if (!Array.isArray(arr) || arr.length === 0) return '';
+        const headers = Array.from(arr.reduce((set, item) => { Object.keys(item || {}).forEach(k => set.add(k)); return set; }, new Set()));
+        const rows = arr.map(obj => headers.map(h => {
+          let val = obj[h] == null ? '' : obj[h];
+          if (typeof val === 'object') val = JSON.stringify(val);
+          val = String(val).replace(/"/g, '""');
+          if (/[,"\n]/.test(val)) val = `"${val}"`;
+          return val;
+        }).join(','));
+        return [headers.join(','), ...rows].join('\n');
+      };
+
+      // Helper: create CSV with deterministic header order and friendly labels
+      const arrayToCsvWithOrder = (arr, preferredOrder = [], labelMap = {}) => {
+        if (!Array.isArray(arr) || arr.length === 0) return '';
+        // Collect all keys present in the data
+        const keySet = arr.reduce((set, item) => { Object.keys(item || {}).forEach(k => set.add(k)); return set; }, new Set());
+        const remaining = Array.from(keySet);
+        // Start with preferredOrder keys that actually exist
+        const headers = [];
+        preferredOrder.forEach(k => {
+          if (remaining.includes(k)) {
+            headers.push(k);
+            const idx = remaining.indexOf(k);
+            if (idx >= 0) remaining.splice(idx, 1);
+          }
+        });
+        // Append any remaining keys in stable alphabetical order
+        remaining.sort();
+        headers.push(...remaining);
+
+        // Build CSV header row using friendly labels when available
+        const headerLabels = headers.map(h => labelMap[h] || h);
+        const rows = arr.map(obj => headers.map(h => {
+          let val = obj[h] == null ? '' : obj[h];
+          if (typeof val === 'object') val = JSON.stringify(val);
+          val = String(val).replace(/"/g, '""');
+          if (/[,"\n]/.test(val)) val = `"${val}"`;
+          return val;
+        }).join(','));
+
+        return [headerLabels.join(','), ...rows].join('\n');
+      };
+
+      // Exporting state for showing spinner/disabled
+      const [exporting, setExporting] = useState({ rto: false, challan: false });
 
     const downloadCsv = (csv, filename) => {
       if (!csv) { toast.info('No data available for export'); return; }
@@ -743,10 +778,46 @@ function ClientDashboard() {
 
     const generateRtoReport = () => {
       if (!Array.isArray(vehicleRtoData) || vehicleRtoData.length === 0) { toast.info('No RTO data available to export'); return; }
-      const rows = vehicleRtoData.map(r => ({ ...r }));
-      const csv = arrayToCsv(rows);
-      const name = `rto-data-report-${new Date().toISOString().slice(0,10)}.csv`;
-      downloadCsv(csv, name);
+      // Wrap in async IIFE so we can set exporting state and ensure it resets
+      (async () => {
+        try {
+          setExporting(e => ({ ...e, rto: true }));
+          const rows = vehicleRtoData.map((r, idx) => {
+            // Prefer rc_regn_no as the canonical vehicle number for RTO exports
+            const vnum = r.rc_regn_no || r.vehicle_number || r.vehicle_no || r.registration_no || r.regn_no || r.reg_no || r.regNo || r.vehicleNo || '';
+            // create a shallow copy and remove noisy/internal fields we don't want in the CSV
+            const r2 = { ...r };
+            // remove API response message column (column C) if present
+            if (r2.api_response_message) delete r2.api_response_message;
+            // also remove the original rc_regn_no field so it doesn't appear twice
+            if (r2.rc_regn_no) delete r2.rc_regn_no;
+            return ({ "S. No.": idx + 1, vehicle_number: vnum, ...r2 });
+          });
+          // Preferred column order and friendly labels for RTO exports
+          const preferredOrder = ["S. No.", "vehicle_number", "owner_name", "engine_no", "chasis_no", "registration_no", "regn_no", "rc_no", "insurance_exp", "road_tax_exp", "fitness_exp", "pollution_exp", "created_at", "createdAt"];
+          const labelMap = {
+            "S. No.": "S. No.",
+            vehicle_number: "Vehicle Number",
+            owner_name: "Owner Name",
+            engine_no: "Engine Number",
+            chasis_no: "Chassis Number",
+            registration_no: "Registration No",
+            regn_no: "Registration No",
+            rc_no: "RC No",
+            insurance_exp: "Insurance Upto",
+            road_tax_exp: "Road Tax Upto",
+            fitness_exp: "Fitness Upto",
+            pollution_exp: "Pollution Upto",
+            created_at: "Created At",
+            createdAt: "Created At"
+          };
+          const csv = arrayToCsvWithOrder(rows, preferredOrder, labelMap);
+          const name = `rto-data-report-${new Date().toISOString().slice(0,10)}.csv`;
+          downloadCsv(csv, name);
+        } finally {
+          setExporting(e => ({ ...e, rto: false }));
+        }
+      })();
     };
 
     const generateChallanReport = () => {
@@ -759,9 +830,36 @@ function ClientDashboard() {
         });
       }
       if (rows.length === 0) { toast.info('No challan data available to export'); return; }
-      const csv = arrayToCsv(rows);
-      const name = `challan-data-report-${new Date().toISOString().slice(0,10)}.csv`;
-      downloadCsv(csv, name);
+      (async () => {
+        try {
+          setExporting(e => ({ ...e, challan: true }));
+          const numbered = rows.map((r, idx) => ({ "S. No.": idx + 1, vehicle_number: r.vehicle_number || '', ...r }));
+          const preferredOrder = ["S. No.", "vehicle_number", "challan_no", "challan_date_time", "created_at", "createdAt", "challan_status", "fine_imposed", "received_amount", "receipt_no", "owner_name", "driver_name", "department", "rto_distric_name", "state_code", "statusType"];
+          const labelMap = {
+            "S. No.": "S. No.",
+            vehicle_number: "Vehicle Number",
+            challan_no: "Challan No",
+            challan_date_time: "Challan Date/Time",
+            created_at: "Created At",
+            createdAt: "Created At",
+            challan_status: "Status",
+            fine_imposed: "Fine Imposed",
+            received_amount: "Received Amount",
+            receipt_no: "Receipt No",
+            owner_name: "Owner Name",
+            driver_name: "Driver Name",
+            department: "Department",
+            rto_distric_name: "RTO District",
+            state_code: "State Code",
+            statusType: "Status Type"
+          };
+          const csv = arrayToCsvWithOrder(numbered, preferredOrder, labelMap);
+          const name = `challan-data-report-${new Date().toISOString().slice(0,10)}.csv`;
+          downloadCsv(csv, name);
+        } finally {
+          setExporting(e => ({ ...e, challan: false }));
+        }
+      })();
     };
 
     return (
@@ -1017,8 +1115,12 @@ function ClientDashboard() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ color: '#333' }}>Select a report to generate and download:</div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button className="action-btn" onClick={generateRtoReport} title="Generate RTO Data Report">Generate RTO Data Report</button>
-            <button className="action-btn" onClick={generateChallanReport} title="Generate Challan Data Report">Generate Challan Data Report</button>
+            <button className="action-btn" onClick={generateRtoReport} title="Generate RTO Data Report" disabled={exporting.rto}>
+              {exporting.rto ? 'Generating RTO...' : 'Generate RTO Data Report'}
+            </button>
+            <button className="action-btn" onClick={generateChallanReport} title="Generate Challan Data Report" disabled={exporting.challan}>
+              {exporting.challan ? 'Generating Challans...' : 'Generate Challan Data Report'}
+            </button>
           </div>
           <div style={{ fontSize: 13, color: '#666' }}>Files will download as CSV. If your browser blocks downloads, allow downloads for this site.</div>
         </div>

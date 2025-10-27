@@ -291,6 +291,17 @@
       right: 16px !important;
       max-width: none !important;
     }
+
+/* Inline spinner used inside action buttons during exports */
+.inline-spinner {
+  vertical-align: middle;
+  animation: inline-spin 1s linear infinite;
+  display: inline-block;
+}
+@keyframes inline-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
     /* Sticky variant: fix to bottom of viewport and align with main content area */
     .main-quick-actions-wrapper.quick-actions-sticky .quick-actions-bar {
       position: fixed;
