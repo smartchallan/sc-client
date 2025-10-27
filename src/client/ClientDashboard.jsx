@@ -712,6 +712,23 @@ function ClientDashboard() {
     });
   }
 
+  // Total renewals count (sum of categories) for display in stat card
+  const vehicleRenewalsTotal = (expiryCounts.insurance || 0) + (expiryCounts.roadTax || 0) + (expiryCounts.fitness || 0) + (expiryCounts.pollution || 0);
+
+  // Compute challan amount totals (pending and disposed) so we can show total at card title
+  let pendingFineTotal = 0, disposedFineTotal = 0;
+  if (Array.isArray(vehicleChallanData)) {
+    vehicleChallanData.forEach(item => {
+      if (Array.isArray(item.pending_data)) {
+        pendingFineTotal += item.pending_data.reduce((sum, c) => sum + (parseFloat(c.fine_imposed) || 0), 0);
+      }
+      if (Array.isArray(item.disposed_data)) {
+        disposedFineTotal += item.disposed_data.reduce((sum, c) => sum + (parseFloat(c.fine_imposed) || 0), 0);
+      }
+    });
+  }
+  const totalFineAmount = pendingFineTotal + disposedFineTotal;
+
     // Helper: convert array of objects to CSV string
       const arrayToCsv = (arr) => {
         if (!Array.isArray(arr) || arr.length === 0) return '';
@@ -973,7 +990,12 @@ function ClientDashboard() {
               </div>
               <div className="stat-card">
                 <i className="ri-alarm-warning-line"></i>
-                <div>Vehicle Renewals</div>
+                <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center'}}>
+                  <div>Vehicle Renewals</div>
+                  <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                    {loadingVehicleRto ? '...' : vehicleRenewalsTotal}
+                  </div>
+                </div>
                 <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 10 }}>
                   <div className={`status-badge`} style={{ cursor: 'default' }}>
                     <div style={{ color: '#ff5252', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.insurance}</div>
@@ -999,31 +1021,22 @@ function ClientDashboard() {
               </div>
               <div className="stat-card">
                 <i className="ri-money-rupee-circle-line"></i>
-                <div>Challan Amount</div>
-                <div className="stat-value">
+                <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center'}}>
+                  <div>Challan Amount</div>
+                  <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                    {loadingVehicleChallan ? '...' : `₹${totalFineAmount.toLocaleString()}`}
+                  </div>
+                </div>
+                <div className="stat-value" style={{ marginTop: 8 }}>
                   {loadingVehicleChallan
                     ? '...'
-                    : (() => {
-                        let pendingFine = 0, disposedFine = 0;
-                        if (Array.isArray(vehicleChallanData)) {
-                          vehicleChallanData.forEach(item => {
-                            if (Array.isArray(item.pending_data)) {
-                              pendingFine += item.pending_data.reduce((sum, c) => sum + (parseFloat(c.fine_imposed) || 0), 0);
-                            }
-                            if (Array.isArray(item.disposed_data)) {
-                              disposedFine += item.disposed_data.reduce((sum, c) => sum + (parseFloat(c.fine_imposed) || 0), 0);
-                            }
-                          });
-                        }
-                        return (
-                          <>
-                            <span style={{color: 'red', fontWeight: 600, fontSize: '0.55em'}}>Pending: ₹{pendingFine.toLocaleString()}</span>
-                            <span style={{margin: '0 6px', color: '#999', fontSize: '0.55em'}}>|</span>
-                            <span style={{fontSize: '0.55em'}}>Paid: ₹{disposedFine.toLocaleString()}</span>
-                          </>
-                        );
-                      })()
-                  }
+                    : (
+                        <>
+                          <span style={{color: 'red', fontWeight: 600, fontSize: '0.55em'}}>Pending: ₹{pendingFineTotal.toLocaleString()}</span>
+                          <span style={{margin: '0 6px', color: '#999', fontSize: '0.55em'}}>|</span>
+                          <span style={{fontSize: '0.55em'}}>Paid: ₹{disposedFineTotal.toLocaleString()}</span>
+                        </>
+                      )}
                 </div>
                 <div className="stat-chart-container" style={{maxWidth: 176, margin: '12px auto'}}>
                   <canvas ref={chartRefAmount} />
