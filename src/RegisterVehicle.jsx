@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import CustomModal from "./client/CustomModal";
+import * as XLSX from 'xlsx';
 
 const FIELD_OPTIONS = [
   { value: "vehicle_number", label: "Vehicle Number" },
@@ -22,6 +23,15 @@ export default function RegisterVehicle() {
   const [vehicles, setVehicles] = useState([]);
   const [fetchingVehicles, setFetchingVehicles] = useState(false);
   const [modal, setModal] = useState({ open: false, action: null, vehicle: null });
+  // Upload Excel states
+  const [uploadingExcel, setUploadingExcel] = useState(false);
+  const [uploadModal, setUploadModal] = useState({ open: false, count: 0, invalids: [] });
+  const [parsedVehicles, setParsedVehicles] = useState([]);
+  const fileInputRef = useRef(null);
+  const [skipHeader, setSkipHeader] = useState(true);
+  const [previewLimit] = useState(10);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
+  const [finalSummary, setFinalSummary] = useState({ open: false, success: 0, fail: 0, failures: [] });
   // Loader state for RTO/Challan API calls
   const [rtoLoadingId, setRtoLoadingId] = useState(null);
   const [challanLoadingId, setChallanLoadingId] = useState(null);
@@ -110,6 +120,114 @@ export default function RegisterVehicle() {
     }
   };
 
+  // ---------------- Bulk upload handlers ----------------
+  const handleFileSelect = (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    // Only accept excel files
+    const allowed = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv'];
+    // We will still attempt parsing even if mime differs; rely on XLSX
+    setUploadingExcel(true);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = evt.target.result;
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        // Get raw rows as arrays so we can take second column (index 1)
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+  // Skip first row if user indicated the file has header; extract second column values
+  const dataRows = Array.isArray(rows) ? (skipHeader ? rows.slice(1) : rows) : [];
+        const extracted = dataRows.map(r => (Array.isArray(r) ? (r[1] || '') : ''))
+                              .map(v => (typeof v === 'string' ? v.trim() : String(v).trim()));
+        // Validation regex per requirement: ^[a-zA-Z0-9]{5,11}$
+        const validRe = /^[A-Za-z0-9]{5,11}$/;
+        const seen = new Set();
+        const normalized = [];
+        const invalids = [];
+        extracted.forEach(v => {
+          if (!v) return;
+          const up = v.toUpperCase();
+          if (seen.has(up)) return;
+          seen.add(up);
+          // validate using case-insensitive pattern (original characters matter only for validation of allowed chars)
+          if (!validRe.test(v)) {
+            invalids.push(up);
+          } else {
+            normalized.push(up);
+          }
+        });
+  setParsedVehicles(normalized);
+  setUploadModal({ open: true, count: normalized.length, invalids });
+      } catch (err) {
+        toast.error('Failed to parse the uploaded file. Make sure it is a valid Excel file.');
+      } finally {
+        setUploadingExcel(false);
+        // Reset file input to allow uploading same file again if needed
+        try { if (fileInputRef.current) fileInputRef.current.value = null; } catch {}
+      }
+    };
+    reader.onerror = () => {
+      setUploadingExcel(false);
+      toast.error('Failed to read the file');
+      try { if (fileInputRef.current) fileInputRef.current.value = null; } catch {}
+    };
+    reader.readAsArrayBuffer(f);
+  };
+
+  const confirmAndUploadParsed = async () => {
+    if (!Array.isArray(parsedVehicles) || parsedVehicles.length === 0) {
+      setUploadModal({ open: false, count: 0, invalids: [] });
+      toast.info('No valid vehicle numbers found in the file.');
+      return;
+    }
+    setUploadModal({ open: false, count: 0, invalids: [] });
+    setUploadingExcel(true);
+    setUploadProgress({ current: 0, total: parsedVehicles.length });
+    const ids = getUserIds();
+    const failures = [];
+    let successCount = 0;
+    try {
+      for (let i = 0; i < parsedVehicles.length; i++) {
+        const vehicle_number = (parsedVehicles[i] || '').toUpperCase();
+        if (!vehicle_number) {
+          // shouldn't happen
+          setUploadProgress(p => ({ ...p, current: p.current + 1 }));
+          continue;
+        }
+        try {
+          const payload = { ...ids, vehicle_number };
+          const res = await fetch(API_ROOT + REGISTER_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok) {
+            successCount++;
+            toast.success(`(${i+1}/${parsedVehicles.length}) ${vehicle_number}: Registered`);
+          } else {
+            const reason = data && data.message ? data.message : 'Failed';
+            failures.push({ vehicle: vehicle_number, reason });
+            toast.error(`(${i+1}/${parsedVehicles.length}) ${vehicle_number}: ${reason}`);
+          }
+        } catch (err) {
+          failures.push({ vehicle: vehicle_number, reason: 'API Error' });
+          toast.error(`(${i+1}/${parsedVehicles.length}) ${vehicle_number}: API Error`);
+        }
+        setUploadProgress(p => ({ ...p, current: p.current + 1 }));
+      }
+      // Refresh list after bulk add
+      if (ids.client_id) fetchVehicles(ids.client_id);
+    } finally {
+      setUploadingExcel(false);
+      setParsedVehicles([]);
+      setFinalSummary({ open: true, success: successCount, fail: failures.length, failures });
+      setUploadProgress({ current: 0, total: 0 });
+    }
+  };
+
   return (
     <div className="register-vehicle-content">
       <ToastContainer position="top-right" autoClose={2000} />
@@ -181,6 +299,28 @@ export default function RegisterVehicle() {
             <button type="submit" className="btn btn-primary" disabled={loading || !!registerError}>{loading ? "Adding..." : "Add New Vehicle"}</button>
           </div>
         </form>
+      </div>
+  {/* Upload Vehicles by Excel */}
+  <div className="card upload-card" style={{ marginTop: 18 }}>
+        <h3 style={{ marginTop: 0 }}>Upload Vehicles (Excel)</h3>
+        <p style={{ marginTop: 0, color: '#666' }}>Upload an Excel file where the <strong>second column</strong> contains vehicle numbers (one per row). We'll read the file, show you the number of vehicles found, and then register them sequentially.</p>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <input type="checkbox" checked={skipHeader} onChange={e => setSkipHeader(!!e.target.checked)} />
+            <span style={{ color: '#444' }}>File has header row (skip first row)</span>
+          </label>
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFileSelect} />
+          <button className="action-btn" onClick={() => { if (fileInputRef.current) fileInputRef.current.click(); }} disabled={uploadingExcel} title="Select Excel file">Select File</button>
+          <div style={{ color: '#666' }}>{uploadingExcel ? (uploadProgress.total > 0 ? `Uploading ${uploadProgress.current}/${uploadProgress.total}` : 'Processing file...') : ''}</div>
+        </div>
+        {uploadingExcel && uploadProgress.total > 0 && (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ height: 10, background: '#eee', borderRadius: 6, overflow: 'hidden' }}>
+              <div style={{ width: `${Math.round((uploadProgress.current/uploadProgress.total)*100)}%`, height: '100%', background: '#4caf50' }} />
+            </div>
+            <div style={{ marginTop: 6, fontSize: 13, color: '#444' }}>{uploadProgress.current} of {uploadProgress.total} uploaded</div>
+          </div>
+        )}
       </div>
       {/* Vehicle table below form */}
 
@@ -479,6 +619,74 @@ export default function RegisterVehicle() {
           )}
         </div>
       </div>
+      <CustomModal
+        open={uploadModal.open}
+        title={`Upload Vehicles — Confirm (${uploadModal.count} valid)`}
+        onConfirm={confirmAndUploadParsed}
+        onCancel={() => { setUploadModal({ open: false, count: 0, invalids: [] }); setParsedVehicles([]); }}
+        confirmText={uploadingExcel ? 'Processing...' : 'Confirm and Upload'}
+        cancelText={uploadingExcel ? null : 'Cancel'}
+      >
+        <div style={{ lineHeight: 1.6 }}>
+          <div>We found <b>{uploadModal.count}</b> valid vehicle number{uploadModal.count === 1 ? '' : 's'} in the uploaded file.</div>
+          {Array.isArray(uploadModal.invalids) && uploadModal.invalids.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ color: '#b33', fontWeight: 700 }}>The following {uploadModal.invalids.length} entries failed validation (they will be skipped):</div>
+              <div style={{ marginTop: 8, maxHeight: 140, overflow: 'auto', padding: 8, background: '#fff7f7', borderRadius: 6, border: '1px solid #f2dede' }}>
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {uploadModal.invalids.map((v, i) => (
+                    <li key={i} style={{ color: '#b33' }}>{v}</li>
+                  ))}
+                </ul>
+              </div>
+              <div style={{ marginTop: 8, color: '#666' }}>Only valid vehicle numbers will be registered. Please correct and re-upload if you need those entries processed.</div>
+            </div>
+          )}
+          <div style={{ marginTop: 8, color: '#666' }}>Click <b>Confirm and Upload</b> to start registering valid numbers one-by-one. Each response will be shown as a toast.</div>
+        </div>
+      </CustomModal>
+      <CustomModal
+        open={finalSummary.open}
+        title={`Upload Summary: ${finalSummary.success} succeeded, ${finalSummary.fail} failed`}
+        onConfirm={() => setFinalSummary({ open: false, success: 0, fail: 0, failures: [] })}
+        onCancel={() => setFinalSummary({ open: false, success: 0, fail: 0, failures: [] })}
+        confirmText="Close"
+        cancelText={null}
+      >
+        <div style={{ lineHeight: 1.6 }}>
+          <div>Upload completed.</div>
+          <div style={{ marginTop: 8 }}>Success: <b>{finalSummary.success}</b></div>
+          <div>Failed: <b>{finalSummary.fail}</b></div>
+          {finalSummary.fail > 0 && (
+            <>
+              <div style={{ marginTop: 10, color: '#b33', fontWeight: 700 }}>Failed entries:</div>
+              <div style={{ maxHeight: 180, overflow: 'auto', padding: 8, borderRadius: 6, background: '#fff7f7', border: '1px solid #f2dede', marginTop: 8 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr><th style={{ textAlign: 'left', padding: '6px 8px' }}>Vehicle</th><th style={{ textAlign: 'left', padding: '6px 8px' }}>Reason</th></tr>
+                  </thead>
+                  <tbody>
+                    {finalSummary.failures.map((f, i) => (
+                      <tr key={i}><td style={{ padding: '6px 8px' }}>{f.vehicle}</td><td style={{ padding: '6px 8px' }}>{f.reason}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                <button className="action-btn" onClick={() => {
+                  // build CSV and download
+                  const rows = finalSummary.failures.map(f => ({ vehicle: f.vehicle, reason: f.reason }));
+                  const header = 'vehicle,reason\n';
+                  const csv = header + rows.map(r => `${(r.vehicle||'').replace(/"/g,'""')},"${(r.reason||'').replace(/"/g,'""')}"`).join('\n');
+                  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a'); a.href = url; a.download = `upload-failures-${new Date().toISOString().slice(0,10)}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+                }}>Download Failures CSV</button>
+              </div>
+            </>
+          )}
+        </div>
+      </CustomModal>
     </div>
   );
 }

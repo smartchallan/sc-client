@@ -198,14 +198,20 @@
       justify-content: flex-start;
       box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
       z-index: 1000;
-  /* Make the sidebar fixed so it stays while main scrolls */
-  position: fixed;
-  top: 0;
-  left: 0;
-  margin-left: 0; /* ensure no gap from viewport */
-  padding-left: 0; /* inner padding handled by children (.logo-container) */
-  height: 100vh;
-  transition: transform 0.3s ease, width 0.3s ease;
+      /* Make the sidebar fixed so it stays while main scrolls */
+      position: fixed;
+      top: 0;
+      left: 0;
+      margin-left: 0; /* ensure no gap from viewport */
+      padding-left: 0; /* inner padding handled by children (.logo-container) */
+      height: 100vh;
+      /* Make sidebar scrollable when content overflows */
+      overflow-y: auto;
+      overflow-x: hidden;
+      /* Custom scrollbar for better appearance */
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+      transition: transform 0.3s ease, width 0.3s ease;
       /* allow internal stacking (logo, menu, user) */
       align-self: stretch;
     }
@@ -221,6 +227,44 @@
     }
     .admin-dashboard-layout .sidebar.open { transform: translateX(0); }
     .sidebar-collapse-btn { display: none; }
+
+    /* Custom scrollbar for sidebar (webkit browsers) */
+    .admin-dashboard-layout .sidebar::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .admin-dashboard-layout .sidebar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    .admin-dashboard-layout .sidebar::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 3px;
+    }
+    
+    .admin-dashboard-layout .sidebar::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+/* Handle very short screens (height < 600px) */
+@media (max-height: 600px) {
+  .admin-dashboard-layout .sidebar {
+    /* Ensure scrolling is smooth on short screens */
+    scroll-behavior: smooth;
+  }
+  
+  .admin-dashboard-layout .nav-menu {
+    /* Reduce vertical spacing on short screens */
+    gap: 4px;
+    padding: 6px 12px 30px 12px; /* Extra bottom padding */
+  }
+  
+  .nav-item {
+    /* Slightly reduce padding on short screens */
+    padding: 10px 12px;
+    margin-bottom: 3px;
+  }
+}
 
     /* Page loader overlay used on ClientDashboard when showLoader is true */
     .page-loader-overlay {
@@ -252,7 +296,7 @@
       align-items: center;
       padding: 8px 12px; /* reduce inner left padding so content sits closer to edge */
       /* margin-bottom: 24px; */
-      background-color: #fbfbf7; /* off-white background for logo area */
+      background-color: #fff; /* off-white background for logo area */
       /* border-radius: 0 12px 12px 0; */
     }
     .admin-dashboard-layout .logo {
@@ -291,17 +335,6 @@
       right: 16px !important;
       max-width: none !important;
     }
-
-/* Inline spinner used inside action buttons during exports */
-.inline-spinner {
-  vertical-align: middle;
-  animation: inline-spin 1s linear infinite;
-  display: inline-block;
-}
-@keyframes inline-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
     /* Sticky variant: fix to bottom of viewport and align with main content area */
     .main-quick-actions-wrapper.quick-actions-sticky .quick-actions-bar {
       position: fixed;
@@ -417,16 +450,18 @@
     }
   .admin-dashboard-layout .nav-menu {
       /* Keep menu items stacked at the top; do not grow to fill space */
-      flex: none;
+      flex: 1 1 auto; /* Allow growing to fill available space */
       display: flex;
       flex-direction: column;
       gap: 6px;
-      padding: 8px 12px;
+      padding: 8px 12px 20px 12px; /* Add bottom padding for scroll space */
       overflow: visible;
       /* normal spacing under the logo */
       margin-top: 4px;
       align-items: stretch;
       justify-content: flex-start;
+      /* Ensure minimum space for all menu items */
+      min-height: 0;
     }
     .nav-item {
       padding: 12px 12px; /* reduce left padding so icons align nearer the left edge */
@@ -873,10 +908,13 @@ input[type="submit"],
   box-shadow: 0 4px 18px rgba(0,0,0,0.06);
   flex: 1 1 260px; /* grow, shrink, base width */
   min-width: 220px;
+  height: 360px; /* Increased height to prevent overlap */
   max-width: calc(25% - 13px); /* show up to 4 cards in a row on wide screens */
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start; /* Left align the card content */
+  justify-content: flex-start; /* Start from top to prevent overlap */
+  overflow: hidden; /* Prevent content from overflowing */
 }
 
 .stat-card i {
@@ -885,11 +923,64 @@ input[type="submit"],
   color: #6b7280;
 }
 
+.stat-card-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Left align content */
+  width: 100%;
+  flex: 0 0 auto; /* Don't grow or shrink */
+  margin-bottom: 12px; /* Add space before chart */
+  padding-left: 8px; /* Add slight padding from left edge */
+}
+
 .stat-chart-container {
   width: 100%;
+  height: 140px; /* Reduced height to fit better */
   display: flex;
-  justify-content: center;
+  justify-content: center; /* Keep charts centered */
   align-items: center;
+  flex: 0 0 140px; /* Fixed size instead of flex: 1 */
+  margin-top: 8px; /* Small gap from content */
+  position: relative; /* For proper canvas positioning */
+  align-self: center; /* Center the entire chart container within the left-aligned card */
+}
+
+/* Ensure canvas elements fit properly in container */
+.stat-chart-container canvas {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto !important;
+  height: auto !important;
+}
+
+/* Compact status badges for better fit within fixed card height */
+.stat-card .status-badge {
+  padding: 3px 5px;
+  font-size: 10px;
+  margin: 2px;
+}
+
+.stat-card .status-badge div {
+  line-height: 1.1;
+  margin: 0;
+}
+
+
+
+/* Reduce icon size and spacing */
+.stat-card > i,
+.stat-card-content > i {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+/* Reduce spacing in stat card content */
+.stat-card-content > div {
+  margin-top: 4px;
+}
+
+.stat-card-content > div:first-of-type {
+  margin-top: 6px;
 }
 
 /* Reduce dashboard stat charts by ~20% (keep ratio and responsive behavior).

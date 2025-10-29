@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function QuickActions({ title = 'Quick Actions', sticky = false, onAddVehicle, onPay, onReports, onContact }) {
+export default function QuickActions({ title = 'Quick Actions', sticky = false, onAddVehicle, onPay, onReports, onContact, onBulkUpload }) {
   const wrapperClass = sticky ? 'main-quick-actions-wrapper quick-actions-sticky' : 'main-quick-actions-wrapper';
   return (
     <div className={wrapperClass}>
@@ -14,6 +14,7 @@ export default function QuickActions({ title = 'Quick Actions', sticky = false, 
         </div>
         <div className="quick-actions-list" aria-hidden={false}>
           <button className="action-btn" onClick={onAddVehicle} title="Add New Vehicle"><i className="ri-add-circle-line"></i> Add New Vehicle</button>
+          <button className="action-btn" onClick={onBulkUpload} title="Bulk Upload Vehicles"><i className="ri-upload-cloud-2-line"></i> Bulk Upload</button>
           <button className="action-btn" onClick={onPay} title="Pay Challans"><i className="ri-wallet-3-line"></i> Pay Challans</button>
           <button className="action-btn" onClick={onReports} title="Generate Reports"><i className="ri-bar-chart-2-line"></i> Generate Reports</button>
           <button className="action-btn" onClick={onContact} title="Contact Support"><i className="ri-customer-service-2-line"></i> Contact Support</button>

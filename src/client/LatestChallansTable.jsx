@@ -19,11 +19,11 @@ const LatestChallansTable = ({ latestChallanRows, loadingVehicleChallan, vehicle
       <>
         <table className="latest-table" style={{ width: '100%', marginTop: 8, tableLayout: 'fixed' }}>
           <colgroup>
-            <col style={{ width: '4%' }} />
+            <col style={{ width: '3%' }} />
+            <col style={{ width: '6%' }} />
             <col style={{ width: '8%' }} />
-            <col style={{ width: '11%' }} />
-            <col style={{ width: '11%' }} />
-            <col style={{ width: '7%' }} />
+            <col style={{ width: '8%' }} />
+            <col style={{ width: '5%' }} />
             <col style={{ width: '6%' }} />
             <col style={{ width: '6%' }} />
             <col style={{ width: '8%' }} />

@@ -15,6 +15,7 @@ import "react-toastify/dist/ReactToastify.css";
 import "./ClientDashboard.css";
 import "./ClientHome.css";
 import "./ClientProfile.css";
+import "./SpeedometerLoader.css"; /* For default loader styles */
 import ClientSidebar from "./ClientSidebar";
 import ClientProfile from "./ClientProfile";
 
@@ -75,6 +76,20 @@ function ClientDashboard() {
   const chartRefActive = useRef(null);
   const chartRefPaid = useRef(null);
   const chartRefAmount = useRef(null);
+  // Chart loading states
+  const [chartLoading, setChartLoading] = useState({
+    total: true,
+    active: true, 
+    paid: true,
+    amount: true
+  });
+  const [chartErrors, setChartErrors] = useState({
+    total: false,
+    active: false,
+    paid: false,
+    amount: false
+  });
+  const [retryTrigger, setRetryTrigger] = useState(0);
   // Client data
   const [clientData, setClientData] = useState(null);
   const [selectedVehicleStatus, setSelectedVehicleStatus] = useState(null);
@@ -116,7 +131,7 @@ function ClientDashboard() {
     }
     // Vehicle status update API
     if (["activate", "inactivate", "delete"].includes(modal.action)) {
-      setShowLoader(true);
+      // setShowLoader(true); // Page loader disabled
       try {
         const statusValue = modal.action === "activate" ? "active" : modal.action === "inactivate" ? "inactive" : "deleted";
         const res = await fetch(`${baseUrl}/updatevehiclestatus`, {
@@ -152,7 +167,7 @@ function ClientDashboard() {
       } catch (err) {
         toast.error("Error updating vehicle status.");
       } finally {
-        setShowLoader(false);
+        // setShowLoader(false); // Page loader disabled
       }
     }
   };
@@ -160,7 +175,7 @@ function ClientDashboard() {
   // Fetch client data on mount
   useEffect(() => {
     const fetchData = async () => {
-      setShowLoader(true);
+      // setShowLoader(true); // Page loader disabled
       setLoadingClient(true);
       const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
       // Get client id from logged-in user
@@ -168,7 +183,7 @@ function ClientDashboard() {
       if (!clientId) {
         setClientData(null);
         setLoadingClient(false);
-        setTimeout(() => setShowLoader(false), 1000);
+        // setTimeout(() => setShowLoader(false), 1000); // Page loader disabled
         return;
       }
       const url = `${baseUrl}/clientdata/${clientId}`;
@@ -181,12 +196,13 @@ function ClientDashboard() {
         setClientData(null);
       } finally {
         setLoadingClient(false);
-        const elapsed = Date.now() - start;
-        if (elapsed < 1000) {
-          setTimeout(() => setShowLoader(false), 1000 - elapsed);
-        } else {
-          setShowLoader(false);
-        }
+        // Page loader disabled - using only graph loaders now
+        // const elapsed = Date.now() - start;
+        // if (elapsed < 1000) {
+        //   setTimeout(() => setShowLoader(false), 1000 - elapsed);
+        // } else {
+        //   setShowLoader(false);
+        // }
       }
     };
     fetchData();
@@ -312,13 +328,120 @@ function ClientDashboard() {
   // Draw charts for stat cards
   useEffect(() => {
     if (activeMenu !== "Dashboard") return;
+    
+    // Check if required data is available and not still loading
+    const hasRequiredData = clientData && vehicleChallanData && vehicleRtoData;
+    const isStillLoading = loadingVehicleChallan || loadingVehicleRto;
+    
+    console.log('Data and loading state:', {
+      clientData: !!clientData,
+      vehicleChallanData: !!vehicleChallanData,
+      vehicleRtoData: !!vehicleRtoData,
+      loadingVehicleChallan,
+      loadingVehicleRto,
+      hasRequiredData,
+      isStillLoading
+    });
+    
+    if (!hasRequiredData || isStillLoading) {
+      console.log('Data not ready or still loading, keeping loaders...');
+      setChartLoading({ total: true, active: true, paid: true, amount: true });
+      setChartErrors({ total: false, active: false, paid: false, amount: false });
+      return;
+    }
+    
+    // Reset loading states when starting
+    setChartLoading({ total: true, active: true, paid: true, amount: true });
+    setChartErrors({ total: false, active: false, paid: false, amount: false });
+    
+    // Record start time for minimum display duration
+    const loadingStartTime = Date.now();
+    const minDisplayTime = 4000; // 4 seconds
+    
     // Delay chart drawing to ensure canvas refs are mounted
     const timeout = setTimeout(() => {
-    if (!chartRefTotal.current || !chartRefActive.current || !chartRefAmount.current) return;
-      Promise.all([
-        import('chart.js/auto')
-      ]).then(([{ default: Chart }]) => {
-  // Registered Vehicles (doughnut) - compute counts and draw interactive chart
+      console.log('Starting chart creation with data available...');
+      
+      let retryCount = 0;
+      const maxRetries = 20; // 2 seconds total (20 * 100ms)
+      
+      const checkCanvasRefsAndCreateCharts = () => {
+        console.log(`Canvas refs check (attempt ${retryCount + 1}):`, {
+          total: !!chartRefTotal.current,
+          active: !!chartRefActive.current,
+          paid: !!chartRefPaid.current,
+          amount: !!chartRefAmount.current
+        });
+        
+        if (!chartRefTotal.current || !chartRefActive.current || !chartRefPaid.current || !chartRefAmount.current) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            console.log('Canvas refs timeout - showing error state');
+            setChartErrors({ total: true, active: true, paid: true, amount: true });
+            setChartLoading({ total: false, active: false, paid: false, amount: false });
+            return;
+          }
+          console.log(`Canvas refs not ready yet, retrying in 100ms... (${retryCount}/${maxRetries})`);
+          setTimeout(checkCanvasRefsAndCreateCharts, 100);
+          return;
+        }
+        
+        console.log('All canvas refs ready, loading Chart.js...');
+        Promise.all([
+          import('chart.js/auto')
+        ]).then(([{ default: Chart }]) => {
+          console.log('Chart.js loaded successfully');
+          
+          // Double-check data is still available (in case component unmounted/data changed)
+          if (!clientData || !vehicleChallanData || !vehicleRtoData) {
+            console.log('Data no longer available, aborting chart creation');
+            return;
+          }
+          
+          try {
+          
+          // Calculate expiry counts for the paid chart
+          const expiryThresholdDays = parseInt(import.meta.env.VITE_EXPIRY_PERIOD_DAYS || '60', 10) || 60;
+          const expiryCounts = { insurance: 0, roadTax: 0, fitness: 0, pollution: 0 };
+          if (Array.isArray(vehicleRtoData)) {
+            const now = new Date();
+            const parseDateStr = (dateStr) => {
+              if (!dateStr || dateStr === '-') return null;
+              if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(dateStr)) return new Date(dateStr.replace(/-/g, ' '));
+              if (/\d{2}-\d{2}-\d{4}/.test(dateStr)) {
+                const [d, m, y] = dateStr.split('-');
+                return new Date(`${y}-${m}-${d}`);
+              }
+              if (/\d{4}-\d{2}-\d{2}/.test(dateStr)) return new Date(dateStr);
+              return new Date(dateStr);
+            };
+            const withinThreshold = (dateStr) => {
+              const d = parseDateStr(dateStr);
+              if (!d || isNaN(d.getTime())) return false;
+              const diffDays = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+              return diffDays <= expiryThresholdDays;
+            };
+            vehicleRtoData.forEach(v => {
+              if (withinThreshold(v.insurance_exp || v.insuranceUpto || v.rc_insurance_upto)) expiryCounts.insurance++;
+              if (withinThreshold(v.road_tax_exp || v.roadTaxExp || v.rc_tax_upto)) expiryCounts.roadTax++;
+              if (withinThreshold(v.fitness_exp || v.fitnessUpto || v.rc_fit_upto)) expiryCounts.fitness++;
+              if (withinThreshold(v.pollution_exp || v.pollutionUpto || v.rc_pucc_upto)) expiryCounts.pollution++;
+            });
+          }
+          
+          // Helper function to clear loading state with minimum display time
+          const clearLoadingWithDelay = (chartType) => {
+            const elapsed = Date.now() - loadingStartTime;
+            const remainingTime = Math.max(0, minDisplayTime - elapsed);
+            
+            setTimeout(() => {
+              setChartLoading(prev => ({ ...prev, [chartType]: false }));
+              setChartErrors(prev => ({ ...prev, [chartType]: false }));
+            }, remainingTime);
+          };
+          
+          // Set individual chart loading states to false as each chart is created successfully
+          // Registered Vehicles (doughnut) - compute counts and draw interactive chart
         let active = 0, inactive = 0, deleted = 0;
         if (clientData && Array.isArray(clientData.vehicles)) {
           clientData.vehicles.forEach(v => {
@@ -356,6 +479,9 @@ function ClientDashboard() {
             }
           }
         });
+        clearLoadingWithDelay('total');
+        console.log('Total vehicles chart created successfully');
+        
         // Active Challans (pending vs disposed)
         const ctxActive = chartRefActive.current.getContext('2d');
         if (window._clientActiveChart) window._clientActiveChart.destroy();
@@ -384,6 +510,8 @@ function ClientDashboard() {
             cutout: '20%'
           }
         });
+        clearLoadingWithDelay('active');
+        
         // Vehicle Expiry Statistics (horizontal bar showing counts per expiry type)
         const ctxPaid = chartRefPaid.current && chartRefPaid.current.getContext('2d');
         if (ctxPaid) {
@@ -413,7 +541,9 @@ function ClientDashboard() {
               scales: { r: { ticks: { precision: 0, beginAtZero: true } } }
             }
           });
+          clearLoadingWithDelay('paid');
         }
+        
         // Amount Due (bar) - red: pending, green: paid
         let pendingFine = 0, disposedFine = 0;
         if (Array.isArray(vehicleChallanData)) {
@@ -467,25 +597,82 @@ function ClientDashboard() {
             }
           }
         });
-      });
-    }, 50); // 50ms delay to ensure DOM is ready
+        clearLoadingWithDelay('amount');
+        console.log('All charts created successfully!');
+        
+          } catch (error) {
+            console.error('Chart creation failed:', error);
+            setChartErrors({ total: true, active: true, paid: true, amount: true });
+            setChartLoading({ total: false, active: false, paid: false, amount: false });
+          }
+        }).catch(error => {
+          console.error('Chart.js import failed:', error);
+          setChartErrors({ total: true, active: true, paid: true, amount: true });
+          setChartLoading({ total: false, active: false, paid: false, amount: false });
+        });
+      };
+      
+      // Start checking for canvas refs
+      checkCanvasRefsAndCreateCharts();
+    }, 100); // 100ms delay to ensure DOM is ready
     return () => {
       clearTimeout(timeout);
-      if (window._clientTotalChart) window._clientTotalChart.destroy();
-      if (window._clientActiveChart) window._clientActiveChart.destroy();
-      if (window._clientPaidChart) window._clientPaidChart.destroy();
-      if (window._clientAmountChart) window._clientAmountChart.destroy();
+      // Destroy existing charts to prevent memory leaks
+      if (window._clientTotalChart) {
+        window._clientTotalChart.destroy();
+        window._clientTotalChart = null;
+      }
+      if (window._clientActiveChart) {
+        window._clientActiveChart.destroy();
+        window._clientActiveChart = null;
+      }
+      if (window._clientPaidChart) {
+        window._clientPaidChart.destroy();
+        window._clientPaidChart = null;
+      }
+      if (window._clientAmountChart) {
+        window._clientAmountChart.destroy();
+        window._clientAmountChart = null;
+      }
     };
-  }, [clientData, vehicleChallanData, vehicleRtoData, activeMenu]);
+  }, [clientData, vehicleChallanData, vehicleRtoData, activeMenu, retryTrigger, loadingVehicleChallan, loadingVehicleRto]);
+  
+  // Function to format numbers in brief format (1k, 1M, etc.)
+  const formatBriefAmount = (amount) => {
+    if (!amount || isNaN(amount)) return '0';
+    
+    const absAmount = Math.abs(amount);
+    
+    if (absAmount >= 10000000) { // 1 crore
+      return (amount / 10000000).toFixed(1).replace(/\.0$/, '') + 'Cr';
+    } else if (absAmount >= 100000) { // 1 lakh
+      return (amount / 100000).toFixed(1).replace(/\.0$/, '') + 'L';
+    } else if (absAmount >= 1000) { // 1 thousand
+      return (amount / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+    } else {
+      return amount.toString();
+    }
+  };
+
+  // Function to retry chart loading
+  const retryCharts = () => {
+    // Reset states
+    setChartLoading({ total: true, active: true, paid: true, amount: true });
+    setChartErrors({ total: false, active: false, paid: false, amount: false });
+    
+    // Trigger useEffect to run again
+    setRetryTrigger(prev => prev + 1);
+  };
   // Sidebar click handler
   const handleMenuClick = (label) => {
-    setShowLoader(true);
-    setTimeout(() => {
+    // Page loader disabled - only using graph loaders now
+    // setShowLoader(true);
+    // setTimeout(() => {
       setActiveMenu(label);
-      setShowLoader(false);
+      // setShowLoader(false);
       // on small screens, close sidebar after selecting a menu
       if (window.innerWidth <= 900) setSidebarOpen(false);
-    }, 300);
+    // }, 300);
   };
 
   const toggleSidebar = () => setSidebarOpen(s => !s);
@@ -883,11 +1070,12 @@ function ClientDashboard() {
     <>
     <ToastContainer position="top-right" autoClose={2000} />
   <div className="admin-dashboard-layout" style={{display: 'flex', width: '100%', minHeight: '100vh'}}>
-      {showLoader && (
+      {/* Page loader commented out - only using graph loaders now */}
+      {/* {showLoader && (
         <div className="page-loader-overlay">
           <TrafficLightLoader />
         </div>
-      )}
+      )} */}
   <ClientSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
       <main className="main-content admin-home-content" style={{flex: 1, minHeight: '100vh'}}>
         <div className="header" style={{marginBottom: 24}}>
@@ -927,15 +1115,16 @@ function ClientDashboard() {
             </div>
             <div className="dashboard-stats">
               <div className="stat-card">
+                <div className="stat-card-content">
                   <i className="ri-car-line"></i>
-                  <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center'}}>
+                  <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
                     <div>Registered Vehicles</div>
                     <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
                       {loadingClient ? '...' : (clientData && Array.isArray(clientData.vehicles) ? clientData.vehicles.length : 0)}
                     </div>
                   </div>
                   {/* Show active/inactive/deleted counts as badges */}
-                  <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 8 }}>
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8 }}>
                     {(() => {
                       const counts = { active: 0, inactive: 0, deleted: 0 };
                       if (clientData && Array.isArray(clientData.vehicles)) {
@@ -962,84 +1151,140 @@ function ClientDashboard() {
                       ];
                     })()}
                   </div>
-                    <div className="stat-chart-container" style={{maxWidth: 220, margin: '6px auto 0'}}>
-                    <canvas ref={chartRefTotal} />
+                </div>
+                <div className="stat-chart-container">
+                  <canvas ref={chartRefTotal} style={{display: chartLoading.total || chartErrors.total ? 'none' : 'block'}} />
+                    {chartLoading.total ? (
+                      <div className="default-loader" style={{ zIndex: 10 }}>
+                        <div className="loader-spinner"></div>
+                      </div>
+                    ) : chartErrors.total ? (
+                      <div style={{ textAlign: 'center', padding: '20px' }}>
+                        <div style={{ color: '#666', marginBottom: '8px', fontSize: '13px' }}>Chart failed to load</div>
+                        <button className="action-btn" onClick={retryCharts} style={{ padding: '6px 12px', fontSize: '12px' }}>
+                          <i className="ri-refresh-line" style={{ marginRight: '4px' }}></i>Retry
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               <div className="stat-card">
-                <i className="ri-error-warning-line"></i>
-                <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center'}}>
-                  <div>Challans Fetched</div>
-                  <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
-                    {loadingVehicleChallan ? '...' : dashboardTotalChallans}
+                <div className="stat-card-content">
+                  <i className="ri-error-warning-line"></i>
+                  <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
+                    <div>Challans Fetched</div>
+                    <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                      {loadingVehicleChallan ? '...' : dashboardTotalChallans}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8 }}>
+                    <div key="pending" className={`status-badge`} style={{ cursor: 'default' }}>
+                      <div style={{ color: '#e74c3c', fontWeight: 700 }}>{loadingVehicleChallan ? '...' : dashboardPendingCount}</div>
+                      <div style={{ fontSize: 12, color: '#666' }}>Pending</div>
+                    </div>
+                    <div key="disposed" className={`status-badge`} style={{ cursor: 'default' }}>
+                      <div style={{ color: '#66bb6a', fontWeight: 700 }}>{loadingVehicleChallan ? '...' : dashboardDisposedCount}</div>
+                      <div style={{ fontSize: 12, color: '#666' }}>Disposed</div>
+                    </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 8 }}>
-                  <div key="pending" className={`status-badge`} style={{ cursor: 'default' }}>
-                    <div style={{ color: '#e74c3c', fontWeight: 700 }}>{loadingVehicleChallan ? '...' : dashboardPendingCount}</div>
-                    <div style={{ fontSize: 12, color: '#666' }}>Pending</div>
-                  </div>
-                  <div key="disposed" className={`status-badge`} style={{ cursor: 'default' }}>
-                    <div style={{ color: '#66bb6a', fontWeight: 700 }}>{loadingVehicleChallan ? '...' : dashboardDisposedCount}</div>
-                    <div style={{ fontSize: 12, color: '#666' }}>Disposed</div>
-                  </div>
-                </div>
-                <div className="stat-chart-container" style={{maxWidth: 220, margin: '6px auto 0'}}>
-                  <canvas ref={chartRefActive} />
+                <div className="stat-chart-container">
+                  <canvas ref={chartRefActive} style={{display: chartLoading.active || chartErrors.active ? 'none' : 'block'}} />
+                  {chartLoading.active ? (
+                    <div className="default-loader" style={{ zIndex: 10 }}>
+                      <div className="loader-spinner"></div>
+                    </div>
+                  ) : chartErrors.active ? (
+                    <div style={{ textAlign: 'center', padding: '20px' }}>
+                      <div style={{ color: '#666', marginBottom: '8px', fontSize: '13px' }}>Chart failed to load</div>
+                      <button className="action-btn" onClick={retryCharts} style={{ padding: '6px 12px', fontSize: '12px' }}>
+                        <i className="ri-refresh-line" style={{ marginRight: '4px' }}></i>Retry
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
               <div className="stat-card">
-                <i className="ri-alarm-warning-line"></i>
-                <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center'}}>
-                  <div>Vehicle Renewals</div>
-                  <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
-                    {loadingVehicleRto ? '...' : vehicleRenewalsTotal}
+                <div className="stat-card-content">
+                  <i className="ri-alarm-warning-line"></i>
+                  <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
+                    <div>Vehicle Renewals</div>
+                    <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                      {loadingVehicleRto ? '...' : vehicleRenewalsTotal}
+                    </div>
                   </div>
-                </div>
-                <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 10 }}>
-                  <div className={`status-badge`} style={{ cursor: 'default' }}>
-                    <div style={{ color: '#ff5252', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.insurance}</div>
-                    <div style={{ fontSize: 12, color: '#666' }}>Insurance</div>
-                  </div>
-                  <div className={`status-badge`} style={{ cursor: 'default' }}>
-                    <div style={{ color: '#ff8a65', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.roadTax}</div>
-                    <div style={{ fontSize: 12, color: '#666' }}>Road Tax</div>
-                  </div>
-                  <div className={`status-badge`} style={{ cursor: 'default' }}>
-                    <div style={{ color: '#f4b400', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.fitness}</div>
-                    <div style={{ fontSize: 12, color: '#666' }}>Fitness</div>
-                  </div>
-                  <div className={`status-badge`} style={{ cursor: 'default' }}>
-                    <div style={{ color: '#42a5f5', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.pollution}</div>
-                    <div style={{ fontSize: 12, color: '#666' }}>Pollution</div>
+                  <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-start', marginTop: 10 }}>
+                    <div className={`status-badge`} style={{ cursor: 'default' }}>
+                      <div style={{ color: '#ff5252', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.insurance}</div>
+                      <div style={{ fontSize: 12, color: '#666' }}>Insurance</div>
+                    </div>
+                    <div className={`status-badge`} style={{ cursor: 'default' }}>
+                      <div style={{ color: '#ff8a65', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.roadTax}</div>
+                      <div style={{ fontSize: 12, color: '#666' }}>Road Tax</div>
+                    </div>
+                    <div className={`status-badge`} style={{ cursor: 'default' }}>
+                      <div style={{ color: '#f4b400', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.fitness}</div>
+                      <div style={{ fontSize: 12, color: '#666' }}>Fitness</div>
+                    </div>
+                    <div className={`status-badge`} style={{ cursor: 'default' }}>
+                      <div style={{ color: '#42a5f5', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.pollution}</div>
+                      <div style={{ fontSize: 12, color: '#666' }}>Pollution</div>
+                    </div>
                   </div>
                 </div>
                 {/* Info line (threshold) intentionally hidden to save vertical space */}
-                <div className="stat-chart-container" style={{maxWidth: 220, margin: '6px auto 0'}}>
-                  <canvas ref={chartRefPaid} />
+                <div className="stat-chart-container">
+                  <canvas ref={chartRefPaid} style={{display: chartLoading.paid || chartErrors.paid ? 'none' : 'block'}} />
+                  {chartLoading.paid ? (
+                    <div className="default-loader" style={{ zIndex: 10 }}>
+                      <div className="loader-spinner"></div>
+                    </div>
+                  ) : chartErrors.paid ? (
+                    <div style={{ textAlign: 'center', padding: '20px' }}>
+                      <div style={{ color: '#666', marginBottom: '8px', fontSize: '13px' }}>Chart failed to load</div>
+                      <button className="action-btn" onClick={retryCharts} style={{ padding: '6px 12px', fontSize: '12px' }}>
+                        <i className="ri-refresh-line" style={{ marginRight: '4px' }}></i>Retry
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
               <div className="stat-card">
-                <i className="ri-money-rupee-circle-line"></i>
-                <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center'}}>
-                  <div>Challan Amount</div>
-                  <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
-                    {loadingVehicleChallan ? '...' : `₹${totalFineAmount.toLocaleString()}`}
+                <div className="stat-card-content">
+                  <i className="ri-money-rupee-circle-line"></i>
+                  <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
+                    <div>Challan Amount</div>
+                    <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                      {loadingVehicleChallan ? '...' : `₹${formatBriefAmount(totalFineAmount)}`}
+                    </div>
+                  </div>
+                  <div className="stat-value" style={{ marginTop: 8 }}>
+                    {loadingVehicleChallan
+                      ? '...'
+                      : (
+                          <>
+                            <span style={{color: 'red', fontWeight: 600, fontSize: '0.55em'}}>Pending: ₹{formatBriefAmount(pendingFineTotal)}</span>
+                            <span style={{margin: '0 6px', color: '#999', fontSize: '0.55em'}}>|</span>
+                            <span style={{fontSize: '0.55em'}}>Paid: ₹{formatBriefAmount(disposedFineTotal)}</span>
+                          </>
+                        )}
                   </div>
                 </div>
-                <div className="stat-value" style={{ marginTop: 8 }}>
-                  {loadingVehicleChallan
-                    ? '...'
-                    : (
-                        <>
-                          <span style={{color: 'red', fontWeight: 600, fontSize: '0.55em'}}>Pending: ₹{pendingFineTotal.toLocaleString()}</span>
-                          <span style={{margin: '0 6px', color: '#999', fontSize: '0.55em'}}>|</span>
-                          <span style={{fontSize: '0.55em'}}>Paid: ₹{disposedFineTotal.toLocaleString()}</span>
-                        </>
-                      )}
-                </div>
-                <div className="stat-chart-container" style={{maxWidth: 176, margin: '12px auto'}}>
-                  <canvas ref={chartRefAmount} />
+                <div className="stat-chart-container">
+                  <canvas ref={chartRefAmount} style={{display: chartLoading.amount || chartErrors.amount ? 'none' : 'block'}} />
+  
+                  {chartLoading.amount ? (
+                    <div className="default-loader" style={{ zIndex: 10 }}>
+                      <div className="loader-spinner"></div>
+                    </div>
+                  ) : chartErrors.amount ? (
+                    <div style={{ textAlign: 'center', padding: '20px' }}>
+                      <div style={{ color: '#666', marginBottom: '8px', fontSize: '13px' }}>Chart failed to load</div>
+                      <button className="action-btn" onClick={retryCharts} style={{ padding: '6px 12px', fontSize: '12px' }}>
+                        <i className="ri-refresh-line" style={{ marginRight: '4px' }}></i>Retry
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -1087,6 +1332,29 @@ function ClientDashboard() {
           title="Quick Actions"
           sticky={true}
           onAddVehicle={() => setActiveMenu('Register Vehicle')}
+          onBulkUpload={() => {
+            setActiveMenu('Register Vehicle');
+            // Give the page a little time to render and then try to scroll/focus the file input and highlight the upload card
+            setTimeout(() => {
+              try {
+                const el = document.querySelector('input[type=file][accept*=".xlsx"]');
+                if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); try { el.focus(); } catch(e){} }
+              } catch (e) {}
+              try {
+                const card = document.querySelector('.upload-card');
+                if (card) {
+                  // restart animation if already applied
+                  card.classList.remove('highlight-upload');
+                  // trigger reflow to restart CSS animation
+                  // eslint-disable-next-line no-unused-expressions
+                  void card.offsetWidth;
+                  card.classList.add('highlight-upload');
+                  // remove class after animation completes (2.5s)
+                  setTimeout(() => card.classList.remove('highlight-upload'), 2600);
+                }
+              } catch (e) {}
+            }, 300);
+          }}
           onPay={() => setInfoModal({ open: true, message: 'Feature not rolled back yet. Stay tuned. We will notify you.' })}
           onReports={() => setReportsModal({ open: true })}
           onContact={() => setSupportModal(true)}
