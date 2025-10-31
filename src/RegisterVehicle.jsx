@@ -35,6 +35,9 @@ export default function RegisterVehicle() {
   // Loader state for RTO/Challan API calls
   const [rtoLoadingId, setRtoLoadingId] = useState(null);
   const [challanLoadingId, setChallanLoadingId] = useState(null);
+  // Pagination state
+  const [activeVehiclesLimit, setActiveVehiclesLimit] = useState(10);
+  const [deletedVehiclesLimit, setDeletedVehiclesLimit] = useState(10);
 
   const API_ROOT = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
   const REGISTER_ENDPOINT = "/uservehicle/register";
@@ -74,6 +77,15 @@ export default function RegisterVehicle() {
     if (client_id) fetchVehicles(client_id);
   }, []);
 
+  // Reset pagination when search or filter changes
+  useEffect(() => {
+    setActiveVehiclesLimit(10);
+  }, [searchValue, statusFilter]);
+
+  useEffect(() => {
+    setDeletedVehiclesLimit(10);
+  }, [sortDesc]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!registerField || !registerValue) {
@@ -105,9 +117,11 @@ export default function RegisterVehicle() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.message || "Failed to register vehicle");
+        // Show specific API error message, including "vehicle already registered"
+        const errorMessage = data.message || "Failed to register vehicle";
+        toast.error(errorMessage);
       } else {
-        toast.success("Vehicle registered successfully!");
+        toast.success(data.message);
         setRegisterValue("");
         setRegisterField("");
         // Fetch vehicles after successful registration
@@ -326,7 +340,7 @@ export default function RegisterVehicle() {
 
       <div className="dashboard-latest">
           <div style={{marginTop: 32}}>
-          <h2 style={{fontSize: '1.2rem', marginBottom: 12}}>Registered Vehicles {vehicles && vehicles.length ? `(${vehicles.length})` : ''}</h2>
+          <h2 style={{fontSize: '1.2rem', marginBottom: 12}}>Active & Inactive Vehicles {vehicles && vehicles.filter(v => (v.status || '').toUpperCase() !== 'DELETED').length ? `(${vehicles.filter(v => (v.status || '').toUpperCase() !== 'DELETED').length})` : ''}</h2>
           {/* Search and status filter controls */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
             <input
@@ -351,8 +365,8 @@ export default function RegisterVehicle() {
           {/* Table logic with search/filter/sort */}
           {fetchingVehicles ? (
             <div>Loading vehicles...</div>
-          ) : vehicles.length === 0 ? (
-            <div style={{color: '#888'}}>No vehicles registered yet.</div>
+          ) : vehicles.filter(v => (v.status || '').toUpperCase() !== 'DELETED').length === 0 ? (
+            <div style={{color: '#888'}}>No active or inactive vehicles found.</div>
           ) : (
             <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
               <thead>
@@ -375,6 +389,10 @@ export default function RegisterVehicle() {
               <tbody>
                 {vehicles
                   .filter(v => {
+                    // Exclude deleted vehicles from main table
+                    const status = (v.status || '').toUpperCase();
+                    if (status === 'DELETED') return false;
+                    
                     const searchVal = searchValue.trim().toUpperCase();
                     const matchesSearch =
                       !searchVal ||
@@ -390,6 +408,7 @@ export default function RegisterVehicle() {
                     const dateB = b.registered_at ? new Date(b.registered_at) : new Date(0);
                     return sortDesc ? dateB - dateA : dateA - dateB;
                   })
+                  .slice(0, activeVehiclesLimit)
                   .map((v, idx) => {
                     let status = (v.status || 'Not Available').toUpperCase();
                     let statusColor = '#888';
@@ -411,7 +430,7 @@ export default function RegisterVehicle() {
                         <td>
                           <div style={{display:'flex',gap:8}}>
                             <button
-                              className="action-btn flat-btn"
+                              className={`action-btn flat-btn ${v.rto_data === false ? 'data-btn-missing' : 'data-btn-available'}`}
                               disabled={rtoLoadingId === v.id}
                               onClick={() => {
                                 // Allow clicks even when vehicle is INACTIVE/DELETED so we can show the info modal.
@@ -421,13 +440,15 @@ export default function RegisterVehicle() {
                                   setModal({ open: true, action: 'getRTO', vehicle: v });
                                 }
                               }}
-                              style={{ opacity: status === 'DELETED' ? 0.6 : status === 'INACTIVE' ? 0.85 : 1 }}
-                              title={rtoLoadingId === v.id ? 'Loading...' : (status === 'DELETED' ? 'Vehicle deleted' : status === 'INACTIVE' ? 'Vehicle inactive' : 'Get RTO Data')}
+                              style={{ 
+                                opacity: status === 'DELETED' ? 0.6 : status === 'INACTIVE' ? 0.85 : 1
+                              }}
+                              title={rtoLoadingId === v.id ? 'Loading...' : (status === 'DELETED' ? 'Vehicle deleted' : status === 'INACTIVE' ? 'Vehicle inactive' : `Get RTO Data${v.rto_data === false ? ' (Missing)' : ' (Available)'}`)}
                             >
                               {rtoLoadingId === v.id ? 'Loading...' : 'Get RTO Data'}
                             </button>
                             <button
-                              className="action-btn flat-btn"
+                              className={`action-btn flat-btn ${v.challan_data === false ? 'data-btn-missing' : 'data-btn-available'}`}
                               disabled={challanLoadingId === v.id}
                               onClick={() => {
                                 // Allow clicks to show info modal for INACTIVE/DELETED states.
@@ -437,8 +458,10 @@ export default function RegisterVehicle() {
                                   setModal({ open: true, action: 'getChallan', vehicle: v });
                                 }
                               }}
-                              style={{ opacity: status === 'DELETED' ? 0.6 : status === 'INACTIVE' ? 0.85 : 1 }}
-                              title={challanLoadingId === v.id ? 'Loading...' : (status === 'DELETED' ? 'Vehicle deleted' : status === 'INACTIVE' ? 'Vehicle inactive' : 'Get Challan Data')}
+                              style={{ 
+                                opacity: status === 'DELETED' ? 0.6 : status === 'INACTIVE' ? 0.85 : 1
+                              }}
+                              title={challanLoadingId === v.id ? 'Loading...' : (status === 'DELETED' ? 'Vehicle deleted' : status === 'INACTIVE' ? 'Vehicle inactive' : `Get Challan Data${v.challan_data === false ? ' (Missing)' : ' (Available)'}`)}
                             >
                               {challanLoadingId === v.id ? 'Loading...' : 'Get Challan Data'}
                             </button>
@@ -617,7 +640,115 @@ export default function RegisterVehicle() {
               </tbody>
             </table>
           )}
+          
+          {/* Load More button for Active/Inactive Vehicles */}
+          {(() => {
+            const filteredActiveVehicles = vehicles.filter(v => {
+              const status = (v.status || '').toUpperCase();
+              if (status === 'DELETED') return false;
+              
+              const searchVal = searchValue.trim().toUpperCase();
+              const matchesSearch =
+                !searchVal ||
+                (v.vehicle_number && v.vehicle_number.toUpperCase().includes(searchVal)) ||
+                (v.engine_number && v.engine_number.toUpperCase().includes(searchVal)) ||
+                (v.chasis_number && v.chasis_number.toUpperCase().includes(searchVal));
+              const matchesStatus =
+                !statusFilter || (v.status && v.status.toUpperCase() === statusFilter.toUpperCase());
+              return matchesSearch && matchesStatus;
+            });
+            
+            if (filteredActiveVehicles.length > activeVehiclesLimit) {
+              return (
+                <div style={{ textAlign: 'center', marginTop: 16 }}>
+                  <button 
+                    className="load-more-btn"
+                    onClick={() => setActiveVehiclesLimit(prev => prev + 10)}
+                  >
+                    Load More Vehicles ({filteredActiveVehicles.length - activeVehiclesLimit} remaining)
+                  </button>
+                </div>
+              );
+            }
+            return null;
+          })()}
         </div>
+
+        {/* Deleted Vehicles Table */}
+        {(() => {
+          const deletedVehicles = vehicles.filter(v => (v.status || '').toUpperCase() === 'DELETED');
+          if (deletedVehicles.length === 0) return null;
+          
+          return (
+            <div className="deleted-vehicles-section">
+              <h2>Deleted Vehicles ({deletedVehicles.length})</h2>
+              <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
+                <thead>
+                  <tr>
+                    <th>S. No.</th>
+                    <th>Vehicle Number</th>
+                    <th>Engine Number</th>
+                    <th>Chasis Number</th>
+                    <th>Status</th>
+                    <th>
+                      Registered At
+                      <span style={{marginLeft:6, cursor:'pointer', fontSize:16}} onClick={() => setSortDesc(s => !s)}>
+                        {sortDesc ? <i className="ri-arrow-down-s-line" title="Sort: Newest First"></i> : <i className="ri-arrow-up-s-line" title="Sort: Oldest First"></i>}
+                      </span>
+                    </th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {deletedVehicles
+                    .sort((a, b) => {
+                      const dateA = a.registered_at ? new Date(a.registered_at) : new Date(0);
+                      const dateB = b.registered_at ? new Date(b.registered_at) : new Date(0);
+                      return sortDesc ? dateB - dateA : dateA - dateB;
+                    })
+                    .slice(0, deletedVehiclesLimit)
+                    .map((v, idx) => {
+                      const handleReactivate = () => setModal({ open: true, action: 'activate', vehicle: v });
+                      
+                      return (
+                        <tr key={v.id || v._id || idx}>
+                          <td>{idx + 1}</td>
+                          <td>{v.vehicle_number || 'Not Available'}</td>
+                          <td>{v.engine_number || 'Not Available'}</td>
+                          <td>{v.chasis_number || 'Not Available'}</td>
+                          <td style={{ color: '#dc2626', fontWeight: 600, letterSpacing: 1 }}>DELETED</td>
+                          <td>{v.registered_at ? new Date(v.registered_at).toLocaleString() : 'Not Available'}</td>
+                          <td>
+                            <span
+                              title="Reactivate Vehicle"
+                              style={{ cursor: 'pointer', fontSize: 18, color: '#16a34a' }}
+                              onClick={handleReactivate}
+                              role="button"
+                              aria-label="Reactivate Vehicle"
+                            >
+                              ♻️
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+              
+              {/* Load More button for Deleted Vehicles */}
+              {deletedVehicles.length > deletedVehiclesLimit && (
+                <div style={{ textAlign: 'center', marginTop: 16 }}>
+                  <button 
+                    className="load-more-btn deleted"
+                    onClick={() => setDeletedVehiclesLimit(prev => prev + 10)}
+                  >
+                    Load More Deleted Vehicles ({deletedVehicles.length - deletedVehiclesLimit} remaining)
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
       <CustomModal
         open={uploadModal.open}

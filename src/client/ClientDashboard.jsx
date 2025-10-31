@@ -1136,15 +1136,15 @@ function ClientDashboard() {
                         });
                       }
                       return [
-                        <div key="act" className={`status-badge`} style={{ cursor: 'pointer' }} onClick={() => { setSelectedVehicleStatus('active'); setActiveMenu('Registered Vehicles'); }}>
+                        <div key="act" className={`status-badge`} style={{  }} onClick={() => { setSelectedVehicleStatus('active'); setActiveMenu('Registered Vehicles'); }}>
                           <div style={{ color: '#42a5f5', fontWeight: 700 }}>{counts.active}</div>
                           <div style={{ fontSize: 12, color: '#666' }}>Active</div>
                         </div>,
-                        <div key="inact" className={`status-badge`} style={{ cursor: 'pointer' }} onClick={() => { setSelectedVehicleStatus('inactive'); setActiveMenu('Registered Vehicles'); }}>
+                        <div key="inact" className={`status-badge`} style={{ }} onClick={() => { setSelectedVehicleStatus('inactive'); setActiveMenu('Registered Vehicles'); }}>
                           <div style={{ color: '#ffa726', fontWeight: 700 }}>{counts.inactive}</div>
                           <div style={{ fontSize: 12, color: '#666' }}>Inactive</div>
                         </div>,
-                        <div key="del" className={`status-badge`} style={{ cursor: 'pointer' }} onClick={() => { setSelectedVehicleStatus('deleted'); setActiveMenu('Registered Vehicles'); }}>
+                        <div key="del" className={`status-badge`} style={{ }} onClick={() => { setSelectedVehicleStatus('deleted'); setActiveMenu('Registered Vehicles'); }}>
                           <div style={{ color: '#e15759', fontWeight: 700 }}>{counts.deleted}</div>
                           <div style={{ fontSize: 12, color: '#666' }}>Deleted</div>
                         </div>

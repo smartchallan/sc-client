@@ -105,3 +105,99 @@
 	70% { box-shadow: 0 8px 22px rgba(24,39,75,0.06); transform: translateY(0) scale(1); border-color: #e6eef8; }
 	100% { box-shadow: 0 6px 18px rgba(24,39,75,0.06); transform: translateY(0) scale(1); border-color: #e6eef8; }
 }
+
+/* Data status button styling */
+.data-btn-missing {
+	background-color: #f59e0b !important; /* amber */
+	color: white !important;
+	border: none !important;
+	transition: all 0.2s ease !important;
+}
+
+.data-btn-missing:hover {
+	background-color: #d97706 !important; /* darker amber on hover */
+	transform: translateY(-1px);
+	box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
+}
+
+.data-btn-available {
+	background-color: #ef4444 !important; /* red */
+	color: white !important;
+	border: none !important;
+	transition: all 0.2s ease !important;
+}
+
+.data-btn-available:hover {
+	background-color: #dc2626 !important; /* darker red on hover */
+	transform: translateY(-1px);
+	box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+}
+
+/* Deleted vehicles table styling */
+.deleted-vehicles-section {
+	margin-top: 32px;
+	padding: 16px;
+	background: #fef2f2;
+	border: 1px solid #fecaca;
+	border-radius: 8px;
+}
+
+.deleted-vehicles-section h2 {
+	color: #dc2626 !important;
+	font-size: 1.2rem;
+	margin-bottom: 12px;
+}
+
+.deleted-vehicles-section .latest-table {
+	background: white;
+	border-radius: 6px;
+	overflow: hidden;
+	border: 1px solid #fecaca;
+}
+
+.deleted-vehicles-section .latest-table thead th {
+	background: #fef2f2;
+	color: #991b1b;
+	border-bottom: 2px solid #fecaca;
+}
+
+.deleted-vehicles-section .latest-table tbody tr {
+	opacity: 0.8;
+}
+
+.deleted-vehicles-section .latest-table tbody tr:hover {
+	background: #fef7f7;
+	opacity: 1;
+}
+
+/* Load More button styling */
+.load-more-btn {
+	background: linear-gradient(180deg, #42a5f5, #1976d2);
+	color: white;
+	border: none;
+	padding: 10px 24px;
+	border-radius: 8px;
+	cursor: pointer;
+	font-size: 14px;
+	font-weight: 500;
+	transition: all 0.2s ease;
+	box-shadow: 0 2px 8px rgba(66, 165, 245, 0.3);
+}
+
+.load-more-btn:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(66, 165, 245, 0.4);
+}
+
+.load-more-btn:active {
+	transform: translateY(0);
+}
+
+.load-more-btn.deleted {
+	background: linear-gradient(180deg, #dc2626, #b91c1c);
+	box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+}
+
+.load-more-btn.deleted:hover {
+	box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
