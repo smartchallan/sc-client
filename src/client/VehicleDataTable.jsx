@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import "./ClientDashboard.css";
+import "../shared/CommonDashboard.css";
 import CustomModal from "./CustomModal";
 
 export default function VehicleDataTable({ clientId, onViewAll, limit = 10, searchText = '' }) {
@@ -100,19 +100,20 @@ export default function VehicleDataTable({ clientId, onViewAll, limit = 10, sear
       <div className="table-total">Total RTO Records fetched: {filtered.length}{searchText ? ` (filtered from ${vehicleData.length})` : ''}</div>
     )}
   </div>
-  <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
-        <thead>
-          <tr>
-            <th>S. No.</th>
-            <th>Vehicle No.</th>
-            <th>Registration Date</th>
-            <th>Insurance Exp</th>
-            <th>Road Tax Exp</th>
-            <th>Fitness Exp</th>
-            <th>Pollution Exp</th>
-            <th>Action</th>
-          </tr>
-        </thead>
+  <div className="table-container">
+    <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
+          <thead>
+            <tr>
+              <th>S. No.</th>
+              <th>Vehicle No.</th>
+              <th>Registration Date</th>
+              <th>Insurance Exp</th>
+              <th>Road Tax Exp</th>
+              <th>Fitness Exp</th>
+              <th>Pollution Exp</th>
+              <th>Action</th>
+            </tr>
+          </thead>
         <tbody>
           {displayed.length === 0 ? (
             <tr><td colSpan={8}>No vehicle data found.</td></tr>
@@ -136,6 +137,7 @@ export default function VehicleDataTable({ clientId, onViewAll, limit = 10, sear
           )}
         </tbody>
       </table>
+    </div>
       {/* If more than 10 records exist show a View All button that navigates to the full Vehicle RTO Data page */}
       {(limit > 0 && vehicleData.length > limit) && (
         <div style={{ textAlign: 'right', marginTop: 12 }}>

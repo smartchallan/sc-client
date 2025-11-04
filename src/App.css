@@ -36,7 +36,7 @@
   }
   
   .form-container {
-    max-width: 550px;
+    max-width: none;
     width: 100%;
     padding: 35px;
   }
@@ -268,7 +268,7 @@ body, .app-container {
 
 /* Responsive container - fits screen on all devices */
 .container {
-  max-width: 1200px;
+  max-width: none;
   width: 100%;
   margin: 0 auto;
   padding: 0 16px; /* Add some padding for mobile screens */

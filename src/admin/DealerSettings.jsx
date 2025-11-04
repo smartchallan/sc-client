@@ -1,5 +1,5 @@
 import React from "react";
-import "./AdminDashboard.css";
+import "../shared/CommonDashboard.css";
 
 export default function DealerSettings({ dealers = [] }) {
   return (

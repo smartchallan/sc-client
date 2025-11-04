@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import "./ClientDashboard.css";
+import "../shared/CommonDashboard.css";
 
 export default function MyBilling({ clientId }) {
   const [billingPlans, setBillingPlans] = useState([]);

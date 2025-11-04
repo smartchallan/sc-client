@@ -17,39 +17,41 @@ const LatestChallansTable = ({ latestChallanRows, loadingVehicleChallan, vehicle
       <div style={{color:'#d32f2f'}}>Error loading challans.</div>
     ) : (
       <>
-        <table className="latest-table" style={{ width: '100%', marginTop: 8, tableLayout: 'fixed' }}>
-          <colgroup>
-            <col style={{ width: '3%' }} />
-            <col style={{ width: '6%' }} />
-            <col style={{ width: '8%' }} />
-            <col style={{ width: '8%' }} />
-            <col style={{ width: '5%' }} />
-            <col style={{ width: '6%' }} />
-            <col style={{ width: '6%' }} />
-            <col style={{ width: '8%' }} />
-            <col style={{ width: '9%' }} />
-            <col style={{ width: '8%' }} />
-            <col style={{ width: '4%' }} />
-          </colgroup>
-          <thead>
-            <tr>
-              <th>S. No.</th>
-              <th>Vehicle Number</th>
-              <th>Challan No</th>
-              <th>Date/Time</th>
-              <th style={{ textAlign: 'center' }}>Location</th>
-              <th>Sent to Reg Court</th>
-              <th>Sent to Virtual Court</th>
-              <th>Fine Imposed</th>
-              <th>Status</th>
-              <th>Offence Details</th>
-              <th style={{ textAlign: 'center' }}>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {latestChallanRows}
-          </tbody>
-        </table>
+        <div className="table-container">
+          <table className="latest-table" style={{ width: '100%', marginTop: 8, tableLayout: 'fixed' }}>
+            <colgroup>
+              <col style={{ width: '3%' }} />
+              <col style={{ width: '6%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '5%' }} />
+              <col style={{ width: '6%' }} />
+              <col style={{ width: '6%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '9%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '4%' }} />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>S. No.</th>
+                <th>Vehicle Number</th>
+                <th>Challan No</th>
+                <th>Date/Time</th>
+                <th style={{ textAlign: 'center' }}>Location</th>
+                <th>Sent to Reg Court</th>
+                <th>Sent to Virtual Court</th>
+                <th>Fine Imposed</th>
+                <th>Status</th>
+                <th>Offence Details</th>
+                <th style={{ textAlign: 'center' }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {latestChallanRows}
+            </tbody>
+          </table>
+        </div>
         <div style={{ textAlign: 'right', marginTop: 12 }}>
           <button
             className="action-btn"

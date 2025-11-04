@@ -3,7 +3,8 @@ import { getInitials } from "../utils/getInitials";
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import "./AdminDashboard.css";
+import "../shared/CommonDashboard.css";
+import "./AdminDashboardOverrides.css";
 import "./AdminHome.css";
 import AdminSidebar from "./AdminSidebar";
 import AdminProfile from "./AdminProfile";
@@ -29,6 +30,7 @@ function AdminDashboard() {
   const [loadingAdminData, setLoadingAdminData] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
   const [adminDataError, setAdminDataError] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth > 900 : true));
   const chartRef = useRef(null); // Dealers by State
   const chartRefCity = useRef(null); // Dealers by City
   const chartRefCountry = useRef(null); // Dealers by Country
@@ -335,7 +337,11 @@ function AdminDashboard() {
   // Sidebar click handler
   const handleMenuClick = (label) => {
     setActiveMenu(label);
+    // Close sidebar on mobile after menu selection
+    if (window.innerWidth <= 900) setSidebarOpen(false);
   };
+  
+  const toggleSidebar = () => setSidebarOpen(s => !s);
 
   console.log('dasdasdad', dealers);
   // Quick Action handlers
@@ -343,10 +349,47 @@ function AdminDashboard() {
   const handleQuickAddClient = () => setActiveMenu('Register Client');
 
   return (
-    <div className="admin-dashboard-layout" style={{display: 'flex', width: '100vw', minHeight: '100vh'}}>
-      <AdminSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} />
-      <main className="main-content admin-home-content" style={{flex: 1, minHeight: '100vh'}}>
-  {activeMenu === "Dashboard" && (
+    <div className={`dashboard-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
+      {sidebarOpen && window.innerWidth <= 900 && (
+        <div className="sidebar-overlay show" onClick={() => setSidebarOpen(false)} />
+      )}
+      <AdminSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
+      <main className="main-content">
+        <div className="header" style={{marginBottom: 24}}>
+          <div className="header-left" style={{display:'flex',alignItems:'center',gap:16}}>
+            <div className="menu-toggle" style={{fontSize:22,cursor:'pointer'}} onClick={toggleSidebar}>
+              <i className="ri-menu-line"></i>
+            </div>
+            <div className="header-title" style={{fontWeight:600}}>
+              {activeMenu === 'Dashboard' ? 'Admin Dashboard' : activeMenu}
+            </div>
+          </div>
+          <div className="header-right" style={{display:'flex',alignItems:'center',gap:18,cursor:'pointer'}} onClick={() => setActiveMenu('Profile')} role="button" aria-label="Open profile">
+            <button className="header-more" title="Hide / Show sidebar" onClick={(e)=>{ e.stopPropagation(); setSidebarOpen(s => !s); }} style={{background:'transparent',border:'none',cursor:'pointer',color:'#333',fontSize:20}}>
+              <i className="ri-more-2-fill" />
+            </button>
+            {(() => {
+              let headerInitials = 'JS';
+              try {
+                const userObj = JSON.parse(localStorage.getItem('sc_user'));
+                if (userObj && userObj.user && userObj.user.name) {
+                  const nameParts = userObj.user.name.trim().split(/\s+/);
+                  if (nameParts.length >= 2) {
+                    headerInitials = (nameParts[0][0] + nameParts[1][0]).toUpperCase();
+                  } else {
+                    headerInitials = userObj.user.name.substring(0,2).toUpperCase();
+                  }
+                }
+              } catch {}
+              return (
+                <div className="header-profile" style={{marginLeft:8}}>
+                  <div className="header-avatar" style={{background:'#0072ff',color:'#fff',borderRadius:'50%',width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:600,fontSize:16}}>{headerInitials}</div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+        {activeMenu === "Dashboard" && (
           <>
             <div className="dashboard-header">
               <h1 className="dashboard-title">Welcome back{user.user && user.user.name ? `, ${user.user.name}` : '123'}!

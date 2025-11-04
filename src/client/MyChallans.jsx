@@ -48,7 +48,8 @@ function ChallanTable({ title, data, search = {}, sortAsc = true }) {
         <div style={{ color: '#888' }}>No challans found.</div>
       ) : (
         <>
-        <table className="latest-table" style={{ width: '100%', minWidth: '900px', marginTop: 8, tableLayout: 'fixed' }}>
+        <div className="table-container">
+          <table className="latest-table" style={{ width: '100%', minWidth: '900px', marginTop: 8, tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: '4%' }} />
             <col style={{ width: '8%' }} />
@@ -157,6 +158,7 @@ function ChallanTable({ title, data, search = {}, sortAsc = true }) {
             ))}
           </tbody>
         </table>
+        </div>
         <div style={{marginTop:12, textAlign:'center'}}>
           {hasMore ? (
             <button className="action-btn flat-btn" onClick={() => setVisibleCount(v => v + 5)}>Load more challans</button>

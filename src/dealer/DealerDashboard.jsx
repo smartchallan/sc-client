@@ -6,20 +6,23 @@ import L from 'leaflet';
 import DealerSidebar from "./DealerSidebar";
 import DealerProfile from "./DealerProfile";
 import RegisterClient from "./RegisterClient";
-import "./DealerDashboard.css";
+import "../shared/CommonDashboard.css";
+import "./DealerDashboardOverrides.css";
 import "./DealerHome.css";
 
 import DealerRegisterVehicle from "./DealerRegisterVehicle";
 import ClientSettings from "./ClientSettings";
 import CustomModal from "../client/CustomModal";
+import QuickActions from "../client/QuickActions";
 
 function DealerDashboard() {
 	const userRole = "dealer";
 	const [supportModal, setSupportModal] = useState(false);
 	const [activeMenu, setActiveMenu] = useState("Home");
-	const [dealers, setDealers] = useState([]);
-	const [loadingDealers, setLoadingDealers] = useState(false);
-	const [dealersError, setDealersError] = useState(null);
+	const [sidebarOpen, setSidebarOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth > 900 : true));
+	const [dealerData, setDealerData] = useState(null);
+	const [loadingDealerData, setLoadingDealerData] = useState(false);
+	const [dealerDataError, setDealerDataError] = useState(null);
 	const chartRef2 = useRef(null);
 	const chartRef3 = useRef(null);
 	const chartRef4 = useRef(null);
@@ -33,49 +36,74 @@ function DealerDashboard() {
 		}
 	})();
 
+	// Fetch dealer data using new endpoint
 	useEffect(() => {
 		const dealerId = user.user && user.user.id;
-		if (!dealerId) return;
-		const fetchDealers = async () => {
-			setLoadingDealers(true);
-			setDealersError(null);
+		const userRole = user.user && user.user.role;
+		
+		if (!dealerId) {
+			console.log('No dealer ID found, skipping API call');
+			return;
+		}
+		
+		if (userRole !== 'dealer') {
+			console.log('User is not a dealer, skipping API call. Role:', userRole);
+			return;
+		}
+		
+		const fetchDealerData = async () => {
+			console.log('Fetching dealer data for ID:', dealerId);
+			setLoadingDealerData(true);
+			setDealerDataError(null);
 			try {
 				const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
-				const url = `${baseUrl}/dealers?dealer_id=${dealerId}`;
+				const url = `${baseUrl}/dealerdata?dealer_id=${dealerId}`;
 				const res = await fetch(url);
 				if (!res.ok) throw new Error(`API error: ${res.status}`);
 				const data = await res.json();
-				if (Array.isArray(data)) {
-					setDealers(data);
-				} else if (Array.isArray(data.dealers)) {
-					setDealers(data.dealers);
-				} else {
-					setDealers([]);
-				}
+				setDealerData(data);
+				console.log('Dealer data fetched successfully:', data);
 			} catch (err) {
-				setDealersError(err.message || "Failed to fetch dealers");
+				setDealerDataError(err.message || "Failed to fetch dealer data");
+				console.error('Error fetching dealer data:', err);
 			} finally {
-				setLoadingDealers(false);
+				setLoadingDealerData(false);
 			}
 		};
-		fetchDealers();
-	}, []);
+		
+		fetchDealerData();
+	}, [user.user?.id, user.user?.role]); // Run when dealer ID or role changes
 
-	// Stat-cards except the first one
+	// Clients pie chart - show clients by city
 	useEffect(() => {
-		if (!chartRef2.current) return;
+		if (!chartRef2.current || !dealerData?.clients) return;
 		import('chart.js/auto').then(({ default: Chart }) => {
 			const ctx = chartRef2.current.getContext('2d');
 			ctx.clearRect(0, 0, chartRef2.current.width, chartRef2.current.height);
+			
+			// Group clients by city
+			const cityCount = {};
+			dealerData.clients.forEach(client => {
+				const city = client.city || client.address?.split(',').pop()?.trim() || 'Other';
+				cityCount[city] = (cityCount[city] || 0) + 1;
+			});
+			
+			// Convert to chart data
+			const cities = Object.keys(cityCount);
+			const counts = Object.values(cityCount);
+			const colors = [
+				'#ff6384', '#36a2eb', '#ffce56', '#8bc34a', 
+				'#ff9f40', '#c9cbcf', '#4bc0c0', '#ff6384'
+			];
+			
 			const data = {
-				labels: ['Active', 'Inactive', 'Pending', 'Banned'],
+				labels: cities.length > 0 ? cities : ['No Data'],
 				datasets: [{
-					data: [12, 7, 4, 2],
-					backgroundColor: [
-						'#ff6384', '#36a2eb', '#ffce56', '#8bc34a',
-					],
+					data: counts.length > 0 ? counts : [1],
+					backgroundColor: cities.length > 0 ? colors.slice(0, cities.length) : ['#e0e0e0'],
 				}],
 			};
+			
 			if (window._clientsPieChart) window._clientsPieChart.destroy();
 			window._clientsPieChart = new Chart(ctx, {
 				type: 'doughnut',
@@ -91,21 +119,34 @@ function DealerDashboard() {
 		return () => {
 			if (window._clientsPieChart) window._clientsPieChart.destroy();
 		};
-	}, []);
+	}, [dealerData]);
 	useEffect(() => {
-		if (!chartRef3.current) return;
+		if (!chartRef3.current || !dealerData?.vehicle_types) return;
 		import('chart.js/auto').then(({ default: Chart }) => {
 			const ctx = chartRef3.current.getContext('2d');
 			ctx.clearRect(0, 0, chartRef3.current.width, chartRef3.current.height);
+			
+			// Use API data for vehicle types or show default data
+			const vehicleData = dealerData.vehicle_types || {
+				'Car': dealerData.vehicles_registered ? Math.floor(dealerData.vehicles_registered * 0.5) : 0,
+				'Bike': dealerData.vehicles_registered ? Math.floor(dealerData.vehicles_registered * 0.3) : 0,
+				'Truck': dealerData.vehicles_registered ? Math.floor(dealerData.vehicles_registered * 0.15) : 0,
+				'Others': dealerData.vehicles_registered ? Math.floor(dealerData.vehicles_registered * 0.05) : 0,
+			};
+			
+			const labels = Object.keys(vehicleData);
+			const counts = Object.values(vehicleData);
+			
 			const data = {
-				labels: ['Cars', 'Bikes', 'Trucks', 'Others'],
+				labels: labels.length > 0 ? labels : ['No Data'],
 				datasets: [{
-					data: [30, 18, 7, 4],
-					backgroundColor: [
+					data: counts.length > 0 && counts.some(c => c > 0) ? counts : [1],
+					backgroundColor: labels.length > 0 ? [
 						'#42a5f5', '#66bb6a', '#ffa726', '#ab47bc',
-					],
+					].slice(0, labels.length) : ['#e0e0e0'],
 				}],
 			};
+			
 			if (window._vehiclesRadialChart) window._vehiclesRadialChart.destroy();
 			window._vehiclesRadialChart = new Chart(ctx, {
 				type: 'polarArea',
@@ -121,20 +162,32 @@ function DealerDashboard() {
 		return () => {
 			if (window._vehiclesRadialChart) window._vehiclesRadialChart.destroy();
 		};
-	}, []);
+	}, [dealerData]);
 	useEffect(() => {
 		if (!chartRef4.current) return;
 		import('chart.js/auto').then(({ default: Chart }) => {
 			const ctx = chartRef4.current.getContext('2d');
 			ctx.clearRect(0, 0, chartRef4.current.width, chartRef4.current.height);
+			
+			// Use API data for challans or show sample data
+			const challansData = dealerData?.challans_monthly || [
+				{ month: 'Jan', amount: 1200 },
+				{ month: 'Feb', amount: 1500 },
+				{ month: 'Mar', amount: 1100 },
+				{ month: 'Apr', amount: 1800 },
+				{ month: 'May', amount: 1700 },
+				{ month: 'Jun', amount: 2000 }
+			];
+			
 			const data = {
-				labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+				labels: challansData.map(item => item.month),
 				datasets: [{
 					label: 'Challans Settled',
-					data: [1200, 1500, 1100, 1800, 1700, 2000],
+					data: challansData.map(item => item.amount || item.value || 0),
 					backgroundColor: '#42a5f5',
 				}],
 			};
+			
 			if (window._challansBarChart) window._challansBarChart.destroy();
 			window._challansBarChart = new Chart(ctx, {
 				type: 'bar',
@@ -154,16 +207,57 @@ function DealerDashboard() {
 		return () => {
 			if (window._challansBarChart) window._challansBarChart.destroy();
 		};
-	}, []);
+	}, [dealerData]);
 
 	const handleMenuClick = (label) => {
 		setActiveMenu(label);
+		// Close sidebar on mobile after menu selection
+		if (window.innerWidth <= 900) setSidebarOpen(false);
 	};
+	
+	const toggleSidebar = () => setSidebarOpen(s => !s);
 
 	return (
-		<div className="admin-dashboard-layout" style={{display: 'flex', width: '100vw', minHeight: '100vh'}}>
-			<DealerSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} />
-			<main className="main-content admin-home-content" style={{flex: 1, minHeight: '100vh'}}>
+		<div className={`dashboard-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
+			{sidebarOpen && window.innerWidth <= 900 && (
+				<div className="sidebar-overlay show" onClick={() => setSidebarOpen(false)} />
+			)}
+			<DealerSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
+			<main className="main-content">
+				<div className="header" style={{marginBottom: 24}}>
+					<div className="header-left" style={{display:'flex',alignItems:'center',gap:16}}>
+						<div className="menu-toggle" style={{fontSize:22,cursor:'pointer'}} onClick={toggleSidebar}>
+							<i className="ri-menu-line"></i>
+						</div>
+						<div className="header-title" style={{fontWeight:600}}>
+							{activeMenu === 'Home' ? 'Dashboard' : activeMenu}
+						</div>
+					</div>
+					<div className="header-right" style={{display:'flex',alignItems:'center',gap:18,cursor:'pointer'}} onClick={() => setActiveMenu('Profile')} role="button" aria-label="Open profile">
+						<button className="header-more" title="Hide / Show sidebar" onClick={(e)=>{ e.stopPropagation(); setSidebarOpen(s => !s); }} style={{background:'transparent',border:'none',cursor:'pointer',color:'#333',fontSize:20}}>
+							<i className="ri-more-2-fill" />
+						</button>
+						{(() => {
+							let headerInitials = 'JS';
+							try {
+								const userObj = JSON.parse(localStorage.getItem('sc_user'));
+								if (userObj && userObj.user && userObj.user.name) {
+									const nameParts = userObj.user.name.trim().split(/\s+/);
+									if (nameParts.length >= 2) {
+										headerInitials = (nameParts[0][0] + nameParts[1][0]).toUpperCase();
+									} else {
+										headerInitials = userObj.user.name.substring(0,2).toUpperCase();
+									}
+								}
+							} catch {}
+							return (
+								<div className="header-profile" style={{marginLeft:8}}>
+									<div className="header-avatar" style={{background:'#0072ff',color:'#fff',borderRadius:'50%',width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:600,fontSize:16}}>{headerInitials}</div>
+								</div>
+							);
+						})()}
+					</div>
+				</div>
 				{activeMenu === "Home" && (
 					<>
 						<div className="dashboard-header">
@@ -173,17 +267,21 @@ function DealerDashboard() {
 						<div className="dashboard-stats">
 							{/* First stat-card (Happy Dealers) removed for dealer dashboard */}
 							<div className="stat-card">
-								<i className="ri-error-warning-line"></i>
+								<i className="ri-user-heart-line"></i>
 								<div>Happy Clients</div>
-								<div className="stat-value">5</div>
+								<div className="stat-value">
+									{loadingDealerData ? '...' : (dealerData?.total_clients || 0)}
+								</div>
 								<div className="clients-pie-chart-container" style={{maxWidth: 200, margin: '16px auto'}}>
 									<canvas ref={chartRef2} width={200} height={200} />
 								</div>
 							</div>
 							<div className="stat-card">
-								<i className="ri-checkbox-circle-line"></i>
+								<i className="ri-car-line"></i>
 								<div>Registered Vehicles</div>
-								<div className="stat-value">19</div>
+								<div className="stat-value">
+									{loadingDealerData ? '...' : (dealerData?.vehicles_registered || 0)}
+								</div>
 								<div className="vehicles-radial-chart-container" style={{maxWidth: 200, margin: '16px auto'}}>
 									<canvas ref={chartRef3} width={200} height={200} />
 								</div>
@@ -191,199 +289,142 @@ function DealerDashboard() {
 							<div className="stat-card">
 								<i className="ri-money-rupee-circle-line"></i>
 								<div>Challans Settled</div>
-								<div className="stat-value">₹3,250</div>
+								<div className="stat-value">
+									{loadingDealerData ? '...' : `₹${dealerData?.total_challans_amount?.toLocaleString() || dealerData?.challans_settled || '0'}`}
+								</div>
 								<div className="challans-bar-chart-container" style={{maxWidth: 220, margin: '16px auto'}}>
 									<canvas ref={chartRef4} width={220} height={180} />
 								</div>
 							</div>
 						</div>
-						{/* Map and table restored below */}
-						<div className="map-dealer-data" style={{ width: '100%', height: 450, margin: '32px 0', position: 'relative' }}>
-							{/* Modern map with colored markers by state */}
-							{Array.isArray(dealers) && dealers.length > 0 ? (
+						{/* Client Locations Map */}
+						<div className="map-client-data" style={{ width: '100%', height: 450, margin: '32px 0', position: 'relative' }}>
+							<div className="latest-header" style={{marginBottom: 20}}>
+								<h2>Client Locations</h2>
+								<span style={{fontSize: 14, color: '#666'}}>
+									{loadingDealerData ? 'Loading...' : `${dealerData?.clients?.length || 0} clients`}
+								</span>
+							</div>
+							{loadingDealerData ? (
+								<div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: '#f8f9fa', borderRadius: 12}}>
+									<div style={{textAlign: 'center'}}>
+										<div className="default-loader">
+											<div className="loader-spinner"></div>
+										</div>
+										<p style={{marginTop: 20, color: '#888'}}>Loading client locations...</p>
+									</div>
+								</div>
+							) : dealerDataError ? (
+								<div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: '#f8f9fa', borderRadius: 12}}>
+									<div style={{textAlign: 'center', color: '#e74c3c'}}>
+										<i className="ri-error-warning-line" style={{fontSize: 48, marginBottom: 16, display: 'block'}}></i>
+										<p>Failed to load client locations</p>
+										<p style={{fontSize: 14, marginTop: 8}}>{dealerDataError}</p>
+									</div>
+								</div>
+							) : dealerData?.clients && Array.isArray(dealerData.clients) && dealerData.clients.length > 0 ? (
 								<>
 									<MapContainer
 										center={[20.5937, 78.9629]}
-										zoom={4}
-										style={{ width: '100%', height: '100%' }}
+										zoom={5}
+										style={{ width: '100%', height: '100%', borderRadius: 12 }}
 										scrollWheelZoom={true}
 									>
 										<TileLayer
 											attribution='&copy; <a href="https://carto.com/attributions">CARTO</a> | &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 											url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
 										/>
-										{(() => {
-											const stateColors = {};
-											const palette = [
-												'#4e79a7', '#f28e2b', '#e15759', '#76b7b2', '#59a14f', '#edc949', '#af7aa1', '#ff9da7', '#9c755f', '#bab0ab',
-												'#8c564b', '#d62728', '#9467bd', '#c49c94', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
+										{dealerData.clients.map((client, idx) => {
+											// Default coordinates for major Indian cities if client location is not available
+											const defaultLocations = [
+												[28.6139, 77.2090], // Delhi
+												[19.0760, 72.8777], // Mumbai
+												[12.9716, 77.5946], // Bangalore
+												[13.0827, 80.2707], // Chennai
+												[22.5726, 88.3639], // Kolkata
+												[17.3850, 78.4867], // Hyderabad
+												[23.0225, 72.5714], // Ahmedabad
+												[18.5204, 73.8567], // Pune
+												[26.9124, 75.7873], // Jaipur
+												[21.1458, 79.0882]  // Nagpur
 											];
-											let colorIdx = 0;
-											dealers.forEach(d => {
-												const state = d.meta && d.meta.state ? d.meta.state : 'Unknown';
-												if (!(state in stateColors)) {
-													stateColors[state] = palette[colorIdx % palette.length];
-													colorIdx++;
-												}
+											
+											// Use client's coordinates or default to a city
+											const lat = client.latitude || client.lat || defaultLocations[idx % defaultLocations.length][0];
+											const lng = client.longitude || client.lng || defaultLocations[idx % defaultLocations.length][1];
+											
+											const icon = L.divIcon({
+												className: '',
+												html: `<svg xmlns='http://www.w3.org/2000/svg' width='28' height='40' viewBox='0 0 28 40'><path d='M14 0C6.27 0 0 6.27 0 14c0 10.5 13.1 25.1 13.6 25.6.2.2.5.4.8.4s.6-.1.8-.4C14.9 39.1 28 24.5 28 14 28 6.27 21.73 0 14 0zm0 21c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z' fill='#0072ff'/></svg>`,
+												iconSize: [28, 40],
+												iconAnchor: [14, 40],
+												popupAnchor: [0, -36],
 											});
-											const stateLatLng = {
-												'Andhra Pradesh': [15.9129, 79.74],
-												'Arunachal Pradesh': [28.218, 94.7278],
-												'Assam': [26.2006, 92.9376],
-												'Bihar': [25.0961, 85.3131],
-												'Chhattisgarh': [21.2787, 81.8661],
-												'Goa': [15.2993, 74.124],
-												'Gujarat': [22.2587, 71.1924],
-												'Haryana': [29.0588, 76.0856],
-												'Himachal Pradesh': [31.1048, 77.1734],
-												'Jharkhand': [23.6102, 85.2799],
-												'Karnataka': [15.3173, 75.7139],
-												'Kerala': [10.8505, 76.2711],
-												'Madhya Pradesh': [22.9734, 78.6569],
-												'Maharashtra': [19.7515, 75.7139],
-												'Manipur': [24.6637, 93.9063],
-												'Meghalaya': [25.467, 91.3662],
-												'Mizoram': [23.1645, 92.9376],
-												'Nagaland': [26.1584, 94.5624],
-												'Odisha': [20.9517, 85.0985],
-												'Punjab': [31.1471, 75.3412],
-												'Rajasthan': [27.0238, 74.2179],
-												'Sikkim': [27.533, 88.5122],
-												'Tamil Nadu': [11.1271, 78.6569],
-												'Telangana': [18.1124, 79.0193],
-												'Tripura': [23.9408, 91.9882],
-												'Uttar Pradesh': [26.8467, 80.9462],
-												'Uttarakhand': [30.0668, 79.0193],
-												'West Bengal': [22.9868, 87.855],
-												'Delhi': [28.7041, 77.1025],
-												'Jammu and Kashmir': [33.7782, 76.5762],
-												'Ladakh': [34.1526, 77.5771],
-												'Puducherry': [11.9416, 79.8083],
-												'Unknown': [20.5937, 78.9629],
-											};
-											return dealers.filter(d => {
-												const state = d.meta && d.meta.state ? d.meta.state : 'Unknown';
-												return stateLatLng[state] !== undefined;
-											}).map((dealer, idx) => {
-												const state = dealer.meta && dealer.meta.state ? dealer.meta.state : 'Unknown';
-												const color = stateColors[state] || '#4e79a7';
-												const [lat, lng] = stateLatLng[state] || stateLatLng['Unknown'];
-												const icon = L.divIcon({
-													className: '',
-													html: `<svg xmlns='http://www.w3.org/2000/svg' width='28' height='40' viewBox='0 0 28 40'><path d='M14 0C6.27 0 0 6.27 0 14c0 10.5 13.1 25.1 13.6 25.6.2.2.5.4.8.4s.6-.1.8-.4C14.9 39.1 28 24.5 28 14 28 6.27 21.73 0 14 0zm0 21c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z' fill='${color}'/></svg>`,
-													iconSize: [28, 40],
-													iconAnchor: [14, 40],
-													popupAnchor: [0, -36],
-												});
-												return (
-													<Marker
-														key={dealer.id || idx}
-														position={[lat, lng]}
-														icon={icon}
-														zIndexOffset={1000}
-													>
-														<Popup>
-															<b>{dealer.name || dealer.dealer_name || 'Dealer'}</b><br/>
-															{dealer.meta.state ? `State: ${dealer.meta.state}` : ''}<br/>
-															{dealer.phone || dealer.mobile || ''}
-														</Popup>
-													</Marker>
-												);
-											});
-										})()}
+											
+											return (
+												<Marker
+													key={client.id || idx}
+													position={[lat, lng]}
+													icon={icon}
+													zIndexOffset={1000}
+												>
+													<Popup>
+														<div style={{minWidth: 200}}>
+															<b>{client.name || client.client_name || 'Client'}</b><br/>
+															{client.email && <div>Email: {client.email}</div>}
+															{client.phone && <div>Phone: {client.phone}</div>}
+															{client.address && <div>Address: {client.address}</div>}
+															<div>Vehicles: {client.vehicle_count || client.vehicles || 0}</div>
+														</div>
+													</Popup>
+												</Marker>
+											);
+										})}
 									</MapContainer>
-									<div style={{position:'absolute', right:10, top:10, background:'#fff', borderRadius:8, boxShadow:'0 2px 8px #0001', padding:'8px 12px', fontSize:12, zIndex:1000, maxHeight:260, overflowY:'auto'}}>
-										<b>State Legend</b>
-										<ul style={{listStyle:'none', margin:0, padding:0}}>
-											{(() => {
-												const stateColors = {};
-												const palette = [
-													'#4e79a7', '#f28e2b', '#e15759', '#76b7b2', '#59a14f', '#edc949', '#af7aa1', '#ff9da7', '#9c755f', '#bab0ab',
-													'#8c564b', '#d62728', '#9467bd', '#c49c94', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
-												];
-												let colorIdx = 0;
-												dealers.forEach(d => {
-													const state = d.meta && d.meta.state ? d.meta.state : 'Unknown';
-													if (!(state in stateColors)) {
-														stateColors[state] = palette[colorIdx % palette.length];
-														colorIdx++;
-													}
-												});
-												return Object.entries(stateColors).map(([state, color]) => (
-													<li key={state} style={{display:'flex',alignItems:'center',marginBottom:2}}>
-														<span style={{display:'inline-block',width:14,height:14,background:color,borderRadius:3,marginRight:6,border:'1px solid #ccc'}}></span>
-														{state}
-													</li>
-												));
-											})()}
+									<div style={{position:'absolute', right:10, top:50, background:'#fff', borderRadius:8, boxShadow:'0 2px 8px #0001', padding:'8px 12px', fontSize:12, zIndex:1000, maxHeight:200, overflowY:'auto'}}>
+										<b>Clients ({dealerData.clients.length})</b>
+										<ul style={{listStyle:'none', margin:'8px 0 0', padding:0, maxHeight:150, overflowY:'auto'}}>
+											{dealerData.clients.slice(0, 10).map((client, idx) => (
+												<li key={client.id || idx} style={{display:'flex',alignItems:'center',marginBottom:4, fontSize:11}}>
+													<span style={{display:'inline-block',width:8,height:8,background:'#0072ff',borderRadius:'50%',marginRight:6}}></span>
+													{client.name || client.client_name || `Client ${idx + 1}`}
+												</li>
+											))}
+											{dealerData.clients.length > 10 && (
+												<li style={{fontSize:11, color:'#666', fontStyle:'italic', marginTop:4}}>
+													...and {dealerData.clients.length - 10} more
+												</li>
+											)}
 										</ul>
 									</div>
 								</>
 							) : (
-								<div style={{textAlign: 'center', padding: 40, color: '#888'}}>No dealer locations to show on map.</div>
+								<div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: '#f8f9fa', borderRadius: 12}}>
+									<div style={{textAlign: 'center', color: '#888'}}>
+										<i className="ri-map-pin-line" style={{fontSize: 48, marginBottom: 16, display: 'block'}}></i>
+										<p>No client locations available</p>
+										<p style={{fontSize: 14, marginTop: 8}}>Client locations will appear here once available.</p>
+									</div>
+								</div>
 							)}
 						</div>
-						<div className="dashboard-latest">
-							<div className="latest-header">
-								<h2>Smart Challan Network</h2>
-								<a href="#" className="view-all">View All</a>
-							</div>
-							<table className="latest-table">
-								<thead>
-									<tr>
-										<th>Dealer Name</th>
-										<th>Phone</th>
-										<th>Email</th>
-										<th>Total Clients</th>
-										<th>Vehicles Registered</th>
-										<th>Status</th>
-									</tr>
-								</thead>
-								<tbody>
-									{loadingDealers && (
-										<tr><td colSpan={6}>Loading dealers...</td></tr>
-									)}
-									{dealersError && (
-										<tr><td colSpan={6} style={{color: 'red'}}>{dealersError}</td></tr>
-									)}
-									{!loadingDealers && !dealersError && Array.isArray(dealers) && dealers.length > 0 && dealers.map((dealer, idx) => (
-										<tr key={dealer.id || idx}>
-											<td>{dealer.name || dealer.dealer_name || '-'}</td>
-											<td>{dealer.phone || dealer.mobile || '-'}</td>
-											<td>{dealer.email || '-'}</td>
-											<td>{dealer.total_clients != null ? dealer.total_clients : '-'}</td>
-											<td>{dealer.vehicles_registered != null ? dealer.vehicles_registered : '-'}</td>
-											<td><span className={`status ${dealer.status ? dealer.status.toLowerCase() : ''}`}>{dealer.status || '-'}</span></td>
-										</tr>
-									))}
-									{!loadingDealers && !dealersError && Array.isArray(dealers) && dealers.length === 0 && (
-										<tr><td colSpan={6}>No dealers found.</td></tr>
-									)}
-								</tbody>
-							</table>
-						</div>
-						<div className="dashboard-actions">
-							<h2>Quick Actions</h2>
-							<div className="actions-list">
-								<button className="action-btn"><i className="ri-wallet-3-line"></i>Add New Client</button>
-								<button className="action-btn"><i className="ri-bar-chart-2-line"></i> Generate Reports</button>
-															<button className="action-btn" onClick={() => setSupportModal(true)}><i className="ri-customer-service-2-line"></i> Contact Support</button>
-	<CustomModal
-	  open={supportModal}
-	  title="Contact Support"
-	  onConfirm={() => setSupportModal(false)}
-	  onCancel={() => setSupportModal(false)}
-	  confirmText="OK"
-	  cancelText={null}
-	>
-	  <div style={{lineHeight: 1.7, fontSize: 15}}>
-	    <div><b>Email:</b> <a href="mailto:support@smartchallan.com">support@smartchallan.com</a></div>
-	    <div><b>Phone:</b> <a href="tel:+911234567890">+91-1234-567-890</a></div>
-	    <div style={{marginTop: 10}}><b>Support Hours:</b> Mon - Sat, 9 AM to 6 PM</div>
-	    <div style={{color: '#b77', marginTop: 4}}>Public holidays: Team is not available. Next working day we will contact you.</div>
-	  </div>
-	</CustomModal>
-							</div>
+						{/* Quick Actions using shared component */}
+						<div style={{ padding: '0 30px 30px 30px' }}>
+							<QuickActions
+								title="Quick Actions"
+								sticky={true}
+								onAddVehicle={() => setActiveMenu('Register Client')}
+								onBulkUpload={() => setActiveMenu('Register Vehicle')}
+								onPay={() => {
+									// For dealers, this could open billing info
+									setSupportModal(true);
+								}}
+								onReports={() => {
+									// For dealers, this could show dealer reports
+									setSupportModal(true);
+								}}
+								onContact={() => setSupportModal(true)}
+							/>
 						</div>
 						<div className="dashboard-due">
 							<h2>Challans Due Today</h2>
@@ -420,6 +461,21 @@ function DealerDashboard() {
 				{activeMenu === "Register Vehicle" && <DealerRegisterVehicle />}
 				{activeMenu === "Settings" && <ClientSettings clients={[]} />}
 			</main>
+			<CustomModal
+				open={supportModal}
+				title="Contact Support"
+				onConfirm={() => setSupportModal(false)}
+				onCancel={() => setSupportModal(false)}
+				confirmText="OK"
+				cancelText={null}
+			>
+				<div style={{lineHeight: 1.7, fontSize: 15}}>
+					<div><b>Email:</b> <a href="mailto:support@smartchallan.com">support@smartchallan.com</a></div>
+					<div><b>Phone:</b> <a href="tel:+911234567890">+91-1234-567-890</a></div>
+					<div style={{marginTop: 10}}><b>Support Hours:</b> Mon - Sat, 9 AM to 6 PM</div>
+					<div style={{color: '#b77', marginTop: 4}}>Public holidays: Team is not available. Next working day we will contact you.</div>
+				</div>
+			</CustomModal>
 		</div>
 	);
 }

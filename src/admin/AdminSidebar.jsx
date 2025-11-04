@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { getInitials } from "../utils/getInitials";
-import "./AdminDashboard.css";
+import "../shared/CommonDashboard.css";
+import scLogo from "../assets/sc-logo.png";
 import CustomModal from "../client/CustomModal";
 
-function AdminSidebar({ role, onMenuClick, activeMenu }) {
+function AdminSidebar({ role, onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }) {
   const [logoutOpen, setLogoutOpen] = useState(false);
   // Get logged in user from localStorage
   let userName = "John Smith";
@@ -47,12 +48,14 @@ function AdminSidebar({ role, onMenuClick, activeMenu }) {
   const cancelLogout = () => setLogoutOpen(false);
 
   return (
-    <aside className="sidebar" style={{minWidth: '270px'}}>
+    <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`} style={{minWidth: '270px'}}>
       <div className="logo-container">
         <div className="logo">
-          <i className="ri-shield-check-line"></i>
-          <span>Smart Challan</span>
+          <img src={scLogo} alt="Smart Challan" className="logo-img" />
         </div>
+        <button className="sidebar-collapse-btn" onClick={onToggleSidebar} aria-label="Toggle sidebar">
+          <i className="ri-menu-3-line" />
+        </button>
       </div>
       <div className="nav-menu">
         {menu.map((item, idx) => (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "./AdminDashboard.css";
+import "../shared/CommonDashboard.css";
 
 export default function ClientBillingSettings({ clients = [] }) {
   const [form, setForm] = useState({

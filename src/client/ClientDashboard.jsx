@@ -12,7 +12,8 @@ import "react-toastify/dist/ReactToastify.css";
 // Chart.js for stat card graphs
 // Install with: npm install chart.js
 // Import Chart.js dynamically in useEffect
-import "./ClientDashboard.css";
+import "../shared/CommonDashboard.css";
+import "./ClientDashboardOverrides.css";
 import "./ClientHome.css";
 import "./ClientProfile.css";
 import "./SpeedometerLoader.css"; /* For default loader styles */
@@ -269,9 +270,9 @@ function ClientDashboard() {
       if (!date || isNaN(date.getTime())) return null;
       const diffDays = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
       
-      if (diffDays <= 60) return 'red';
-      else if (diffDays <= 90) return 'orange';
-      else return 'green';
+      if (diffDays < 0) return 'red'; // Date has passed
+      else if (diffDays <= 30) return 'orange'; // Within 30 days
+      else return 'green'; // More than 30 days
     };
     
     let stats = {
@@ -1069,13 +1070,16 @@ function ClientDashboard() {
     return (
     <>
     <ToastContainer position="top-right" autoClose={2000} />
-  <div className="admin-dashboard-layout" style={{display: 'flex', width: '100%', minHeight: '100vh'}}>
+  <div className={`dashboard-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
       {/* Page loader commented out - only using graph loaders now */}
       {/* {showLoader && (
         <div className="page-loader-overlay">
           <TrafficLightLoader />
         </div>
       )} */}
+      {sidebarOpen && window.innerWidth <= 900 && (
+        <div className="sidebar-overlay show" onClick={() => setSidebarOpen(false)} />
+      )}
   <ClientSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
       <main className="main-content admin-home-content" style={{flex: 1, minHeight: '100vh'}}>
         <div className="header" style={{marginBottom: 24}}>

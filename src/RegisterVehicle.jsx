@@ -278,32 +278,57 @@ export default function RegisterVehicle() {
           {registerField && (
             <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '50%'}}>
               <label htmlFor="field_value">{FIELD_OPTIONS.find(f => f.value === registerField)?.label}</label>
-              <input
-                type="text"
-                id="field_value"
-                name="field_value"
-                className={"form-control" + (registerField === 'vehicle_number' ? (registerError ? ' input-invalid' : (registerValue.length >= 5 ? ' input-valid' : '')) : '')}
-                value={registerValue}
-                onChange={e => {
-                  const v = e.target.value.toUpperCase();
-                  setRegisterValue(v);
-                  // validate vehicle number format when that field is selected
-                  if (registerField === 'vehicle_number') {
-                    const re = /^[A-Z0-9]{0,11}$/; // allow partial input up to 11 for UX
-                    if (!re.test(v)) {
-                      setRegisterError('Only alphanumeric characters allowed (max 11).');
-                    } else if (v.length > 0 && (v.length < 5 || v.length > 11)) {
-                      setRegisterError('Vehicle number must be 5-11 characters long.');
-                    } else {
-                      setRegisterError('');
-                    }
-                  } else {
+              {registerField === 'vehicle_number' ? (
+                <div className="number-plate-container">
+                  <div className={"number-plate-wrapper" + (registerError ? ' input-invalid' : (registerValue.length >= 5 ? ' input-valid' : ''))}>
+                    <div className="number-plate-badge">IND</div>
+                    <div className="tricolor-strip">
+                      <div className="saffron"></div>
+                      <div className="white"></div>
+                      <div className="green"></div>
+                    </div>
+                    <input
+                      type="text"
+                      id="field_value"
+                      name="field_value"
+                      className={"number-plate-input" + (registerError ? ' input-invalid' : (registerValue.length >= 5 ? ' input-valid' : ''))}
+                      value={registerValue}
+                      onChange={e => {
+                        const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                        setRegisterValue(v);
+                        // validate vehicle number format
+                        if (v.length > 11) {
+                          setRegisterError('Vehicle number cannot exceed 11 characters.');
+                        } else if (v.length > 0 && v.length < 5) {
+                          setRegisterError('Vehicle number must be at least 5 characters long.');
+                        } else {
+                          setRegisterError('');
+                        }
+                      }}
+                      placeholder="Enter vehicle number"
+                      maxLength={11}
+                    />
+                  </div>
+                  <div className="security-features">
+                    <div className="hologram"></div>
+                    <div className="chakra">⚙</div>
+                  </div>
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  id="field_value"
+                  name="field_value"
+                  className="form-control"
+                  value={registerValue}
+                  onChange={e => {
+                    setRegisterValue(e.target.value.toUpperCase());
                     setRegisterError('');
-                  }
-                }}
-                style={{textTransform: 'uppercase'}}
-                placeholder={`Enter ${FIELD_OPTIONS.find(f => f.value === registerField)?.label?.toLowerCase()}`}
-              />
+                  }}
+                  style={{textTransform: 'uppercase'}}
+                  placeholder={`Enter ${FIELD_OPTIONS.find(f => f.value === registerField)?.label?.toLowerCase()}`}
+                />
+              )}
               {registerField === 'vehicle_number' && registerError && (
                 <div style={{color: 'red', marginTop: 6, fontSize: 13}}>{registerError}</div>
               )}

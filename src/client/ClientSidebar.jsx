@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import scLogo from "../assets/sc-logo.png";
 import { getInitials } from "../utils/getInitials";
 import CustomModal from "./CustomModal";
-import "./ClientDashboard.css";
+import "../shared/CommonDashboard.css";
 
 function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }) {
   const [logoutOpen, setLogoutOpen] = useState(false);
