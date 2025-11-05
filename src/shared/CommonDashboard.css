@@ -438,7 +438,7 @@ main.main-content,
   border-radius: 6px;
   padding: 4px 8px;
   font-size: 12px;
-  cursor: pointer;
+  /* cursor: pointer; */
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;

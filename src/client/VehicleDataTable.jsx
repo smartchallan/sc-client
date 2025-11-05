@@ -45,8 +45,34 @@ export default function VehicleDataTable({ clientId, onViewAll, limit = 10, sear
         console.log("Vehicle RTO API response:", data);
         let arr = [];
         if (Array.isArray(data)) {
-          // Map each item to its VehicleDetails inside rto_data
-          arr = data.map(item => item.rto_data && item.rto_data.VehicleDetails ? item.rto_data.VehicleDetails : null).filter(Boolean);
+          // Map each item to its VehicleDetails inside rto_data, but keep all records even if VehicleDetails is empty
+          arr = data.map(item => {
+            if (item.rto_data && item.rto_data.VehicleDetails) {
+              return item.rto_data.VehicleDetails;
+            } else if (item.vehicle_number) {
+              // If VehicleDetails is missing but vehicle_number exists, create a minimal record
+              return {
+                rc_regn_no: item.vehicle_number,
+                rc_regn_dt: item.created_at || '-',
+                insurance_exp: '-',
+                road_tax_exp: '-',
+                fitness_exp: '-',
+                pollution_exp: '-',
+                rc_owner_name: '-',
+                rc_chasi_no: '-',
+                rc_engine_no: '-',
+                rc_vh_class_desc: '-',
+                rc_fuel_desc: '-',
+                rc_maker_desc: '-',
+                rc_maker_model: '-',
+                rc_off_cd: '-',
+                rc_state_cd: '-',
+                rc_mobile_no: '-',
+                rc_present_address: '-'
+              };
+            }
+            return null;
+          }).filter(item => item !== null);
         } else if (Array.isArray(data.vehicleDetails)) {
           arr = data.vehicleDetails;
         } else if (Array.isArray(data.vehicles)) {
@@ -169,23 +195,23 @@ export default function VehicleDataTable({ clientId, onViewAll, limit = 10, sear
       >
         {selectedVehicle && (
           <div style={{lineHeight:1.7, fontSize:15}}>
-            <div><b>Vehicle No:</b> {selectedVehicle.rc_regn_no}</div>
-            <div><b>Owner Name:</b> {selectedVehicle.rc_owner_name}</div>
+            <div><b>Vehicle No:</b> {selectedVehicle.rc_regn_no || '-'}</div>
+            <div><b>Owner Name:</b> {selectedVehicle.rc_owner_name || '-'}</div>
             <div><b>Registration Date:</b> {formatExpiry(selectedVehicle.rc_regn_dt, false)}</div>
             <div><b>Insurance Expiry:</b> {formatExpiry(selectedVehicle.insurance_exp || selectedVehicle.rc_insurance_upto, false)}</div>
             <div><b>Road Tax Expiry:</b> {formatExpiry(selectedVehicle.road_tax_exp || selectedVehicle.rc_tax_upto, false)}</div>
             <div><b>Fitness Expiry:</b> {formatExpiry(selectedVehicle.fitness_exp || selectedVehicle.rc_fit_upto, false)}</div>
             <div><b>Pollution Expiry:</b> {formatExpiry(selectedVehicle.pollution_exp || selectedVehicle.rc_pucc_upto, false)}</div>
-            <div><b>Chassis No:</b> {selectedVehicle.rc_chasi_no}</div>
-            <div><b>Engine No:</b> {selectedVehicle.rc_engine_no}</div>
-            <div><b>Vehicle Class:</b> {selectedVehicle.rc_vh_class_desc}</div>
-            <div><b>Fuel Type:</b> {selectedVehicle.rc_fuel_desc}</div>
-            <div><b>Maker:</b> {selectedVehicle.rc_maker_desc}</div>
-            <div><b>Model:</b> {selectedVehicle.rc_maker_model}</div>
-            <div><b>RTO:</b> {selectedVehicle.rc_off_cd}</div>
-            <div><b>State:</b> {selectedVehicle.rc_state_cd}</div>
-            <div><b>Mobile No:</b> {selectedVehicle.rc_mobile_no}</div>
-            <div><b>Address:</b> {selectedVehicle.rc_present_address}</div>
+            <div><b>Chassis No:</b> {selectedVehicle.rc_chasi_no || '-'}</div>
+            <div><b>Engine No:</b> {selectedVehicle.rc_engine_no || '-'}</div>
+            <div><b>Vehicle Class:</b> {selectedVehicle.rc_vh_class_desc || '-'}</div>
+            <div><b>Fuel Type:</b> {selectedVehicle.rc_fuel_desc || '-'}</div>
+            <div><b>Maker:</b> {selectedVehicle.rc_maker_desc || '-'}</div>
+            <div><b>Model:</b> {selectedVehicle.rc_maker_model || '-'}</div>
+            <div><b>RTO:</b> {selectedVehicle.rc_off_cd || '-'}</div>
+            <div><b>State:</b> {selectedVehicle.rc_state_cd || '-'}</div>
+            <div><b>Mobile No:</b> {selectedVehicle.rc_mobile_no || '-'}</div>
+            <div><b>Address:</b> {selectedVehicle.rc_present_address || '-'}</div>
           </div>
         )}
       </CustomModal>
