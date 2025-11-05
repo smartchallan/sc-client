@@ -1,6 +1,7 @@
 
 import React from "react";
 import VehicleTableOnly from "./VehicleTableOnly";
+import "../RegisterVehicle.css";
 
 
 export default function MyVehicles({ searchText = '', setSearchText = null }) {
@@ -11,14 +12,28 @@ export default function MyVehicles({ searchText = '', setSearchText = null }) {
       {/* Search input placed here per request; props passed from ClientDashboard when rendering MyVehicles */}
       { (setSearchText || searchText) ? (
         <div style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'center' }}>
-          <input
-            type="text"
-            placeholder="Search by Vehicle No."
-            value={searchText || ''}
-            onChange={e => setSearchText && setSearchText(e.target.value)}
-            className="form-control"
-            style={{ padding: '6px 12px', fontSize: 15, borderRadius: 4, border: '1px solid #ccc', minWidth: 200, maxWidth: 320, textTransform: 'uppercase' }}
-          />
+          <div className="number-plate-container" style={{ minWidth: 200, maxWidth: 330 }}>
+            <div className="number-plate-wrapper">
+              <div className="number-plate-badge">IND</div>
+              <div className="tricolor-strip">
+                <div className="saffron"></div>
+                <div className="white"></div>
+                <div className="green"></div>
+              </div>
+              <input
+                type="text"
+                placeholder="Search by Vehicle No."
+                value={searchText || ''}
+                onChange={e => setSearchText && setSearchText(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                className="number-plate-input"
+                maxLength={12}
+              />
+            </div>
+            <div className="security-features">
+              <div className="hologram"></div>
+              <div className="chakra">⚙</div>
+            </div>
+          </div>
         </div>
       ) : null}
       {/* Registered Vehicles table removed as requested */}

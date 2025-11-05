@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import CustomModal from "./CustomModal";
+import "../RegisterVehicle.css";
 
 function ChallanTable({ title, data, search = {}, sortAsc = true }) {
   const [showFull, setShowFull] = useState({});
@@ -327,13 +328,28 @@ export default function MyChallans() {
       <h1 className="page-title">My Challans</h1>
       <p className="page-subtitle">View and manage your Settled and Disposed challans</p>
       <div style={{display:'flex',gap:16,marginBottom:12}}>
-        <input
-          type="text"
-          placeholder="Search Vehicle Number"
-          value={search.vehicle}
-          onChange={e => setSearch(s => ({ ...s, vehicle: e.target.value }))}
-          style={{padding:'6px 12px',fontSize:15,borderRadius:4,border:'1px solid #ccc',width:180}}
-        />
+        <div className="number-plate-container" style={{ width: 330 }}>
+          <div className="number-plate-wrapper">
+            <div className="number-plate-badge">IND</div>
+            <div className="tricolor-strip">
+              <div className="saffron"></div>
+              <div className="white"></div>
+              <div className="green"></div>
+            </div>
+            <input
+              type="text"
+              placeholder="Search Vehicle Number"
+              value={search.vehicle}
+              onChange={e => setSearch(s => ({ ...s, vehicle: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') }))}
+              className="number-plate-input"
+              maxLength={12}
+            />
+          </div>
+          <div className="security-features">
+            <div className="hologram"></div>
+            <div className="chakra">⚙</div>
+          </div>
+        </div>
         <input
           type="text"
           placeholder="Search Challan Number"

@@ -368,14 +368,28 @@ export default function RegisterVehicle() {
           <h2 style={{fontSize: '1.2rem', marginBottom: 12}}>Active & Inactive Vehicles {vehicles && vehicles.filter(v => (v.status || '').toUpperCase() !== 'DELETED').length ? `(${vehicles.filter(v => (v.status || '').toUpperCase() !== 'DELETED').length})` : ''}</h2>
           {/* Search and status filter controls */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-            <input
-              type="text"
-              className="form-control"
-              style={{ minWidth: 200, maxWidth: 300, textTransform: 'uppercase' }}
-              placeholder="Search by Vehicle No, Engine No or Chasis No"
-              value={searchValue}
-              onChange={e => setSearchValue(e.target.value.toUpperCase())}
-            />
+            <div className="number-plate-container" style={{ minWidth: 200, maxWidth: 330 }}>
+              <div className="number-plate-wrapper">
+                <div className="number-plate-badge">IND</div>
+                <div className="tricolor-strip">
+                  <div className="saffron"></div>
+                  <div className="white"></div>
+                  <div className="green"></div>
+                </div>
+                <input
+                  type="text"
+                  className="number-plate-input"
+                  placeholder="Search by Vehicle No, Engine No or Chasis No"
+                  value={searchValue}
+                  onChange={e => setSearchValue(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                  maxLength={20}
+                />
+              </div>
+              <div className="security-features">
+                <div className="hologram"></div>
+                <div className="chakra">⚙</div>
+              </div>
+            </div>
             <select
               className="form-control"
               style={{ minWidth: 200, maxWidth: 300, textTransform: 'uppercase' }}

@@ -93,7 +93,13 @@ export default function VehicleFastag() {
           const vehicle = responseData.response.vehicle;
           
           if (vehicle && vehicle.vehltxnList && vehicle.vehltxnList.txn) {
-            setResults(vehicle.vehltxnList.txn);
+            // Sort transactions by date and time in descending order (newest first)
+            const sortedTransactions = vehicle.vehltxnList.txn.sort((a, b) => {
+              const dateA = new Date(a.readerReadTime);
+              const dateB = new Date(b.readerReadTime);
+              return dateB.getTime() - dateA.getTime(); // Descending order
+            });
+            setResults(sortedTransactions);
           } else {
             setError("No transaction data found in the response");
           }
@@ -116,7 +122,7 @@ export default function VehicleFastag() {
       <h2 style={{ marginBottom: 18 }}>Vehicle FasTag Transactions</h2>
       <div className="card">
         <form className="register-vehicle-form" onSubmit={handleSubmit} style={{display: 'flex', flexWrap: 'wrap', gap: 16}}>
-          <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '50%'}}>
+          <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '30%'}}>
             <label htmlFor="vehicleNumber" style={{fontSize: 14, fontWeight: 500, marginBottom: 8, display: 'block'}}>Vehicle Number</label>
             <div className="number-plate-container">
               <div className="number-plate-wrapper">

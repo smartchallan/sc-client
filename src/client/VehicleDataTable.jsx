@@ -26,8 +26,8 @@ export default function VehicleDataTable({ clientId, onViewAll, limit = 10, sear
     const diffDays = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
   let color = 'green';
   let fontWeight = 'bold';
-  if (diffDays <= 60) color = 'red';
-  else if (diffDays <= 90) color = 'orange';
+  if (diffDays < 0) color = 'red'; // Date has passed
+  else if (diffDays <= 30) color = 'orange'; // Within 30 days
   else fontWeight = 'normal';
   return <span style={{color, fontWeight}}>{formatted}</span>;
   };
