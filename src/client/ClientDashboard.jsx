@@ -456,7 +456,7 @@ function ClientDashboard() {
         if (window._clientTotalChart) window._clientTotalChart.destroy();
         const totalData = [active, inactive, deleted];
         window._clientTotalChart = new Chart(ctxTotal, {
-          type: 'doughnut',
+          type: 'pie',
           data: {
             labels: ['Active', 'Inactive', 'Deleted'],
             datasets: [{
@@ -468,7 +468,6 @@ function ClientDashboard() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
-            cutout: '60%',
             onClick: (evt, elements) => {
               if (elements && elements.length > 0) {
                 const idx = elements[0].index;
@@ -525,7 +524,7 @@ function ClientDashboard() {
             (expiryCounts.pollution || 0)
           ];
           window._clientPaidChart = new Chart(ctxPaid, {
-            type: 'polarArea',
+            type: 'pie',
             data: {
               labels: ['Insurance', 'Road Tax', 'Fitness', 'Pollution'],
               datasets: [{
@@ -538,8 +537,7 @@ function ClientDashboard() {
             options: {
               responsive: true,
               maintainAspectRatio: false,
-              plugins: { legend: { display: false } },
-              scales: { r: { ticks: { precision: 0, beginAtZero: true } } }
+              plugins: { legend: { display: false } }
             }
           });
           clearLoadingWithDelay('paid');
@@ -559,16 +557,16 @@ function ClientDashboard() {
         }
         const ctxAmount = chartRefAmount.current.getContext('2d');
         if (window._clientAmountChart) window._clientAmountChart.destroy();
-        // Create gentle vertical gradients for Pending and Paid slices
+        // Create gentle vertical gradients for Pending and Paid slices with moderately lighter colors
         const pendingGradient = ctxAmount.createLinearGradient(0, 0, 0, 160);
-        pendingGradient.addColorStop(0, '#ff8a80');
-        pendingGradient.addColorStop(1, '#e15759');
+        pendingGradient.addColorStop(0, '#ff9a9e');
+        pendingGradient.addColorStop(1, '#ff6b6b');
         const paidGradient = ctxAmount.createLinearGradient(0, 0, 0, 160);
-        paidGradient.addColorStop(0, '#a5d6a7');
-        paidGradient.addColorStop(1, '#66bb6a');
+        paidGradient.addColorStop(0, '#90caf9');
+        paidGradient.addColorStop(1, '#4caf50');
 
         window._clientAmountChart = new Chart(ctxAmount, {
-          type: 'polarArea',
+          type: 'pie',
           data: {
             labels: ['Pending', 'Paid'],
             datasets: [{
@@ -592,9 +590,6 @@ function ClientDashboard() {
                   }
                 }
               }
-            },
-            scales: {
-              r: { ticks: { beginAtZero: true, precision: 0 } }
             }
           }
         });
@@ -870,7 +865,8 @@ function ClientDashboard() {
   const dashboardTotalChallans = dashboardPendingCount + dashboardDisposedCount;
 
   // Vehicle RTO expiry counts (expiring soon) - compute from vehicleRtoData
-  const expiryThresholdDays = parseInt(import.meta.env.VITE_EXPIRY_PERIOD_DAYS || '60', 10) || 60;
+  const expiryThresholdDays = parseInt(import.meta.env.VITE_EXPIRY_PERIOD_DAYS || '30', 10) || 60;
+  console.log(`Expiry threshold set to ${expiryThresholdDays} days`);
   const expiryCounts = { insurance: 0, roadTax: 0, fitness: 0, pollution: 0 };
   if (Array.isArray(vehicleRtoData)) {
     const now = new Date();
@@ -1359,7 +1355,7 @@ function ClientDashboard() {
               } catch (e) {}
             }, 300);
           }}
-          onPay={() => setInfoModal({ open: true, message: 'Feature not rolled back yet. Stay tuned. We will notify you.' })}
+          onPay={() => setInfoModal({ open: true, message: 'Feature not rolled out yet. Stay tuned. We will notify you.' })}
           onReports={() => setReportsModal({ open: true })}
           onContact={() => setSupportModal(true)}
         />
