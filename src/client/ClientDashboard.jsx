@@ -1209,6 +1209,7 @@ function ClientDashboard() {
                   <i className="ri-alarm-warning-line"></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
                     <div>Vehicle Renewals</div>
+                    <span style={{ color: '#666', fontSize: 12, float: 'left' }}>Expired / Expiring in {expiryThresholdDays} days</span>
                     <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
                       {loadingVehicleRto ? '...' : vehicleRenewalsTotal}
                     </div>
