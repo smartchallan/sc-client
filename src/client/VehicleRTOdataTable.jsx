@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import "../shared/CommonDashboard.css";
 import CustomModal from "./CustomModal";
+import "../RegisterVehicle.css";
 
-export default function VehicleRTOdataTable({ clientId, onViewAll, limit = 20, searchText = '' }) {
+export default function VehicleRTOdataTable({ clientId, onViewAll }) {
   const formatExpiry = (dateStr, useColor = true) => {
     if (!dateStr || dateStr === '-') return '-';
     let d = null;
@@ -100,26 +101,113 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, limit = 20, s
   }, [clientId]);
 
   const [selectedVehicle, setSelectedVehicle] = useState(null);
-  const filtered = searchText.trim() === '' ? vehicleData : vehicleData.filter(v => (v.rc_regn_no || '').toString().toUpperCase().includes(searchText.trim().toUpperCase()));
-  const [recordsToShow, setRecordsToShow] = useState(limit);
-  useEffect(() => { setRecordsToShow(limit); }, [limit, searchText, vehicleData]);
+  // Search, sort, filter state
+  const [search, setSearch] = useState('');
+  const [sortAsc, setSortAsc] = useState(false); // false = newest first
+  const [expiryFilter, setExpiryFilter] = useState('all'); // all, expired, expiring, valid
+
+  // Helper to determine expiry status
+  const getExpiryStatus = (v) => {
+    const exp = v.insurance_exp || v.rc_insurance_upto || v.road_tax_exp || v.rc_tax_upto || v.fitness_exp || v.rc_fit_upto || v.pollution_exp || v.rc_pucc_upto;
+    if (!exp || exp === '-') return 'unknown';
+    let d = null;
+    if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(exp)) d = new Date(exp.replace(/-/g, ' '));
+    else if (/\d{2}-\d{2}-\d{4}/.test(exp)) { const [day, month, year] = exp.split('-'); d = new Date(`${year}-${month}-${day}`); }
+    else if (/\d{4}-\d{2}-\d{2}/.test(exp)) d = new Date(exp);
+    else d = new Date(exp);
+    if (isNaN(d.getTime())) return 'unknown';
+    const now = new Date();
+    const diffDays = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return 'expired';
+    if (diffDays <= 30) return 'expiring';
+    return 'valid';
+  };
+
+  // Filter, search, sort
+  let filtered = vehicleData;
+  if (search.trim() !== '') {
+    filtered = filtered.filter(v => (v.rc_regn_no || '').toString().toUpperCase().includes(search.trim().toUpperCase()));
+  }
+  if (expiryFilter !== 'all') {
+    filtered = filtered.filter(v => getExpiryStatus(v) === expiryFilter);
+  }
+  filtered = filtered.slice().sort((a, b) => {
+    const parse = s => s ? new Date(String(s).replace(/(\d{2})-(\d{2})-(\d{4})/, '$2/$1/$3')) : new Date(0);
+    const dateA = parse(a.rc_regn_dt);
+    const dateB = parse(b.rc_regn_dt);
+    return sortAsc ? dateA - dateB : dateB - dateA;
+  });
+  // Always show 20 records by default
+  const DEFAULT_LIMIT = 20;
+  const [recordsToShow, setRecordsToShow] = useState(DEFAULT_LIMIT);
+  useEffect(() => { setRecordsToShow(DEFAULT_LIMIT); }, [search, expiryFilter, sortAsc, vehicleData]);
   const displayed = recordsToShow > 0 ? filtered.slice(0, recordsToShow) : filtered;
 
   return (
     <div className="dashboard-latest" style={{marginTop:32}}>
       <div className="latest-header">
-          <h2>Vehicle RTO Data</h2>
+        <h2>Vehicle RTO Data</h2>
+      </div>
+      <div style={{display:'flex',gap:16,marginBottom:12,flexWrap:'wrap',alignItems:'center'}}>
+        <div className="number-plate-container" style={{ width: 330 }}>
+          <div className="number-plate-wrapper">
+            <div className="number-plate-badge">IND</div>
+            <div className="tricolor-strip">
+              <div className="saffron"></div>
+              <div className="white"></div>
+              <div className="green"></div>
+            </div>
+            <input
+              type="text"
+              placeholder="Search Vehicle Number"
+              value={search}
+              onChange={e => setSearch(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+              className="number-plate-input"
+              maxLength={12}
+            />
+          </div>
+          <div className="security-features">
+            <div className="hologram"></div>
+            <div className="chakra">⚙</div>
+          </div>
         </div>
-  {loading && <div>Loading vehicle data...</div>}
-  {error && <div style={{color:'red'}}>{error}</div>}
-  <div className="table-caption-row">
-    <div />
-    {limit > 0 ? (
-      <div className="table-caption">Showing {displayed.length} of {filtered.length}{searchText ? ` (filtered from ${vehicleData.length})` : ''}</div>
-    ) : (
-      <div className="table-total">Total RTO Records fetched: {filtered.length}{searchText ? ` (filtered from ${vehicleData.length})` : ''}</div>
-    )}
-  </div>
+        <select
+          value={expiryFilter}
+          onChange={e => setExpiryFilter(e.target.value)}
+          className="filter-select"
+        >
+          <option value="all">All</option>
+          <option value="expired">Expired</option>
+          <option value="expiring">Expiring Soon (≤30d)</option>
+          <option value="valid">Valid (&gt;30d)</option>
+        </select>
+        <button
+          className="action-btn flat-btn sort-btn"
+          onClick={() => setSortAsc(s => !s)}
+        >
+          Sort Reg Date {sortAsc ? '▲' : '▼'}
+        </button>
+      </div>
+      {loading && <div>Loading vehicle data...</div>}
+      {error && <div style={{color:'red'}}>{error}</div>}
+      <div className="table-caption-row">
+        <div />
+        <div
+          style={{
+            marginBottom: 8,
+            color: '#222',
+            fontSize: 15,
+            background: '#e3f7d6',
+            border: '1.5px solid #4caf50',
+            borderRadius: 6,
+            padding: '4px 12px',
+            fontWeight: 600,
+            display: 'inline-block',
+          }}
+        >
+          Showing {displayed.length} of {filtered.length} records
+        </div>
+      </div>
   <div className="table-container">
     <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
           <thead>
@@ -164,7 +252,7 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, limit = 20, s
             className="action-btn"
             onClick={e => {
               e.preventDefault();
-              setRecordsToShow(prev => Math.min(prev + limit, filtered.length));
+              setRecordsToShow(prev => Math.min(prev + DEFAULT_LIMIT, filtered.length));
             }}
           >
             Load More Vehicles

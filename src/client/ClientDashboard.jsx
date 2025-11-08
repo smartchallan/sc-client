@@ -23,7 +23,7 @@ import ClientProfile from "./ClientProfile";
 import RegisterVehicle from "../RegisterVehicle";
 import UserChallan from "../UserChallan";
 import MyVehicles from "./MyVehicles";
-import VehicleRTOdataTable from "./VehicleRTOdataTable";
+import VehicleRTOdataTable from "./vehicleRTOdataTable";
 import MyChallans from "./MyChallans";
 import MyBilling from "./MyBilling";
 import UserSettings from "./UserSettings";
@@ -173,37 +173,30 @@ function ClientDashboard() {
     }
   };
 
+  // Track last dashboard data update time
+  const [lastDashboardUpdate, setLastDashboardUpdate] = useState(null);
+
   // Fetch client data on mount
   useEffect(() => {
     const fetchData = async () => {
-      // setShowLoader(true); // Page loader disabled
       setLoadingClient(true);
       const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
-      // Get client id from logged-in user
       const clientId = user && user.user && (user.user.id || user.user._id || user.user.client_id);
       if (!clientId) {
         setClientData(null);
         setLoadingClient(false);
-        // setTimeout(() => setShowLoader(false), 1000); // Page loader disabled
         return;
       }
       const url = `${baseUrl}/clientdata/${clientId}`;
-      const start = Date.now();
       try {
         const res = await fetch(url);
         const data = await res.json();
         setClientData(data);
+        setLastDashboardUpdate(new Date());
       } catch {
         setClientData(null);
       } finally {
         setLoadingClient(false);
-        // Page loader disabled - using only graph loaders now
-        // const elapsed = Date.now() - start;
-        // if (elapsed < 1000) {
-        //   setTimeout(() => setShowLoader(false), 1000 - elapsed);
-        // } else {
-        //   setShowLoader(false);
-        // }
       }
     };
     fetchData();
@@ -455,13 +448,17 @@ function ClientDashboard() {
         const ctxTotal = chartRefTotal.current.getContext('2d');
         if (window._clientTotalChart) window._clientTotalChart.destroy();
         const totalData = [active, inactive, deleted];
+        // Create a soft green radial gradient for the 'active' slice
+        let greenGradient = ctxTotal.createRadialGradient(60, 60, 10, 60, 60, 90);
+        greenGradient.addColorStop(0, '#d1fae5'); // light green
+        greenGradient.addColorStop(1, '#4ade80'); // soft green
         window._clientTotalChart = new Chart(ctxTotal, {
           type: 'pie',
           data: {
             labels: ['Active', 'Inactive', 'Deleted'],
             datasets: [{
               data: totalData,
-              backgroundColor: ['#42a5f5', '#ffa726', '#e15759'],
+              backgroundColor: [greenGradient, '#f59e42', '#ef4444'],
             }],
           },
           options: {
@@ -1104,14 +1101,28 @@ function ClientDashboard() {
         </div>
         {activeMenu === "Dashboard" && (
           <>
-            <div className="dashboard-header" style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+            <div className="dashboard-header" style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative'}}>
               <div>
                 <h1 className="dashboard-title">Welcome back{user.user && user.user.name ? `, ${user.user.name}` : '123'}!</h1>
                 <p>Here's an overview of your Fleet status</p>
               </div>
-              {/* <div className="header-profile">
-                <span className="header-avatar">{headerInitials || 'JS'}</span>
-              </div> */}
+              {lastDashboardUpdate && (
+                <span style={{
+                  background: '#e3f7d6',
+                  color: '#222',
+                  border: '1.5px solid #4caf50',
+                  borderRadius: 6,
+                  padding: '4px 12px',
+                  fontWeight: 600,
+                  fontSize: 14,
+                  marginLeft: 16,
+                  whiteSpace: 'nowrap',
+                  alignSelf: 'flex-start',
+                  marginTop: 8
+                }}>
+                  Last updated: {lastDashboardUpdate.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
             </div>
             <div className="dashboard-stats">
               <div className="stat-card">

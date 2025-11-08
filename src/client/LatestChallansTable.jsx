@@ -8,7 +8,21 @@ const LatestChallansTable = ({ latestChallanRows, loadingVehicleChallan, vehicle
     <div className="table-caption-row">
       <div />
       {limit > 0 && (
-        <div className="table-caption">Showing {Array.isArray(latestChallanRows) ? latestChallanRows.length : 0} of {totalCount}</div>
+        <div
+          style={{
+            marginBottom: 8,
+            color: '#222',
+            fontSize: 15,
+            background: '#e3f7d6',
+            border: '1.5px solid #4caf50',
+            borderRadius: 6,
+            padding: '4px 12px',
+            fontWeight: 600,
+            display: 'inline-block',
+          }}
+        >
+          Showing {Array.isArray(latestChallanRows) ? latestChallanRows.length : 0} of {totalCount} records
+        </div>
       )}
     </div>
     {loadingVehicleChallan ? (
