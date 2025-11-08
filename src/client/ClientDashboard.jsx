@@ -23,7 +23,7 @@ import ClientProfile from "./ClientProfile";
 import RegisterVehicle from "../RegisterVehicle";
 import UserChallan from "../UserChallan";
 import MyVehicles from "./MyVehicles";
-import VehicleRTOdataTable from "./vehicleRTOdataTable";
+import VehicleRTOdataTable from "./VehicleRTOdataTable";
 import MyChallans from "./MyChallans";
 import MyBilling from "./MyBilling";
 import UserSettings from "./UserSettings";
