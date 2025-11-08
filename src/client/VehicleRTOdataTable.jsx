@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import "../shared/CommonDashboard.css";
 import CustomModal from "./CustomModal";
 
-export default function VehicleRTOdataTable({ clientId, onViewAll, limit = 10, searchText = '' }) {
+export default function VehicleRTOdataTable({ clientId, onViewAll, limit = 20, searchText = '' }) {
   const formatExpiry = (dateStr, useColor = true) => {
     if (!dateStr || dateStr === '-') return '-';
     let d = null;
@@ -101,7 +101,9 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, limit = 10, s
 
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const filtered = searchText.trim() === '' ? vehicleData : vehicleData.filter(v => (v.rc_regn_no || '').toString().toUpperCase().includes(searchText.trim().toUpperCase()));
-  const displayed = limit > 0 ? filtered.slice(0, limit) : filtered;
+  const [recordsToShow, setRecordsToShow] = useState(limit);
+  useEffect(() => { setRecordsToShow(limit); }, [limit, searchText, vehicleData]);
+  const displayed = recordsToShow > 0 ? filtered.slice(0, recordsToShow) : filtered;
 
   return (
     <div className="dashboard-latest" style={{marginTop:32}}>
@@ -156,20 +158,16 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, limit = 10, s
         </tbody>
       </table>
     </div>
-      {(limit > 0 && vehicleData.length > limit) && (
+      {(recordsToShow < filtered.length) && (
         <div style={{ textAlign: 'right', marginTop: 12 }}>
           <button
             className="action-btn"
             onClick={e => {
               e.preventDefault();
-              if (typeof onViewAll === 'function') return onViewAll();
-              if (typeof window !== 'undefined' && window.handleViewAllRtoData) {
-                return window.handleViewAllRtoData();
-              }
-              try { window.location.hash = '#Vehicle%20RTO%20Data'; } catch (_) {}
+              setRecordsToShow(prev => Math.min(prev + limit, filtered.length));
             }}
           >
-            View All
+            Load More Vehicles
           </button>
         </div>
       )}
