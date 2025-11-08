@@ -18,7 +18,7 @@ const LatestChallansTable = ({ latestChallanRows, loadingVehicleChallan, vehicle
     ) : (
       <>
         <div className="table-container">
-          <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
+          <table className="latest-table">
             <colgroup>
               <col style={{ width: '3%' }} />
               <col style={{ width: '6%' }} />

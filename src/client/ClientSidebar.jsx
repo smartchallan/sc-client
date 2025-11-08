@@ -72,24 +72,29 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
       
 
       <div className="nav-menu">
-        {menu.map((item, idx) => (
-          item.logout ? (
+        {menu.map((item) => {
+          // All icons dark green except logout
+          if (item.logout) {
+            return (
               <div className="nav-item" key={item.label} onClick={handleLogout} style={{color: '#ff5252', cursor: 'pointer'}}>
-              <i className={item.icon}></i>
-              <span>{item.label}</span>
-            </div>
-          ) : (
-            <div
-              className={`nav-item${activeMenu === item.label ? " active" : ""}`}
-              key={item.label}
-              onClick={() => onMenuClick && onMenuClick(item.label)}
-              style={{cursor: 'pointer'}}
-            >
-              <i className={item.icon}></i>
-              <span>{item.label}</span>
-            </div>
-          )
-        ))}
+                <i className={item.icon} style={{ color: '#ff5252' }}></i>
+                <span>{item.label}</span>
+              </div>
+            );
+          } else {
+            return (
+              <div
+                className={`nav-item${activeMenu === item.label ? " active" : ""}`}
+                key={item.label}
+                onClick={() => onMenuClick && onMenuClick(item.label)}
+                style={{cursor: 'pointer'}}
+              >
+                <i className={item.icon} style={{ color: '#006400' }}></i>
+                <span>{item.label}</span>
+              </div>
+            );
+          }
+        })}
       </div>
       
       <CustomModal open={logoutOpen} title="Confirm logout" description="You will be signed out of Smart Challan and returned to the login page." icon="ri-logout-box-r-line" onConfirm={confirmLogout} onCancel={cancelLogout} confirmText="Logout" cancelText="Stay">

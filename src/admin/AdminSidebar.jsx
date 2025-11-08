@@ -58,24 +58,28 @@ function AdminSidebar({ role, onMenuClick, activeMenu, sidebarOpen, onToggleSide
         </button>
       </div>
       <div className="nav-menu">
-        {menu.map((item, idx) => (
-          item.logout ? (
-            <div className="nav-item" key={item.label} onClick={handleLogout} style={{color: '#ff5252', cursor: 'pointer'}}>
-              <i className={item.icon}></i>
-              <span>{item.label}</span>
-            </div>
-          ) : (
-            <div
-              className={`nav-item${activeMenu === item.label ? " active" : ""}`}
-              key={item.label}
-              onClick={() => onMenuClick && onMenuClick(item.label)}
-              style={{cursor: 'pointer'}}
-            >
-              <i className={item.icon}></i>
-              <span>{item.label}</span>
-            </div>
-          )
-        ))}
+        {menu.map((item, idx) => {
+          if (item.logout) {
+            return (
+              <div className="nav-item" key={item.label} onClick={handleLogout} style={{color: '#ff5252', cursor: 'pointer'}}>
+                <i className={item.icon} style={{ color: '#ff5252' }}></i>
+                <span>{item.label}</span>
+              </div>
+            );
+          } else {
+            return (
+              <div
+                className={`nav-item${activeMenu === item.label ? " active" : ""}`}
+                key={item.label}
+                onClick={() => onMenuClick && onMenuClick(item.label)}
+                style={{cursor: 'pointer'}}
+              >
+                <i className={item.icon} style={{ color: '#222' }}></i>
+                <span>{item.label}</span>
+              </div>
+            );
+          }
+        })}
       </div>
       <div className="sidebar-user">
         <span className="user-avatar">{initials}</span>

@@ -45,6 +45,21 @@ function ChallanTable({ title, data, search = {}, sortAsc = true }) {
       <h2 style={{ fontSize: '1.2rem', marginBottom: 12 }}>
         {title} <span style={{fontSize:21, color: countColor, marginLeft:8, fontWeight:600}}>({filtered.length})</span>
       </h2>
+      {filtered.length > 0 && (
+        <div style={{
+          marginBottom: 8,
+          color: '#222',
+          fontSize: 15,
+          background: title && title.toLowerCase().includes('pending') ? '#ffe9b3' : '#e3f7d6',
+          border: title && title.toLowerCase().includes('pending') ? '1.5px solid #f7b500' : '1.5px solid #4caf50',
+          borderRadius: 6,
+          padding: '4px 12px',
+          fontWeight: 600,
+          display: 'inline-block',
+        }}>
+          Showing {Math.min(filtered.length, visibleCount)} of {filtered.length} challans
+        </div>
+      )}
       {filtered.length === 0 ? (
         <div style={{ color: '#888' }}>No challans found.</div>
       ) : (

@@ -32,6 +32,8 @@ export default function RegisterVehicle() {
   const [previewLimit] = useState(10);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [finalSummary, setFinalSummary] = useState({ open: false, success: 0, fail: 0, failures: [] });
+  // Bulk upload section collapsed state
+  const [bulkUploadEnabled, setBulkUploadEnabled] = useState(false);
   // Loader state for RTO/Challan API calls
   const [rtoLoadingId, setRtoLoadingId] = useState(null);
   const [challanLoadingId, setChallanLoadingId] = useState(null);
@@ -249,7 +251,7 @@ export default function RegisterVehicle() {
       <p className="page-subtitle">
         You can register your vehicle using <b>any one</b> of the following details: <b>Vehicle Number</b>, <b>Engine Number</b>, or <b>Chasis Number</b>.
       </p>
-      <div className="card">
+      <div className="modern-form-card">
         <form className="vehicle-form" onSubmit={handleSubmit} style={{display: 'flex', flexWrap: 'wrap', gap: 16}}>
           <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '50%'}}>
             <label htmlFor="select_field">Select Field to Register By</label>
@@ -339,8 +341,19 @@ export default function RegisterVehicle() {
           </div>
         </form>
       </div>
-  {/* Upload Vehicles by Excel */}
-  <div className="card upload-card" style={{ marginTop: 18 }}>
+  {/* Upload Vehicles by Excel (collapsible) */}
+  <div className="modern-form-card upload-card" style={{ marginTop: 18 }}>
+    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 500, fontSize: 16, marginBottom: bulkUploadEnabled ? 12 : 0 }}>
+      <input
+        type="checkbox"
+        checked={bulkUploadEnabled}
+        onChange={e => setBulkUploadEnabled(e.target.checked)}
+        style={{ width: 18, height: 18 }}
+      />
+      Enable bulk vehicle upload
+    </label>
+    {bulkUploadEnabled && (
+      <div>
         <h3 style={{ marginTop: 0 }}>Upload Vehicles (Excel)</h3>
         <p style={{ marginTop: 0, color: '#666' }}>Upload an Excel file where the <strong>second column</strong> contains vehicle numbers (one per row). We'll read the file, show you the number of vehicles found, and then register them sequentially.</p>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -361,9 +374,11 @@ export default function RegisterVehicle() {
           </div>
         )}
       </div>
+    )}
+  </div>
       {/* Vehicle table below form */}
 
-      <div className="dashboard-latest">
+  <div className="dashboard-latest modern-form-card">
           <div style={{marginTop: 32}}>
           <h2 style={{fontSize: '1.2rem', marginBottom: 12}}>Active & Inactive Vehicles {vehicles && vehicles.filter(v => (v.status || '').toUpperCase() !== 'DELETED').length ? `(${vehicles.filter(v => (v.status || '').toUpperCase() !== 'DELETED').length})` : ''}</h2>
           {/* Search and status filter controls */}
@@ -407,7 +422,7 @@ export default function RegisterVehicle() {
           ) : vehicles.filter(v => (v.status || '').toUpperCase() !== 'DELETED').length === 0 ? (
             <div style={{color: '#888'}}>No active or inactive vehicles found.</div>
           ) : (
-            <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
+            <table className="vehicle-challan-table" style={{ width: '100%', marginTop: 8 }}>
               <thead>
                 <tr>
                   <th>S. No.</th>
@@ -721,7 +736,7 @@ export default function RegisterVehicle() {
           return (
             <div className="deleted-vehicles-section">
               <h2>Deleted Vehicles ({deletedVehicles.length})</h2>
-              <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
+              <table className="vehicle-challan-table" style={{ width: '100%', marginTop: 8 }}>
                 <thead>
                   <tr>
                     <th>S. No.</th>
