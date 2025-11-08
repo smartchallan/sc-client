@@ -436,7 +436,7 @@ export default function RegisterVehicle() {
                       {sortDesc ? <i className="ri-arrow-down-s-line" title="Sort: Newest First"></i> : <i className="ri-arrow-up-s-line" title="Sort: Oldest First"></i>}
                     </span>
                   </th>
-                  <th>Data</th>
+                  {/* <th>Data</th> */}
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -472,7 +472,7 @@ export default function RegisterVehicle() {
                     const handleInactivate = () => setModal({ open: true, action: 'inactivate', vehicle: v });
                     const handleActivate = () => setModal({ open: true, action: 'activate', vehicle: v });
                     const handleDelete = () => setModal({ open: true, action: 'delete', vehicle: v });
-                    const setInfoModal = (vehicle, lastAction) => setModal({ open: true, action: 'info', vehicle: { ...vehicle, lastAction, status: (vehicle.status || '').toUpperCase() } });
+                    // Remove setInfoModal and RTO/Challan actions
                     return (
                           <tr key={v.id || v._id || idx}>
                             <td>{idx + 1}</td>
@@ -481,46 +481,7 @@ export default function RegisterVehicle() {
                         <td>{v.chasis_number || 'Not Available'}</td>
                         <td style={{ color: statusColor, fontWeight: 600, letterSpacing: 1 }}>{status}</td>
                         <td>{v.registered_at ? new Date(v.registered_at).toLocaleString() : 'Not Available'}</td>
-                        <td>
-                          <div style={{display:'flex',gap:8}}>
-                            <button
-                              className={`action-btn flat-btn ${v.rto_data === false ? 'data-btn-missing' : 'data-btn-available'}`}
-                              disabled={rtoLoadingId === v.id}
-                              onClick={() => {
-                                // Allow clicks even when vehicle is INACTIVE/DELETED so we can show the info modal.
-                                if (status === 'INACTIVE' || status === 'DELETED') {
-                                  setInfoModal(v, 'getRTO');
-                                } else {
-                                  setModal({ open: true, action: 'getRTO', vehicle: v });
-                                }
-                              }}
-                              style={{ 
-                                opacity: status === 'DELETED' ? 0.6 : status === 'INACTIVE' ? 0.85 : 1
-                              }}
-                              title={rtoLoadingId === v.id ? 'Loading...' : (status === 'DELETED' ? 'Vehicle deleted' : status === 'INACTIVE' ? 'Vehicle inactive' : `Get RTO Data${v.rto_data === false ? ' (Missing)' : ' (Available)'}`)}
-                            >
-                              {rtoLoadingId === v.id ? 'Loading...' : 'Get RTO Data'}
-                            </button>
-                            <button
-                              className={`action-btn flat-btn ${v.challan_data === false ? 'data-btn-missing' : 'data-btn-available'}`}
-                              disabled={challanLoadingId === v.id}
-                              onClick={() => {
-                                // Allow clicks to show info modal for INACTIVE/DELETED states.
-                                if (status === 'INACTIVE' || status === 'DELETED') {
-                                  setInfoModal(v, 'getChallan');
-                                } else {
-                                  setModal({ open: true, action: 'getChallan', vehicle: v });
-                                }
-                              }}
-                              style={{ 
-                                opacity: status === 'DELETED' ? 0.6 : status === 'INACTIVE' ? 0.85 : 1
-                              }}
-                              title={challanLoadingId === v.id ? 'Loading...' : (status === 'DELETED' ? 'Vehicle deleted' : status === 'INACTIVE' ? 'Vehicle inactive' : `Get Challan Data${v.challan_data === false ? ' (Missing)' : ' (Available)'}`)}
-                            >
-                              {challanLoadingId === v.id ? 'Loading...' : 'Get Challan Data'}
-                            </button>
-                          </div>
-                        </td>
+                        {/* RTO/Challan data actions removed */}
                         <td>
                           {status === 'DELETED' ? (
                             <span style={{ color: '#999' }}>—</span>
@@ -566,68 +527,14 @@ export default function RegisterVehicle() {
                 <CustomModal
                   open={modal.open}
                   title={
-                    modal.action === 'getRTO' ? 'Are you sure you want to request vehicle RTO data?'
-                    : modal.action === 'getChallan' ? 'Are you sure you want to request vehicle Challan data?'
-                    : modal.action === 'inactivate' ? 'Are you sure you want to inactivate this vehicle?'
+                    modal.action === 'inactivate' ? 'Are you sure you want to inactivate this vehicle?'
                     : modal.action === 'activate' ? 'Are you sure you want to activate this vehicle?'
                     : modal.action === 'delete' ? 'Are you sure you want to delete this vehicle?'
-                    : modal.action === 'info' ? (modal.vehicle && ((modal.vehicle.status || '').toUpperCase() === 'DELETED') ? 'Vehicle Deleted' : 'Vehicle Inactive')
                     : ''
                   }
                   onConfirm={async () => {
-                    if (modal.action === 'info') {
-                      setModal({ open: false, action: null, vehicle: null });
-                      return;
-                    }
                     if (!modal.vehicle) return setModal({ open: false, action: null, vehicle: null });
-                    // Close modal immediately after confirmation
                     setModal({ open: false, action: null, vehicle: null });
-                    if (modal.action === 'getRTO') {
-                      setRtoLoadingId(modal.vehicle.id);
-                      try {
-                        const userObj = JSON.parse(localStorage.getItem("sc_user"));
-                        const clientID = userObj && userObj.user ? userObj.user.client_id || userObj.user.id : null;
-                        const vehicleNumber = modal.vehicle.vehicle_number;
-                        const res = await fetch(`${API_ROOT}/getvehiclertodata`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ vehicleNumber, clientID })
-                        });
-                        const data = await res.json();
-                        if (res.ok) {
-                          toast.success('RTO data fetched successfully');
-                        } else {
-                          toast.error(data.message || 'Failed to fetch RTO data');
-                        }
-                      } catch (err) {
-                        toast.error('API call failed');
-                      }
-                      setRtoLoadingId(null);
-                      return;
-                    }
-                    if (modal.action === 'getChallan') {
-                      setChallanLoadingId(modal.vehicle.id);
-                      try {
-                        const userObj = JSON.parse(localStorage.getItem("sc_user"));
-                        const clientID = userObj && userObj.user ? userObj.user.client_id || userObj.user.id : null;
-                        const vehicleNumber = modal.vehicle.vehicle_number;
-                        const res = await fetch(`${API_ROOT}/getvehicleechallandata`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ vehicleNumber, clientID })
-                        });
-                        const data = await res.json();
-                        if (res.ok) {
-                          toast.success('Challan data fetched successfully');
-                        } else {
-                          toast.error(data.message || 'Failed to fetch Challan data');
-                        }
-                      } catch (err) {
-                        toast.error('API call failed');
-                      }
-                      setChallanLoadingId(null);
-                      return;
-                    }
                     let status = '';
                     if (modal.action === 'inactivate') status = 'inactive';
                     else if (modal.action === 'activate') status = 'active';
@@ -652,43 +559,11 @@ export default function RegisterVehicle() {
                     setModal({ open: false, action: null, vehicle: null });
                   }}
                   onCancel={() => setModal({ open: false, action: null, vehicle: null })}
-                  confirmText={modal.action === 'delete' ? 'Delete' : modal.action === 'activate' ? 'Activate' : modal.action === 'inactivate' ? 'Inactivate' : modal.action === 'info' ? 'OK' : 'Yes'}
-                  cancelText={modal.action === 'info' ? null : 'Cancel'}
+                  confirmText={modal.action === 'delete' ? 'Delete' : modal.action === 'activate' ? 'Activate' : modal.action === 'inactivate' ? 'Inactivate' : 'Yes'}
+                  cancelText={'Cancel'}
                 >
                   {modal.action === 'delete' && (
-                    <span style={{color:'red', fontWeight:600}}>This action is non-reversible.<br/>Your vehicle and all related RTO, challan data will be deleted permanently.</span>
-                  )}
-                  {modal.action === 'info' && (
-                    (() => {
-                      const statusStr = modal.vehicle && modal.vehicle.status ? String(modal.vehicle.status).toUpperCase() : '';
-                      const lastAct = modal.vehicle && modal.vehicle.lastAction ? String(modal.vehicle.lastAction).toLowerCase() : '';
-                      if (statusStr === 'DELETED') {
-                        return (
-                          <span style={{color:'#d35400', fontWeight:500}}>
-                            RTO / Challan data can not be requested for deleted vehicles. Please contact admin to activate vehicle again.
-                          </span>
-                        );
-                      }
-                      if (lastAct === 'getrto') {
-                        return (
-                          <span style={{color:'#d35400', fontWeight:500}}>
-                            Selected vehicle is currently inactive. Please activate first to get RTO data.
-                          </span>
-                        );
-                      }
-                      if (lastAct === 'getchallan') {
-                        return (
-                          <span style={{color:'#d35400', fontWeight:500}}>
-                            Selected vehicle is currently inactive. Please activate first to get Challan data.
-                          </span>
-                        );
-                      }
-                      return (
-                        <span style={{color:'#d35400', fontWeight:500}}>
-                          Please activate your vehicle first to get RTO and Challan data.
-                        </span>
-                      );
-                    })()
+                    <span style={{color:'red', fontWeight:600}}>This action is non-reversible.<br/>Your vehicle and all related data will be deleted permanently.</span>
                   )}
                 </CustomModal>
               </tbody>

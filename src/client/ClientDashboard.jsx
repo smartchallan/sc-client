@@ -23,7 +23,7 @@ import ClientProfile from "./ClientProfile";
 import RegisterVehicle from "../RegisterVehicle";
 import UserChallan from "../UserChallan";
 import MyVehicles from "./MyVehicles";
-import VehicleDataTable from "./VehicleDataTable";
+import VehicleDataTable from "./vehicleRTOdataTable";
 import MyChallans from "./MyChallans";
 import MyBilling from "./MyBilling";
 import UserSettings from "./UserSettings";
@@ -1309,6 +1309,7 @@ function ClientDashboard() {
         {activeMenu === "Register Vehicle" && <RegisterVehicle />}
         {activeMenu === "Vehicle RTO Data" && (
           <>
+            <MyVehicles searchText={vehicleSearchText} setSearchText={setVehicleSearchText} />
             <VehicleDataTable clientId={user.user && (user.user.id || user.user._id || user.user.client_id)} onViewAll={() => setActiveMenu('Vehicle RTO Data')} limit={0} searchText={vehicleSearchText} />
           </>
         )}

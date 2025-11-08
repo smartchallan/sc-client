@@ -4,26 +4,6 @@ import CustomModal from "./client/CustomModal";
 
 export default function UserChallan() {
   const [supportModal, setSupportModal] = useState(false);
-
-  // Demo challan data (replace with real data if available)
-  const challans = [
-    { no: 'CH-2023-0045782', date: '12 Jun 2023', amount: 1200, desc: 'Speeding violation on NH-48', status: 'Active' },
-    { no: 'CH-2023-0045689', date: '08 Jun 2023', amount: 500, desc: 'Parking violation at MG Road', status: 'Paid' },
-    { no: 'CH-2023-0045521', date: '02 Jun 2023', amount: 2000, desc: 'Signal jumping at City Center', status: 'Overdue' },
-    { no: 'CH-2023-0044982', date: '28 May 2023', amount: 800, desc: 'No helmet violation', status: 'Paid' },
-    { no: 'CH-2023-0044756', date: '22 May 2023', amount: 1500, desc: 'Driving without license', status: 'Paid' },
-    { no: 'CH-2023-0044321', date: '15 May 2023', amount: 1000, desc: 'Wrong side driving', status: 'Active' },
-    { no: 'CH-2023-0043987', date: '10 May 2023', amount: 700, desc: 'No parking zone violation', status: 'Overdue' },
-  ];
-  // Pending: Active or Overdue
-  const pendingChallans = challans.filter(c => c.status === 'Active' || c.status === 'Overdue');
-  // Disposed: Paid
-  const disposedChallans = challans.filter(c => c.status === 'Paid');
-  const pendingLimit = 5;
-  const disposedLimit = 5;
-
-  // Debug: log array lengths
-  console.log('pendingChallans:', pendingChallans.length, 'disposedChallans:', disposedChallans.length);
   return (
     <div className="user-challan-content">
       <div className="dashboard-header">
@@ -94,26 +74,10 @@ export default function UserChallan() {
        
         <button className="action-btn" style={{marginLeft: '16px'}}><i className="ri-search-line"></i> Filter</button>
       </div>
-      {/* Pending Challans Table */}
       <div className="dashboard-latest">
         <div className="latest-header">
-          <h2>Pending Challans</h2>
+          <h2>Challan List</h2>
         </div>
-        {pendingChallans.length > 0 && (
-          <div style={{
-            marginBottom: 8,
-            color: '#222',
-            fontSize: 15,
-            background: '#ffe9b3',
-            border: '1.5px solid #f7b500',
-            borderRadius: 6,
-            padding: '4px 12px',
-            fontWeight: 600,
-            display: 'inline-block'
-          }}>
-            Showing {Math.min(pendingChallans.length, pendingLimit)} of {pendingChallans.length} challans
-          </div>
-        )}
         <table className="latest-table">
           <thead>
             <tr>
@@ -126,67 +90,66 @@ export default function UserChallan() {
             </tr>
           </thead>
           <tbody>
-            {pendingChallans.slice(0, pendingLimit).map((c, i) => (
-              <tr key={c.no}>
-                <td>{c.no}</td>
-                <td>{c.date}</td>
-                <td>₹{c.amount.toLocaleString()}</td>
-                <td>{c.desc}</td>
-                <td><span className={`status ${c.status.toLowerCase()}`}>{c.status}</span></td>
-                <td>
-                  <button className="action-btn"><i className="ri-eye-line"></i> View</button>
-                  {(c.status === 'Active' || c.status === 'Overdue') && <button className="action-btn"><i className="ri-wallet-3-line"></i> Pay</button>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Disposed Challans Table */}
-      <div className="dashboard-latest">
-        <div className="latest-header">
-          <h2>Disposed Challans</h2>
-        </div>
-        {disposedChallans.length > 0 && (
-          <div style={{
-            marginBottom: 8,
-            color: '#222',
-            fontSize: 15,
-            background: '#e3f7d6',
-            border: '1.5px solid #4caf50',
-            borderRadius: 6,
-            padding: '4px 12px',
-            fontWeight: 600,
-            display: 'inline-block'
-          }}>
-            Showing {Math.min(disposedChallans.length, disposedLimit)} of {disposedChallans.length} challans
-          </div>
-        )}
-        <table className="latest-table">
-          <thead>
             <tr>
-              <th>Challan No</th>
-              <th>Date</th>
-              <th>Amount</th>
-              <th>Description</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <td>CH-2023-0045782</td>
+              <td>12 Jun 2023</td>
+              <td>₹1,200</td>
+              <td>Speeding violation on NH-48</td>
+              <td><span className="status pending">Active</span></td>
+              <td><button className="action-btn"><i className="ri-eye-line"></i> View</button> <button className="action-btn"><i className="ri-wallet-3-line"></i> Pay</button></td>
             </tr>
-          </thead>
-          <tbody>
-            {disposedChallans.slice(0, disposedLimit).map((c, i) => (
-              <tr key={c.no}>
-                <td>{c.no}</td>
-                <td>{c.date}</td>
-                <td>₹{c.amount.toLocaleString()}</td>
-                <td>{c.desc}</td>
-                <td><span className={`status ${c.status.toLowerCase()}`}>{c.status}</span></td>
-                <td>
-                  <button className="action-btn"><i className="ri-eye-line"></i> View</button>
-                </td>
-              </tr>
-            ))}
+            <tr>
+              <td>CH-2023-0045689</td>
+              <td>08 Jun 2023</td>
+              <td>₹500</td>
+              <td>Parking violation at MG Road</td>
+              <td><span className="status paid">Paid</span></td>
+              <td><button className="action-btn"><i className="ri-eye-line"></i> View</button></td>
+            </tr>
+            <tr>
+              <td>CH-2023-0045521</td>
+              <td>02 Jun 2023</td>
+              <td>₹2,000</td>
+              <td>Signal jumping at City Center</td>
+              <td><span className="status overdue">Overdue</span></td>
+              <td><button className="action-btn"><i className="ri-eye-line"></i> View</button> <button className="action-btn"><i className="ri-wallet-3-line"></i> Pay</button></td>
+            </tr>
+            <tr>
+              <td>CH-2023-0044982</td>
+              <td>28 May 2023</td>
+              <td>₹800</td>
+              <td>No helmet violation</td>
+              <td><span className="status paid">Paid</span></td>
+              <td><button className="action-btn"><i className="ri-eye-line"></i> View</button></td>
+            </tr>
+            <tr>
+              <td>CH-2023-0044756</td>
+              <td>22 May 2023</td>
+              <td>₹1,500</td>
+              <td>Driving without license</td>
+              <td><span className="status paid">Paid</span></td>
+              <td><button className="action-btn"><i className="ri-eye-line"></i> View</button></td>
+            </tr>
+            <tr>
+              <td>CH-2023-0044321</td>
+              <td>15 May 2023</td>
+              <td>₹1,000</td>
+              <td>Wrong side driving</td>
+              <td><span className="status pending">Active</span></td>
+              <td>
+                <button className="btn btn-view"><i className="ri-eye-line"></i> Views</button> 
+                <button className="btn btn-pay"><i className="ri-wallet-3-line"></i> Pay</button></td>
+            </tr>
+            <tr>
+              <td>CH-2023-0043987</td>
+              <td>10 May 2023</td>
+              <td>₹700</td>
+              <td>No parking zone violation</td>
+              <td><span className="status overdue">Overdue</span></td>
+              <td>
+                <button className="btn btn-view"><i className="ri-eye-line"></i> View</button> 
+                <button className="btn btn-pay"><i className="ri-wallet-3-line"></i> Pay</button></td>
+            </tr>
           </tbody>
         </table>
       </div>
