@@ -3,7 +3,7 @@ import "../shared/CommonDashboard.css";
 import CustomModal from "./CustomModal";
 import "../RegisterVehicle.css";
 
-export default function VehicleRTOdataTable({ clientId, onViewAll, hideControls }) {
+export default function VehicleRTOdataTable({ clientId, onViewAll }) {
   const formatExpiry = (dateStr, useColor = true) => {
     if (!dateStr || dateStr === '-') return '-';
     let d = null;
@@ -148,70 +148,66 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, hideControls 
       <div className="latest-header">
         <h2>Vehicle RTO Data</h2>
       </div>
-      {!hideControls && (
-        <div style={{display:'flex',gap:16,marginBottom:12,flexWrap:'wrap',alignItems:'center'}}>
-          <div className="number-plate-container" style={{ width: 330 }}>
-            <div className="number-plate-wrapper">
-              <div className="number-plate-badge">IND</div>
-              <div className="tricolor-strip">
-                <div className="saffron"></div>
-                <div className="white"></div>
-                <div className="green"></div>
-              </div>
-              <input
-                type="text"
-                placeholder="Search Vehicle Number"
-                value={search}
-                onChange={e => setSearch(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                className="number-plate-input"
-                maxLength={12}
-              />
+      <div style={{display:'flex',gap:16,marginBottom:12,flexWrap:'wrap',alignItems:'center'}}>
+        <div className="number-plate-container" style={{ width: 330 }}>
+          <div className="number-plate-wrapper">
+            <div className="number-plate-badge">IND</div>
+            <div className="tricolor-strip">
+              <div className="saffron"></div>
+              <div className="white"></div>
+              <div className="green"></div>
             </div>
-            <div className="security-features">
-              <div className="hologram"></div>
-              <div className="chakra">⚙</div>
-            </div>
+            <input
+              type="text"
+              placeholder="Search Vehicle Number"
+              value={search}
+              onChange={e => setSearch(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+              className="number-plate-input"
+              maxLength={12}
+            />
           </div>
-          <select
-            value={expiryFilter}
-            onChange={e => setExpiryFilter(e.target.value)}
-            className="filter-select"
-          >
-            <option value="all">All</option>
-            <option value="expired">Expired</option>
-            <option value="expiring">Expiring Soon (≤30d)</option>
-            <option value="valid">Valid (&gt;30d)</option>
-          </select>
-          <button
-            className="action-btn flat-btn sort-btn"
-            onClick={() => setSortAsc(s => !s)}
-          >
-            Sort Reg Date {sortAsc ? '▲' : '▼'}
-          </button>
+          <div className="security-features">
+            <div className="hologram"></div>
+            <div className="chakra">⚙</div>
+          </div>
         </div>
-      )}
+        <select
+          value={expiryFilter}
+          onChange={e => setExpiryFilter(e.target.value)}
+          className="filter-select"
+        >
+          <option value="all">All</option>
+          <option value="expired">Expired</option>
+          <option value="expiring">Expiring Soon (≤30d)</option>
+          <option value="valid">Valid (&gt;30d)</option>
+        </select>
+        <button
+          className="action-btn flat-btn sort-btn"
+          onClick={() => setSortAsc(s => !s)}
+        >
+          Sort Reg Date {sortAsc ? '▲' : '▼'}
+        </button>
+      </div>
       {loading && <div>Loading vehicle data...</div>}
       {error && <div style={{color:'red'}}>{error}</div>}
-      {!hideControls && (
-        <div className="table-caption-row">
-          <div />
-          <div
-            style={{
-              marginBottom: 8,
-              color: '#222',
-              fontSize: 15,
-              background: '#e3f7d6',
-              border: '1.5px solid #4caf50',
-              borderRadius: 6,
-              padding: '4px 12px',
-              fontWeight: 600,
-              display: 'inline-block',
-            }}
-          >
-            Showing {displayed.length} of {filtered.length} records
-          </div>
+      <div className="table-caption-row">
+        <div />
+        <div
+          style={{
+            marginBottom: 8,
+            color: '#222',
+            fontSize: 15,
+            background: '#e3f7d6',
+            border: '1.5px solid #4caf50',
+            borderRadius: 6,
+            padding: '4px 12px',
+            fontWeight: 600,
+            display: 'inline-block',
+          }}
+        >
+          Showing {displayed.length} of {filtered.length} records
         </div>
-      )}
+      </div>
   <div className="table-container">
     <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
           <thead>

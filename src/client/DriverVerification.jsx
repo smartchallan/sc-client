@@ -325,8 +325,8 @@ export default function DriverVerification() {
         </table>
       </div>
       <h3 style={{ marginBottom: 12 }}>Verify Driver License</h3>
-      <div className="card">
-        <form className="register-vehicle-form" onSubmit={handleSubmit} style={{display: 'flex', flexWrap: 'wrap', gap: 16}}>
+      <div className="card" style={{background: 'linear-gradient(180deg, #f8fafc 0%, #e0e7ef 100%)', boxShadow: '0 4px 24px rgba(30, 64, 175, 0.06)', borderRadius: 14, padding: 28, marginBottom: 24}}>
+        <form className="register-vehicle-form" onSubmit={handleSubmit} style={{display: 'flex', flexWrap: 'wrap', gap: 16}} autoComplete="off">
           <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '50%'}}>
             <label htmlFor="licenseNo" style={{fontSize: 14, fontWeight: 500, marginBottom: 8, display: 'block'}}>License Number</label>
             <div className="number-plate-container">
@@ -362,27 +362,29 @@ export default function DriverVerification() {
             <label htmlFor="dob" style={{fontSize: 14, fontWeight: 500, marginBottom: 8, display: 'block'}}>Date of Birth</label>
             <div style={{position: 'relative'}} ref={datePickerRef}>
               <div
+                className={`form-control${showDatePicker ? ' input-active' : ''}`}
                 onClick={toggleDatePicker}
                 style={{
                   padding: '14px 16px 14px 48px',
                   fontSize: 15,
-                  border: showDatePicker ? '2px solid #667eea' : '1px solid #d1d5db',
-                  borderRadius: 12,
                   width: '100%',
                   backgroundColor: loading ? '#f9fafb' : '#fff',
                   color: form.dob ? '#374151' : '#9ca3af',
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                   fontFamily: 'system-ui, -apple-system, sans-serif',
                   fontWeight: 500,
                   cursor: loading ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  outline: 'none',
+                  border: showDatePicker ? '2px solid #667eea' : '1px solid #d1d5db',
+                  borderRadius: 12,
                   boxShadow: showDatePicker 
                     ? '0 0 0 3px rgba(102, 126, 234, 0.1), 0 4px 12px rgba(0, 0, 0, 0.1)' 
                     : '0 1px 2px rgba(0, 0, 0, 0.05)',
-                  outline: 'none'
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
+                tabIndex={0}
               >
                 <span>{formatDisplayDate(form.dob)}</span>
                 <i className={`ri-arrow-${showDatePicker ? 'up' : 'down'}-s-line`} style={{
@@ -444,18 +446,11 @@ export default function DriverVerification() {
                         letterSpacing: '0.3px'
                       }}>Birth Year</label>
                       <select
+                        className="form-control"
                         value={selectedDate.year}
                         onChange={(e) => setSelectedDate({...selectedDate, year: parseInt(e.target.value)})}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: '1px solid #d1d5db',
-                          borderRadius: 12,
-                          fontSize: 14,
-                          background: '#fff',
-                          color: '#374151',
-                          outline: 'none',
-                          transition: 'all 0.2s ease',
                           appearance: 'none',
                           backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
                           backgroundRepeat: 'no-repeat',

@@ -34,9 +34,53 @@ export default function RegisterVehicle() {
   const [finalSummary, setFinalSummary] = useState({ open: false, success: 0, fail: 0, failures: [] });
   // Bulk upload section collapsed state
   const [bulkUploadEnabled, setBulkUploadEnabled] = useState(false);
-  // Loader state for RTO/Challan API calls
-  const [rtoLoadingId, setRtoLoadingId] = useState(null);
+  // Loader state for Challan API calls (per vehicle)
   const [challanLoadingId, setChallanLoadingId] = useState(null);
+
+  // Get Vehicle Data and Challan handler
+  const [dataLoadingId, setDataLoadingId] = useState(null);
+  const handleGetVehicleData = async (vehicleNumber) => {
+    const { client_id } = getUserIds();
+    if (!vehicleNumber || !client_id) {
+      toast.error("Vehicle number or client ID missing");
+      return;
+    }
+    setDataLoadingId(vehicleNumber);
+    try {
+      // 1. Get RTO Data
+      const rtoRes = await fetch(`${API_ROOT}/getvehiclertodata`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vehicleNumber, clientID: client_id })
+      });
+      const rtoData = await rtoRes.json();
+      if (!rtoRes.ok) {
+        toast.error(rtoData.message || "Failed to fetch RTO data");
+      } else {
+        toast.success("RTO data fetched successfully");
+        // Optionally, show rtoData in a modal or log it
+        // console.log(rtoData);
+      }
+      // 2. Get Challan Data
+      const challanRes = await fetch(`${API_ROOT}/getvehicleechallandata`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vehicleNumber, clientID: client_id })
+      });
+      const challanData = await challanRes.json();
+      if (!challanRes.ok) {
+        toast.error(challanData.message || "Failed to fetch challan data");
+      } else {
+        toast.success("Challan data fetched successfully");
+        // Optionally, show challanData in a modal or log it
+        // console.log(challanData);
+      }
+    } catch (err) {
+      toast.error("Error fetching vehicle data");
+    } finally {
+      setDataLoadingId(null);
+    }
+  };
   // Pagination state
   const [activeVehiclesLimit, setActiveVehiclesLimit] = useState(10);
   const [deletedVehiclesLimit, setDeletedVehiclesLimit] = useState(10);
@@ -425,19 +469,19 @@ export default function RegisterVehicle() {
             <table className="vehicle-challan-table" style={{ width: '100%', marginTop: 8 }}>
               <thead>
                 <tr>
-                  <th>S. No.</th>
-                  <th>Vehicle Number</th>
-                  <th>Engine Number</th>
-                  <th>Chasis Number</th>
-                  <th>Status</th>
-                  <th>
+                  <th style={{ textAlign: 'center' }}>S. No.</th>
+                  <th style={{ textAlign: 'center' }}>Vehicle Number</th>
+                  <th style={{ textAlign: 'center' }}>Engine Number</th>
+                  <th style={{ textAlign: 'center' }}>Chasis Number</th>
+                  <th style={{ textAlign: 'center' }}>Status</th>
+                  <th style={{ textAlign: 'center' }}>
                     Registered At
                     <span style={{marginLeft:6, cursor:'pointer', fontSize:16}} onClick={() => setSortDesc(s => !s)}>
                       {sortDesc ? <i className="ri-arrow-down-s-line" title="Sort: Newest First"></i> : <i className="ri-arrow-up-s-line" title="Sort: Oldest First"></i>}
                     </span>
                   </th>
-                  {/* <th>Data</th> */}
-                  <th>Actions</th>
+                  <th style={{ textAlign: 'center' }}>Data</th>
+                  <th style={{ textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -481,7 +525,19 @@ export default function RegisterVehicle() {
                         <td>{v.chasis_number || 'Not Available'}</td>
                         <td style={{ color: statusColor, fontWeight: 600, letterSpacing: 1 }}>{status}</td>
                         <td>{v.registered_at ? new Date(v.registered_at).toLocaleString() : 'Not Available'}</td>
-                        {/* RTO/Challan data actions removed */}
+                        <td>
+                          {status === 'DELETED' ? (
+                            <span style={{ color: '#999' }}>—</span>
+                          ) : (
+                            <button
+                              className="action-btn"
+                              disabled={dataLoadingId === v.vehicle_number}
+                              onClick={() => handleGetVehicleData(v.vehicle_number)}
+                            >
+                              {dataLoadingId === v.vehicle_number ? 'Getting Data...' : 'Vehicle Data'}
+                            </button>
+                          )}
+                        </td>
                         <td>
                           {status === 'DELETED' ? (
                             <span style={{ color: '#999' }}>—</span>

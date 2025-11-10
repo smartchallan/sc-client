@@ -23,7 +23,7 @@ import ClientProfile from "./ClientProfile";
 import RegisterVehicle from "../RegisterVehicle";
 import UserChallan from "../UserChallan";
 import MyVehicles from "./MyVehicles";
-import VehicleRTOdataTable from "./VehicleRTOdataTable";
+import VehicleRTOdataTable from "./VehicleRTOdata";
 import MyChallans from "./MyChallans";
 import MyBilling from "./MyBilling";
 import UserSettings from "./UserSettings";
@@ -448,17 +448,25 @@ function ClientDashboard() {
         const ctxTotal = chartRefTotal.current.getContext('2d');
         if (window._clientTotalChart) window._clientTotalChart.destroy();
         const totalData = [active, inactive, deleted];
-        // Create a soft green radial gradient for the 'active' slice
-        let greenGradient = ctxTotal.createRadialGradient(60, 60, 10, 60, 60, 90);
-        greenGradient.addColorStop(0, '#d1fae5'); // light green
-        greenGradient.addColorStop(1, '#4ade80'); // soft green
+        // Create a purple radial gradient for the 'active' slice
+        let purpleGradient = ctxTotal.createRadialGradient(60, 60, 10, 60, 60, 90);
+        purpleGradient.addColorStop(0, '#ede9fe'); // light purple
+        purpleGradient.addColorStop(1, '#a78bfa'); // soft purple
+        // Teal for 'inactive'
+        let tealGradient = ctxTotal.createRadialGradient(60, 60, 10, 60, 60, 90);
+        tealGradient.addColorStop(0, '#ccfbf1');
+        tealGradient.addColorStop(1, '#2dd4bf');
+        // Amber for 'deleted'
+        let amberGradient = ctxTotal.createRadialGradient(60, 60, 10, 60, 60, 90);
+        amberGradient.addColorStop(0, '#fef3c7');
+        amberGradient.addColorStop(1, '#fbbf24');
         window._clientTotalChart = new Chart(ctxTotal, {
           type: 'pie',
           data: {
             labels: ['Active', 'Inactive', 'Deleted'],
             datasets: [{
               data: totalData,
-              backgroundColor: [greenGradient, '#f59e42', '#ef4444'],
+              backgroundColor: [purpleGradient, tealGradient, amberGradient],
             }],
           },
           options: {
@@ -1125,7 +1133,7 @@ function ClientDashboard() {
               )}
             </div>
             <div className="dashboard-stats">
-              <div className="stat-card">
+              <div className="stat-card" style={{background: 'linear-gradient(120deg, #93c5fd 60%, #dbeafe 100%)', borderRadius: 18, boxShadow: '0 6px 24px rgba(59, 130, 246, 0.10)', border: '1.5px solid #dbeafe'}}>
                 <div className="stat-card-content">
                   <i className="ri-car-line"></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
@@ -1179,7 +1187,7 @@ function ClientDashboard() {
                     ) : null}
                   </div>
                 </div>
-              <div className="stat-card">
+              <div className="stat-card" style={{background: 'linear-gradient(120deg, #6ee7b7 60%, #d1fae5 100%)', borderRadius: 18, boxShadow: '0 6px 24px rgba(16, 185, 129, 0.10)', border: '1.5px solid #d1fae5'}}>
                 <div className="stat-card-content">
                   <i className="ri-error-warning-line"></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
@@ -1215,7 +1223,7 @@ function ClientDashboard() {
                   ) : null}
                 </div>
               </div>
-              <div className="stat-card">
+              <div className="stat-card" style={{background: 'linear-gradient(120deg, #f9a8d4 60%, #fce7f3 100%)', borderRadius: 18, boxShadow: '0 6px 24px rgba(236, 72, 153, 0.10)', border: '1.5px solid #fce7f3'}}>
                 <div className="stat-card-content">
                   <i className="ri-alarm-warning-line"></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
@@ -1261,7 +1269,7 @@ function ClientDashboard() {
                   ) : null}
                 </div>
               </div>
-              <div className="stat-card">
+              <div className="stat-card" style={{background: 'linear-gradient(120deg, #fdba74 60%, #fef3c7 100%)', borderRadius: 18, boxShadow: '0 6px 24px rgba(251, 191, 36, 0.10)', border: '1.5px solid #fef3c7'}}>
                 <div className="stat-card-content">
                   <i className="ri-money-rupee-circle-line"></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
