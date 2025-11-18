@@ -1,3 +1,10 @@
+	<style>{`
+		.sidebar,
+		.main-content,
+		.main-content.admin-home-content {
+			transition: all 0.35s cubic-bezier(.4,1.3,.5,1) !important;
+		}
+	`}</style>
 // Copy of AdminDashboard.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -79,37 +86,32 @@ function DealerDashboard() {
 
 	// Clients pie chart - show clients by city
 	useEffect(() => {
-		if (!chartRef2.current || !dealerData?.clients) return;
+		if (!chartRef2.current) return;
+		if (!dealerData?.clients || !dealerData.clients.length) {
+			if (window._clientsPieChart) window._clientsPieChart.destroy();
+			return;
+		}
 		import('chart.js/auto').then(({ default: Chart }) => {
+			if (window._clientsPieChart) window._clientsPieChart.destroy();
 			const ctx = chartRef2.current.getContext('2d');
-			ctx.clearRect(0, 0, chartRef2.current.width, chartRef2.current.height);
-			
-			// Group clients by city
-			const cityCount = {};
+			// Pie chart by client status (active/inactive)
+			let active = 0, inactive = 0;
 			dealerData.clients.forEach(client => {
-				const city = client.city || client.address?.split(',').pop()?.trim() || 'Other';
-				cityCount[city] = (cityCount[city] || 0) + 1;
+				const status = (client.status || '').toLowerCase();
+				if (status === 'active') active++;
+				else inactive++;
 			});
-			
-			// Convert to chart data
-			const cities = Object.keys(cityCount);
-			const counts = Object.values(cityCount);
-			const colors = [
-				'#ff6384', '#36a2eb', '#ffce56', '#8bc34a', 
-				'#ff9f40', '#c9cbcf', '#4bc0c0', '#ff6384'
-			];
-			
 			const data = {
-				labels: cities.length > 0 ? cities : ['No Data'],
+				labels: ['Active', 'Inactive'],
 				datasets: [{
-					data: counts.length > 0 ? counts : [1],
-					backgroundColor: cities.length > 0 ? colors.slice(0, cities.length) : ['#e0e0e0'],
+					data: [active, inactive],
+					backgroundColor: ['#43e97b', '#ffa726'],
+					borderColor: '#fff',
+					borderWidth: 3,
 				}],
 			};
-			
-			if (window._clientsPieChart) window._clientsPieChart.destroy();
 			window._clientsPieChart = new Chart(ctx, {
-				type: 'doughnut',
+				type: 'pie',
 				data,
 				options: {
 					plugins: {
@@ -124,46 +126,68 @@ function DealerDashboard() {
 		};
 	}, [dealerData]);
 	useEffect(() => {
-		if (!chartRef3.current || !dealerData?.vehicle_types) return;
+		if (!chartRef3.current || !dealerData?.clients) return;
 		import('chart.js/auto').then(({ default: Chart }) => {
+			if (window._vehiclesBarChart) window._vehiclesBarChart.destroy();
 			const ctx = chartRef3.current.getContext('2d');
 			ctx.clearRect(0, 0, chartRef3.current.width, chartRef3.current.height);
-			
-			// Use API data for vehicle types or show default data
-			const vehicleData = dealerData.vehicle_types || {
-				'Car': dealerData.vehicles_registered ? Math.floor(dealerData.vehicles_registered * 0.5) : 0,
-				'Bike': dealerData.vehicles_registered ? Math.floor(dealerData.vehicles_registered * 0.3) : 0,
-				'Truck': dealerData.vehicles_registered ? Math.floor(dealerData.vehicles_registered * 0.15) : 0,
-				'Others': dealerData.vehicles_registered ? Math.floor(dealerData.vehicles_registered * 0.05) : 0,
-			};
-			
-			const labels = Object.keys(vehicleData);
-			const counts = Object.values(vehicleData);
-			
+			// Group vehicles by week (registered_at)
+			const vehicles = (dealerData.vehicles || []).filter(v => v.registered_at);
+			// Get last 8 months
+			const now = new Date();
+			const months = [];
+			for (let i = 7; i >= 0; i--) {
+				const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+				months.push(new Date(d));
+			}
+			// Count vehicles per month
+			const monthLabels = months.map((d) => d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }));
+			const monthCounts = months.map((start, i) => {
+				const end = new Date(start.getFullYear(), start.getMonth() + 1, 0, 23, 59, 59, 999);
+				return vehicles.filter(v => {
+					const reg = new Date(v.registered_at);
+					return reg >= start && reg <= end;
+				}).length;
+			});
 			const data = {
-				labels: labels.length > 0 ? labels : ['No Data'],
+				labels: monthLabels,
 				datasets: [{
-					data: counts.length > 0 && counts.some(c => c > 0) ? counts : [1],
-					backgroundColor: labels.length > 0 ? [
-						'#42a5f5', '#66bb6a', '#ffa726', '#ab47bc',
-					].slice(0, labels.length) : ['#e0e0e0'],
+					label: 'Vehicles Registered',
+					data: monthCounts,
+					backgroundColor: '#1976d2',
+					borderColor: '#fff',
+					borderWidth: 3,
 				}],
 			};
-			
-			if (window._vehiclesRadialChart) window._vehiclesRadialChart.destroy();
-			window._vehiclesRadialChart = new Chart(ctx, {
-				type: 'polarArea',
+			window._vehiclesBarChart = new Chart(ctx, {
+				type: 'bar',
 				data,
 				options: {
 					plugins: {
-						legend: { position: 'bottom' },
+						legend: { display: false },
 						title: { display: false },
+					},
+					scales: {
+						x: {
+							beginAtZero: true,
+							ticks: {
+								color: '#222',
+								font: { weight: 'bold' },
+							},
+						},
+						y: {
+							beginAtZero: true,
+							ticks: {
+								color: '#222',
+								font: { weight: 'bold' },
+							},
+						},
 					},
 				},
 			});
 		});
 		return () => {
-			if (window._vehiclesRadialChart) window._vehiclesRadialChart.destroy();
+			if (window._vehiclesBarChart) window._vehiclesBarChart.destroy();
 		};
 	}, [dealerData]);
 	useEffect(() => {
@@ -241,7 +265,9 @@ function DealerDashboard() {
 			{sidebarOpen && window.innerWidth <= 900 && (
 				<div className="sidebar-overlay show" onClick={() => setSidebarOpen(false)} />
 			)}
-			<DealerSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
+						{(sidebarOpen || window.innerWidth <= 900) && (
+							<DealerSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
+						)}
 			<main className="main-content">
 				<div className="header" style={{marginBottom: 24}}>
 					<div className="header-left" style={{display:'flex',alignItems:'center',gap:16}}>
@@ -279,18 +305,37 @@ function DealerDashboard() {
 				</div>
 				{activeMenu === "Home" && (
 					<>
-						<div className="dashboard-header">
-							<h1 className="dashboard-title">Welcome back{user.user && user.user.name ? `, ${user.user.name}` : '123'}!</h1>
-							<p>Here's an overview of your challan status</p>
+						<div>
+							<h1 className="page-title">Welcome{user.user && user.user.name ? `, ${user.user.name}` : ''}</h1>
+							<p className="page-subtitle">Manage your clients, vehicles, and challans all in one place.</p>
 						</div>
 						<div className="dashboard-stats">
 							{/* Stat card: Happy Clients (from summary.total_clients) */}
 							<div className="stat-card">
 								<i className="ri-user-heart-line"></i>
 								<div>Happy Clients</div>
-								<div className="stat-value">
-									{loadingDealerData ? '...' : (dealerData?.summary?.total_clients ?? dealerData?.total_clients ?? 0)}
-								</div>
+								{(() => {
+									if (!dealerData?.clients || !dealerData.clients.length) return null;
+									let active = 0, inactive = 0;
+									dealerData.clients.forEach(client => {
+										const status = (client.status || '').toLowerCase();
+										if (status === 'active') active++;
+										else inactive++;
+									});
+									return (
+										<div style={{
+											textAlign:'center',
+											margin:'6px 0 2px 0',
+											fontSize:'0.98em',
+											letterSpacing:0.5
+										}}>
+											<span style={{color:'#fff', fontWeight:400}}>Active </span>
+											<span style={{color:'#43e97b', fontWeight:700}}>{active}</span>
+											<span style={{color:'#fff', fontWeight:400}}>&nbsp; Inactive </span>
+											<span style={{color:'#ffa726', fontWeight:700}}>{inactive}</span>
+										</div>
+									);
+								})()}
 								<div className="clients-pie-chart-container" style={{maxWidth: 200, margin: '16px auto'}}>
 									<canvas ref={chartRef2} width={200} height={200} />
 								</div>
@@ -315,6 +360,9 @@ function DealerDashboard() {
 										<div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
 											{loadingDealerData ? '...' : (dealerData?.summary?.total_challan_records ?? dealerData?.total_challan_records ?? 0)}
 										</div>
+									</div>
+									<div className="challans-pie-chart-container" style={{maxWidth: 200, margin: '16px auto'}}>
+										<canvas ref={chartRef4} width={200} height={200} />
 									</div>
 								</div>
 							</div>
@@ -592,24 +640,6 @@ function DealerDashboard() {
 														</div>
 													)}
 												</div>
-												{/* Quick Actions using shared component */}
-												<div style={{ padding: '0 30px 30px 30px' }}>
-														<QuickActions
-																title="Quick Actions"
-																sticky={true}
-																onAddVehicle={() => setActiveMenu('Register Client')}
-																onBulkUpload={() => setActiveMenu('Register Vehicle')}
-																onPay={() => {
-																		// For dealers, this could open billing info
-																		setSupportModal(true);
-																}}
-																onReports={() => {
-																		// For dealers, this could show dealer reports
-																		setSupportModal(true);
-																}}
-																onContact={() => setSupportModal(true)}
-														/>
-												</div>
 					</>
 				)}
 				{activeMenu === "Profile" && <DealerProfile />}
@@ -621,7 +651,7 @@ function DealerDashboard() {
 										key={clientVehiclesPageClient || 'default'}
 									/>
 								)}
-				{activeMenu === "Settings" && <ClientSettings clients={[]} />}
+				{activeMenu === "Settings" && <ClientSettings clients={dealerData?.clients || []} />}
 				{activeMenu === "Register Client" && <DealerRegisterClientPage />}
 				{activeMenu === "Add client" && <AddClientPage />}
 				{activeMenu === "Register New Client" && <AddClientPage />}

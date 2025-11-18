@@ -1001,8 +1001,17 @@ function ClientDashboard() {
       {sidebarOpen && window.innerWidth <= 900 && (
         <div className="sidebar-overlay show" onClick={() => setSidebarOpen(false)} />
       )}
-  <ClientSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
-      <main className="main-content admin-home-content" style={{flex: 1, minHeight: '100vh'}}>
+      {(sidebarOpen || window.innerWidth <= 900) && (
+        <ClientSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
+      )}
+      <main className="main-content admin-home-content" style={{flex: 1, minHeight: '100vh', transition: 'all 0.35s cubic-bezier(.4,1.3,.5,1)', WebkitTransition: 'all 0.35s cubic-bezier(.4,1.3,.5,1)'}}>
+  <style>{`
+    .sidebar,
+    .main-content,
+    .main-content.admin-home-content {
+      transition: all 0.35s cubic-bezier(.4,1.3,.5,1) !important;
+    }
+  `}</style>
         <div className="header" style={{marginBottom: 24}}>
             <div className="header-left" style={{display:'flex',alignItems:'center',gap:16}}>
             <div className="menu-toggle" style={{fontSize:22,cursor:'pointer'}} onClick={toggleSidebar}>
