@@ -3,7 +3,7 @@ import "../shared/CommonDashboard.css";
 import CustomModal from "./CustomModal";
 import "../RegisterVehicle.css";
 
-export default function VehicleRTOdataTable({ clientId, onViewAll, hideControls }) {
+export default function VehicleRTOdataTable({ clientId, onViewAll, hideControls, initialExpiryFilter, initialTab }) {
   const formatExpiry = (dateStr, useColor = true) => {
     if (!dateStr || dateStr === '-') return '-';
     let d = null;
@@ -104,7 +104,11 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, hideControls 
   // Search, sort, filter state
   const [search, setSearch] = useState('');
   const [sortAsc, setSortAsc] = useState(false); // false = newest first
-  const [expiryFilter, setExpiryFilter] = useState('all'); // all, expired, expiring, valid
+  const [expiryFilter, setExpiryFilter] = useState(initialExpiryFilter || 'all'); // all, expired, expiring, valid
+  // If initialExpiryFilter changes (e.g., user clicks stat card), update filter
+  useEffect(() => {
+    if (initialExpiryFilter) setExpiryFilter(initialExpiryFilter);
+  }, [initialExpiryFilter]);
 
   // Helper to determine expiry status
   const getExpiryStatus = (v) => {

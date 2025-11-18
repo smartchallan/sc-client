@@ -111,6 +111,8 @@ function ClientDashboard() {
   const [selectedChallan, setSelectedChallan] = useState(null);
   // Sidebar open state: open by default on wide screens, closed on small screens
   const [sidebarOpen, setSidebarOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth > 900 : true));
+  // Initial filter state for Vehicle RTO Data
+  const [vehicleRtoInitialFilter, setVehicleRtoInitialFilter] = useState(null);
 
   // Modal confirmation logic for RTO/Challan requests
   const handleModalConfirm = async () => {
@@ -322,119 +324,44 @@ function ClientDashboard() {
   // Draw charts for stat cards
   useEffect(() => {
     if (activeMenu !== "Dashboard") return;
-    
     // Check if required data is available and not still loading
     const hasRequiredData = clientData && vehicleChallanData && vehicleRtoData;
     const isStillLoading = loadingVehicleChallan || loadingVehicleRto;
-    
-    console.log('Data and loading state:', {
-      clientData: !!clientData,
-      vehicleChallanData: !!vehicleChallanData,
-      vehicleRtoData: !!vehicleRtoData,
-      loadingVehicleChallan,
-      loadingVehicleRto,
-      hasRequiredData,
-      isStillLoading
-    });
-    
     if (!hasRequiredData || isStillLoading) {
-      console.log('Data not ready or still loading, keeping loaders...');
       setChartLoading({ total: true, active: true, paid: true, amount: true });
       setChartErrors({ total: false, active: false, paid: false, amount: false });
       return;
     }
-    
-    // Reset loading states when starting
     setChartLoading({ total: true, active: true, paid: true, amount: true });
     setChartErrors({ total: false, active: false, paid: false, amount: false });
-    
-    // Record start time for minimum display duration
     const loadingStartTime = Date.now();
-    const minDisplayTime = 4000; // 4 seconds
-    
-    // Delay chart drawing to ensure canvas refs are mounted
+    const minDisplayTime = 4000;
+    const clearLoadingWithDelay = (chartType) => {
+      const elapsed = Date.now() - loadingStartTime;
+      const remainingTime = Math.max(0, minDisplayTime - elapsed);
+      setTimeout(() => {
+        setChartLoading(prev => ({ ...prev, [chartType]: false }));
+        setChartErrors(prev => ({ ...prev, [chartType]: false }));
+      }, remainingTime);
+    };
     const timeout = setTimeout(() => {
-      console.log('Starting chart creation with data available...');
-      
       let retryCount = 0;
-      const maxRetries = 20; // 2 seconds total (20 * 100ms)
-      
-      const checkCanvasRefsAndCreateCharts = () => {
-        console.log(`Canvas refs check (attempt ${retryCount + 1}):`, {
-          total: !!chartRefTotal.current,
-          active: !!chartRefActive.current,
-          paid: !!chartRefPaid.current,
-          amount: !!chartRefAmount.current
-        });
-        
+      const maxRetries = 20;
+      const checkCanvasRefsAndCreateCharts = async () => {
         if (!chartRefTotal.current || !chartRefActive.current || !chartRefPaid.current || !chartRefAmount.current) {
           retryCount++;
           if (retryCount >= maxRetries) {
-            console.log('Canvas refs timeout - showing error state');
             setChartErrors({ total: true, active: true, paid: true, amount: true });
             setChartLoading({ total: false, active: false, paid: false, amount: false });
             return;
           }
-          console.log(`Canvas refs not ready yet, retrying in 100ms... (${retryCount}/${maxRetries})`);
           setTimeout(checkCanvasRefsAndCreateCharts, 100);
           return;
         }
-        
-        console.log('All canvas refs ready, loading Chart.js...');
-        Promise.all([
-          import('chart.js/auto')
-        ]).then(([{ default: Chart }]) => {
-          console.log('Chart.js loaded successfully');
-          
-          // Double-check data is still available (in case component unmounted/data changed)
-          if (!clientData || !vehicleChallanData || !vehicleRtoData) {
-            console.log('Data no longer available, aborting chart creation');
-            return;
-          }
-          
-          try {
-          
-          // Calculate expiry counts for the paid chart
-          const expiryThresholdDays = parseInt(import.meta.env.VITE_EXPIRY_PERIOD_DAYS || '60', 10) || 60;
-          const expiryCounts = { insurance: 0, roadTax: 0, fitness: 0, pollution: 0 };
-          if (Array.isArray(vehicleRtoData)) {
-            const now = new Date();
-            const parseDateStr = (dateStr) => {
-              if (!dateStr || dateStr === '-') return null;
-              if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(dateStr)) return new Date(dateStr.replace(/-/g, ' '));
-              if (/\d{2}-\d{2}-\d{4}/.test(dateStr)) {
-                const [d, m, y] = dateStr.split('-');
-                return new Date(`${y}-${m}-${d}`);
-              }
-              if (/\d{4}-\d{2}-\d{2}/.test(dateStr)) return new Date(dateStr);
-              return new Date(dateStr);
-            };
-            const withinThreshold = (dateStr) => {
-              const d = parseDateStr(dateStr);
-              if (!d || isNaN(d.getTime())) return false;
-              const diffDays = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
-              return diffDays <= expiryThresholdDays;
-            };
-            vehicleRtoData.forEach(v => {
-              if (withinThreshold(v.insurance_exp || v.insuranceUpto || v.rc_insurance_upto)) expiryCounts.insurance++;
-              if (withinThreshold(v.road_tax_exp || v.roadTaxExp || v.rc_tax_upto)) expiryCounts.roadTax++;
-              if (withinThreshold(v.fitness_exp || v.fitnessUpto || v.rc_fit_upto)) expiryCounts.fitness++;
-              if (withinThreshold(v.pollution_exp || v.pollutionUpto || v.rc_pucc_upto)) expiryCounts.pollution++;
-            });
-          }
-          
-          // Helper function to clear loading state with minimum display time
-          const clearLoadingWithDelay = (chartType) => {
-            const elapsed = Date.now() - loadingStartTime;
-            const remainingTime = Math.max(0, minDisplayTime - elapsed);
-            
-            setTimeout(() => {
-              setChartLoading(prev => ({ ...prev, [chartType]: false }));
-              setChartErrors(prev => ({ ...prev, [chartType]: false }));
-            }, remainingTime);
-          };
-          
-          // Set individual chart loading states to false as each chart is created successfully
+        try {
+          const chartjs = await import('chart.js');
+          const { Chart, PieController, ArcElement, Tooltip, Legend } = chartjs;
+          Chart.register(PieController, ArcElement, Tooltip, Legend);
           // Registered Vehicles (doughnut) - compute counts and draw interactive chart
         let active = 0, inactive = 0, deleted = 0;
         if (clientData && Array.isArray(clientData.vehicles)) {
@@ -517,36 +444,36 @@ function ClientDashboard() {
         });
         clearLoadingWithDelay('active');
         
-        // Vehicle Expiry Statistics (horizontal bar showing counts per expiry type)
-        const ctxPaid = chartRefPaid.current && chartRefPaid.current.getContext('2d');
-        if (ctxPaid) {
-          // Use a polar area chart for clearer proportion view of expiry counts
-          if (window._clientPaidChart) window._clientPaidChart.destroy();
-          const paidData = [
-            (expiryCounts.insurance || 0),
-            (expiryCounts.roadTax || 0),
-            (expiryCounts.fitness || 0),
-            (expiryCounts.pollution || 0)
-          ];
-          window._clientPaidChart = new Chart(ctxPaid, {
-            type: 'pie',
-            data: {
-              labels: ['Insurance', 'Road Tax', 'Fitness', 'Pollution'],
-              datasets: [{
-                data: paidData,
-                backgroundColor: ['#ff5252', '#ff8a65', '#f4b400', '#42a5f5'],
-                borderColor: '#ffffff',
-                borderWidth: 1
-              }]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: { legend: { display: false } }
-            }
-          });
-          clearLoadingWithDelay('paid');
+    // Vehicle Expiry Statistics (horizontal bar showing counts per expiry type)
+    const ctxPaid = chartRefPaid.current && chartRefPaid.current.getContext('2d');
+    if (ctxPaid) {
+      // Use a polar area chart for clearer proportion view of expiry counts
+      if (window._clientPaidChart) window._clientPaidChart.destroy();
+      const paidData = [
+        (expiryCounts.insurance || 0),
+        (expiryCounts.roadTax || 0),
+        (expiryCounts.fitness || 0),
+        (expiryCounts.pollution || 0)
+      ];
+      window._clientPaidChart = new Chart(ctxPaid, {
+        type: 'pie',
+        data: {
+          labels: ['Insurance', 'Road Tax', 'Fitness', 'Pollution'],
+          datasets: [{
+            data: paidData,
+            backgroundColor: ['#ff5252', '#ff8a65', '#f4b400', '#42a5f5'],
+            borderColor: '#ffffff',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } }
         }
+      });
+    }
+    clearLoadingWithDelay('paid');
         
         // Amount Due (bar) - red: pending, green: paid
         let pendingFine = 0, disposedFine = 0;
@@ -597,25 +524,19 @@ function ClientDashboard() {
               }
             }
           }
-        });
+        }); // <-- close Chart constructor
         clearLoadingWithDelay('amount');
         console.log('All charts created successfully!');
-        
-          } catch (error) {
-            console.error('Chart creation failed:', error);
-            setChartErrors({ total: true, active: true, paid: true, amount: true });
-            setChartLoading({ total: false, active: false, paid: false, amount: false });
-          }
-        }).catch(error => {
-          console.error('Chart.js import failed:', error);
-          setChartErrors({ total: true, active: true, paid: true, amount: true });
-          setChartLoading({ total: false, active: false, paid: false, amount: false });
-        });
-      };
-      
-      // Start checking for canvas refs
-      checkCanvasRefsAndCreateCharts();
-    }, 100); // 100ms delay to ensure DOM is ready
+      } catch (error) {
+        console.error('Chart creation failed or import failed:', error);
+        setChartErrors({ total: true, active: true, paid: true, amount: true });
+        setChartLoading({ total: false, active: false, paid: false, amount: false });
+      }
+    };
+    
+    // Start checking for canvas refs
+    checkCanvasRefsAndCreateCharts();
+  }, 100); // 100ms delay to ensure DOM is ready
     return () => {
       clearTimeout(timeout);
       // Destroy existing charts to prevent memory leaks
@@ -877,7 +798,6 @@ function ClientDashboard() {
     const now = new Date();
     const parseDateStr = (dateStr) => {
       if (!dateStr || dateStr === '-') return null;
-      // Handle common formats used earlier
       if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(dateStr)) return new Date(dateStr.replace(/-/g, ' '));
       if (/\d{2}-\d{2}-\d{4}/.test(dateStr)) {
         const [d, m, y] = dateStr.split('-');
@@ -886,18 +806,18 @@ function ClientDashboard() {
       if (/\d{4}-\d{2}-\d{2}/.test(dateStr)) return new Date(dateStr);
       return new Date(dateStr);
     };
-    const withinThreshold = (dateStr) => {
+    // Only count expired (date in the past)
+    const isExpired = (dateStr) => {
       const d = parseDateStr(dateStr);
       if (!d || isNaN(d.getTime())) return false;
       const diffDays = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
-      // Include already-passed dates (expired) as well as upcoming dates within threshold
-      return diffDays <= expiryThresholdDays;
+      return diffDays < 0;
     };
     vehicleRtoData.forEach(v => {
-      if (withinThreshold(v.insurance_exp || v.insuranceUpto || v.rc_insurance_upto)) expiryCounts.insurance++;
-      if (withinThreshold(v.road_tax_exp || v.roadTaxExp || v.rc_tax_upto)) expiryCounts.roadTax++;
-      if (withinThreshold(v.fitness_exp || v.fitnessUpto || v.rc_fit_upto)) expiryCounts.fitness++;
-      if (withinThreshold(v.pollution_exp || v.pollutionUpto || v.rc_pucc_upto)) expiryCounts.pollution++;
+      if (isExpired(v.insurance_exp || v.insuranceUpto || v.rc_insurance_upto)) expiryCounts.insurance++;
+      if (isExpired(v.road_tax_exp || v.roadTaxExp || v.rc_tax_upto)) expiryCounts.roadTax++;
+      if (isExpired(v.fitness_exp || v.fitnessUpto || v.rc_fit_upto)) expiryCounts.fitness++;
+      if (isExpired(v.pollution_exp || v.pollutionUpto || v.rc_pucc_upto)) expiryCounts.pollution++;
     });
   }
 
@@ -1024,7 +944,7 @@ function ClientDashboard() {
           setExporting(e => ({ ...e, rto: false }));
         }
       })();
-    };
+    }
 
     const generateChallanReport = () => {
       let rows = [];
@@ -1228,13 +1148,21 @@ function ClientDashboard() {
                   <i className="ri-alarm-warning-line"></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
                     <div>Vehicle Renewals</div>
-                    <span style={{ color: '#666', fontSize: 12, float: 'left' }}>Expired / Expiring in {expiryThresholdDays} days</span>
+                    {/* <span style={{ color: '#666', fontSize: 12, float: 'left' }}>Expired</span> */}
                     <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
                       {loadingVehicleRto ? '...' : vehicleRenewalsTotal}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-start', marginTop: 10 }}>
-                    <div className={`status-badge`} style={{ cursor: 'default' }}>
+                    <div
+                      className={`status-badge`}
+                      style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                      title="Show only vehicles with expired insurance"
+                      onClick={() => {
+                        setActiveMenu('Vehicle RTO Data');
+                        setVehicleRtoInitialFilter({ expiryFilter: 'expired', tab: 'insurance' });
+                      }}
+                    >
                       <div style={{ color: '#ff5252', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.insurance}</div>
                       <div style={{ fontSize: 12, color: '#666' }}>Insurance</div>
                     </div>
@@ -1315,7 +1243,14 @@ function ClientDashboard() {
               totalCount={totalChallans}
               limit={5}
             />
-            <VehicleRTOdataTable clientId={user.user && (user.user.id || user.user._id || user.user.client_id)} onViewAll={() => setActiveMenu('Vehicle RTO Data')} limit={10} searchText={vehicleSearchText} />
+            <VehicleRTOdataTable
+              clientId={user.user && (user.user.id || user.user._id || user.user.client_id)}
+              onViewAll={() => setActiveMenu('Vehicle RTO Data')}
+              limit={10}
+              searchText={vehicleSearchText}
+              initialExpiryFilter={vehicleRtoInitialFilter?.expiryFilter}
+              initialTab={vehicleRtoInitialFilter?.tab}
+            />
             {/* QuickActions moved to a shared component rendered below so it's available on every page */}
             {/* Removed dashboard 'due' data section as requested */}
           </>
@@ -1327,7 +1262,13 @@ function ClientDashboard() {
         )}
         {activeMenu === "Register Vehicle" && <RegisterVehicle />}
         {activeMenu === "Vehicle RTO Data" && (
-          <VehicleRTOdataTable clientId={user.user && (user.user.id || user.user._id || user.user.client_id)} limit={0} searchText={vehicleSearchText} />
+          <VehicleRTOdataTable
+            clientId={user.user && (user.user.id || user.user._id || user.user.client_id)}
+            limit={0}
+            searchText={vehicleSearchText}
+            initialExpiryFilter={vehicleRtoInitialFilter?.expiryFilter}
+            initialTab={vehicleRtoInitialFilter?.tab}
+          />
         )}
         {activeMenu === "Vehicle Challan Data" && <MyChallans />}
         {activeMenu === "Challans" && <UserChallan />}
@@ -1407,10 +1348,11 @@ function ClientDashboard() {
         description="Choose which report you want to generate and download as CSV."
         onConfirm={() => setReportsModal({ open: false })}
         onCancel={() => setReportsModal({ open: false })}
+
         confirmText="Close"
         cancelText={null}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ color: '#333' }}>Select a report to generate and download:</div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button className="action-btn" onClick={generateRtoReport} title="Generate RTO Data Report" disabled={exporting.rto}>

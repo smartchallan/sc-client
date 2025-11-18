@@ -5,17 +5,20 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import DealerSidebar from "./DealerSidebar";
 import DealerProfile from "./DealerProfile";
-import RegisterClient from "./RegisterClient";
 import "../shared/CommonDashboard.css";
 import "./DealerDashboardOverrides.css";
 import "./DealerHome.css";
 
 import DealerRegisterVehicle from "./DealerRegisterVehicle";
+import ClientVehiclesPage from "./ClientVehiclesPage";
 import ClientSettings from "./ClientSettings";
 import CustomModal from "../client/CustomModal";
 import QuickActions from "../client/QuickActions";
+import AddClientPage from "./AddClientPage";
 
 function DealerDashboard() {
+	const [selectedClient, setSelectedClient] = useState(null);
+	const [clientVehiclesPageClient, setClientVehiclesPageClient] = useState(null);
 	const userRole = "dealer";
 	const [supportModal, setSupportModal] = useState(false);
 	const [activeMenu, setActiveMenu] = useState("Home");
@@ -210,8 +213,24 @@ function DealerDashboard() {
 	}, [dealerData]);
 
 	const handleMenuClick = (label) => {
-		setActiveMenu(label);
-		// Close sidebar on mobile after menu selection
+		// Map 'Dashboard' menu label to 'Home' for dashboard content
+		const menuLabel = label === 'Dashboard' ? 'Home' : label;
+		setActiveMenu(menuLabel);
+		// Reset dashboard state when returning to Home/Dashboard
+		if (menuLabel === "Home") {
+			setLoadingDealerData(false);
+			setDealerDataError(null);
+			if (user.user && user.user.id && user.user.role === 'dealer') {
+				const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+				const url = `${baseUrl}/dealerdata?dealer_id=${user.user.id}`;
+				setLoadingDealerData(true);
+				fetch(url)
+					.then(res => res.json())
+					.then(data => setDealerData(data))
+					.catch(() => setDealerDataError("Failed to fetch dealer data"))
+					.finally(() => setLoadingDealerData(false));
+			}
+		}
 		if (window.innerWidth <= 900) setSidebarOpen(false);
 	};
 	
@@ -265,40 +284,55 @@ function DealerDashboard() {
 							<p>Here's an overview of your challan status</p>
 						</div>
 						<div className="dashboard-stats">
-							{/* First stat-card (Happy Dealers) removed for dealer dashboard */}
+							{/* Stat card: Happy Clients (from summary.total_clients) */}
 							<div className="stat-card">
 								<i className="ri-user-heart-line"></i>
 								<div>Happy Clients</div>
 								<div className="stat-value">
-									{loadingDealerData ? '...' : (dealerData?.total_clients || 0)}
+									{loadingDealerData ? '...' : (dealerData?.summary?.total_clients ?? dealerData?.total_clients ?? 0)}
 								</div>
 								<div className="clients-pie-chart-container" style={{maxWidth: 200, margin: '16px auto'}}>
 									<canvas ref={chartRef2} width={200} height={200} />
 								</div>
 							</div>
+							{/* Stat card: Registered Vehicles (from summary.total_vehicles) */}
 							<div className="stat-card">
 								<i className="ri-car-line"></i>
 								<div>Registered Vehicles</div>
 								<div className="stat-value">
-									{loadingDealerData ? '...' : (dealerData?.vehicles_registered || 0)}
+									{loadingDealerData ? '...' : (dealerData?.summary?.total_vehicles ?? dealerData?.vehicles_registered ?? 0)}
 								</div>
 								<div className="vehicles-radial-chart-container" style={{maxWidth: 200, margin: '16px auto'}}>
 									<canvas ref={chartRef3} width={200} height={200} />
 								</div>
 							</div>
-							<div className="stat-card">
-								<i className="ri-money-rupee-circle-line"></i>
-								<div>Challans Settled</div>
-								<div className="stat-value">
-									{loadingDealerData ? '...' : `₹${dealerData?.total_challans_amount?.toLocaleString() || dealerData?.challans_settled || '0'}`}
+							{/* Stat card: Challans Fetched (from summary.total_challan_records) */}
+							<div className="stat-card" style={{background: 'linear-gradient(120deg, #6ee7b7 60%, #d1fae5 100%)', borderRadius: 18, boxShadow: '0 6px 24px rgba(16, 185, 129, 0.10)', border: '1.5px solid #d1fae5'}}>
+								<div className="stat-card-content">
+									<i className="ri-error-warning-line"></i>
+									<div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
+										<div>Challans Fetched</div>
+										<div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+											{loadingDealerData ? '...' : (dealerData?.summary?.total_challan_records ?? dealerData?.total_challan_records ?? 0)}
+										</div>
+									</div>
 								</div>
-								<div className="challans-bar-chart-container" style={{maxWidth: 220, margin: '16px auto'}}>
-									<canvas ref={chartRef4} width={220} height={180} />
+							</div>
+							{/* Stat card: Vehicle Renewals */}
+							<div className="stat-card" style={{background: 'linear-gradient(120deg, #f9a8d4 60%, #fce7f3 100%)', borderRadius: 18, boxShadow: '0 6px 24px rgba(236, 72, 153, 0.10)', border: '1.5px solid #fce7f3'}}>
+								<div className="stat-card-content">
+									<i className="ri-alarm-warning-line"></i>
+									<div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
+										<div>Vehicle Renewals</div>
+										<div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+											{loadingDealerData ? '...' : (dealerData?.summary?.vehicle_renewals ?? dealerData?.vehicle_renewals ?? 0)}
+										</div>
+									</div>
 								</div>
 							</div>
 						</div>
 						{/* Client Locations Map */}
-						<div className="map-client-data" style={{ width: '100%', height: 450, margin: '32px 0', position: 'relative' }}>
+						<div className="map-client-data" style={{ width: '100%', height: 450, margin: '32px 0 0 0', position: 'relative' }}>
 							<div className="latest-header" style={{marginBottom: 20}}>
 								<h2>Client Locations</h2>
 								<span style={{fontSize: 14, color: '#666'}}>
@@ -328,7 +362,7 @@ function DealerDashboard() {
 										center={[20.5937, 78.9629]}
 										zoom={5}
 										style={{ width: '100%', height: '100%', borderRadius: 12 }}
-										scrollWheelZoom={true}
+										scrollWheelZoom={false}
 									>
 										<TileLayer
 											attribution='&copy; <a href="https://carto.com/attributions">CARTO</a> | &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -407,59 +441,190 @@ function DealerDashboard() {
 									</div>
 								</div>
 							)}
-						</div>
-						{/* Quick Actions using shared component */}
-						<div style={{ padding: '0 30px 30px 30px' }}>
-							<QuickActions
-								title="Quick Actions"
-								sticky={true}
-								onAddVehicle={() => setActiveMenu('Register Client')}
-								onBulkUpload={() => setActiveMenu('Register Vehicle')}
-								onPay={() => {
-									// For dealers, this could open billing info
-									setSupportModal(true);
-								}}
-								onReports={() => {
-									// For dealers, this could show dealer reports
-									setSupportModal(true);
-								}}
-								onContact={() => setSupportModal(true)}
-							/>
-						</div>
-						<div className="dashboard-due">
-							<h2>Challans Due Today</h2>
-							<div className="due-list">
-								<div className="due-item">
-									<div className="due-date">18 JUN</div>
-									<div className="due-info">Speeding Violation <span>MH02AB1234</span> <span>₹1,000</span></div>
-								</div>
-								<div className="due-item">
-									<div className="due-date">18 JUN</div>
-									<div className="due-info">No Parking Zone <span>MH02CD5678</span> <span>₹500</span></div>
-								</div>
-							</div>
-							<h2>Upcoming Due Dates</h2>
-							<div className="due-list">
-								<div className="due-item">
-									<div className="due-date">22 JUN</div>
-									<div className="due-info">Red Light Violation <span>MH02AB1234</span> <span>₹1,500</span></div>
-								</div>
-								<div className="due-item">
-									<div className="due-date">25 JUN</div>
-									<div className="due-info">Improper Parking <span>MH02CD5678</span> <span>₹750</span></div>
-								</div>
-								<div className="due-item">
-									<div className="due-date">30 JUN</div>
-									<div className="due-info">No Helmet <span>MH02AB1234</span> <span>₹500</span></div>
-								</div>
-							</div>
-						</div>
+												</div>
+												{/* My Clients Table - below map */}
+												<div className="dashboard-latest" style={{ marginTop: 100, marginBottom: 32, display: 'flex', gap: 32, alignItems: 'flex-start' }}>
+													<div className="table-container" style={{ flex: 1, minWidth: 0 }}>
+														<table className="vehicle-challan-table my-clients-table" style={{ width: '100%', marginTop: 8, tableLayout: 'fixed', borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 12px #0001' }}>
+															<colgroup>
+																<col style={{ width: '5%', textAlign: 'center' }} />
+																<col style={{ width: '18%' }} />
+																<col style={{ width: '14%' }} />
+																<col style={{ width: '13%' }} />
+																<col style={{ width: '13%' }} />
+																<col style={{ width: '13%' }} />
+																<col style={{ width: '13%' }} />
+																<col style={{ width: '11%' }} />
+																<col style={{ width: '10%' }} />
+															</colgroup>
+															<thead style={{ background: '#f5f7fa' }}>
+																<tr>
+																	<th style={{ textAlign: 'center' }}>S. No.</th>
+																	<th style={{ textAlign: 'left' }}>Client Name</th>
+																	<th style={{ textAlign: 'center' }}>Phone</th>
+																	<th style={{ textAlign: 'center' }}>Registered Date</th>
+																	<th style={{ textAlign: 'center' }}>Status</th>
+																	<th style={{ textAlign: 'center' }}>Vehicles Registered</th>
+																	<th style={{ textAlign: 'center' }}>RTO Records</th>
+																	<th style={{ textAlign: 'center' }}>Challan Records</th>
+																	<th style={{ textAlign: 'center' }}>View Client</th>
+																</tr>
+															</thead>
+															<tbody>
+																{loadingDealerData ? (
+																	<tr><td colSpan={9} style={{ textAlign: 'center', color: '#888' }}>Loading clients...</td></tr>
+																) : dealerDataError ? (
+																	<tr><td colSpan={9} style={{ textAlign: 'center', color: 'red' }}>{dealerDataError}</td></tr>
+																) : !dealerData?.clients?.length ? (
+																	<tr><td colSpan={9} style={{ textAlign: 'center', color: '#888' }}>No clients found.</td></tr>
+																) : (
+																	dealerData.clients.map((client, idx) => {
+																		let status = (client.status || 'Not Available').toUpperCase();
+																		let statusColor = '#888';
+																		if (status === 'ACTIVE') statusColor = '#43e97b';
+																		else if (status === 'INACTIVE') statusColor = '#ffa726';
+																		else if (status === 'DELETED') statusColor = '#e57373';
+																		let regDate = client.registered_at || client.created_at || client.registration_date;
+																		let regDateStr = regDate ? new Date(regDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+																		let stats = client.statistics || {};
+																		let vehiclesRegistered = stats.vehicles_registered ?? '';
+																		let rtoRecords = stats.rto_records ?? '';
+																		let challanRecords = stats.challan_records ?? '';
+																		let phone = (client.meta && client.meta.phone) || client.phone || client.mobile || client.contact || '-';
+																		return (
+																			<tr key={client.id || client._id || idx} className="my-clients-row" style={{ transition: 'background 0.2s', cursor: 'pointer' }}>
+																				<td style={{ textAlign: 'center', fontWeight: 500 }}>{idx + 1}</td>
+																																																																																<td style={{ textAlign: 'left', background: 'none', border: 'none' }}>
+																																																																																	<span
+																																																																																		style={{
+																																																																																			display: 'inline-block',
+																																																																																			fontWeight: 600,
+																																																																																			color: '#222',
+																																																																																			background: '#f3f6fa',
+																																																																																			letterSpacing: 0.5,
+																																																																																			cursor: 'pointer',
+																																																																																			borderRadius: '8px',
+																																																																																			padding: '7px 18px',
+																																																																																			fontSize: '1em',
+																																																																																			border: '1px solid #e3e8ee',
+																																																																																			boxShadow: '0 1px 4px #0001',
+																																																																																			transition: 'background 0.18s, color 0.18s',
+																																																																																			margin: '6px 0',
+																																																																																			minWidth: 120,
+																																																																																		}}
+																																																																																		onClick={() => {
+																																																																																			setClientVehiclesPageClient(client.id || client._id || client.email);
+																																																																																			setActiveMenu('Client Vehicles');
+																																																																																		}}
+																																																																																		onMouseOver={e => {
+																																																																																			e.currentTarget.style.background='#e3f0ff';
+																																																																																			e.currentTarget.style.color='#1976d2';
+																																																																																		}}
+																																																																																		onMouseOut={e => {
+																																																																																			e.currentTarget.style.background='#f3f6fa';
+																																																																																			e.currentTarget.style.color='#222';
+																																																																																		}}
+																																																																																	>
+																																																																																		{client.name || client.client_name || 'Client'}
+																																																																																	</span>
+																																																																																</td>
+																				<td style={{ textAlign: 'center' }}>{phone}</td>
+																				<td style={{ textAlign: 'center' }}>{regDateStr}</td>
+																				<td style={{ color: statusColor, fontWeight: 700, letterSpacing: 1, textAlign: 'center' }}>{status}</td>
+																				<td style={{ textAlign: 'center' }}>{vehiclesRegistered}</td>
+																				<td style={{ textAlign: 'center' }}>{rtoRecords}</td>
+																				<td style={{ textAlign: 'center' }}>{challanRecords}</td>
+																				<td style={{ textAlign: 'center' }}>
+																					<button className="action-btn flat-btn" style={{ padding: '4px 10px', fontSize: 14 }} onClick={e => { e.stopPropagation(); setSelectedClient(client); }}>
+																						View Client
+																					</button>
+																				</td>
+																			</tr>
+																		);
+																	})
+																)}
+															</tbody>
+														</table>
+													</div>
+													{/* Right Sidebar for Client Details */}
+													{selectedClient && (
+														<div style={{width:'370px',minWidth:260,maxWidth:'90vw',background:'#f8fafc',border:'1.5px solid #e3e8ee',borderRadius:10,boxShadow:'0 2px 12px #0001',padding:'18px 18px 12px 18px',position:'sticky',top:24,alignSelf:'flex-start',zIndex:2}}>
+															<div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+																<span style={{fontWeight:700,fontSize:'1.1rem',color:'#1976d2'}}>Client Details</span>
+																<button onClick={()=>setSelectedClient(null)} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#888',fontWeight:700}} title="Close">×</button>
+															</div>
+															<div style={{ fontSize: 15, minWidth: 260 }}>
+																<table style={{ width: '100%', borderCollapse: 'collapse' }}>
+																	<tbody>
+																		{Object.entries(selectedClient).map(([key, value]) => {
+																			if (["password", "role", "admin_id", "dealer_id", "client_id", "updated_at"].includes(key)) return null;
+																			if (key === 'meta' && value && typeof value === 'object') {
+																				return Object.entries(value)
+																					.filter(([mKey]) => mKey !== 'id' && mKey !== 'user_id')
+																					.map(([mKey, mVal]) => (
+																						<tr key={"meta-" + mKey}>
+																							<td style={{ fontWeight: 600, padding: '6px 12px', background: '#f5f7fa', border: '1px solid #e3f0ff', width: '38%', textAlign: 'left', verticalAlign: 'top' }}>{mKey.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</td>
+																							<td style={{ padding: '6px 12px', border: '1px solid #e3f0ff', background: '#fff', textAlign: 'left', verticalAlign: 'top', width: '62%' }}>{mVal == null ? '-' : String(mVal)}</td>
+																						</tr>
+																					));
+																			}
+																			if (key === 'statistics' && value && typeof value === 'object') {
+																				return Object.entries(value).map(([sKey, sVal]) => (
+																					<tr key={"statistics-" + sKey}>
+																						<td style={{ fontWeight: 600, padding: '6px 12px', background: '#f5f7fa', border: '1px solid #e3f0ff', width: '38%', textAlign: 'left', verticalAlign: 'top' }}>{sKey.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</td>
+																						<td style={{ padding: '6px 12px', border: '1px solid #e3f0ff', background: '#fff', textAlign: 'left', verticalAlign: 'top', width: '62%' }}>{sVal == null ? '-' : String(sVal)}</td>
+																					</tr>
+																				));
+																			}
+																			if (typeof value === 'object' && value !== null) {
+																				return null;
+																			}
+																			return (
+																				<tr key={key}>
+																					<td style={{ fontWeight: 600, padding: '6px 12px', background: '#f5f7fa', border: '1px solid #e3f0ff', width: '38%', textAlign: 'left', verticalAlign: 'top' }}>{key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</td>
+																					<td style={{ padding: '6px 12px', border: '1px solid #e3f0ff', background: '#fff', textAlign: 'left', verticalAlign: 'top', width: '62%' }}>{value == null ? '-' : String(value)}</td>
+																				</tr>
+																			);
+																		})}
+																	</tbody>
+																</table>
+															</div>
+														</div>
+													)}
+												</div>
+												{/* Quick Actions using shared component */}
+												<div style={{ padding: '0 30px 30px 30px' }}>
+														<QuickActions
+																title="Quick Actions"
+																sticky={true}
+																onAddVehicle={() => setActiveMenu('Register Client')}
+																onBulkUpload={() => setActiveMenu('Register Vehicle')}
+																onPay={() => {
+																		// For dealers, this could open billing info
+																		setSupportModal(true);
+																}}
+																onReports={() => {
+																		// For dealers, this could show dealer reports
+																		setSupportModal(true);
+																}}
+																onContact={() => setSupportModal(true)}
+														/>
+												</div>
 					</>
 				)}
 				{activeMenu === "Profile" && <DealerProfile />}
-				{activeMenu === "Register Client" && <RegisterClient />}
-				{activeMenu === "Register Vehicle" && <DealerRegisterVehicle />}
+								{activeMenu === "Register Vehicle" && <DealerRegisterVehicle clients={dealerData?.clients || []} />}
+								{activeMenu === "Client Vehicles" && (
+									<ClientVehiclesPage
+										clients={dealerData?.clients || []}
+										initialClientId={clientVehiclesPageClient}
+										key={clientVehiclesPageClient || 'default'}
+									/>
+								)}
 				{activeMenu === "Settings" && <ClientSettings clients={[]} />}
+				{activeMenu === "Register Client" && <DealerRegisterClientPage />}
+				{activeMenu === "Add client" && <AddClientPage />}
+				{activeMenu === "Register New Client" && <AddClientPage />}
 			</main>
 			<CustomModal
 				open={supportModal}

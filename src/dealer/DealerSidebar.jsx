@@ -17,14 +17,16 @@ function DealerSidebar({ role = "dealer", onMenuClick, activeMenu, sidebarOpen, 
 	} catch {}
 
 	// Dealer menu (no Register Dealer)
-	const menu = [
-		{ icon: "ri-home-4-line", label: "Home" },
-		{ icon: "ri-user-3-line", label: "Profile" },
-		{ icon: "ri-user-add-line", label: "Register Client" },
-		{ icon: "ri-car-line", label: "Register Vehicle" },
-		{ icon: "ri-settings-3-line", label: "Settings" },
-		{ icon: "ri-logout-box-r-line", label: "Logout", logout: true },
-	];
+	    const menu = [
+		    { icon: "ri-home-4-line", label: "Dashboard" },
+			   { icon: "ri-user-add-line", label: "Register New Client" },
+// ...existing code...
+			{ icon: "ri-car-line", label: "Register Vehicle" },
+			{ icon: "ri-group-line", label: "Client Vehicles" },
+			{ icon: "ri-settings-3-line", label: "Settings" },
+			{ icon: "ri-user-3-line", label: "Profile" },
+			{ icon: "ri-logout-box-r-line", label: "Logout", logout: true },
+		];
 
 		const handleLogout = () => setLogoutOpen(true);
 

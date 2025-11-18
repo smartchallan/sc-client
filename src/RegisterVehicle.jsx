@@ -11,6 +11,8 @@ const FIELD_OPTIONS = [
 ];
 
 export default function RegisterVehicle() {
+  // Sidebar for vehicle details
+  const [sidebarVehicle, setSidebarVehicle] = useState(null);
   // Registration form state
   const [registerField, setRegisterField] = useState("");
   const [registerValue, setRegisterValue] = useState("");
@@ -518,9 +520,41 @@ export default function RegisterVehicle() {
                     const handleDelete = () => setModal({ open: true, action: 'delete', vehicle: v });
                     // Remove setInfoModal and RTO/Challan actions
                     return (
-                          <tr key={v.id || v._id || idx}>
-                            <td>{idx + 1}</td>
-                            <td>{v.vehicle_number || 'Not Available'}</td>
+                      <tr key={v.id || v._id || idx}>
+                        <td>{idx + 1}</td>
+                        <td>
+                          <span
+                            style={{
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              background: 'linear-gradient(90deg, #ffe082 0%, #f8b500 100%)',
+                              color: '#7c5700',
+                              padding: '3px 14px',
+                              borderRadius: '18px',
+                              fontSize: '1.08em',
+                              boxShadow: '0 2px 8px #f8b50022',
+                              border: '1.5px solid #ffe082',
+                              letterSpacing: 0.5,
+                              transition: 'box-shadow 0.2s, background 0.2s, color 0.2s',
+                              display: 'inline-block',
+                              textShadow: '0 1px 0 #fff, 0 2px 8px #f8b50022',
+                            }}
+                            onMouseOver={e => {
+                              e.currentTarget.style.background='linear-gradient(90deg, #ffe082 0%, #ffd54f 100%)';
+                              e.currentTarget.style.color='#a67c00';
+                              e.currentTarget.style.boxShadow='0 4px 16px #f8b50033';
+                            }}
+                            onMouseOut={e => {
+                              e.currentTarget.style.background='linear-gradient(90deg, #ffe082 0%, #f8b500 100%)';
+                              e.currentTarget.style.color='#7c5700';
+                              e.currentTarget.style.boxShadow='0 2px 8px #f8b50022';
+                            }}
+                            onClick={() => setSidebarVehicle(v)}
+                            title="View vehicle details"
+                          >
+                            {v.vehicle_number || 'Not Available'}
+                          </span>
+                        </td>
                         <td>{v.engine_number || 'Not Available'}</td>
                         <td>{v.chasis_number || 'Not Available'}</td>
                         <td style={{ color: statusColor, fontWeight: 600, letterSpacing: 1 }}>{status}</td>
@@ -578,6 +612,49 @@ export default function RegisterVehicle() {
                         </td>
                       </tr>
                     );
+      {/* Right Sidebar for Vehicle Details */}
+      {sidebarVehicle && (
+        <div style={{position:'fixed',top:0,right:0,height:'100vh',width:'370px',minWidth:260,maxWidth:'90vw',background:'#f8fafc',borderLeft:'2px solid #e3e8ee',boxShadow:'-2px 0 16px #0001',zIndex:1000,padding:'24px 18px 12px 18px',overflowY:'auto'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+            <span style={{fontWeight:700,fontSize:'1.1rem',color:'#1976d2'}}>Vehicle Details</span>
+            <button onClick={()=>setSidebarVehicle(null)} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#888',fontWeight:700}} title="Close">×</button>
+          </div>
+          {/* RTO Data Card */}
+          <div style={{marginBottom:18,background:'#fff',border:'1.5px solid #b3e5fc',borderRadius:8,padding:'12px 12px 8px 12px',boxShadow:'0 1px 6px #00bcd41a',position:'relative'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+              <div style={{fontWeight:600,fontSize:15,color:'#0288d1'}}>Vehicle RTO Data</div>
+              <button onClick={()=>setSidebarVehicle(s => s ? {...s, showRTO:false} : s)} style={{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#888',fontWeight:700}} title="Close">×</button>
+            </div>
+            {(sidebarVehicle.showRTO !== false) && (
+              <div>
+                <div><b>Owner:</b> John Doe</div>
+                <div><b>Vehicle No:</b> {sidebarVehicle.vehicle_number || '-'}</div>
+                <div><b>Engine No:</b> {sidebarVehicle.engine_number || '-'}</div>
+                <div><b>Chasis No:</b> {sidebarVehicle.chasis_number || '-'}</div>
+                <div><b>Type:</b> Car</div>
+                <div><b>Fuel:</b> Petrol</div>
+                <div><b>Reg Date:</b> 2022-01-15</div>
+                <div><b>Status:</b> Active</div>
+              </div>
+            )}
+          </div>
+          {/* Challan Data Card */}
+          <div style={{marginBottom:0,background:'#fff',border:'1.5px solid #ffe082',borderRadius:8,padding:'12px 12px 8px 12px',boxShadow:'0 1px 6px #ffb3001a',position:'relative'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+              <div style={{fontWeight:600,fontSize:15,color:'#ff9800'}}>Vehicle Challan Data</div>
+              <button onClick={()=>setSidebarVehicle(s => s ? {...s, showChallan:false} : s)} style={{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#888',fontWeight:700}} title="Close">×</button>
+            </div>
+            {(sidebarVehicle.showChallan !== false) && (
+              <div>
+                <div><b>Total Challans:</b> 2</div>
+                <div><b>Last Challan Date:</b> 2025-10-12</div>
+                <div><b>Amount Due:</b> ₹1500</div>
+                <div><b>Status:</b> Pending</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
                   })}
                 {/* Custom Modal for confirmation */}
                 <CustomModal
