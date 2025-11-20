@@ -46,7 +46,10 @@ export default function AddClientPage() {
     name: "",
     email: "",
     phone: "",
+    password: "",
     gtin: "",
+    company_name: "",
+    business_category: "",
     country: "",
     state: "",
     city: "",
@@ -74,6 +77,8 @@ export default function AddClientPage() {
           : "Phone must be 10 digits."
         : "Phone is required.";
     }
+    if ("password" in fieldValues)
+      temp.password = fieldValues.password ? (fieldValues.password.length >= 6 ? "" : "Password must be at least 6 characters.") : "Password is required.";
     if ("country" in fieldValues)
       temp.country = fieldValues.country ? "" : "Country is required.";
     if ("state" in fieldValues)
@@ -84,6 +89,10 @@ export default function AddClientPage() {
       temp.address = fieldValues.address ? "" : "Address is required.";
     if (form.city && "pin" in fieldValues)
       temp.pin = fieldValues.pin ? "" : "Pin is required.";
+    if ("company_name" in fieldValues)
+      temp.company_name = fieldValues.company_name ? "" : "Company name is required.";
+    if ("business_category" in fieldValues)
+      temp.business_category = fieldValues.business_category ? "" : "Business category is required.";
     setErrors({ ...temp });
     return Object.values(temp).every((x) => x === "");
   };
@@ -94,16 +103,42 @@ export default function AddClientPage() {
     validate({ ...form, [name]: value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (validate()) {
       setSubmitting(true);
-      setTimeout(() => {
-        setSubmitting(false);
-        alert("Client registered! (demo)");
-        setForm({ name: "", email: "", phone: "", gtin: "", country: "", state: "", city: "", address: "", pin: "" });
+      try {
+        // Get admin_id and dealer_id from localStorage (sc_user)
+        let admin_id = null, dealer_id = null;
+        try {
+          const stored = JSON.parse(localStorage.getItem('sc_user')) || {};
+          if (stored && stored.user) {
+            admin_id = stored.user.admin_id || stored.user.adminId || null;
+            dealer_id = stored.user.id || null; // logged in user id as dealer_id
+          }
+        } catch (e) {}
+        const payload = {
+          ...form,
+          admin_id,
+          dealer_id,
+          userType: 'client'
+        };
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}/auth/register`;
+  const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error("Failed to register client");
+        const data = await res.json();
+        alert("Client registered successfully!");
+        setForm({ name: "", email: "", phone: "", password: "", gtin: "", company_name: "", business_category: "", country: "", state: "", city: "", address: "", pin: "" });
         setErrors({});
-      }, 1000);
+      } catch (err) {
+        alert("Client registration failed! " + (err.message || ""));
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
 
@@ -176,8 +211,39 @@ export default function AddClientPage() {
             {errors.phone && <div className="form-error" style={{color:'red', fontSize:12}}>{errors.phone}</div>}
           </div>
           <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '50%'}}>
+            <label htmlFor="password">Password<span style={{color:'red'}}>*</span></label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              className="form-control"
+              value={form.password}
+              onChange={handleChange}
+              required
+              minLength={6}
+              style={{
+                borderColor: errors.password
+                  ? 'red'
+                  : form.password
+                  ? 'green'
+                  : undefined
+              }}
+            />
+            {errors.password && <div className="form-error" style={{color:'red', fontSize:12}}>{errors.password}</div>}
+          </div>
+          <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '50%'}}>
             <label htmlFor="gtin">GTIN</label>
             <input type="text" id="gtin" name="gtin" className="form-control" value={form.gtin} onChange={handleChange} />
+          </div>
+          <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '50%'}}>
+            <label htmlFor="company_name">Company Name<span style={{color:'red'}}>*</span></label>
+            <input type="text" id="company_name" name="company_name" className="form-control" value={form.company_name} onChange={handleChange} required />
+            {errors.company_name && <div className="form-error" style={{color:'red', fontSize:12}}>{errors.company_name}</div>}
+          </div>
+          <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '50%'}}>
+            <label htmlFor="business_category">Business Category<span style={{color:'red'}}>*</span></label>
+            <input type="text" id="business_category" name="business_category" className="form-control" value={form.business_category} onChange={handleChange} required />
+            {errors.business_category && <div className="form-error" style={{color:'red', fontSize:12}}>{errors.business_category}</div>}
           </div>
           <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '50%'}}>
             <label htmlFor="country">Country<span style={{color:'red'}}>*</span></label>

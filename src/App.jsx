@@ -66,6 +66,7 @@ export function LoginPage() {
       } else if (data.user && data.user.user.role === 'client') {
         localStorage.setItem('sc_user', JSON.stringify({
           user: data.user.user,
+          userMeta: data.user.userMeta || {},
           token: data.token
         }));
         console.log('Redirecting to /smartboard');

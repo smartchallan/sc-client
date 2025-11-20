@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -7,8 +6,8 @@ import "./DealerRegisterVehicle.css";
 
 const FIELD_OPTIONS = [
   { value: "vehicle_number", label: "Vehicle Number" },
-  { value: "engine_number", label: "Engine Number" },
-  { value: "chasis_number", label: "Chasis Number" },
+  { value: "engine_number", label: "Engine Number", disabled: true },
+  { value: "chasis_number", label: "Chasis Number", disabled: true },
 ];
 
 export default function DealerRegisterVehicle({ clients: propClients }) {
@@ -72,9 +71,12 @@ export default function DealerRegisterVehicle({ clients: propClients }) {
     }
     setLoading(true);
     try {
-      const dealerId = getDealerId();
+      const userObj = JSON.parse(localStorage.getItem("sc_user"));
+      const dealerId = userObj && userObj.user && userObj.user.id ? userObj.user.id : null;
+      const adminId = userObj && userObj.user && (userObj.user.admin_id || userObj.user.adminId) ? (userObj.user.admin_id || userObj.user.adminId) : null;
       const payload = {
         dealer_id: dealerId,
+        admin_id: adminId,
         client_id: selectedClient,
         vehicle_number: selectedField === "vehicle_number" ? fieldValue : undefined,
         engine_number: selectedField === "engine_number" ? fieldValue : undefined,
@@ -128,7 +130,10 @@ export default function DealerRegisterVehicle({ clients: propClients }) {
               id="select_client"
               className="form-control"
               value={selectedClient}
-              onChange={e => setSelectedClient(e.target.value)}
+              onChange={e => {
+                setSelectedClient(e.target.value);
+                setSidebarVehicle(null);
+              }}
               required
             >
               <option value="">Select Client</option>
@@ -156,7 +161,7 @@ export default function DealerRegisterVehicle({ clients: propClients }) {
             >
               <option value="">Select Field</option>
               {FIELD_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                <option key={opt.value} value={opt.value} disabled={opt.disabled}>{opt.label}</option>
               ))}
             </select>
           </div>
@@ -337,21 +342,108 @@ export default function DealerRegisterVehicle({ clients: propClients }) {
               <button onClick={()=>setSidebarVehicle(null)} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#888',fontWeight:700}} title="Close">×</button>
             </div>
             {/* RTO Data Card */}
-            <div style={{marginBottom:18,background:'#fff',border:'1.5px solid #b3e5fc',borderRadius:8,padding:'12px 12px 8px 12px',boxShadow:'0 1px 6px #00bcd41a',position:'relative'}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
-                <div style={{fontWeight:600,fontSize:15,color:'#0288d1'}}>Vehicle RTO Data</div>
-                <button onClick={()=>setSidebarVehicle(s => s ? {...s, showRTO:false} : s)} style={{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#888',fontWeight:700}} title="Close">×</button>
-              </div>
+            <div style={{
+              marginBottom:18,
+              background:'#fff',
+              border:'1.5px solid #b3e5fc',
+              borderRadius:8,
+              padding:'12px 12px 8px 12px',
+              boxShadow:'0 1px 6px #00bcd41a',
+              position:'relative',
+              display:'inline-block',
+              maxWidth:'100%'
+            }}>
               {(sidebarVehicle.showRTO !== false) && (
                 <div>
-                  <div><b>Owner:</b> John Doe</div>
-                  <div><b>Vehicle No:</b> {sidebarVehicle.vehicle_number || '-'}</div>
-                  <div><b>Engine No:</b> {sidebarVehicle.engine_number || '-'}</div>
-                  <div><b>Chasis No:</b> {sidebarVehicle.chasis_number || '-'}</div>
-                  <div><b>Type:</b> Car</div>
-                  <div><b>Fuel:</b> Petrol</div>
-                  <div><b>Reg Date:</b> 2022-01-15</div>
-                  <div><b>Status:</b> Active</div>
+                  {typeof sidebarVehicle.rto_data === 'string' ? (
+                    <div>{sidebarVehicle.rto_data}</div>
+                  ) : sidebarVehicle.rto_data && typeof sidebarVehicle.rto_data === 'object' ? (
+                    sidebarVehicle.rto_data.VehicleDetails ? (
+                      (() => {
+                        let details = sidebarVehicle.rto_data.VehicleDetails;
+                        if (typeof details === 'string') {
+                          try {
+                            details = JSON.parse(details);
+                          } catch {
+                            return <div>Invalid VehicleDetails data</div>;
+                          }
+                        }
+                        if (typeof details === 'object' && details !== null) {
+                          // Only show the specified fields in the requested order
+                          const showFields = [
+                            "rc_pucc_no",
+                            "rc_regn_dt",
+                            "rc_regn_no",
+                            "rc_financer",
+                            "rc_fit_upto",
+                            "rc_tax_upto",
+                            "rc_fuel_desc",
+                            "rc_pucc_upto",
+                            "rc_regn_upto",
+                            "rc_status_as_on",
+                            "rc_vch_catg_desc",
+                            "rc_vh_class_desc",
+                            "rc_insurance_upto"
+                          ];
+                          const fieldLabels = {
+                            rc_pucc_no: "PUCC No",
+                            rc_regn_dt: "Registration Date",
+                            rc_regn_no: "Registration No",
+                            rc_financer: "Financer",
+                            rc_fit_upto: "Fitness Upto",
+                            rc_tax_upto: "Tax Upto",
+                            rc_fuel_desc: "Fuel Type",
+                            rc_pucc_upto: "PUCC Upto",
+                            rc_regn_upto: "Registration Upto",
+                            rc_status_as_on: "Status As On",
+                            rc_vch_catg_desc: "Vehicle Category",
+                            rc_vh_class_desc: "Vehicle Class",
+                            rc_insurance_upto: "Insurance Upto"
+                          };
+                          // Move rc_regn_no to the top if present
+                          const rcRegnNoIdx = showFields.indexOf("rc_regn_no");
+                          let orderedFields = [...showFields];
+                          if (rcRegnNoIdx > 0) {
+                            orderedFields.splice(rcRegnNoIdx, 1);
+                            orderedFields = ["rc_regn_no", ...orderedFields];
+                          }
+                          return (
+                            <div style={{maxWidth:'100%',overflowX:'auto'}}>
+                              <table style={{fontSize:13, background:'#f4faff', borderCollapse:'collapse', margin:'8px 0', tableLayout:'fixed', width:'100%', minWidth:0, maxWidth:'100%'}}>
+                                <tbody>
+                                  {orderedFields.map(key => (
+                                    details[key] !== undefined && details[key] !== null && details[key] !== "" ? (
+                                      <tr key={key}>
+                                        <td style={{fontWeight:600,padding:'4px 8px',border:'1px solid #b3e5fc',textTransform:'capitalize',whiteSpace:'nowrap',background:'#e3f7fd',maxWidth:140,overflow:'hidden',textOverflow:'ellipsis'}}>{fieldLabels[key] || key.replace(/_/g,' ')}</td>
+                                        <td style={{padding:'4px 8px',border:'1px solid #b3e5fc',background:'#fff',wordBreak:'break-word',maxWidth:180,overflow:'hidden',textOverflow:'ellipsis'}}>{String(details[key])}</td>
+                                      </tr>
+                                    ) : null
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          );
+                        } else {
+                          return <div>No VehicleDetails found</div>;
+                        }
+                      })()
+                    ) : (
+                      <table style={{width:'100%',fontSize:13,background:'#f4faff',borderCollapse:'collapse',margin:'8px 0'}}>
+                        <tbody>
+                          {Object.entries(sidebarVehicle.rto_data).map(([key, value]) => (
+                            <tr key={key}>
+                              <td style={{fontWeight:600,padding:'4px 8px',border:'1px solid #b3e5fc',textTransform:'capitalize',width:'40%'}}>{key.replace(/_/g,' ')}</td>
+                              <td style={{padding:'4px 8px',border:'1px solid #b3e5fc'}}>{
+                                typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value)
+                              }</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )
+                  ) : (
+                    <div>Data not available</div>
+                  )}
                 </div>
               )}
             </div>
@@ -363,10 +455,46 @@ export default function DealerRegisterVehicle({ clients: propClients }) {
               </div>
               {(sidebarVehicle.showChallan !== false) && (
                 <div>
-                  <div><b>Total Challans:</b> 2</div>
-                  <div><b>Last Challan Date:</b> 2025-10-12</div>
-                  <div><b>Amount Due:</b> ₹1500</div>
-                  <div><b>Status:</b> Pending</div>
+                  {typeof sidebarVehicle.challan_data === 'string' ? (
+                    <div>{sidebarVehicle.challan_data}</div>
+                  ) : sidebarVehicle.challan_data && typeof sidebarVehicle.challan_data === 'object' ? (
+                    <>
+                      <div style={{marginBottom:8}}>
+                        <b>Pending Challans:</b>
+                        {Array.isArray(sidebarVehicle.challan_data.pending_data) && sidebarVehicle.challan_data.pending_data.length > 0 ? (
+                          sidebarVehicle.challan_data.pending_data.map((challan, idx) => (
+                            <div key={idx} style={{border:'1px solid #ffe082',borderRadius:4,padding:6,margin:'6px 0',background:'#fffde7'}}>
+                              <div><b>Challan No:</b> {challan.challan_no}</div>
+                              <div><b>Status:</b> {challan.challan_status}</div>
+                              <div><b>Date:</b> {challan.challan_date_time}</div>
+                              <div><b>Amount:</b> {challan.amount_of_fine_imposed || challan.fine_imposed || '-'}</div>
+                              <div><b>Offence(s):</b> {challan.offence_details && Array.isArray(challan.offence_details) ? challan.offence_details.map((o, i) => o.name).join(', ') : '-'}</div>
+                            </div>
+                          ))
+                        ) : (
+                          <div style={{color:'#888'}}>No pending challans.</div>
+                        )}
+                      </div>
+                      <div>
+                        <b>Disposed Challans:</b>
+                        {Array.isArray(sidebarVehicle.challan_data.disposed_data) && sidebarVehicle.challan_data.disposed_data.length > 0 ? (
+                          sidebarVehicle.challan_data.disposed_data.map((challan, idx) => (
+                            <div key={idx} style={{border:'1px solid #ffe082',borderRadius:4,padding:6,margin:'6px 0',background:'#f9fbe7'}}>
+                              <div><b>Challan No:</b> {challan.challan_no}</div>
+                              <div><b>Status:</b> {challan.challan_status}</div>
+                              <div><b>Date:</b> {challan.challan_date_time}</div>
+                              <div><b>Amount:</b> {challan.amount_of_fine_imposed || challan.fine_imposed || challan.received_amount || '-'}</div>
+                              <div><b>Offence(s):</b> {challan.offence_details && Array.isArray(challan.offence_details) ? challan.offence_details.map((o, i) => o.name).join(', ') : '-'}</div>
+                            </div>
+                          ))
+                        ) : (
+                          <div style={{color:'#888'}}>No disposed challans.</div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div>Data not available</div>
+                  )}
                 </div>
               )}
             </div>

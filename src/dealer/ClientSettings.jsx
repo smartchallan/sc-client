@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import "../shared/CommonDashboard.css";
 
@@ -9,31 +10,106 @@ export default function ClientSettings({ clients = [] }) {
     canDeleteVehicle: false,
     canFetchVehicleData: false,
   });
+  // Toast state for showing API responses
+  const [toast, setToast] = useState({ message: '', type: '' });
+
+
+  // Show toast for 2.5 seconds
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast({ message: '', type: '' }), 2500);
+  };
 
   // Optionally, load client settings from API or props when client changes
   React.useEffect(() => {
     if (!selectedClientId) return;
-    // Here you would fetch settings for the selected client
-    // For demo, reset to defaults
-    setSettings({
-      canAddVehicle: false,
-      canInactivateVehicle: false,
-      canDeleteVehicle: false,
-      canFetchVehicleData: false,
-    });
+    // Fetch user options for the selected client
+    const fetchUserOptions = async () => {
+      try {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+        const res = await fetch(`${baseUrl}/useroptions?user_id=${selectedClientId}&user_role=client`);
+        if (!res.ok) throw new Error('Failed to fetch user options');
+        const data = await res.json();
+        // Map API response to settings state
+        const opts = data.options || {};
+        setSettings({
+          canAddVehicle:
+            opts.can_add_vehicle === 1 || opts.can_add_vehicle === '1' || opts.can_add_vehicle === true,
+          canInactivateVehicle:
+            opts.can_activate_vehicle === 1 || opts.can_activate_vehicle === '1' || opts.can_activate_vehicle === true,
+          canDeleteVehicle:
+            opts.can_delete_vehicle === 1 || opts.can_delete_vehicle === '1' || opts.can_delete_vehicle === true,
+          canFetchVehicleData:
+            opts.can_fetch_vehicle_data === 1 || opts.can_fetch_vehicle_data === '1' || opts.can_fetch_vehicle_data === true,
+        });
+      } catch (err) {
+        // On error, reset to defaults
+        setSettings({
+          canAddVehicle: false,
+          canInactivateVehicle: false,
+          canDeleteVehicle: false,
+          canFetchVehicleData: false,
+        });
+      }
+    };
+    fetchUserOptions();
   }, [selectedClientId]);
 
   const handleToggle = (key) => {
     setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleSave = () => {
-    // Save settings for selected client (API call)
-    alert("Settings saved for client " + selectedClientId);
+  const handleSave = async () => {
+    if (!selectedClientId) return;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    // Convert camelCase to snake_case for API
+    const settingsPayload = {
+      can_add_vehicle: !!settings.canAddVehicle,
+      can_delete_vehicle: !!settings.canDeleteVehicle,
+      can_activate_vehicle: !!settings.canInactivateVehicle, // Assuming inactivate means activate/inactivate
+      can_fetch_vehicle_data: !!settings.canFetchVehicleData
+    };
+    const payload = {
+      user_id: selectedClientId,
+      user_role: "client",
+      settings: settingsPayload
+    };
+    try {
+      const res = await fetch(`${baseUrl}/useroptions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Failed to save user options');
+      showToast("Settings saved for client " + selectedClientId, 'success');
+    } catch (err) {
+      showToast("Failed to save settings: " + err.message, 'error');
+    }
   };
 
   return (
     <div className="register-vehicle-content" style={{width:'100%', maxWidth:'100%', padding:0, margin:0}}>
+      {/* Toast notification */}
+      {toast.message && (
+        <div style={{
+          position: 'fixed',
+          top: 24,
+          right: 24,
+          zIndex: 9999,
+          background: toast.type === 'error' ? '#e57373' : '#43e97b',
+          color: '#fff',
+          padding: '14px 28px',
+          borderRadius: 8,
+          fontWeight: 600,
+          fontSize: 16,
+          boxShadow: '0 2px 12px #0002',
+          minWidth: 220,
+          textAlign: 'center',
+          letterSpacing: 0.2,
+        }}>
+          {toast.message}
+        </div>
+      )}
       <h1 className="page-title">Client Settings</h1>
       <p className="page-subtitle">Manage permissions for each client below. You can allow or restrict actions for each client.</p>
       <div className="card client-settings-form-section" style={{width:'100%', maxWidth:'100%', padding:'32px 24px', borderRadius: 16, boxShadow: '0 2px 16px #0001', margin:0}}>

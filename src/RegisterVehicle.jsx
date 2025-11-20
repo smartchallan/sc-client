@@ -154,6 +154,7 @@ export default function RegisterVehicle() {
       const ids = getUserIds();
       const payload = {
         ...ids,
+        admin_id: ids.admin_id, // ensure admin_id is always present
         vehicle_number: registerField === "vehicle_number" ? registerValue : undefined,
         engine_number: registerField === "engine_number" ? registerValue : undefined,
         chasis_number: registerField === "chasis_number" ? registerValue : undefined,

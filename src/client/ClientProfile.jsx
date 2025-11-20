@@ -14,13 +14,16 @@ export default function ClientProfile() {
   const [smsNotification, setSmsNotification] = useState(false);
   const [marketingNotification, setMarketingNotification] = useState(false);
   // Get user info from localStorage
-  const user = (() => {
+  const scUser = (() => {
     try {
-      return JSON.parse(localStorage.getItem("sc_user"))?.user || {};
+      return JSON.parse(localStorage.getItem("sc_user")) || {};
     } catch {
       return {};
     }
   })();
+  const user = scUser.user || {};
+  // Always provide a fallback object for userMeta to avoid undefined errors
+  const userMeta = (scUser.userMeta && typeof scUser.userMeta === 'object') ? scUser.userMeta : {};
   const [billing, setBilling] = useState(null);
   const clientId = user.id || user._id || 3;
 
@@ -51,6 +54,10 @@ export default function ClientProfile() {
   const [supportModal, setSupportModal] = useState(false);
   const userName = user.name || "John Smith";
   const userEmail = user.email || "johnsmith@example.com";
+  const userPhone = (userMeta.phone && userMeta.phone.trim()) ? userMeta.phone : (user.phone && String(user.phone).trim()) ? String(user.phone).trim() : "Not available";
+  const address = (userMeta.address && String(userMeta.address).trim()) ? userMeta.address : (user.address && String(user.address).trim()) ? user.address : "Not available";
+  const companyName = (userMeta.company_name && String(userMeta.company_name).trim()) ? userMeta.company_name : (user.company_name && String(user.company_name).trim()) ? user.company_name : (user.companyName && String(user.companyName).trim()) ? user.companyName : "Not available";
+  const gtin = (userMeta.gtin && String(userMeta.gtin).trim()) ? userMeta.gtin : (user.gtin && String(user.gtin).trim()) ? user.gtin : "Not available";
   let userJoined = "June 15, 2023";
   if (user.created_at) {
     const date = new Date(user.created_at);
@@ -77,54 +84,70 @@ export default function ClientProfile() {
         <div className="profile-header-profile">
           <div className="profile-picture">{initials}</div>
           <div>
-            <h2>{userName}</h2>
-            <p>{userEmail}</p>
-            <p>Member since: {userJoined}</p>
+            <h2 style={{fontWeight:800, fontSize:28, marginBottom:8}}>{userName}</h2>
+            <p style={{color:'#555', fontSize:16, marginBottom:2}}>{userEmail}</p>
+            <p style={{color:'#888', fontSize:15}}>Member since: {userJoined}</p>
           </div>
         </div>
-      <div className="profile-section">
-        <div className="card-icon personal">
-            <i className="ri-user-settings-line"></i>
+        <div className="profile-section">
+          <div className="card-icon personal"><i className="ri-user-settings-line"></i></div>
+          <h3 className="card-title" style={{marginBottom:18}}>Personal Information</h3>
+          <form className="profile-form">
+            <div className="form-row">
+              <div className="form-col">
+                <div className="form-group">
+                  <label className="form-label">Full Name</label>
+                  <input className="form-control" type="text" value={userName} readOnly />
+                </div>
+              </div>
+              <div className="form-col">
+                <div className="form-group">
+                  <label className="form-label">Email Address</label>
+                  <input className="form-control" type="email" value={userEmail} readOnly />
+                </div>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-col">
+                <div className="form-group">
+                  <label className="form-label">Mobile Number</label>
+                  <input className="form-control" type="text" value={userPhone ? userPhone : "Not available"} readOnly />
+                </div>
+              </div>
+              <div className="form-col">
+                <div className="form-group">
+                  <label className="form-label">Address</label>
+                    <input className="form-control" type="text" value={address} readOnly />
+                </div>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-col">
+                <div className="form-group">
+                  <label className="form-label">Company Name</label>
+                    <input className="form-control" type="text" value={companyName} readOnly />
+                </div>
+              </div>
+              <div className="form-col">
+                <div className="form-group">
+                  <label className="form-label">GTIN</label>
+                    <input className="form-control" type="text" value={gtin} readOnly />
+                </div>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-col">
+                <div className="form-group">
+                  <label className="form-label">Date Joined</label>
+                  <input className="form-control" type="text" value={userJoined} readOnly />
+                </div>
+              </div>
+            </div>
+            <div style={{textAlign:"right", marginTop:'10px'}}>
+              <button className="btn btn-primary" disabled>Save Changes</button>
+            </div>
+          </form>
         </div>
-        <h3 className="card-title">Personal Information</h3>
-        <form className="profile-form">
-          <div className="form-row">
-                    <div className="form-col">
-                        <div className="form-group">
-                            <label className="form-label">Full Name</label>
-                              <input className="form-control" type="text" value={userName} disabled />
-                        </div>
-                    </div>
-                    <div className="form-col">
-                        <div className="form-group">
-                            <label className="form-label">Email Address</label>
-                              <input className="form-control" type="email" value={userEmail} disabled />
-                        </div>
-                    </div>
-                </div>
-          
-          <div className="form-row">
-                    <div className="form-col">
-                        <div className="form-group">
-                            <label className="form-label">Mobile Number</label>
-                               <input className="form-control" type="text" value={user.mobile || "+91 9876543210"} disabled />
-                        </div>
-                    </div>
-                    <div className="form-col">
-                        <div className="form-group">
-                            <label className="form-label">Date Joined</label>
-                              <input className="form-control" type="text" value={userJoined} disabled />
-                        </div>
-                    </div>
-                </div>
-          
-          
-         
-          <div style={{textAlign:"right", marginTop:'10px'}}>
-                    <button className="btn btn-primary" fdprocessedid="3zl7hn">Save Changes</button>
-                </div>
-        </form>
-      </div>
       <div className="profile-section">
         <h3>Account Settings</h3>
         <form className="profile-form">
