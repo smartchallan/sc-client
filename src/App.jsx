@@ -59,7 +59,11 @@ export function LoginPage() {
         await delay(2000);
         navigate('/dealersmartboard', { replace: true });
       } else if (data.user && data.user.user.role === 'admin') {
-        localStorage.setItem('sc_user', JSON.stringify(data.user));
+        localStorage.setItem('sc_user', JSON.stringify({
+          user: data.user.user,
+          userMeta: data.user.userMeta || {},
+          token: data.token
+        }));
         console.log('Redirecting to /adminsmartboard');
         await delay(2000);
         navigate('/adminsmartboard', { replace: true });

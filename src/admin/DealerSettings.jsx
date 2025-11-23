@@ -4,10 +4,8 @@ import "../shared/CommonDashboard.css";
 export default function DealerSettings({ dealers = [] }) {
   return (
     <div className="register-vehicle-content">
-      <h1>Dealer Settings</h1>
-      <p style={{marginBottom: 16, color: '#444', fontWeight: 500}}>
-        Manage permissions for each dealer below. You can allow or restrict adding clients and vehicles for each dealer.
-      </p>
+      <h1 className="page-title">Dealer Settings</h1>
+      <p className="page-subtitle">Manage permissions for each dealer below. You can allow or restrict adding clients and vehicles for each dealer.</p>
       <div className="card">
         <div style={{marginTop: 16}}>
           <h2 style={{fontSize: '1.2rem', marginBottom: 12}}>Dealers</h2>

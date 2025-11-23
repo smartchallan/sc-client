@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { getInitials } from "../utils/getInitials";
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+
 import "../shared/CommonDashboard.css";
 import "./AdminDashboardOverrides.css";
 import "./AdminHome.css";
@@ -16,11 +14,18 @@ import ClientBillingSettings from "./ClientBillingSettings";
 import UserChallan from "../UserChallan";
 import DealerSettings from "./DealerSettings";
 import CustomModal from "../client/CustomModal";
+import AdminSidebarViewer from "./AdminSidebarViewer";
+import "./AdminSidebarViewer.css";
+
+import AdminQuickActions from "./AdminQuickActions";
+
 
 function AdminDashboard() {
 
   const userRole = "admin";
   const [supportModal, setSupportModal] = useState(false);
+  // Sidebar open/close state
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 900);
   const [searchDealer, setSearchDealer] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [activeMenu, setActiveMenu] = useState("Dashboard");
@@ -30,7 +35,86 @@ function AdminDashboard() {
   const [loadingAdminData, setLoadingAdminData] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
   const [adminDataError, setAdminDataError] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth > 900 : true));
+  // ...existing code...
+
+  // Sidebar for viewing dealer/client details
+  const [sidebarViewerOpen, setSidebarViewerOpen] = useState(false);
+  const [sidebarViewerTitle, setSidebarViewerTitle] = useState("");
+  const [sidebarViewerData, setSidebarViewerData] = useState(null);
+
+  // Toggle dealer status (activate/deactivate)
+  function handleToggleDealerStatus(dealer) {
+    if (!dealer) return;
+    // Here you would call your API to update status, then update state
+    const newStatus = dealer.status === 'Active' ? 'Inactive' : 'Active';
+    setDealers(prev => prev.map(d => (d.id === dealer.id ? { ...d, status: newStatus } : d)));
+  }
+
+  // Toggle client status (activate/deactivate)
+  function handleToggleClientStatus(client) {
+    if (!client) return;
+    // Here you would call your API to update status, then update state
+    const newStatus = client.status === 'Active' ? 'Inactive' : 'Active';
+    setClients(prev => prev.map(c => (c.id === client.id ? { ...c, status: newStatus } : c)));
+  }
+
+  function handleViewDealer(dealer) {
+    // Remove unwanted fields and transform meta
+    if (!dealer) return;
+    const {
+      updated_at,
+      admin_id,
+      dealer_id,
+      client_id,
+      created_at,
+      meta = {},
+      ...rest
+    } = dealer;
+    // Flatten meta except id/user_id
+    const { id: metaId, user_id: metaUserId, ...metaRest } = meta || {};
+    // Compose new object
+    const filtered = {
+      ...rest,
+      ...metaRest,
+      'Member Since': created_at ? new Date(created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : undefined,
+    };
+    // Remove undefined/null fields
+    Object.keys(filtered).forEach(k => (filtered[k] === undefined || filtered[k] === null) && delete filtered[k]);
+    setSidebarViewerTitle("Dealer Details");
+    setSidebarViewerData(filtered);
+    setSidebarViewerOpen(true);
+  }
+  function handleViewClient(client) {
+    // Remove unwanted fields and transform meta
+    if (!client) return;
+    const {
+      updated_at,
+      admin_id,
+      dealer_id,
+      client_id,
+      created_at,
+      meta = {},
+      ...rest
+    } = client;
+    // Flatten meta except id/user_id
+    const { id: metaId, user_id: metaUserId, ...metaRest } = meta || {};
+    // Compose new object
+    const filtered = {
+      ...rest,
+      ...metaRest,
+      'Member Since': created_at ? new Date(created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : undefined,
+    };
+    // Remove undefined/null fields
+    Object.keys(filtered).forEach(k => (filtered[k] === undefined || filtered[k] === null) && delete filtered[k]);
+    setSidebarViewerTitle("Client Details");
+    setSidebarViewerData(filtered);
+    setSidebarViewerOpen(true);
+  }
+  function handleCloseSidebarViewer() {
+    setSidebarViewerOpen(false);
+    setSidebarViewerData(null);
+    setSidebarViewerTitle("");
+  }
   const chartRef = useRef(null); // Dealers by State
   const chartRefCity = useRef(null); // Dealers by City
   const chartRefCountry = useRef(null); // Dealers by Country
@@ -131,9 +215,11 @@ function AdminDashboard() {
         type: 'pie',
         data,
         options: {
+          responsive: true,
+          maintainAspectRatio: false,
           plugins: {
-            legend: { position: 'bottom' },
-            title: { display: true, text: 'Dealers by City' },
+            legend: { display: false },
+            title: { display: false },
           },
         },
       });
@@ -169,9 +255,11 @@ function AdminDashboard() {
         type: 'pie',
         data,
         options: {
+          responsive: true,
+          maintainAspectRatio: false,
           plugins: {
-            legend: { position: 'bottom' },
-            // title: { display: true, text: 'Dealers by City' },
+            legend: { display: false },
+            title: { display: false },
           },
         },
       });
@@ -207,9 +295,11 @@ function AdminDashboard() {
         type: 'pie',
         data,
         options: {
+          responsive: true,
+          maintainAspectRatio: false,
           plugins: {
-            legend: { position: 'bottom' },
-            title: { display: true, text: 'Dealers by Country' },
+            legend: { display: false },
+            title: { display: false },
           },
         },
       });
@@ -246,9 +336,11 @@ function AdminDashboard() {
         type: 'doughnut',
         data,
         options: {
+          responsive: true,
+          maintainAspectRatio: false,
           plugins: {
-            legend: { position: 'bottom' },
-            // title: { display: true, text: 'Clients by State' },
+            legend: { display: false },
+            title: { display: false },
           },
         },
       });
@@ -288,9 +380,11 @@ function AdminDashboard() {
         type: 'polarArea',
         data,
         options: {
+          responsive: true,
+          maintainAspectRatio: false,
           plugins: {
-            legend: { position: 'bottom' },
-            // title: { display: true, text: 'Vehicles by Status' },
+            legend: { display: false },
+            title: { display: false },
           },
         },
       });
@@ -322,8 +416,10 @@ function AdminDashboard() {
         type: 'polarArea',
         data,
         options: {
+          responsive: true,
+          maintainAspectRatio: false,
           plugins: {
-            legend: { display: true },
+            legend: { display: false },
             title: { display: false },
           },
         },
@@ -348,13 +444,39 @@ function AdminDashboard() {
   const handleQuickAddDealer = () => setActiveMenu('Register Dealer');
   const handleQuickAddClient = () => setActiveMenu('Register Client');
 
+  // Toggle dealer status (activate/deactivate)
+  function handleToggleDealerStatus(dealer) {
+    if (!dealer) return;
+    // Here you would call your API to update status, then update state
+    const newStatus = dealer.status === 'Active' ? 'Inactive' : 'Active';
+    setDealers(prev => prev.map(d => (d.id === dealer.id ? { ...d, status: newStatus } : d)));
+  }
+
+  // Toggle client status (activate/deactivate)
+  function handleToggleClientStatus(client) {
+    if (!client) return;
+    // Here you would call your API to update status, then update state
+    const newStatus = client.status === 'Active' ? 'Inactive' : 'Active';
+    setClients(prev => prev.map(c => (c.id === client.id ? { ...c, status: newStatus } : c)));
+  }
+
   return (
     <div className={`dashboard-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
       {sidebarOpen && window.innerWidth <= 900 && (
         <div className="sidebar-overlay show" onClick={() => setSidebarOpen(false)} />
       )}
-      <AdminSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
-      <main className="main-content">
+      {(sidebarOpen || window.innerWidth <= 900) && (
+        <AdminSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
+      )}
+      <main className="main-content admin-home-content" style={{flex: 1, minHeight: '100vh', transition: 'all 0.35s cubic-bezier(.4,1.3,.5,1)', WebkitTransition: 'all 0.35s cubic-bezier(.4,1.3,.5,1)'}}>
+        <AdminQuickActions
+          sticky={true}
+          onAddDealer={() => setActiveMenu('Register Dealer')}
+          onAddClient={() => setActiveMenu('Register Client')}
+          onAddVehicle={() => setActiveMenu('Register Vehicle')}
+          onReports={() => setActiveMenu('Settings')}
+          onContact={() => setSupportModal(true)}
+        />
         <div className="header" style={{marginBottom: 24}}>
           <div className="header-left" style={{display:'flex',alignItems:'center',gap:16}}>
             <div className="menu-toggle" style={{fontSize:22,cursor:'pointer'}} onClick={toggleSidebar}>
@@ -389,17 +511,16 @@ function AdminDashboard() {
             })()}
           </div>
         </div>
-        {activeMenu === "Dashboard" && (
+        {/* Stat Cards and Dashboard Graphs */}
+        {activeMenu === 'Dashboard' && (
           <>
             <div className="dashboard-header">
-              <h1 className="dashboard-title">Welcome back{user.user && user.user.name ? `, ${user.user.name}` : '123'}!
-                {user.user && user.user.name && (
-                  <span style={{marginLeft:8, background:'#eee', borderRadius:'50%', padding:'4px 10px', fontWeight:'bold', fontSize:18, color:'#555'}}>
-                    {getInitials(user.user.name)}
-                  </span>
-                )}
+              <h1 className="page-title">Welcome, {user.user && user.user.name ? user.user.name : 'Admin'}
+                <span style={{marginLeft:8, background:'#eee', borderRadius:'50%', padding:'4px 10px', fontWeight:'bold', fontSize:18, color:'#555'}}>
+                  {getInitials(user.user && user.user.name ? user.user.name : 'A')}
+                </span>
               </h1>
-              <p>Here's an overview of your challan status</p>
+              <p className="page-subtitle">Here's an overview of your challan status</p>
             </div>
             <div className="dashboard-stats">
               <div className="stat-card">
@@ -410,28 +531,11 @@ function AdminDashboard() {
                     <div className="bar-loader">
                       <div></div><div></div><div></div><div></div><div></div>
                     </div>
-                    <style>{`
-                      .bar-loader { display: flex; align-items: flex-end; height: 48px; gap: 4px; }
-                      .bar-loader div {
-                        width: 8px; height: 16px; background: #4e79a7; border-radius: 2px;
-                        animation: barGrow 1s infinite;
-                      }
-                      .bar-loader div:nth-child(2) { animation-delay: 0.1s; }
-                      .bar-loader div:nth-child(3) { animation-delay: 0.2s; }
-                      .bar-loader div:nth-child(4) { animation-delay: 0.3s; }
-                      .bar-loader div:nth-child(5) { animation-delay: 0.4s; }
-                      @keyframes barGrow {
-                        0%, 100% { height: 16px; background: #4e79a7; }
-                        50% { height: 48px; background: #f28e2b; }
-                      }
-                    `}</style>
                   </div>
                   <div style={{display: showLoader ? 'none' : 'block', width:'100%'}}>
                     <div className="stat-value">{Array.isArray(dealers) ? dealers.length : 0}</div>
-                    <div style={{display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center'}}>
-                      <div className="dealers-state-pie-chart-container" style={{maxWidth: 200, margin: '8px auto'}}>
-                        <canvas ref={chartRef} width={200} height={200} />
-                      </div>
+                    <div className="stat-chart-container">
+                      <canvas ref={chartRef} width={220} height={180} />
                     </div>
                   </div>
                 </div>
@@ -447,14 +551,14 @@ function AdminDashboard() {
                   </div>
                   <div style={{display: showLoader ? 'none' : 'block', width:'100%'}}>
                     <div className="stat-value">{Array.isArray(clients) ? clients.length : 0}</div>
-                    <div className="clients-pie-chart-container" style={{maxWidth: 200, margin: '16px auto'}}>
-                      <canvas ref={chartRef2} width={200} height={200} />
+                    <div className="stat-chart-container">
+                      <canvas ref={chartRef2} width={220} height={180} />
                     </div>
                   </div>
                 </div>
               </div>
               <div className="stat-card">
-                <i className="ri-checkbox-circle-line"></i>
+                <i className="ri-car-line"></i>
                 <div>Registered Vehicles</div>
                 <div style={{position:'relative', width:'100%'}}>
                   <div style={{display: showLoader ? 'flex' : 'none', justifyContent:'center',alignItems:'center',height:'100%', minHeight:120, width:'100%', position:'absolute', top:0, left:0, right:0, bottom:0, zIndex:2, background:'white'}}>
@@ -464,8 +568,8 @@ function AdminDashboard() {
                   </div>
                   <div style={{display: showLoader ? 'none' : 'block', width:'100%'}}>
                     <div className="stat-value">{Array.isArray(vehicles) ? vehicles.length : 0}</div>
-                    <div className="vehicles-radial-chart-container" style={{maxWidth: 200, margin: '16px auto'}}>
-                      <canvas ref={chartRef3} width={200} height={200} />
+                    <div className="stat-chart-container">
+                      <canvas ref={chartRef3} width={220} height={180} />
                     </div>
                   </div>
                 </div>
@@ -474,273 +578,205 @@ function AdminDashboard() {
                 <i className="ri-money-rupee-circle-line"></i>
                 <div>Challans Received</div>
                 <div className="stat-value">₹3,250</div>
-                <div className="challans-bar-chart-container" style={{maxWidth: 220, margin: '16px auto'}}>
+                <div className="stat-chart-container">
                   <canvas ref={chartRef4} width={220} height={180} />
                 </div>
               </div>
             </div>
-
-            <div className="map-dealer-data" style={{ width: '100%', height: 450, margin: '32px 0', position: 'relative' }}>
-              {/* Modern map with colored markers by state */}
-              {Array.isArray(dealers) && dealers.length > 0 ? (
-                <>
-                  <MapContainer
-                    center={[20.5937, 78.9629]}
-                    zoom={4}
-                    style={{ width: '100%', height: '100%' }}
-                    scrollWheelZoom={true}
-                  >
-                    <TileLayer
-                      attribution='&copy; <a href="https://carto.com/attributions">CARTO</a> | &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                      url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-                    />
-                    {(() => {
-                      // Assign a color to each state
-                      const stateColors = {};
-                      const palette = [
-                        '#4e79a7', '#f28e2b', '#e15759', '#76b7b2', '#59a14f', '#edc949', '#af7aa1', '#ff9da7', '#9c755f', '#bab0ab',
-                        '#8c564b', '#d62728', '#9467bd', '#c49c94', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
-                      ];
-                      let colorIdx = 0;
-                      dealers.filter(Boolean).forEach(d => {
-                        const state = d.meta && d.meta.state ? d.meta.state : 'Unknown';
-                        if (!(state in stateColors)) {
-                          stateColors[state] = palette[colorIdx % palette.length];
-                          colorIdx++;
-                        }
-                      });
-                      // Static mapping of Indian states to lat/lng (approximate centers)
-                      const stateLatLng = {
-                        'Andhra Pradesh': [15.9129, 79.74],
-                        'Arunachal Pradesh': [28.218, 94.7278],
-                        'Assam': [26.2006, 92.9376],
-                        'Bihar': [25.0961, 85.3131],
-                        'Chhattisgarh': [21.2787, 81.8661],
-                        'Goa': [15.2993, 74.124],
-                        'Gujarat': [22.2587, 71.1924],
-                        'Haryana': [29.0588, 76.0856],
-                        'Himachal Pradesh': [31.1048, 77.1734],
-                        'Jharkhand': [23.6102, 85.2799],
-                        'Karnataka': [15.3173, 75.7139],
-                        'Kerala': [10.8505, 76.2711],
-                        'Madhya Pradesh': [22.9734, 78.6569],
-                        'Maharashtra': [19.7515, 75.7139],
-                        'Manipur': [24.6637, 93.9063],
-                        'Meghalaya': [25.467, 91.3662],
-                        'Mizoram': [23.1645, 92.9376],
-                        'Nagaland': [26.1584, 94.5624],
-                        'Odisha': [20.9517, 85.0985],
-                        'Punjab': [31.1471, 75.3412],
-                        'Rajasthan': [27.0238, 74.2179],
-                        'Sikkim': [27.533, 88.5122],
-                        'Tamil Nadu': [11.1271, 78.6569],
-                        'Telangana': [18.1124, 79.0193],
-                        'Tripura': [23.9408, 91.9882],
-                        'Uttar Pradesh': [26.8467, 80.9462],
-                        'Uttarakhand': [30.0668, 79.0193],
-                        'West Bengal': [22.9868, 87.855],
-                        'Delhi': [28.7041, 77.1025],
-                        'Jammu and Kashmir': [33.7782, 76.5762],
-                        'Ladakh': [34.1526, 77.5771],
-                        'Puducherry': [11.9416, 79.8083],
-                        'Unknown': [20.5937, 78.9629],
-                      };
-                      return dealers.filter(Boolean).filter(d => {
-                        const state = d.meta && d.meta.state ? d.meta.state : 'Unknown';
-                        return stateLatLng[state] !== undefined;
-                      }).map((dealer, idx) => {
-                        const state = dealer.meta && dealer.meta.state ? dealer.meta.state : 'Unknown';
-                        const color = stateColors[state] || '#4e79a7';
-                        const [lat, lng] = stateLatLng[state] || stateLatLng['Unknown'];
-                        const icon = L.divIcon({
-                          className: '',
-                          html: `<svg xmlns='http://www.w3.org/2000/svg' width='28' height='40' viewBox='0 0 28 40'><path d='M14 0C6.27 0 0 6.27 0 14c0 10.5 13.1 25.1 13.6 25.6.2.2.5.4.8.4s.6-.1.8-.4C14.9 39.1 28 24.5 28 14 28 6.27 21.73 0 14 0zm0 21c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z' fill='${color}'/></svg>`,
-                          iconSize: [28, 40],
-                          iconAnchor: [14, 40],
-                          popupAnchor: [0, -36],
-                        });
-                        const dealerState = dealer.meta && dealer.meta.state ? dealer.meta.state : null;
-                        const dealerCity = dealer.meta && dealer.meta.city ? dealer.meta.city : null;
+            {/* Dealer Table (updated to match client dashboard) */}
+            {/* Dealer Table (updated to match client dashboard) */}
+            <div className="dashboard-latest" style={{marginBottom: 32}}>
+              <div className="latest-header">
+                <h2>Dealer Network</h2>
+              </div>
+              <div className="table-container">
+                <table className="latest-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Phone</th>
+                      <th>Email</th>
+                      <th>Clients</th>
+                      <th>Vehicles</th>
+                      <th>Status</th>
+                      <th>View</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.isArray(dealers) && dealers.length > 0 ? (
+                      dealers.map((dealer, idx) => {
+                        const totalClients = Array.isArray(clients)
+                          ? clients.filter(c => {
+                              const cDealerId = c.dealer_id && typeof c.dealer_id === 'object' ? c.dealer_id.id || c.dealer_id._id : c.dealer_id;
+                              const dId = dealer.id || dealer._id || dealer.email;
+                              return String(cDealerId) === String(dId);
+                            }).length
+                          : '-';
+                        const totalVehicles = Array.isArray(vehicles)
+                          ? vehicles.filter(v => {
+                              const vDealerId = v.dealer_id && typeof v.dealer_id === 'object' ? v.dealer_id.id || v.dealer_id._id : v.dealer_id;
+                              const dId = dealer.id || dealer._id || dealer.email;
+                              return String(vDealerId) === String(dId);
+                            }).length
+                          : '-';
                         return (
-                          <Marker
-                            key={dealer.id || idx}
-                            position={[lat, lng]}
-                            icon={icon}
-                            zIndexOffset={1000}
-                          >
-                            <Popup>
-                              <b>{dealer.name || dealer.dealer_name || 'Dealer'}</b><br/>
-                              {dealerState ? (
-                                <span>State: {dealerState}<br/></span>
-                              ) : null}
-                              <span>City: {dealerCity ? dealerCity : 'Unknown'}<br/></span>
-                              {dealer.phone || dealer.mobile || ''}
-                            </Popup>
-                          </Marker>
+                          <tr key={dealer.id || idx}>
+                            <td>{dealer.name || dealer.dealer_name || '-'}</td>
+                            <td>{dealer.meta && dealer.meta.phone ? dealer.meta.phone : (dealer.phone || dealer.mobile || '-')}</td>
+                            <td>{dealer.email || '-'}</td>
+                            <td>{totalClients}</td>
+                            <td>{totalVehicles}</td>
+                            <td><span className={`status ${dealer.status ? dealer.status.toLowerCase() : ''}`}>{dealer.status || '-'}</span></td>
+                            <td>
+                              <button
+                                className="action-btn"
+                                style={{
+                                  padding: '6px 14px',
+                                  fontSize: 14,
+                                  border: '1.5px solid #b3b3b3',
+                                  background: '#fff',
+                                  color: '#333',
+                                  borderRadius: 6,
+                                  fontWeight: 500,
+                                  boxShadow: 'none',
+                                  transition: 'background 0.15s, color 0.15s, border 0.15s',
+                                  cursor: 'pointer',
+                                }}
+                                onMouseOver={e => {
+                                  e.currentTarget.style.background = '#f5f7fa';
+                                  e.currentTarget.style.color = '#1976d2';
+                                  e.currentTarget.style.borderColor = '#1976d2';
+                                }}
+                                onMouseOut={e => {
+                                  e.currentTarget.style.background = '#fff';
+                                  e.currentTarget.style.color = '#333';
+                                  e.currentTarget.style.borderColor = '#b3b3b3';
+                                }}
+                                onClick={() => handleViewDealer(dealer)}
+                              >
+                                View Dealer
+                              </button>
+                            </td>
+                            <td>
+                              <button
+                                className="action-btn"
+                                style={{padding: '6px 14px', fontSize: 14, background: dealer.status === 'Active' ? '#e74c3c' : '#43e97b', color: '#fff'}}
+                                onClick={() => handleToggleDealerStatus(dealer)}
+                              >
+                                {(dealer.status && dealer.status.toLowerCase() === 'active') ? (
+                                  <i className="ri-lock-line" title="Inactivate" aria-label="Inactivate" style={{fontSize:18, verticalAlign:'middle', color:'#e74c3c'}}></i>
+                                ) : (
+                                  <i className="ri-lock-unlock-line" title="Activate" aria-label="Activate" style={{fontSize:18, verticalAlign:'middle'}}></i>
+                                )}
+                              </button>
+                            </td>
+                          </tr>
                         );
-                      });
-                    })()}
-                  </MapContainer>
-                  {/* Legend for state colors */}
-                  <div style={{position:'absolute', right:10, top:10, background:'#fff', borderRadius:8, boxShadow:'0 2px 8px #0001', padding:'8px 12px', fontSize:12, zIndex:1000, maxHeight:260, overflowY:'auto'}}>
-                    <b>State Legend</b>
-                    <ul style={{listStyle:'none', margin:0, padding:0}}>
-                      {(() => {
-                        // Recompute stateColors for legend
-                        const stateColors = {};
-                        const palette = [
-                          '#4e79a7', '#f28e2b', '#e15759', '#76b7b2', '#59a14f', '#edc949', '#af7aa1', '#ff9da7', '#9c755f', '#bab0ab',
-                          '#8c564b', '#d62728', '#9467bd', '#c49c94', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
-                        ];
-                        let colorIdx = 0;
-                        dealers.filter(Boolean).forEach(d => {
-                          const state = d.meta && d.meta.state ? d.meta.state : 'Unknown';
-                          if (!(state in stateColors)) {
-                            stateColors[state] = palette[colorIdx % palette.length];
-                            colorIdx++;
+                      })
+                    ) : (
+                      <tr><td colSpan={8}>No dealers found.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            {/* Client Table (updated to match client dashboard) */}
+            <div className="dashboard-latest" style={{marginBottom: 32}}>
+              <div className="latest-header">
+                <h2>Client Network</h2>
+              </div>
+              <div className="table-container">
+                <table className="latest-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Phone</th>
+                      <th>Email</th>
+                      <th>Dealer</th>
+                      <th>Vehicles</th>
+                      <th>Status</th>
+                      <th>View</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.isArray(clients) && clients.length > 0 ? (
+                      clients.map((client, idx) => {
+                        const dealerName = (() => {
+                          if (!client.dealer_id) return '-';
+                          if (typeof client.dealer_id === 'object') {
+                            return client.dealer_id.name || client.dealer_id.dealer_name || client.dealer_id.email || '-';
                           }
-                        });
-                        return Object.entries(stateColors).map(([state, color]) => (
-                          <li key={state} style={{display:'flex',alignItems:'center',marginBottom:2}}>
-                            <span style={{display:'inline-block',width:14,height:14,background:color,borderRadius:3,marginRight:6,border:'1px solid #ccc'}}></span>
-                            {state}
-                          </li>
-                        ));
-                      })()}
-                    </ul>
-                  </div>
-                </>
-              ) : (
-                <div style={{textAlign: 'center', padding: 40, color: '#888'}}>No dealer locations to show on map.</div>
-              )}
-            </div>
-            <div className="dashboard-latest">
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16,flexWrap:'wrap',gap:16}}>
-                <h2 style={{margin:0}}>Smart Challan Network</h2>
-                <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-                  <input
-                    type="text"
-                    placeholder="Search dealer name, phone, email..."
-                    value={searchDealer || ''}
-                    onChange={e => setSearchDealer(e.target.value)}
-                    style={{padding:'6px 10px',border:'1px solid #ccc',borderRadius:4,minWidth:180}}
-                  />
-                  <select
-                    value={statusFilter || ''}
-                    onChange={e => setStatusFilter(e.target.value)}
-                    style={{padding:'6px 10px',border:'1px solid #ccc',borderRadius:4,minWidth:120}}
-                  >
-                    <option value="">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="deleted">Deleted</option>
-                  </select>
-                </div>
-              </div>
-              <div style={{display:'flex',justifyContent:'flex-end',marginBottom:8}}>
-                <a href="#" className="view-all">View All</a>
-              </div>
-              <table className="latest-table">
-                <thead>
-                  <tr>
-                    <th>Dealer Name</th>
-                    <th>Phone</th>
-                    <th>Email</th>
-                    <th>Total Clients</th>
-                    <th>Vehicles Registered</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loadingAdminData && (
-                    <tr><td colSpan={6}>Loading dealers...</td></tr>
-                  )}
-                  {adminDataError && (
-                    <tr><td colSpan={6} style={{color: 'red'}}>{adminDataError}</td></tr>
-                  )}
-                  {!loadingAdminData && !adminDataError && Array.isArray(dealers) && dealers.length > 0 && (
-                    filteredDealers.length > 0 ? filteredDealers.map((dealer, idx) => {
-                      const totalClients = Array.isArray(clients)
-                        ? clients.filter(c => {
-                            const dealerId = c.dealer_id && typeof c.dealer_id === 'object' ? c.dealer_id.id || c.dealer_id._id : c.dealer_id;
-                            const dId = dealer.id || dealer._id || dealer.email;
-                            return String(dealerId) === String(dId);
-                          }).length
-                        : '-';
-                      const totalVehicles = Array.isArray(vehicles)
-                        ? vehicles.filter(v => {
-                            const vDealerId = v.dealer_id && typeof v.dealer_id === 'object' ? v.dealer_id.id || v.dealer_id._id : v.dealer_id;
-                            const dId = dealer.id || dealer._id || dealer.email;
-                            return String(vDealerId) === String(dId);
-                          }).length
-                        : '-';
-                      return (
-                        <tr key={dealer.id || idx}>
-                          <td>{dealer.name || dealer.dealer_name || '-'}</td>
-                          <td>{dealer.meta && dealer.meta.phone ? dealer.meta.phone : (dealer.phone || dealer.mobile || '-')}</td>
-                          <td>{dealer.email || '-'}</td>
-                          <td>{totalClients}</td>
-                          <td>{totalVehicles}</td>
-                          <td><span className={`status ${dealer.status ? dealer.status.toLowerCase() : ''}`}>{dealer.status || '-'}</span></td>
-                        </tr>
-                      );
-                    }) : (
-                      <tr><td colSpan={6}>No dealers found.</td></tr>
-                    )
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <div className="dashboard-actions">
-              <h2>Quick Actions</h2>
-              <div className="actions-list">
-                <button className="action-btn" onClick={handleQuickAddDealer}><i className="ri-add-circle-line"></i> Add New Dealer</button>
-                <button className="action-btn" onClick={handleQuickAddClient}><i className="ri-wallet-3-line"></i>Add New Client</button>
-                <button className="action-btn"><i className="ri-bar-chart-2-line"></i> Generate Reports</button>
-                <button className="action-btn" onClick={() => setSupportModal(true)}><i className="ri-customer-service-2-line"></i> Contact Support</button>
-      <CustomModal
-        open={supportModal}
-        title="Contact Support"
-        onConfirm={() => setSupportModal(false)}
-        onCancel={() => setSupportModal(false)}
-        confirmText="OK"
-        cancelText={null}
-      >
-        <div style={{lineHeight: 1.7, fontSize: 15}}>
-          <div><b>Email:</b> <a href="mailto:support@smartchallan.com">support@smartchallan.com</a></div>
-          <div><b>Phone:</b> <a href="tel:+911234567890">+91-1234-567-890</a></div>
-          <div style={{marginTop: 10}}><b>Support Hours:</b> Mon - Sat, 9 AM to 6 PM</div>
-          <div style={{color: '#b77', marginTop: 4}}>Public holidays: Team is not available. Next working day we will contact you.</div>
-        </div>
-      </CustomModal>
-              </div>
-            </div>
-            <div className="dashboard-due">
-              <h2>Challans Due Today</h2>
-              <div className="due-list">
-                <div className="due-item">
-                  <div className="due-date">18 JUN</div>
-                  <div className="due-info">Speeding Violation <span>MH02AB1234</span> <span>₹1,000</span></div>
-                </div>
-                <div className="due-item">
-                  <div className="due-date">18 JUN</div>
-                  <div className="due-info">No Parking Zone <span>MH02CD5678</span> <span>₹500</span></div>
-                </div>
-              </div>
-              <h2>Upcoming Due Dates</h2>
-              <div className="due-list">
-                <div className="due-item">
-                  <div className="due-date">22 JUN</div>
-                  <div className="due-info">Red Light Violation <span>MH02AB1234</span> <span>₹1,500</span></div>
-                </div>
-                <div className="due-item">
-                  <div className="due-date">25 JUN</div>
-                  <div className="due-info">Improper Parking <span>MH02CD5678</span> <span>₹750</span></div>
-                </div>
-                <div className="due-item">
-                  <div className="due-date">30 JUN</div>
-                  <div className="due-info">No Helmet <span>MH02AB1234</span> <span>₹500</span></div>
-                </div>
+                          const found = Array.isArray(dealers) ? dealers.find(d => (d.id || d._id || d.email) === client.dealer_id) : null;
+                          return found ? (found.name || found.dealer_name || found.email) : '-';
+                        })();
+                        const totalVehicles = Array.isArray(vehicles)
+                          ? vehicles.filter(v => {
+                              const vClientId = v.client_id && typeof v.client_id === 'object' ? v.client_id.id || v.client_id._id : v.client_id;
+                              const cId = client.id || client._id || client.email;
+                              return String(vClientId) === String(cId);
+                            }).length
+                          : '-';
+                        return (
+                          <tr key={client.id || idx}>
+                            <td>{client.name || client.client_name || '-'}</td>
+                            <td>{client.meta && client.meta.phone ? client.meta.phone : (client.phone || client.mobile || '-')}</td>
+                            <td>{client.email || '-'}</td>
+                            <td>{dealerName}</td>
+                            <td>{totalVehicles}</td>
+                            <td><span className={`status ${client.status ? client.status.toLowerCase() : ''}`}>{client.status || '-'}</span></td>
+                            <td>
+                              <button
+                                className="action-btn"
+                                style={{
+                                  padding: '6px 14px',
+                                  fontSize: 14,
+                                  border: '1.5px solid #b3b3b3',
+                                  background: '#fff',
+                                  color: '#333',
+                                  borderRadius: 6,
+                                  fontWeight: 500,
+                                  boxShadow: 'none',
+                                  transition: 'background 0.15s, color 0.15s, border 0.15s',
+                                  cursor: 'pointer',
+                                }}
+                                onMouseOver={e => {
+                                  e.currentTarget.style.background = '#f5f7fa';
+                                  e.currentTarget.style.color = '#1976d2';
+                                  e.currentTarget.style.borderColor = '#1976d2';
+                                }}
+                                onMouseOut={e => {
+                                  e.currentTarget.style.background = '#fff';
+                                  e.currentTarget.style.color = '#333';
+                                  e.currentTarget.style.borderColor = '#b3b3b3';
+                                }}
+                                onClick={() => handleViewClient(client)}
+                              >
+                                View Client
+                              </button>
+                            </td>
+                            <td>
+                              <button
+                                className="action-btn"
+                                style={{padding: '6px 14px', fontSize: 14, background: client.status === 'Active' ? '#e74c3c' : '#43e97b', color: '#fff'}}
+                                onClick={() => handleToggleClientStatus(client)}
+                              >
+                                {(client.status && client.status.toLowerCase() === 'active') ? (
+                                  <i className="ri-lock-line" title="Inactivate" aria-label="Inactivate" style={{fontSize:18, verticalAlign:'middle', color:'#e74c3c'}}></i>
+                                ) : (
+                                  <i className="ri-lock-unlock-line" title="Activate" aria-label="Activate" style={{fontSize:18, verticalAlign:'middle'}}></i>
+                                )}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr><td colSpan={8}>No clients found.</td></tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </>
@@ -766,7 +802,8 @@ function AdminDashboard() {
             <ClientBillingSettings clients={clients} />
           </>
         )}
-      </main>
+  <AdminSidebarViewer open={sidebarViewerOpen} onClose={handleCloseSidebarViewer} title={sidebarViewerTitle} data={sidebarViewerData} />
+  </main>
     </div>
   );
 }

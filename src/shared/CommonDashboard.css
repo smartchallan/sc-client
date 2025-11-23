@@ -1,3 +1,38 @@
+/* Dynamic input border for validation */
+.input-error {
+  border: 2px solid #e53935 !important;
+  background: #fff6f6;
+}
+.input-valid {
+  border: 2px solid #43e97b !important;
+  background: #f6fff8;
+}
+/* Ensure all .form-row in admin forms display 2 fields per row */
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 18px;
+  margin-bottom: 18px;
+}
+.form-col {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 50%;
+  width: 50%;
+  padding-right: 8px;
+  box-sizing: border-box;
+}
+@media (max-width: 700px) {
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+  .form-col {
+    max-width: 100%;
+    width: 100%;
+    padding-right: 0;
+  }
+}
 /* Page subtitle spacing */
 .page-subtitle {
   margin-bottom: 28px;

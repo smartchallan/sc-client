@@ -106,97 +106,103 @@ export default function AdminRegisterVehicle({ dealers = [], clients = [], vehic
   return (
     <div className="register-vehicle-content">
       <ToastContainer position="top-right" autoClose={2000} />
-      <h1>Register New Vehicle (Admin)</h1>
-      <p style={{marginBottom: 16, color: '#444', fontWeight: 500}}>
+      <h1 className="page-title">Register New Vehicle (Admin)</h1>
+      <p className="page-subtitle">
         As admin, please select a <b>Dealer</b>, then a <b>Client</b> under that dealer, then register the vehicle using <b>any one</b> of the following details: <b>Vehicle Number</b>, <b>Engine Number</b>, or <b>Chasis Number</b>.
       </p>
-      <div className="card">
-        <form className="vehicle-form" onSubmit={handleSubmit} style={{display: 'flex', flexWrap: 'wrap', gap: 16}}>
-          <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '50%'}}>
-            <label htmlFor="select_dealer">Select Dealer</label>
-            <select
-              id="select_dealer"
-              className="form-control"
-              value={selectedDealer}
-              onChange={e => {
-                setSelectedDealer(e.target.value);
-                setSelectedClient("");
-              }}
-              required
-            >
-              <option value="">Select Dealer</option>
-              {dealers.length === 0 && <option disabled>No dealers found</option>}
-              {dealers.map(d => (
-                <option key={d.id || d._id || d.email} value={d.id || d._id || d.email}>
-                  {d.name || d.dealer_name || d.email}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '50%'}}>
-            <label htmlFor="select_client">Select Client</label>
-            <select
-              id="select_client"
-              className="form-control"
-              value={selectedClient}
-              onChange={e => setSelectedClient(e.target.value)}
-              required
-              disabled={!selectedDealer}
-            >
-              <option value="">Select Client</option>
-              {clients.filter(c => {
-                const dealerId = c.dealer_id && typeof c.dealer_id === 'object' ? c.dealer_id.id || c.dealer_id._id : c.dealer_id;
-                return String(dealerId) === String(selectedDealer);
-              }).length === 0 && selectedDealer && <option disabled>No clients found</option>}
-              {clients
-                .filter(c => {
-                  const dealerId = c.dealer_id && typeof c.dealer_id === 'object' ? c.dealer_id.id || c.dealer_id._id : c.dealer_id;
-                  return String(dealerId) === String(selectedDealer);
-                })
-                .map(c => (
-                  <option key={c.id || c._id || c.email} value={c.id || c._id || c.email}>
-                    {c.name || c.email}
+      <div className="modern-form-card">
+        <form className="vehicle-form" onSubmit={handleSubmit} autoComplete="off">
+          <div className="form-row">
+            <div className="form-col" style={{width:'50%'}}>
+              <label htmlFor="select_dealer">Select Dealer</label>
+              <select
+                id="select_dealer"
+                className="form-control"
+                value={selectedDealer}
+                onChange={e => {
+                  setSelectedDealer(e.target.value);
+                  setSelectedClient("");
+                }}
+                required
+              >
+                <option value="">Select Dealer</option>
+                {dealers.length === 0 && <option disabled>No dealers found</option>}
+                {dealers.map(d => (
+                  <option key={d.id || d._id || d.email} value={d.id || d._id || d.email}>
+                    {d.name || d.dealer_name || d.email}
                   </option>
                 ))}
-            </select>
-          </div>
-          <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '50%'}}>
-            <label htmlFor="select_field">Select Field to Register By</label>
-            <select
-              id="select_field"
-              className="form-control"
-              value={selectedField}
-              onChange={e => {
-                setSelectedField(e.target.value);
-                setFieldValue("");
-              }}
-              required
-              disabled={!selectedClient}
-            >
-              <option value="">Select Field</option>
-              {FIELD_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-          {selectedField && (
-            <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '50%'}}>
-              <label htmlFor="field_value">{FIELD_OPTIONS.find(f => f.value === selectedField)?.label}</label>
-              <input
-                type="text"
-                id="field_value"
-                name="field_value"
+              </select>
+            </div>
+            <div className="form-col" style={{width:'50%'}}>
+              <label htmlFor="select_client">Select Client</label>
+              <select
+                id="select_client"
                 className="form-control"
-                value={fieldValue}
-                onChange={e => setFieldValue(e.target.value.toUpperCase())}
-                style={{textTransform: 'uppercase'}}
-                placeholder={`Enter ${FIELD_OPTIONS.find(f => f.value === selectedField)?.label?.toLowerCase()}`}
+                value={selectedClient}
+                onChange={e => setSelectedClient(e.target.value)}
+                required
+                disabled={!selectedDealer}
+              >
+                <option value="">Select Client</option>
+                {clients.filter(c => {
+                  const dealerId = c.dealer_id && typeof c.dealer_id === 'object' ? c.dealer_id.id || c.dealer_id._id : c.dealer_id;
+                  return String(dealerId) === String(selectedDealer);
+                }).length === 0 && selectedDealer && <option disabled>No clients found</option>}
+                {clients
+                  .filter(c => {
+                    const dealerId = c.dealer_id && typeof c.dealer_id === 'object' ? c.dealer_id.id || c.dealer_id._id : c.dealer_id;
+                    return String(dealerId) === String(selectedDealer);
+                  })
+                  .map(c => (
+                    <option key={c.id || c._id || c.email} value={c.id || c._id || c.email}>
+                      {c.name || c.email}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-col" style={{width:'50%'}}>
+              <label htmlFor="select_field">Select Field to Register By</label>
+              <select
+                id="select_field"
+                className="form-control"
+                value={selectedField}
+                onChange={e => {
+                  setSelectedField(e.target.value);
+                  setFieldValue("");
+                }}
                 required
                 disabled={!selectedClient}
-              />
+              >
+                <option value="">Select Field</option>
+                {FIELD_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
             </div>
-          )}
-          <div className="button-group" style={{width: '100%'}}>
+            <div className="form-col" style={{width:'50%'}}>
+              {selectedField && (
+                <>
+                  <label htmlFor="field_value">{FIELD_OPTIONS.find(f => f.value === selectedField)?.label}</label>
+                  <input
+                    type="text"
+                    id="field_value"
+                    name="field_value"
+                    className="form-control"
+                    value={fieldValue}
+                    onChange={e => setFieldValue(e.target.value.toUpperCase())}
+                    style={{textTransform: 'uppercase'}}
+                    placeholder={`Enter ${FIELD_OPTIONS.find(f => f.value === selectedField)?.label?.toLowerCase()}`}
+                    required
+                    disabled={!selectedClient}
+                  />
+                </>
+              )}
+            </div>
+          </div>
+          <div style={{textAlign:'right', marginTop:16}}>
             <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? "Adding..." : "Add New Vehicle"}</button>
           </div>
         </form>

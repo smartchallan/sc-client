@@ -1,3 +1,72 @@
+.latest-table thead th {
+	background: linear-gradient(90deg, #1976d2 0%, #43e97b 100%);
+	color: #fff;
+	font-weight: 900;
+	font-size: 18px;
+	padding: 20px 16px;
+	border-bottom: 4px solid #43e97b;
+	letter-spacing: 0.4px;
+	box-shadow: 0 4px 16px rgba(25, 118, 210, 0.10);
+	text-shadow: 0 2px 12px rgba(25, 118, 210, 0.13);
+	border-top: 1.5px solid #1976d2;
+	border-right: 1px solid #e3f0ff;
+	border-left: 1px solid #e3f0ff;
+	border-radius: 0 !important;
+	transition: background 0.2s, color 0.2s;
+}
+.latest-table thead tr:first-child th:first-child {
+	border-top-left-radius: 16px;
+}
+.latest-table thead tr:first-child th:last-child {
+	border-top-right-radius: 16px;
+}
+/* Modern table style for admin dashboard tables */
+.latest-table {
+	width: 100%;
+	border-collapse: separate;
+	border-spacing: 0;
+	background: linear-gradient(120deg, #fafdff 60%, #e3f0ff 100%);
+	border-radius: 16px;
+	box-shadow: 0 4px 18px rgba(60,120,200,0.08);
+	overflow: hidden;
+	margin-bottom: 28px;
+	border: 1.5px solid #e3f0ff;
+}
+.latest-table th {
+	background: #42a5f5;
+	color: #fff;
+	font-weight: 700;
+	font-size: 15px;
+	padding: 14px 12px;
+	border-bottom: 2.5px solid #43e97b;
+	letter-spacing: 0.1px;
+}
+.latest-table td {
+	background: #fafdff;
+	color: #222;
+	font-size: 14px;
+	padding: 13px 12px;
+	border-bottom: 1.5px solid #e3f0ff;
+	transition: background 0.18s;
+}
+.latest-table tbody tr:hover {
+	background: #e3f0ff;
+}
+.latest-table tr:last-child td {
+	border-bottom: none;
+}
+.latest-table thead tr:first-child th:first-child {
+	border-top-left-radius: 16px;
+}
+.latest-table thead tr:first-child th:last-child {
+	border-top-right-radius: 16px;
+}
+.latest-table tbody tr:last-child td:first-child {
+	border-bottom-left-radius: 16px;
+}
+.latest-table tbody tr:last-child td:last-child {
+	border-bottom-right-radius: 16px;
+}
 /* Admin-specific dashboard styles and overrides */
 
 /* Any admin-specific customizations can go here */
