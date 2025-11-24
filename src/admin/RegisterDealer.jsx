@@ -163,7 +163,8 @@ export default function RegisterDealer() {
         business_category: form.business,
         pin: form.zip,
         admin_id: adminId,
-        userType: 'dealer'
+        userType: 'dealer',
+        sendEmail: true
       };
       delete payload.company;
       delete payload.business;

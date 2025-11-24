@@ -171,7 +171,8 @@ export default function RegisterClient() {
         pin: form.zip,
         admin_id: adminId,
         dealer_id: selectedDealer,
-        userType: 'client'
+        userType: 'client',
+        sendEmail: true
       };
       delete payload.company;
       delete payload.business;
