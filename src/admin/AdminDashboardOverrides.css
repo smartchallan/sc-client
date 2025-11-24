@@ -1,18 +1,45 @@
+.latest-table td, .latest-table th {
+	text-align: center !important;
+	vertical-align: middle !important;
+}
+/* Action button color variants for activate/inactivate */
+.action-btn.inactivate {
+	background: #e53935 !important;
+	color: #fff !important;
+	border: none !important;
+	box-shadow: 0 2px 8px rgba(229,57,53,0.08);
+	transition: background 0.18s, color 0.18s;
+}
+.action-btn.inactivate svg {
+	color: #fff !important;
+}
+.action-btn.activate {
+	background: #43a047 !important;
+	color: #fff !important;
+	border: none !important;
+	box-shadow: 0 2px 8px rgba(67,160,71,0.08);
+	transition: background 0.18s, color 0.18s;
+}
+.action-btn.activate svg {
+	color: #fff !important;
+}
 .latest-table thead th {
-	background: linear-gradient(90deg, #1976d2 0%, #43e97b 100%);
+	background: #183153;
 	color: #fff;
-	font-weight: 900;
-	font-size: 18px;
-	padding: 20px 16px;
-	border-bottom: 4px solid #43e97b;
-	letter-spacing: 0.4px;
-	box-shadow: 0 4px 16px rgba(25, 118, 210, 0.10);
-	text-shadow: 0 2px 12px rgba(25, 118, 210, 0.13);
-	border-top: 1.5px solid #1976d2;
-	border-right: 1px solid #e3f0ff;
-	border-left: 1px solid #e3f0ff;
+	font-weight: 800;
+	font-size: 17px;
+	padding: 18px 14px;
+	border-bottom: 3px solid #2e4a7d;
+	letter-spacing: 0.2px;
+	box-shadow: none;
+	text-shadow: none;
+	border-top: none;
+	border-right: none;
+	border-left: none;
 	border-radius: 0 !important;
 	transition: background 0.2s, color 0.2s;
+	text-align: center;
+	vertical-align: middle;
 }
 .latest-table thead tr:first-child th:first-child {
 	border-top-left-radius: 16px;
@@ -48,6 +75,8 @@
 	padding: 13px 12px;
 	border-bottom: 1.5px solid #e3f0ff;
 	transition: background 0.18s;
+	text-align: center;
+	vertical-align: middle;
 }
 .latest-table tbody tr:hover {
 	background: #e3f0ff;
