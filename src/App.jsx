@@ -48,29 +48,29 @@ export function LoginPage() {
       loginSuccess = true;
       loginMessage = "Login successful!";
       toast.success(loginMessage);
-      if (data.user && data.user.user.role === 'superuser') {
+      if (data.user && data.user.role === 'superuser') {
         localStorage.setItem('sc_user', JSON.stringify(data.user));
         console.log('Redirecting to /superkidboard');
         await delay(2000);
         navigate('/superkidboard', { replace: true });
-      } else if (data.user && data.user.user.role === 'dealer') {
+      } else if (data.user && data.user.role === 'dealer') {
         localStorage.setItem('sc_user', JSON.stringify(data.user));
         console.log('Redirecting to /dealersmartboard');
         await delay(2000);
         navigate('/dealersmartboard', { replace: true });
-      } else if (data.user && data.user.user.role === 'admin') {
+      } else if (data.user && data.user.role === 'admin') {
         localStorage.setItem('sc_user', JSON.stringify({
-          user: data.user.user,
-          userMeta: data.user.userMeta || {},
+          user: data.user,
+          userMeta: data.userMeta || {},
           token: data.token
         }));
         console.log('Redirecting to /adminsmartboard');
         await delay(2000);
         navigate('/adminsmartboard', { replace: true });
-      } else if (data.user && data.user.user.role === 'client') {
+      } else if (data.user && data.user.role === 'client') {
         localStorage.setItem('sc_user', JSON.stringify({
-          user: data.user.user,
-          userMeta: data.user.userMeta || {},
+          user: data.user,
+          userMeta: data.userMeta || {},
           token: data.token
         }));
         console.log('Redirecting to /smartboard');
