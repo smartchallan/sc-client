@@ -4,8 +4,11 @@ import 'react-toastify/dist/ReactToastify.css';
 import "./RegisterDealer.css";
 
 export default function RegisterClient() {
-  // Email regex
+  // Regex patterns
   const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,}$/i;
+  const phoneRegex = /^\d{10}$/;
+  const passwordRegex = /^[a-zA-Z0-9@#$]{5,15}$/;
+  const zipRegex = /^\d{6}$/;
 
   // Validation state
   const [errors, setErrors] = useState({});
@@ -14,8 +17,8 @@ export default function RegisterClient() {
   const isValid = (field) => {
     if (field === 'email') return form.email && emailRegex.test(form.email);
     if (field === 'name') return !!form.name.trim();
-    if (field === 'phone') return !!form.phone.trim();
-    if (field === 'password') return !!form.password.trim();
+    if (field === 'phone') return phoneRegex.test(form.phone);
+    if (field === 'password') return passwordRegex.test(form.password);
     if (field === 'company') return true;
     if (field === 'gtin') return true;
     if (field === 'business') return true;
@@ -23,7 +26,7 @@ export default function RegisterClient() {
     if (field === 'state') return !!form.state;
     if (field === 'city') return !!form.city;
     if (field === 'address') return !!form.address.trim();
-    if (field === 'zip') return !!form.zip.trim();
+    if (field === 'zip') return zipRegex.test(form.zip);
     return true;
   };
 
@@ -122,17 +125,46 @@ export default function RegisterClient() {
     // Add more as needed
   };
 
+  // Dynamic field validation on change
+  const validateField = (field, value) => {
+    let error = '';
+    if (!value || (typeof value === 'string' && !value.trim())) {
+      error = 'This field is required';
+    } else {
+      if (field === 'email' && !emailRegex.test(value)) {
+        error = 'Invalid email address.';
+      } else if (field === 'phone' && !phoneRegex.test(value)) {
+        error = 'Phone must be exactly 10 digits';
+      } else if (field === 'password' && !passwordRegex.test(value)) {
+        error = 'Password must be 5-15 characters (letters, numbers, @, #, $)';
+      } else if (field === 'zip' && !zipRegex.test(value)) {
+        error = 'Zip must be exactly 6 digits';
+      }
+    }
+    setErrors(prev => ({ ...prev, [field]: error }));
+  };
+
   const handleChange = e => {
     const { name, value } = e.target;
     // Reset dependent fields
     if (name === 'country') {
       setForm(f => ({ ...f, country: value, state: '', city: '', zip: '' }));
+      validateField('country', value);
+      validateField('state', '');
+      validateField('city', '');
+      validateField('zip', '');
     } else if (name === 'state') {
       setForm(f => ({ ...f, state: value, city: '', zip: '' }));
+      validateField('state', value);
+      validateField('city', '');
+      validateField('zip', '');
     } else if (name === 'city') {
       setForm(f => ({ ...f, city: value, zip: '' }));
+      validateField('city', value);
+      validateField('zip', '');
     } else {
       setForm(f => ({ ...f, [name]: value }));
+      validateField(name, value);
     }
   };
 
@@ -143,13 +175,16 @@ export default function RegisterClient() {
     if (!form.email.trim()) newErrors.email = 'Email is required.';
     else if (!emailRegex.test(form.email)) newErrors.email = 'Invalid email address.';
     if (!form.phone.trim()) newErrors.phone = 'Phone is required.';
+    else if (!phoneRegex.test(form.phone)) newErrors.phone = 'Phone must be exactly 10 digits';
     if (!form.password.trim()) newErrors.password = 'Password is required.';
+    else if (!passwordRegex.test(form.password)) newErrors.password = 'Password must be 5-15 characters (letters, numbers, @, #, $)';
     // Company, GTIN, Business are optional
     if (!form.country) newErrors.country = 'Country is required.';
     if (!form.state) newErrors.state = 'State is required.';
     if (!form.city) newErrors.city = 'City is required.';
     if (!form.address.trim()) newErrors.address = 'Address is required.';
     if (!form.zip.trim()) newErrors.zip = 'Zip is required.';
+    else if (!zipRegex.test(form.zip)) newErrors.zip = 'Zip must be exactly 6 digits';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };

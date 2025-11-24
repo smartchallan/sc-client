@@ -5,8 +5,11 @@ import 'react-toastify/dist/ReactToastify.css';
 import "./RegisterDealer.css";
 
 export default function RegisterDealer() {
-  // Email regex
+  // Regex patterns
   const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,}$/i;
+  const phoneRegex = /^\d{10}$/;
+  const passwordRegex = /^[a-zA-Z0-9@#$]{5,15}$/;
+  const zipRegex = /^\d{6}$/;
 
   // Validation state
   const [errors, setErrors] = useState({});
@@ -35,7 +38,16 @@ export default function RegisterDealer() {
         if (!value || (typeof value === 'string' && !value.trim())) {
           newErrors[field] = 'This field is required';
         } else {
-          delete newErrors[field];
+          // Custom validation
+          if (field === 'phone' && !phoneRegex.test(value)) {
+            newErrors[field] = 'Phone must be exactly 10 digits';
+          } else if (field === 'password' && !passwordRegex.test(value)) {
+            newErrors[field] = 'Password must be 5-15 characters (letters, numbers, @, #, $)';
+          } else if (field === 'zip' && !zipRegex.test(value)) {
+            newErrors[field] = 'Zip must be exactly 6 digits';
+          } else {
+            delete newErrors[field];
+          }
         }
       }
       return newErrors;
@@ -45,8 +57,17 @@ export default function RegisterDealer() {
     const requiredFields = ['name', 'email', 'phone', 'password', 'country', 'state', 'city', 'address', 'zip'];
     const newErrors = {};
     requiredFields.forEach(field => {
-      if (!form[field] || (typeof form[field] === 'string' && !form[field].trim())) {
+      const value = form[field];
+      if (!value || (typeof value === 'string' && !value.trim())) {
         newErrors[field] = 'This field is required';
+      } else {
+        if (field === 'phone' && !phoneRegex.test(value)) {
+          newErrors[field] = 'Phone must be exactly 10 digits';
+        } else if (field === 'password' && !passwordRegex.test(value)) {
+          newErrors[field] = 'Password must be 5-15 characters (letters, numbers, @, #, $)';
+        } else if (field === 'zip' && !zipRegex.test(value)) {
+          newErrors[field] = 'Zip must be exactly 6 digits';
+        }
       }
     });
     setErrors(newErrors);
@@ -57,13 +78,13 @@ export default function RegisterDealer() {
   const isValid = (field) => {
     if (field === 'email') return form.email && emailRegex.test(form.email);
     if (field === 'name') return !!form.name.trim();
-    if (field === 'phone') return !!form.phone.trim();
-    if (field === 'password') return !!form.password.trim();
+    if (field === 'phone') return phoneRegex.test(form.phone);
+  if (field === 'password') return passwordRegex.test(form.password);
     if (field === 'country') return !!form.country;
     if (field === 'state') return !!form.state;
     if (field === 'city') return !!form.city;
     if (field === 'address') return !!form.address.trim();
-    if (field === 'zip') return !!form.zip.trim();
+    if (field === 'zip') return zipRegex.test(form.zip);
     return true;
   };
 

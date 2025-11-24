@@ -248,82 +248,92 @@ function AdminDashboard() {
     }
   })();
 
-  // Fetch admin data (dealers, clients, vehicles) only once on mount
-  useEffect(() => {
+  // Fetch admin data (dealers, clients, vehicles) on mount and when returning to Dashboard
+  const fetchAdminData = React.useCallback(async () => {
     const adminId = user.user && user.user.id;
     if (!adminId) return;
+    setLoadingAdminData(true);
+    setShowLoader(true);
+    setAdminDataError(null);
+    const minLoaderTime = 3000;
+    const start = Date.now();
     let loaderTimeout;
-    const fetchAdminData = async () => {
-      setLoadingAdminData(true);
-      setShowLoader(true);
-      setAdminDataError(null);
-      const minLoaderTime = 3000;
-      const start = Date.now();
-      try {
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
-        const url = `${baseUrl}/admindata/${adminId}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`API error: ${res.status}`);
-        const data = await res.json();
-  console.log('[AdminDashboard] /admindata API response:', data);
-  setRawAdminData(data); // For debugging
-        setDealers(Array.isArray(data.dealers) ? data.dealers : []);
-        setClients(Array.isArray(data.clients) ? data.clients : []);
-        setVehicles(Array.isArray(data.vehicles) ? data.vehicles : []);
-        // Aggregate dealer status counts
-        if (Array.isArray(data.dealers)) {
-          const dCounts = { Active: 0, Inactive: 0 };
-          data.dealers.forEach(d => {
-            const status = (d.status || '').toLowerCase();
-            if (status === 'active') dCounts.Active++;
-            else if (status === 'inactive') dCounts.Inactive++;
-          });
-          setDealerCounts(dCounts);
-        }
-        // Aggregate client status counts
-        if (Array.isArray(data.clients)) {
-          const cCounts = { Active: 0, Inactive: 0 };
-          data.clients.forEach(c => {
-            const status = (c.status || '').toLowerCase();
-            if (status === 'active') cCounts.Active++;
-            else if (status === 'inactive') cCounts.Inactive++;
-          });
-          setClientCounts(cCounts);
-        }
-        // Aggregate vehicle_counts from all clients
-        if (Array.isArray(data.clients)) {
-          const counts = { Active: 0, Inactive: 0, Deleted: 0 };
-          data.clients.forEach(c => {
-            if (c.vehicle_counts) {
-              // Map possible keys to expected casing
-              Object.entries(c.vehicle_counts).forEach(([k, v]) => {
-                let key = k.toLowerCase();
-                if (key === 'active') counts.Active += Number(v) || 0;
-                else if (key === 'inactive') counts.Inactive += Number(v) || 0;
-                else if (key === 'deleted') counts.Deleted += Number(v) || 0;
-              });
-            }
-          });
-          console.log('[AdminDashboard] Aggregated vehicle_counts from clients:', counts);
-          setVehicleCounts(counts);
-        }
-      } catch (err) {
-        setAdminDataError(err.message || "Failed to fetch admin data");
-        setDealers([]); setClients([]); setVehicles([]);
-      } finally {
-        setLoadingAdminData(false);
-        const elapsed = Date.now() - start;
-        if (elapsed < minLoaderTime) {
-          loaderTimeout = setTimeout(() => setShowLoader(false), minLoaderTime - elapsed);
-        } else {
-          setShowLoader(false);
-        }
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+      const url = `${baseUrl}/admindata/${adminId}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      const data = await res.json();
+      console.log('[AdminDashboard] /admindata API response:', data);
+      setRawAdminData(data); // For debugging
+      setDealers(Array.isArray(data.dealers) ? data.dealers : []);
+      setClients(Array.isArray(data.clients) ? data.clients : []);
+      setVehicles(Array.isArray(data.vehicles) ? data.vehicles : []);
+      // Aggregate dealer status counts
+      if (Array.isArray(data.dealers)) {
+        const dCounts = { Active: 0, Inactive: 0 };
+        data.dealers.forEach(d => {
+          const status = (d.status || '').toLowerCase();
+          if (status === 'active') dCounts.Active++;
+          else if (status === 'inactive') dCounts.Inactive++;
+        });
+        setDealerCounts(dCounts);
       }
-    };
-    fetchAdminData();
+      // Aggregate client status counts
+      if (Array.isArray(data.clients)) {
+        const cCounts = { Active: 0, Inactive: 0 };
+        data.clients.forEach(c => {
+          const status = (c.status || '').toLowerCase();
+          if (status === 'active') cCounts.Active++;
+          else if (status === 'inactive') cCounts.Inactive++;
+        });
+        setClientCounts(cCounts);
+      }
+      // Aggregate vehicle_counts from all clients
+      if (Array.isArray(data.clients)) {
+        const counts = { Active: 0, Inactive: 0, Deleted: 0 };
+        data.clients.forEach(c => {
+          if (c.vehicle_counts) {
+            // Map possible keys to expected casing
+            Object.entries(c.vehicle_counts).forEach(([k, v]) => {
+              let key = k.toLowerCase();
+              if (key === 'active') counts.Active += Number(v) || 0;
+              else if (key === 'inactive') counts.Inactive += Number(v) || 0;
+              else if (key === 'deleted') counts.Deleted += Number(v) || 0;
+            });
+          }
+        });
+        console.log('[AdminDashboard] Aggregated vehicle_counts from clients:', counts);
+        setVehicleCounts(counts);
+      }
+    } catch (err) {
+      setAdminDataError(err.message || "Failed to fetch admin data");
+      setDealers([]); setClients([]); setVehicles([]);
+    } finally {
+      setLoadingAdminData(false);
+      const elapsed = Date.now() - start;
+      if (elapsed < minLoaderTime) {
+        loaderTimeout = setTimeout(() => setShowLoader(false), minLoaderTime - elapsed);
+      } else {
+        setShowLoader(false);
+      }
+    }
     return () => { if (loaderTimeout) clearTimeout(loaderTimeout); };
+  }, [user.user]);
+
+  // On mount, fetch admin data
+  useEffect(() => {
+    fetchAdminData();
     // eslint-disable-next-line
   }, []);
+
+  // Refetch admin data when returning to Dashboard tab
+  useEffect(() => {
+    if (activeMenu === 'Dashboard') {
+      fetchAdminData();
+    }
+    // eslint-disable-next-line
+  }, [activeMenu]);
 
   // Draw pie chart for dealers by city
   useEffect(() => {
