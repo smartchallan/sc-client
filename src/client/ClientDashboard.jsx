@@ -25,9 +25,12 @@ import UserChallan from "../UserChallan";
 import MyVehicles from "./MyVehicles";
 import VehicleRTOdataTable from "./VehicleRTOdata";
 import MyChallans from "./MyChallans";
+const ChallanSettlement = React.lazy(() => import("./ChallanSettlement"));
 import MyBilling from "./MyBilling";
 import UserSettings from "./UserSettings";
 import CustomModal from "./CustomModal";
+import RightSidebar from "./RightSidebar";
+import "./RightSidebar.css";
 
 // NOTE: do not read `sc_user` at module load time (causes stale user after login)
 // ClientDashboard will read `sc_user` from localStorage when the component mounts.
@@ -109,8 +112,7 @@ function ClientDashboard() {
   // Active menu
   const [activeMenu, setActiveMenu] = useState("Dashboard");
   const [selectedChallan, setSelectedChallan] = useState(null);
-  // Sidebar open state: open by default on wide screens, closed on small screens
-  const [sidebarOpen, setSidebarOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth > 900 : true));
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   // Initial filter state for Vehicle RTO Data
   const [vehicleRtoInitialFilter, setVehicleRtoInitialFilter] = useState(null);
 
@@ -770,7 +772,10 @@ function ClientDashboard() {
           <td style={{ textAlign: "center"}}>
             <button
               className="action-btn flat-btn"
-              onClick={() => setSelectedChallan(c)}
+              onClick={() => {
+                setSelectedChallan(c);
+                setSidebarOpen(true);
+              }}
             >
               View Challan
             </button>
@@ -1280,6 +1285,11 @@ function ClientDashboard() {
           />
         )}
         {activeMenu === "Vehicle Challan Data" && <MyChallans />}
+        {activeMenu === "Challan Settlement" && (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <ChallanSettlement />
+          </React.Suspense>
+        )}
         {activeMenu === "Challans" && <UserChallan />}
         {activeMenu === "My Billing" && <MyBilling clientId={user.user && (user.user.id || user.user._id)} />}
         {activeMenu === "Settings" && <UserSettings users={[]} />}
@@ -1374,55 +1384,50 @@ function ClientDashboard() {
           <div style={{ fontSize: 13, color: '#666' }}>Files will download as CSV. If your browser blocks downloads, allow downloads for this site.</div>
         </div>
       </CustomModal>
-      <CustomModal
+      <RightSidebar
         open={!!selectedChallan}
+        onClose={() => {
+          setTimeout(() => setSelectedChallan(null), 300);
+        }}
         title={selectedChallan ? `Challan Details: ${selectedChallan.challan_no}` : ''}
-        onConfirm={() => setSelectedChallan(null)}
-        onCancel={() => setSelectedChallan(null)}
-        confirmText="Close"
-        cancelText={null}
       >
         {selectedChallan && (
-          <div style={{lineHeight:1.7, fontSize:15}}>
-            <div><b>Status:</b> {selectedChallan.challan_status}</div>
-            <div><b>Vehicle Number:</b> {selectedChallan.vehicle_number}</div>
-            <div><b>Challan No:</b> {selectedChallan.challan_no}</div>
-            <div><b>Date/Time:</b> {selectedChallan.challan_date_time}</div>
-            <div><b>Location:</b> {selectedChallan.challan_place || selectedChallan.location || selectedChallan.challan_location}</div>
-            <div><b>Owner Name:</b> {selectedChallan.owner_name}</div>
-            <div><b>Driver Name:</b> {selectedChallan.driver_name}</div>
-            <div><b>Name of Violator:</b> {selectedChallan.name_of_violator}</div>
-            <div><b>Department:</b> {selectedChallan.department}</div>
-            <div><b>State Code:</b> {selectedChallan.state_code}</div>
-            <div><b>RTO District Name:</b> {selectedChallan.rto_distric_name}</div>
-            <div><b>Remark:</b> {selectedChallan.remark}</div>
-            <div><b>Document Impounded:</b> {selectedChallan.document_impounded}</div>
-            <div><b>Sent to Court On:</b> {selectedChallan.sent_to_court_on}</div>
-            <div><b>Sent to Reg Court:</b> {selectedChallan.sent_to_reg_court}</div>
-            <div><b>Sent to Virtual Court:</b> {selectedChallan.sent_to_virtual_court}</div>
-            <div><b>Court Name:</b> {selectedChallan.court_name}</div>
-            <div><b>Court Address:</b> {selectedChallan.court_address}</div>
-            <div><b>Date of Proceeding:</b> {selectedChallan.date_of_proceeding}</div>
-            <div><b>DL No:</b> {selectedChallan.dl_no}</div>
-            {selectedChallan.challan_status === 'Disposed' && (
-              <>
-                <div><b>Receipt No:</b> {selectedChallan.receipt_no}</div>
-                <div><b>Received Amount:</b> {selectedChallan.received_amount}</div>
-              </>
-            )}
-            <div><b>Fine Imposed:</b> {selectedChallan.fine_imposed}</div>
-            <div><b>Amount of Fine Imposed:</b> {selectedChallan.amount_of_fine_imposed}</div>
-            <div><b>Act:</b> {Array.isArray(selectedChallan.offence_details) && selectedChallan.offence_details.length > 0 ? selectedChallan.offence_details[0].act : ''}</div>
-            <div><b>Offence Details:</b>
-              <ul style={{margin:0,paddingLeft:18}}>
-                {Array.isArray(selectedChallan.offence_details) && selectedChallan.offence_details.map((o, j) => (
-                  <li key={j} className="cell-ellipsis" title={o.name}>{o.name}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          <table className="latest-table" style={{ width: '100%', fontSize: 15 }}>
+            <tbody>
+              <tr><td><b>Status</b></td><td>{selectedChallan.challan_status}</td></tr>
+              <tr><td><b>Vehicle Number</b></td><td>{selectedChallan.vehicle_number}</td></tr>
+              <tr><td><b>Challan No</b></td><td>{selectedChallan.challan_no}</td></tr>
+              <tr><td><b>Date/Time</b></td><td>{selectedChallan.challan_date_time}</td></tr>
+              <tr><td><b>Location</b></td><td>{selectedChallan.challan_place || selectedChallan.location || selectedChallan.challan_location}</td></tr>
+              <tr><td><b>Owner Name</b></td><td>{selectedChallan.owner_name}</td></tr>
+              <tr><td><b>Driver Name</b></td><td>{selectedChallan.driver_name}</td></tr>
+              <tr><td><b>Name of Violator</b></td><td>{selectedChallan.name_of_violator}</td></tr>
+              <tr><td><b>Department</b></td><td>{selectedChallan.department}</td></tr>
+              <tr><td><b>State Code</b></td><td>{selectedChallan.state_code}</td></tr>
+              <tr><td><b>RTO District Name</b></td><td>{selectedChallan.rto_distric_name}</td></tr>
+              <tr><td><b>Remark</b></td><td>{selectedChallan.remark}</td></tr>
+              <tr><td><b>Document Impounded</b></td><td>{selectedChallan.document_impounded}</td></tr>
+              <tr><td><b>Sent to Court On</b></td><td>{selectedChallan.sent_to_court_on}</td></tr>
+              <tr><td><b>Sent to Reg Court</b></td><td>{selectedChallan.sent_to_reg_court}</td></tr>
+              <tr><td><b>Sent to Virtual Court</b></td><td>{selectedChallan.sent_to_virtual_court}</td></tr>
+              <tr><td><b>Court Name</b></td><td>{selectedChallan.court_name}</td></tr>
+              <tr><td><b>Court Address</b></td><td>{selectedChallan.court_address}</td></tr>
+              <tr><td><b>Date of Proceeding</b></td><td>{selectedChallan.date_of_proceeding}</td></tr>
+              <tr><td><b>DL No</b></td><td>{selectedChallan.dl_no}</td></tr>
+              {selectedChallan.challan_status === 'Disposed' && (
+                <>
+                  <tr><td><b>Receipt No</b></td><td>{selectedChallan.receipt_no}</td></tr>
+                  <tr><td><b>Received Amount</b></td><td>{selectedChallan.received_amount}</td></tr>
+                </>
+              )}
+              <tr><td><b>Fine Imposed</b></td><td>{selectedChallan.fine_imposed}</td></tr>
+              <tr><td><b>Amount of Fine Imposed</b></td><td>{selectedChallan.amount_of_fine_imposed}</td></tr>
+              <tr><td><b>Act</b></td><td>{Array.isArray(selectedChallan.offence_details) && selectedChallan.offence_details.length > 0 ? selectedChallan.offence_details[0].act : ''}</td></tr>
+              <tr><td><b>Offence Details</b></td><td><ul style={{margin:0,paddingLeft:18}}>{Array.isArray(selectedChallan.offence_details) && selectedChallan.offence_details.map((o, j) => (<li key={j} className="cell-ellipsis" title={o.name}>{o.name}</li>))}</ul></td></tr>
+            </tbody>
+          </table>
         )}
-      </CustomModal>
+      </RightSidebar>
     </div>
     </>
   );

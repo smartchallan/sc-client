@@ -1,4 +1,17 @@
 import scLogo from './assets/sc-logo.png';
+// Whitelabel config
+const IS_DEFAULT_DOMAIN = window.location.hostname === 'app.smartchallan.com';
+const CUSTOM_LOGO_URL = import.meta.env.VITE_CUSTOM_LOGO_URL;
+const CUSTOM_FAVICON_URL = import.meta.env.VITE_CUSTOM_FAVICON_URL;
+const CUSTOM_COPYRIGHT = import.meta.env.VITE_CUSTOM_COPYRIGHT;
+
+// Set favicon dynamically if whitelabel
+if (!IS_DEFAULT_DOMAIN && CUSTOM_FAVICON_URL) {
+  const link = document.querySelector("link[rel~='icon']") || document.createElement('link');
+  link.rel = 'icon';
+  link.href = CUSTOM_FAVICON_URL;
+  document.head.appendChild(link);
+}
 import React, { useState } from 'react';
 import { HashRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
@@ -101,7 +114,7 @@ export function LoginPage() {
         <div className="container">
           <div className="header-content">
             <div className="logo">
-              <img src={scLogo} alt="App Logo" />
+              <img src={(!IS_DEFAULT_DOMAIN && CUSTOM_LOGO_URL) ? CUSTOM_LOGO_URL : scLogo} alt="App Logo" />
             </div>
             
             {/* Desktop Navigation */}
@@ -204,7 +217,7 @@ export function LoginPage() {
       </main>
       <footer>
         <div className="container">
-          <p>© 2025 SmartChallan. All rights reserved.</p>
+          <p>{(!IS_DEFAULT_DOMAIN && CUSTOM_COPYRIGHT) ? CUSTOM_COPYRIGHT : '© 2025 SmartChallan. All rights reserved.'}</p>
         </div>
       </footer>
     </div>

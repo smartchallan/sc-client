@@ -284,15 +284,14 @@ body {
   font-weight: bold;
 }
 
-.logo i {
-  font-size: 28px;
-  margin-right: 10px;
-  color: #4cceac;
-}
-
 .logo-img {
-  height: 60px;
-  width: auto;
+  max-width: 160px;
+  height: auto;
+  margin-right: 10px;
+  vertical-align: middle;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  background: #fff;
   object-fit: contain;
 }
 

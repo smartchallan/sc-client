@@ -1,12 +1,16 @@
 
 import React, { useState, useEffect } from "react";
 import CustomModal from "./CustomModal";
+import RightSidebar from "./RightSidebar";
+import "./RightSidebar.css";
 import "../RegisterVehicle.css";
 
-function ChallanTable({ title, data, search = {}, sortAsc = true }) {
+export function ChallanTable({ title, data, search = {}, sortAsc = true, addToCart, removeFromCart, cart, showCart, setShowCart, settlementMode }) {
   const [showFull, setShowFull] = useState({});
   const [selectedChallan, setSelectedChallan] = useState(null);
-  const [visibleCount, setVisibleCount] = useState(5);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const DEFAULT_LIMIT = 10;
+  const [visibleCount, setVisibleCount] = useState(DEFAULT_LIMIT);
   const [infoModal, setInfoModal] = useState({ open: false, message: '' });
   const handleShowFull = (rowIdx, col) => {
     setShowFull(prev => ({ ...prev, [rowIdx + '-' + col]: !prev[rowIdx + '-' + col] }));
@@ -46,17 +50,19 @@ function ChallanTable({ title, data, search = {}, sortAsc = true }) {
         {title} <span style={{fontSize:21, color: countColor, marginLeft:8, fontWeight:600}}>({filtered.length})</span>
       </h2>
       {filtered.length > 0 && (
-        <div style={{
-          marginBottom: 8,
-          color: '#222',
-          fontSize: 15,
-          background: title && title.toLowerCase().includes('pending') ? '#ffe9b3' : '#e3f7d6',
-          border: title && title.toLowerCase().includes('pending') ? '1.5px solid #f7b500' : '1.5px solid #4caf50',
-          borderRadius: 6,
-          padding: '4px 12px',
-          fontWeight: 600,
-          display: 'inline-block',
-        }}>
+        <div
+          style={{
+            color: '#222',
+            fontSize: 15,
+            background: title && title.toLowerCase().includes('pending') ? '#ffe9b3' : '#e3f7d6',
+            border: title && title.toLowerCase().includes('pending') ? '1.5px solid #f7b500' : '1.5px solid #4caf50',
+            borderRadius: 6,
+            padding: '4px 12px',
+            fontWeight: 600,
+            display: 'inline-block',
+            marginBottom: 8
+          }}
+        >
           Showing {Math.min(filtered.length, visibleCount)} of {filtered.length} challans
         </div>
       )}
@@ -64,124 +70,180 @@ function ChallanTable({ title, data, search = {}, sortAsc = true }) {
         <div style={{ color: '#888' }}>No challans found.</div>
       ) : (
         <>
-        <div className="table-container">
-          <table className="latest-table" style={{ width: '100%', minWidth: '900px', marginTop: 8, tableLayout: 'fixed' }}>
-          <colgroup>
-            <col style={{ width: '4%' }} />
-            <col style={{ width: '8%' }} />
-            <col style={{ width: '11%' }} />
-            <col style={{ width: '11%' }} />
-            <col style={{ width: '7%' }} />
-            <col style={{ width: '6%' }} />
-            <col style={{ width: '6%' }} />
-            <col style={{ width: '8%' }} />
-            <col style={{ width: '9%' }} />
-            <col style={{ width: '8%' }} />
-            <col style={{ width: '4%' }} />
-          </colgroup>
-          <thead>
-            <tr>
-              <th>S. No.</th>
-              <th>Vehicle Number</th>
-              <th>Challan No</th>
-              <th>Date/Time</th>
-              <th style={{ textAlign: 'center' }}>Location</th>
-              <th>Sent to Reg Court</th>
-              <th>Sent to Virtual Court</th>
-              <th>Fine Imposed</th>
-              <th>Status</th>
-              <th>Offence Details</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {limited.map((c, idx) => (
-              <tr key={c.challan_no || idx}>
-                <td>{idx + 1}</td>
-                <td>
-                  <div className="cell-ellipsis" title={c.vehicle_number}>{c.vehicle_number || '-'}</div>
-                </td>
-                <td>
-                  <div
-                    className={`cell-ellipsis${showFull[idx+'-challan_no'] ? ' cell-wrap' : ''}`}
-                    title={c.challan_no}
-                    onClick={() => handleShowFull(idx, 'challan_no')}
-                    style={{ cursor: c.challan_no && c.challan_no.length > 16 ? 'pointer' : 'default' }}
-                  >
-                    {showFull[idx+'-challan_no'] ? c.challan_no : <span>{c.challan_no && c.challan_no.length > 16 ? c.challan_no.slice(0, 16) + '…' : c.challan_no}</span>}
-                  </div>
-                </td>
-                <td>
-                  <div className="cell-ellipsis" title={c.challan_date_time || c.created_at || c.createdAt}>{c.challan_date_time || c.created_at || c.createdAt}</div>
-                </td>
-                <td style={{ textAlign: 'center' }}>
-                  {(() => {
-                    const loc = c.challan_place || c.location || c.challan_location || c.address || c.owner_address;
-                    if (loc && typeof loc === 'string' && loc.trim()) {
-                      const openMap = (address) => {
-                        setInfoModal({
-                          open: true,
-                          message: (
-                            <iframe
-                              title="Google Maps"
-                              width="910"
-                              height="500"
-                              style={{ border: 0, borderRadius: 12 }}
-                              src={`https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`}
-                              allowFullScreen
-                            />
-                          )
-                        });
-                      };
-                      return (
-                        <span
-                          style={{ cursor: 'pointer', color: '#4285F4', fontSize: 20, verticalAlign: 'middle' }}
-                          title={loc}
-                          onClick={() => openMap(loc)}
-                        >
-                          <i className="ri-map-pin-2-fill" />
-                        </span>
-                      );
-                    }
-                    return 'Not Available';
-                  })()}
-                </td>
-                <td style={{ textAlign: 'center' }}>{formatRegCourtValue(c.sent_to_reg_court ?? c.sent_to_court_on ?? c.sent_to_court)}</td>
-                <td style={{ textAlign: 'center' }}>{formatRegCourtValue(c.sent_to_virtual_court ?? c.sent_to_virtual)}</td>
-                <td style={{ textAlign: "center"}}>{c.fine_imposed}</td>
-                <td><span className={c.challan_status === 'Pending' ? 'status pending' : c.challan_status === 'Disposed' ? 'status paid' : ''}>{c.challan_status}</span></td>
-                <td>
-                  <ul style={{ margin: 0, paddingLeft: 18 }}>
-                    {Array.isArray(c.offence_details) && c.offence_details.map((o, i) => (
-                      <li
-                        key={i}
-                        className={`cell-ellipsis${showFull[idx+'-offence'+i] ? ' cell-wrap' : ''}`}
-                        title={o.name}
-                        onClick={() => handleShowFull(idx, 'offence'+i)}
-                        style={{ cursor: o.name && o.name.length > 30 ? 'pointer' : 'default' }}
-                      >
-                        {showFull[idx+'-offence'+i] ? o.name : <span>{o.name.length > 30 ? o.name.slice(0, 30) + '…' : o.name}</span>}
-                      </li>
-                    ))}
-                  </ul>
-                </td>
-                <td style={{textAlign:'center'}}>
-                  <button className="action-btn flat-btn" onClick={() => setSelectedChallan(c)}>
-                    View Challan
-                  </button>
-                </td>
+        <div className="table-scroll-x" style={{ overflowX: 'auto', maxWidth: '100%' }}>
+          <table
+            className="latest-table responsive-table"
+            style={{
+              width: '100%',
+              marginTop: 8,
+              tableLayout: 'auto',
+            }}
+          >
+            <colgroup>
+              <col style={{ width: '4%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '7%' }} />
+              <col style={{ width: '7%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '8%' }} />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>S. No.</th>
+                <th>Vehicle Number</th>
+                <th>Challan No</th>
+                <th>Date/Time</th>
+                <th style={{ textAlign: 'center' }}>Location</th>
+                {title && title.toLowerCase().includes('pending') && <th>Sent to Reg Court</th>}
+                {title && title.toLowerCase().includes('pending') && <th>Sent to Virtual Court</th>}
+                <th>Fine Imposed</th>
+                {title && title.toLowerCase().includes('disposed') && <th>Fine Paid</th>}
+                <th>Status</th>
+                <th>Offence Details</th>
+                <th>Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {limited.map((c, idx) => (
+                <tr key={c.challan_no || idx}>
+                  <td style={{wordBreak:'break-word',maxWidth:60}}>{idx + 1}</td>
+                  <td style={{wordBreak:'break-word',maxWidth:120}}>
+                    <div className="cell-ellipsis" title={c.vehicle_number}>{c.vehicle_number || '-'}</div>
+                  </td>
+                  <td style={{wordBreak:'break-word',maxWidth:140}}>
+                    <div
+                      className={`cell-ellipsis${showFull[idx+'-challan_no'] ? ' cell-wrap' : ''}`}
+                      title={c.challan_no}
+                      onClick={() => handleShowFull(idx, 'challan_no')}
+                      style={{ cursor: c.challan_no && c.challan_no.length > 16 ? 'pointer' : 'default' }}
+                    >
+                      {showFull[idx+'-challan_no'] ? c.challan_no : <span>{c.challan_no && c.challan_no.length > 16 ? c.challan_no.slice(0, 16) + '…' : c.challan_no}</span>}
+                    </div>
+                  </td>
+                  <td style={{wordBreak:'break-word',maxWidth:120}}>
+                    <div className="cell-ellipsis" title={c.challan_date_time || c.created_at || c.createdAt}>{c.challan_date_time || c.created_at || c.createdAt}</div>
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    {(() => {
+                      const loc = c.challan_place || c.location || c.challan_location || c.address || c.owner_address;
+                      if (loc && typeof loc === 'string' && loc.trim()) {
+                        const openMap = (address) => {
+                          setInfoModal({
+                            open: true,
+                            message: (
+                              <iframe
+                                title="Google Maps"
+                                width="910"
+                                height="500"
+                                style={{ border: 0, borderRadius: 12 }}
+                                src={`https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`}
+                                allowFullScreen
+                              />
+                            )
+                          });
+                        };
+                        return (
+                          <span
+                            style={{ cursor: 'pointer', color: '#4285F4', fontSize: 20, verticalAlign: 'middle' }}
+                            title={loc}
+                            onClick={() => openMap(loc)}
+                          >
+                            <i className="ri-map-pin-2-fill" />
+                          </span>
+                        );
+                      }
+                      return 'Not Available';
+                    })()}
+                  </td>
+                  {title && title.toLowerCase().includes('pending') && (
+                    <td style={{ textAlign: 'center' }}>{formatRegCourtValue(c.sent_to_reg_court ?? c.sent_to_court_on ?? c.sent_to_court)}</td>
+                  )}
+                  {title && title.toLowerCase().includes('pending') && (
+                    <td style={{ textAlign: 'center' }}>{formatRegCourtValue(c.sent_to_virtual_court ?? c.sent_to_virtual)}</td>
+                  )}
+                  <td style={{ textAlign: "center"}}>{c.fine_imposed}</td>
+                  {title && title.toLowerCase().includes('disposed') && (
+                    <td style={{ textAlign: "center"}}>{c.received_amount ?? '-'}</td>
+                  )}
+                  <td><span className={c.challan_status === 'Pending' ? 'status pending' : c.challan_status === 'Disposed' ? 'status paid' : ''}>{c.challan_status}</span></td>
+                  <td>
+                    <ul style={{ margin: 0, paddingLeft: 18 }}>
+                      {Array.isArray(c.offence_details) && c.offence_details.map((o, i) => (
+                        <li
+                          key={i}
+                          className={`cell-ellipsis${showFull[idx+'-offence'+i] ? ' cell-wrap' : ''}`}
+                          title={o.name}
+                          onClick={() => handleShowFull(idx, 'offence'+i)}
+                          style={{ cursor: o.name && o.name.length > 30 ? 'pointer' : 'default' }}
+                        >
+                          {showFull[idx+'-offence'+i] ? o.name : <span>{o.name.length > 30 ? o.name.slice(0, 30) + '…' : o.name}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </td>
+                  <td style={{textAlign:'center'}}>
+                    {settlementMode ? (
+                      cart && cart.some(ch => ch.challan_no === c.challan_no) ? (
+                        <button className="action-btn flat-btn" style={{ background: '#eee', color: '#1976d2', padding: '0 12px', fontSize: '13px', minWidth: 0, height: '32px', lineHeight: '32px' }} onClick={() => removeFromCart && removeFromCart(c)}>
+                          Remove from Cart
+                        </button>
+                      ) : (
+                        <button className="action-btn flat-btn" style={{ background: '#1976d2', color: '#fff', padding: '0 12px', fontSize: '13px', minWidth: 0, height: '32px', lineHeight: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => addToCart && addToCart(c)}>
+                          <i className="ri-shopping-cart-2-line" style={{ fontSize: 18, color: '#fff', verticalAlign: 'middle' }}></i>
+                        </button>
+                      )
+                    ) : (
+                      <button
+                        className="action-btn flat-btn"
+                        style={{ padding: '0 12px', fontSize: '13px', minWidth: 0, height: '32px', lineHeight: '32px', display: 'inline-block', verticalAlign: 'middle', boxSizing: 'border-box' }}
+                        onClick={() => { setSelectedChallan(c); setSidebarOpen(true); }}
+                      >
+                        View Challan
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <div style={{marginTop:12, textAlign:'center'}}>
-          {hasMore ? (
-            <button className="action-btn flat-btn" onClick={() => setVisibleCount(v => v + 5)}>Load more challans</button>
-          ) : (
-            <button className="action-btn flat-btn" disabled style={{opacity:0.7}}>No more challans</button>
-          )}
-        </div>
+        {/* Show more records dropdown below the table, aligned left */}
+        {hasMore && (
+          <div style={{ marginTop: 10, textAlign: 'left' }}>
+            <span style={{ fontWeight: 600, marginRight: 10, color: '#1976d2', fontSize: 15 }}>Show more records:</span>
+            <select
+              style={{
+                padding: '7px 16px',
+                borderRadius: 6,
+                border: '1.5px solid #1976d2',
+                fontSize: 15,
+                fontWeight: 600,
+                color: '#1976d2',
+                background: '#f5faff',
+                outline: 'none',
+                marginRight: 8
+              }}
+              value={0}
+              onChange={e => {
+                const val = e.target.value;
+                if (val === 'all') setVisibleCount(filtered.length);
+                else setVisibleCount(prev => Math.min(prev + Number(val), filtered.length));
+              }}
+            >
+              <option value={0} disabled>Select</option>
+              <option value={10}>10 more</option>
+              <option value={50}>50 more</option>
+              <option value={100}>100 more</option>
+              <option value={200}>200 more</option>
+              <option value="all">All records</option>
+            </select>
+          </div>
+        )}
         </>
       )}
       <CustomModal
@@ -192,55 +254,51 @@ function ChallanTable({ title, data, search = {}, sortAsc = true }) {
         confirmText="OK"
         cancelText={null}
       />
-      <CustomModal
-        open={!!selectedChallan}
+      <RightSidebar
+        open={sidebarOpen && !!selectedChallan}
+        onClose={() => {
+          setSidebarOpen(false);
+          setTimeout(() => setSelectedChallan(null), 300);
+        }}
         title={selectedChallan ? `Challan Details: ${selectedChallan.challan_no}` : ''}
-        onConfirm={() => setSelectedChallan(null)}
-        onCancel={() => setSelectedChallan(null)}
-        confirmText="Close"
-        cancelText={null}
       >
         {selectedChallan && (
-          <div style={{lineHeight:1.7, fontSize:15}}>
-            <div><b>Status:</b> {selectedChallan.challan_status}</div>
-            <div><b>Vehicle Number:</b> {selectedChallan.vehicle_number}</div>
-            <div><b>Challan No:</b> {selectedChallan.challan_no}</div>
-            <div><b>Date/Time:</b> {selectedChallan.challan_date_time}</div>
-            <div><b>Location:</b> {selectedChallan.challan_place || selectedChallan.location || selectedChallan.challan_location}</div>
-            <div><b>Owner Name:</b> {selectedChallan.owner_name}</div>
-            <div><b>Driver Name:</b> {selectedChallan.driver_name}</div>
-            <div><b>Name of Violator:</b> {selectedChallan.name_of_violator}</div>
-            <div><b>Department:</b> {selectedChallan.department}</div>
-            <div><b>State Code:</b> {selectedChallan.state_code}</div>
-            <div><b>RTO District Name:</b> {selectedChallan.rto_distric_name}</div>
-            <div><b>Remark:</b> {selectedChallan.remark}</div>
-            <div><b>Document Impounded:</b> {selectedChallan.document_impounded}</div>
-            <div><b>Sent to Court On:</b> {selectedChallan.sent_to_court_on}</div>
-            <div><b>Sent to Reg Court:</b> {selectedChallan.sent_to_reg_court}</div>
-            <div><b>Sent to Virtual Court:</b> {selectedChallan.sent_to_virtual_court}</div>
-            <div><b>Court Name:</b> {selectedChallan.court_name}</div>
-            <div><b>Court Address:</b> {selectedChallan.court_address}</div>
-            <div><b>Date of Proceeding:</b> {selectedChallan.date_of_proceeding}</div>
-            <div><b>DL No:</b> {selectedChallan.dl_no}</div>
-            {selectedChallan.challan_status === 'Disposed' && (
-              <>
-                <div><b>Receipt No:</b> {selectedChallan.receipt_no}</div>
-                <div><b>Received Amount:</b> {selectedChallan.received_amount}</div>
-              </>
-            )}
-            <div><b>Fine Imposed:</b> {selectedChallan.fine_imposed}</div>
-            <div><b>Amount of Fine Imposed:</b> {selectedChallan.amount_of_fine_imposed}</div>
-            <div><b>Act:</b> {Array.isArray(selectedChallan.offence_details) && selectedChallan.offence_details.length > 0 ? selectedChallan.offence_details[0].act : ''}</div>
-            <div><b>Offence Details:</b>
-              <ul style={{margin:0,paddingLeft:18}}>
-                {Array.isArray(selectedChallan.offence_details) && selectedChallan.offence_details.map((o, j) => (
-                  <li key={j} className="cell-ellipsis" title={o.name}>{o.name}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          <table className="latest-table" style={{ width: '100%', fontSize: 15 }}>
+            <tbody>
+              <tr><td><b>Status</b></td><td>{selectedChallan.challan_status}</td></tr>
+              <tr><td><b>Vehicle Number</b></td><td>{selectedChallan.vehicle_number}</td></tr>
+              <tr><td><b>Challan No</b></td><td>{selectedChallan.challan_no}</td></tr>
+              <tr><td><b>Date/Time</b></td><td>{selectedChallan.challan_date_time}</td></tr>
+              <tr><td><b>Location</b></td><td>{selectedChallan.challan_place || selectedChallan.location || selectedChallan.challan_location}</td></tr>
+              <tr><td><b>Owner Name</b></td><td>{selectedChallan.owner_name}</td></tr>
+              <tr><td><b>Driver Name</b></td><td>{selectedChallan.driver_name}</td></tr>
+              <tr><td><b>Name of Violator</b></td><td>{selectedChallan.name_of_violator}</td></tr>
+              <tr><td><b>Department</b></td><td>{selectedChallan.department}</td></tr>
+              <tr><td><b>State Code</b></td><td>{selectedChallan.state_code}</td></tr>
+              <tr><td><b>RTO District Name</b></td><td>{selectedChallan.rto_distric_name}</td></tr>
+              <tr><td><b>Remark</b></td><td>{selectedChallan.remark}</td></tr>
+              <tr><td><b>Document Impounded</b></td><td>{selectedChallan.document_impounded}</td></tr>
+              <tr><td><b>Sent to Court On</b></td><td>{selectedChallan.sent_to_court_on}</td></tr>
+              <tr><td><b>Sent to Reg Court</b></td><td>{selectedChallan.sent_to_reg_court}</td></tr>
+              <tr><td><b>Sent to Virtual Court</b></td><td>{selectedChallan.sent_to_virtual_court}</td></tr>
+              <tr><td><b>Court Name</b></td><td>{selectedChallan.court_name}</td></tr>
+              <tr><td><b>Court Address</b></td><td>{selectedChallan.court_address}</td></tr>
+              <tr><td><b>Date of Proceeding</b></td><td>{selectedChallan.date_of_proceeding}</td></tr>
+              <tr><td><b>DL No</b></td><td>{selectedChallan.dl_no}</td></tr>
+              {selectedChallan.challan_status === 'Disposed' && (
+                <>
+                  <tr><td><b>Receipt No</b></td><td>{selectedChallan.receipt_no}</td></tr>
+                  <tr><td><b>Received Amount</b></td><td>{selectedChallan.received_amount}</td></tr>
+                </>
+              )}
+              <tr><td><b>Fine Imposed</b></td><td>{selectedChallan.fine_imposed}</td></tr>
+              <tr><td><b>Amount of Fine Imposed</b></td><td>{selectedChallan.amount_of_fine_imposed}</td></tr>
+              <tr><td><b>Act</b></td><td>{Array.isArray(selectedChallan.offence_details) && selectedChallan.offence_details.length > 0 ? selectedChallan.offence_details[0].act : ''}</td></tr>
+              <tr><td><b>Offence Details</b></td><td><ul style={{margin:0,paddingLeft:18}}>{Array.isArray(selectedChallan.offence_details) && selectedChallan.offence_details.map((o, j) => (<li key={j} className="cell-ellipsis" title={o.name}>{o.name}</li>))}</ul></td></tr>
+            </tbody>
+          </table>
         )}
-      </CustomModal>
+      </RightSidebar>
       <style>{`
         .cell-ellipsis {
           overflow: hidden;

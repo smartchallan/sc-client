@@ -709,7 +709,6 @@ export default function RegisterVehicle() {
             const filteredActiveVehicles = vehicles.filter(v => {
               const status = (v.status || '').toUpperCase();
               if (status === 'DELETED') return false;
-              
               const searchVal = searchValue.trim().toUpperCase();
               const matchesSearch =
                 !searchVal ||
@@ -720,16 +719,36 @@ export default function RegisterVehicle() {
                 !statusFilter || (v.status && v.status.toUpperCase() === statusFilter.toUpperCase());
               return matchesSearch && matchesStatus;
             });
-            
             if (filteredActiveVehicles.length > activeVehiclesLimit) {
               return (
-                <div style={{ textAlign: 'center', marginTop: 16 }}>
-                  <button 
-                    className="load-more-btn"
-                    onClick={() => setActiveVehiclesLimit(prev => prev + 10)}
+                <div style={{ textAlign: 'left', marginTop: 16 }}>
+                  <span style={{ fontWeight: 600, marginRight: 10, color: '#1976d2', fontSize: 15 }}>Show more records:</span>
+                  <select
+                    style={{
+                      padding: '7px 16px',
+                      borderRadius: 6,
+                      border: '1.5px solid #1976d2',
+                      fontSize: 15,
+                      fontWeight: 600,
+                      color: '#1976d2',
+                      background: '#f5faff',
+                      outline: 'none',
+                      marginRight: 8
+                    }}
+                    value={0}
+                    onChange={e => {
+                      const val = e.target.value;
+                      if (val === 'all') setActiveVehiclesLimit(filteredActiveVehicles.length);
+                      else setActiveVehiclesLimit(prev => Math.min(prev + Number(val), filteredActiveVehicles.length));
+                    }}
                   >
-                    Load More Vehicles ({filteredActiveVehicles.length - activeVehiclesLimit} remaining)
-                  </button>
+                    <option value={0} disabled>Select</option>
+                    <option value={10}>10 more</option>
+                    <option value={50}>50 more</option>
+                    <option value={100}>100 more</option>
+                    <option value={200}>200 more</option>
+                    <option value="all">All records</option>
+                  </select>
                 </div>
               );
             }

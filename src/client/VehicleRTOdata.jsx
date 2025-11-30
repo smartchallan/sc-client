@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import "../shared/CommonDashboard.css";
 import CustomModal from "./CustomModal";
+import RightSidebar from "./RightSidebar";
+import "./RightSidebar.css";
 import "../RegisterVehicle.css";
 
 export default function VehicleRTOdataTable({ clientId, onViewAll }) {
@@ -101,6 +103,7 @@ export default function VehicleRTOdataTable({ clientId, onViewAll }) {
   }, [clientId]);
 
   const [selectedVehicle, setSelectedVehicle] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   // Search, sort, filter state
   const [search, setSearch] = useState('');
   const [sortAsc, setSortAsc] = useState(false); // false = newest first
@@ -236,7 +239,7 @@ export default function VehicleRTOdataTable({ clientId, onViewAll }) {
                 <td>{formatExpiry(v.fitness_exp || v.rc_fit_upto, true)}</td>
                 <td>{formatExpiry(v.pollution_exp || v.rc_pucc_upto, true)}</td>
                 <td style={{textAlign:'center'}}>
-                  <button className="action-btn flat-btn" style={{padding:'4px 10px',fontSize:14}} onClick={() => setSelectedVehicle(v)}>
+                  <button className="action-btn flat-btn" style={{padding:'4px 10px',fontSize:14}} onClick={() => { setSelectedVehicle(v); setSidebarOpen(true); }}>
                     View Vehicle
                   </button>
                 </td>
@@ -246,50 +249,77 @@ export default function VehicleRTOdataTable({ clientId, onViewAll }) {
         </tbody>
       </table>
     </div>
+
       {(recordsToShow < filtered.length) && (
-        <div style={{ textAlign: 'right', marginTop: 12 }}>
-          <button
-            className="action-btn"
-            onClick={e => {
-              e.preventDefault();
-              setRecordsToShow(prev => Math.min(prev + DEFAULT_LIMIT, filtered.length));
+        <div style={{ textAlign: 'left', marginTop: 16, marginBottom: 8 }}>
+          <span style={{
+            fontWeight: 600,
+            marginRight: 12,
+            color: '#1976d2',
+            fontSize: 15
+          }}>
+            Show more records:
+          </span>
+          <select
+            style={{
+              padding: '7px 16px',
+              borderRadius: 6,
+              border: '1.5px solid #1976d2',
+              fontSize: 15,
+              fontWeight: 600,
+              color: '#1976d2',
+              background: '#f5faff',
+              outline: 'none',
+              marginRight: 8
+            }}
+            value={0}
+            onChange={e => {
+              const val = e.target.value;
+              if (val === 'all') setRecordsToShow(filtered.length);
+              else setRecordsToShow(prev => Math.min(prev + Number(val), filtered.length));
             }}
           >
-            Load More Vehicles
-          </button>
+            <option value={0} disabled>Select</option>
+            <option value={50}>50 more</option>
+            <option value={100}>100 more</option>
+            <option value={200}>200 more</option>
+            <option value="all">All records</option>
+          </select>
         </div>
       )}
 
-      <CustomModal
-        open={!!selectedVehicle}
+      <RightSidebar
+        open={sidebarOpen && !!selectedVehicle}
+        onClose={() => {
+          setSidebarOpen(false);
+          setTimeout(() => setSelectedVehicle(null), 300);
+        }}
         title={selectedVehicle ? `Vehicle RTO Data: ${selectedVehicle.rc_regn_no}` : ''}
-        onConfirm={() => setSelectedVehicle(null)}
-        onCancel={() => setSelectedVehicle(null)}
-        confirmText="Close"
-        cancelText={null}
       >
         {selectedVehicle && (
-          <div style={{lineHeight:1.7, fontSize:15}}>
-            <div><b>Vehicle No:</b> {selectedVehicle.rc_regn_no || '-'}</div>
-            <div><b>Owner Name:</b> {selectedVehicle.rc_owner_name || '-'}</div>
-            <div><b>Registration Date:</b> {formatExpiry(selectedVehicle.rc_regn_dt, false)}</div>
-            <div><b>Insurance Expiry:</b> {formatExpiry(selectedVehicle.insurance_exp || selectedVehicle.rc_insurance_upto, false)}</div>
-            <div><b>Road Tax Expiry:</b> {formatExpiry(selectedVehicle.road_tax_exp || selectedVehicle.rc_tax_upto, false)}</div>
-            <div><b>Fitness Expiry:</b> {formatExpiry(selectedVehicle.fitness_exp || selectedVehicle.rc_fit_upto, false)}</div>
-            <div><b>Pollution Expiry:</b> {formatExpiry(selectedVehicle.pollution_exp || selectedVehicle.rc_pucc_upto, false)}</div>
-            <div><b>Chassis No:</b> {selectedVehicle.rc_chasi_no || '-'}</div>
-            <div><b>Engine No:</b> {selectedVehicle.rc_engine_no || '-'}</div>
-            <div><b>Vehicle Class:</b> {selectedVehicle.rc_vh_class_desc || '-'}</div>
-            <div><b>Fuel Type:</b> {selectedVehicle.rc_fuel_desc || '-'}</div>
-            <div><b>Maker:</b> {selectedVehicle.rc_maker_desc || '-'}</div>
-            <div><b>Model:</b> {selectedVehicle.rc_maker_model || '-'}</div>
-            <div><b>RTO:</b> {selectedVehicle.rc_off_cd || '-'}</div>
-            <div><b>State:</b> {selectedVehicle.rc_state_cd || '-'}</div>
-            <div><b>Mobile No:</b> {selectedVehicle.rc_mobile_no || '-'}</div>
-            <div><b>Address:</b> {selectedVehicle.rc_present_address || '-'}</div>
-          </div>
+          <table className="latest-table" style={{ width: '100%', fontSize: 15 }}>
+            <tbody>
+              <tr><td><b>Vehicle No</b></td><td>{selectedVehicle.rc_regn_no || '-'}</td></tr>
+              <tr><td><b>Owner Name</b></td><td>{selectedVehicle.rc_owner_name || '-'}</td></tr>
+              <tr><td><b>Registration Date</b></td><td>{formatExpiry(selectedVehicle.rc_regn_dt, false)}</td></tr>
+              <tr><td><b>Insurance Expiry</b></td><td>{formatExpiry(selectedVehicle.insurance_exp || selectedVehicle.rc_insurance_upto, false)}</td></tr>
+              <tr><td><b>Road Tax Expiry</b></td><td>{formatExpiry(selectedVehicle.road_tax_exp || selectedVehicle.rc_tax_upto, false)}</td></tr>
+              <tr><td><b>Fitness Expiry</b></td><td>{formatExpiry(selectedVehicle.fitness_exp || selectedVehicle.rc_fit_upto, false)}</td></tr>
+              <tr><td><b>Pollution Expiry</b></td><td>{formatExpiry(selectedVehicle.pollution_exp || selectedVehicle.rc_pucc_upto, false)}</td></tr>
+              <tr><td><b>Chassis No</b></td><td>{selectedVehicle.rc_chasi_no || '-'}</td></tr>
+              <tr><td><b>Engine No</b></td><td>{selectedVehicle.rc_engine_no || '-'}</td></tr>
+              <tr><td><b>Vehicle Class</b></td><td>{selectedVehicle.rc_vh_class_desc || '-'}</td></tr>
+              <tr><td><b>Fuel Type</b></td><td>{selectedVehicle.rc_fuel_desc || '-'}</td></tr>
+              <tr><td><b>Maker</b></td><td>{selectedVehicle.rc_maker_desc || '-'}</td></tr>
+              <tr><td><b>Model</b></td><td>{selectedVehicle.rc_maker_model || '-'}</td></tr>
+              <tr><td><b>RTO</b></td><td>{selectedVehicle.rc_off_cd || '-'}</td></tr>
+              <tr><td><b>State</b></td><td>{selectedVehicle.rc_state_cd || '-'}</td></tr>
+              <tr><td><b>Mobile No</b></td><td>{selectedVehicle.rc_mobile_no || '-'}</td></tr>
+              <tr><td><b>Address</b></td><td>{selectedVehicle.rc_present_address || '-'}</td></tr>
+            </tbody>
+          </table>
         )}
-      </CustomModal>
+      </RightSidebar>
 
     </div>
   );
