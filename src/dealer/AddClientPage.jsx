@@ -112,10 +112,9 @@ export default function AddClientPage() {
         let admin_id = null, dealer_id = null;
         try {
           const stored = JSON.parse(localStorage.getItem('sc_user')) || {};
-          if (stored && stored.user) {
-            admin_id = stored.user.admin_id || stored.user.adminId || null;
-            dealer_id = stored.user.id || null; // logged in user id as dealer_id
-          }
+          const dealerObj = stored.user ? stored.user : stored;
+          admin_id = dealerObj.admin_id || dealerObj.adminId || null;
+          dealer_id = dealerObj.id || null; // logged in user id as dealer_id
         } catch (e) {}
         const payload = {
           ...form,
