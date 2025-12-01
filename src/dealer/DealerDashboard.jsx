@@ -38,51 +38,49 @@ function DealerDashboard() {
 	const chartRef4 = useRef(null);
 
 	// Get user info from localStorage
-	const user = (() => {
-		try {
-			return JSON.parse(localStorage.getItem('sc_user')) || {};
-		} catch {
-			return {};
-		}
-	})();
+// Remove static user object; always read from localStorage in effect
 
-	// Fetch dealer data using new endpoint
-	useEffect(() => {
-		const dealerId = user.user && user.user.id;
-		const userRole = user.user && user.user.role;
-		
-		if (!dealerId) {
-			console.log('No dealer ID found, skipping API call');
-			return;
-		}
-		
-		if (userRole !== 'dealer') {
-			console.log('User is not a dealer, skipping API call. Role:', userRole);
-			return;
-		}
-		
-		const fetchDealerData = async () => {
-			console.log('Fetching dealer data for ID:', dealerId);
-			setLoadingDealerData(true);
-			setDealerDataError(null);
-			try {
-				const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
-				const url = `${baseUrl}/dealerdata?dealer_id=${dealerId}`;
-				const res = await fetch(url);
-				if (!res.ok) throw new Error(`API error: ${res.status}`);
-				const data = await res.json();
-				setDealerData(data);
-				console.log('Dealer data fetched successfully:', data);
-			} catch (err) {
-				setDealerDataError(err.message || "Failed to fetch dealer data");
-				console.error('Error fetching dealer data:', err);
-			} finally {
-				setLoadingDealerData(false);
-			}
-		};
-		
-		fetchDealerData();
-	}, [user.user?.id, user.user?.role]); // Run when dealer ID or role changes
+		// Fetch dealer data using new endpoint
+		useEffect(() => {
+			let user = {};
+					try {
+						user = JSON.parse(localStorage.getItem('sc_user')) || {};
+					} catch {
+						user = {};
+					}
+					// Support both {user: ...} and flat user object
+					const dealerObj = user.user ? user.user : user;
+					const dealerId = dealerObj && dealerObj.id;
+					const userRole = dealerObj && dealerObj.role;
+					if (!dealerId) {
+						console.log('No dealer ID found, skipping API call');
+						return;
+					}
+					if (userRole !== 'dealer') {
+						console.log('User is not a dealer, skipping API call. Role:', userRole);
+						return;
+					}
+			const fetchDealerData = async () => {
+				console.log('Fetching dealer data for ID:', dealerId);
+				setLoadingDealerData(true);
+				setDealerDataError(null);
+				try {
+					const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+					const url = `${baseUrl}/dealerdata?dealer_id=${dealerId}`;
+					const res = await fetch(url);
+					if (!res.ok) throw new Error(`API error: ${res.status}`);
+					const data = await res.json();
+					setDealerData(data);
+					console.log('Dealer data fetched successfully:', data);
+				} catch (err) {
+					setDealerDataError(err.message || "Failed to fetch dealer data");
+					console.error('Error fetching dealer data:', err);
+				} finally {
+					setLoadingDealerData(false);
+				}
+			};
+			fetchDealerData();
+		}, []); // Only on mount; always reads latest user from localStorage
 
 	// Clients pie chart - show clients by city
 	useEffect(() => {
@@ -244,71 +242,83 @@ function DealerDashboard() {
 		if (menuLabel === "Home") {
 			setLoadingDealerData(false);
 			setDealerDataError(null);
-			if (user.user && user.user.id && user.user.role === 'dealer') {
-				const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
-				const url = `${baseUrl}/dealerdata?dealer_id=${user.user.id}`;
-				setLoadingDealerData(true);
-				fetch(url)
-					.then(res => res.json())
-					.then(data => setDealerData(data))
-					.catch(() => setDealerDataError("Failed to fetch dealer data"))
-					.finally(() => setLoadingDealerData(false));
-			}
+					// Always read user from localStorage at the time of click
+							let user = {};
+							try {
+								user = JSON.parse(localStorage.getItem('sc_user')) || {};
+							} catch { user = {}; }
+							const dealerObj = user.user ? user.user : user;
+							if (dealerObj && dealerObj.id && dealerObj.role === 'dealer') {
+								const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+								const url = `${baseUrl}/dealerdata?dealer_id=${dealerObj.id}`;
+								setLoadingDealerData(true);
+								fetch(url)
+									.then(res => res.json())
+									.then(data => setDealerData(data))
+									.catch(() => setDealerDataError("Failed to fetch dealer data"))
+									.finally(() => setLoadingDealerData(false));
+							}
 		}
 		if (window.innerWidth <= 900) setSidebarOpen(false);
 	};
 	
 	const toggleSidebar = () => setSidebarOpen(s => !s);
 
-	return (
-		<div className={`dashboard-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
-			{sidebarOpen && window.innerWidth <= 900 && (
-				<div className="sidebar-overlay show" onClick={() => setSidebarOpen(false)} />
-			)}
-						{(sidebarOpen || window.innerWidth <= 900) && (
-							<DealerSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
-						)}
-			<main className="main-content">
-				<div className="header" style={{marginBottom: 24}}>
-					<div className="header-left" style={{display:'flex',alignItems:'center',gap:16}}>
-						<div className="menu-toggle" style={{fontSize:22,cursor:'pointer'}} onClick={toggleSidebar}>
-							<i className="ri-menu-line"></i>
+		return (
+			<div className={`dashboard-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
+				{sidebarOpen && window.innerWidth <= 900 && (
+					<div className="sidebar-overlay show" onClick={() => setSidebarOpen(false)} />
+				)}
+					{(sidebarOpen || window.innerWidth <= 900) && (
+						<DealerSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
+					)}
+				<main className="main-content">
+					<div className="header" style={{marginBottom: 24}}>
+						<div className="header-left" style={{display:'flex',alignItems:'center',gap:16}}>
+							<div className="menu-toggle" style={{fontSize:22,cursor:'pointer'}} onClick={toggleSidebar}>
+								<i className="ri-menu-line"></i>
+							</div>
+							<div className="header-title" style={{fontWeight:600}}>
+								{activeMenu === 'Home' ? 'Dashboard' : activeMenu}
+							</div>
 						</div>
-						<div className="header-title" style={{fontWeight:600}}>
-							{activeMenu === 'Home' ? 'Dashboard' : activeMenu}
-						</div>
-					</div>
-					<div className="header-right" style={{display:'flex',alignItems:'center',gap:18,cursor:'pointer'}} onClick={() => setActiveMenu('Profile')} role="button" aria-label="Open profile">
-						<button className="header-more" title="Hide / Show sidebar" onClick={(e)=>{ e.stopPropagation(); setSidebarOpen(s => !s); }} style={{background:'transparent',border:'none',cursor:'pointer',color:'#333',fontSize:20}}>
-							<i className="ri-more-2-fill" />
-						</button>
-						{(() => {
-							let headerInitials = 'JS';
-							try {
-								const userObj = JSON.parse(localStorage.getItem('sc_user'));
-								if (userObj && userObj.user && userObj.user.name) {
-									const nameParts = userObj.user.name.trim().split(/\s+/);
-									if (nameParts.length >= 2) {
+						<div className="header-right" style={{display:'flex',alignItems:'center',gap:18,cursor:'pointer'}} onClick={() => setActiveMenu('Profile')} role="button" aria-label="Open profile">
+							<button className="header-more" title="Hide / Show sidebar" onClick={(e)=>{ e.stopPropagation(); setSidebarOpen(s => !s); }} style={{background:'transparent',border:'none',cursor:'pointer',color:'#333',fontSize:20}}>
+								<i className="ri-more-2-fill" />
+							</button>
+							{(() => {
+								let headerInitials = 'JS';
+								try {
+									const userObj = JSON.parse(localStorage.getItem('sc_user'));
+									if (userObj && userObj.user && userObj.user.name) {
+										const nameParts = userObj.user.name.trim().split(/\s+/);
+										if (nameParts.length >= 2) {
 										headerInitials = (nameParts[0][0] + nameParts[1][0]).toUpperCase();
-									} else {
+										} else {
 										headerInitials = userObj.user.name.substring(0,2).toUpperCase();
+										}
 									}
-								}
-							} catch {}
-							return (
-								<div className="header-profile" style={{marginLeft:8}}>
-									<div className="header-avatar" style={{background:'#0072ff',color:'#fff',borderRadius:'50%',width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:600,fontSize:16}}>{headerInitials}</div>
-								</div>
-							);
-						})()}
-					</div>
-				</div>
-				{activeMenu === "Home" && (
-					<>
-						<div>
-							<h1 className="page-title">Welcome{user.user && user.user.name ? `, ${user.user.name}` : ''}</h1>
-							<p className="page-subtitle">Manage your clients, vehicles, and challans all in one place.</p>
+								} catch {}
+								return (
+									<div className="header-profile" style={{marginLeft:8}}>
+										<div className="header-avatar" style={{background:'#0072ff',color:'#fff',borderRadius:'50%',width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:600,fontSize:16}}>{headerInitials}</div>
+									</div>
+								);
+							})()}
 						</div>
+					</div>
+					{activeMenu === "Home" && (
+						<>
+							<div>
+								{(() => {
+									let user = {};
+									try {
+										user = JSON.parse(localStorage.getItem('sc_user')) || {};
+									} catch { user = {}; }
+									return <h1 className="page-title">Welcome{user.user && user.user.name ? `, ${user.user.name}` : ''}</h1>;
+								})()}
+								<p className="page-subtitle">Manage your clients, vehicles, and challans all in one place.</p>
+							</div>
 						<div className="dashboard-stats">
 							{/* Stat card: Happy Clients (from summary.total_clients) */}
 							<div className="stat-card">
