@@ -1,7 +1,33 @@
 import React, { useEffect, useState } from "react";
+import { FaDownload, FaPrint } from "react-icons/fa";
+import * as XLSX from "xlsx";
 import "../shared/CommonDashboard.css";
 
 export default function MyBilling({ clientId }) {
+  // Download as Excel
+  const handleDownloadExcel = () => {
+    if (!billingPlans || billingPlans.length === 0) return;
+    const exportData = billingPlans.map(({ _raw, ...row }) => row);
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "BillingPlans");
+    XLSX.writeFile(workbook, "billing_plans.xlsx");
+  };
+
+  // Print table
+  const handlePrintTable = () => {
+    const printContents = document.getElementById('my-billing-table-print-area')?.innerHTML;
+    if (!printContents) return;
+    const printWindow = window.open('', '', 'height=600,width=900');
+    printWindow.document.write('<html><head><title>Print Billing Plans</title>');
+    printWindow.document.write('<style>body{font-family:sans-serif;} table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ccc;padding:8px;} th{background:#f5f8fa;}</style>');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write(printContents);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
+  };
   const [billingPlans, setBillingPlans] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -64,7 +90,16 @@ export default function MyBilling({ clientId }) {
       <h2 style={{fontSize:'1.2rem', marginBottom:12}}>My Billing</h2>
       {loading && <div>Loading...</div>}
       {error && <div style={{color:'red'}}>{error}</div>}
-      <table className="latest-table" style={{width:'100%', marginBottom:24}}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '8px 0', gap: 10 }}>
+        <button onClick={handleDownloadExcel} title="Download Excel" style={{ padding: '8px 16px', background: '#2196f3', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <FaDownload size={18} />
+        </button>
+        <button onClick={handlePrintTable} title="Print" style={{ padding: '8px 16px', background: '#4caf50', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <FaPrint size={18} />
+        </button>
+      </div>
+      <div id="my-billing-table-print-area">
+        <table className="latest-table" style={{width:'100%', marginBottom:24}}>
         <thead>
           <tr>
             <th>Billing Type</th>
@@ -91,8 +126,9 @@ export default function MyBilling({ clientId }) {
             ))
           )}
         </tbody>
-      </table>
-      <form className="dealer-form" onSubmit={handleSubmit} style={{maxWidth:500, marginTop:24}}>
+  </table>
+  </div>
+  <form className="dealer-form" onSubmit={handleSubmit} style={{maxWidth:500, marginTop:24}}>
         <div className="form-row">
           <div className="form-col" style={{width:'50%'}}>
             <label>Start Date</label>

@@ -1,3 +1,8 @@
+@media print {
+  .print-hide {
+    display: none !important;
+  }
+}
 /* Responsive styles */
 /* Large laptop responsiveness */
 @media (max-width: 1440px) and (min-width: 1025px) {

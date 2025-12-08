@@ -35,8 +35,10 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
   const menu = [
     { icon: "ri-home-4-line", label: "Dashboard" },
     { icon: "ri-car-line", label: "Register Vehicle" },
+    { icon: "ri-truck-line", label: "My Fleet" },
     { icon: "ri-car-line", label: "Vehicle RTO Data" },
-    { icon: "ri-file-list-3-line", label: "Vehicle Challan Data" },
+  { icon: "ri-file-list-3-line", label: "Vehicle Challan Data" },
+  { icon: "ri-shopping-cart-2-line", label: "Challan Settlement" },
     // { icon: "ri-shopping-cart-2-line", label: "Challan Settlement" },
     { icon: "ri-id-card-line", label: "Driver Verification" },
     { icon: "ri-bank-card-line", label: "Vehicle Fastag" },

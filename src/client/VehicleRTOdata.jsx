@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
+import { FaDownload, FaPrint } from "react-icons/fa";
+import * as XLSX from "xlsx";
 import "../shared/CommonDashboard.css";
 import CustomModal from "./CustomModal";
 import RightSidebar from "./RightSidebar";
 import "./RightSidebar.css";
 import "../RegisterVehicle.css";
 
-export default function VehicleRTOdataTable({ clientId, onViewAll }) {
+export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoData, setSelectedRtoData, hideSearchSortFilter }) {
   const formatExpiry = (dateStr, useColor = true) => {
     if (!dateStr || dateStr === '-') return '-';
     let d = null;
@@ -102,8 +104,7 @@ export default function VehicleRTOdataTable({ clientId, onViewAll }) {
       });
   }, [clientId]);
 
-  const [selectedVehicle, setSelectedVehicle] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Sidebar state is now managed by parent
   // Search, sort, filter state
   const [search, setSearch] = useState('');
   const [sortAsc, setSortAsc] = useState(false); // false = newest first
@@ -147,54 +148,91 @@ export default function VehicleRTOdataTable({ clientId, onViewAll }) {
   const displayed = recordsToShow > 0 ? filtered.slice(0, recordsToShow) : filtered;
 
   return (
-    <div className="dashboard-latest" style={{marginTop:32}}>
-      <div className="latest-header">
-        <h2>Vehicle RTO Data</h2>
+    <div className="dashboard-latest" >
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 0, padding: '0 0 10px 0' }}>
+        <div style={{ width: 6, height: 28, background: '#4caf50', borderRadius: 3, marginRight: 12 }} />
+        <h2 style={{
+          margin: 0,
+          fontSize: 20,
+          // fontWeight: 800,
+          color: '#222',
+          letterSpacing: '0.01em',
+          fontFamily: 'Segoe UI, Arial, sans-serif',
+          lineHeight: 1.2
+        }}>Vehicle RTO Data</h2>
       </div>
-      <div style={{display:'flex',gap:16,marginBottom:12,flexWrap:'wrap',alignItems:'center'}}>
-        <div className="number-plate-container" style={{ width: 330 }}>
-          <div className="number-plate-wrapper">
-            <div className="number-plate-badge">IND</div>
-            <div className="tricolor-strip">
-              <div className="saffron"></div>
-              <div className="white"></div>
-              <div className="green"></div>
+      {!hideSearchSortFilter && (
+        <div style={{display:'flex',gap:16,marginBottom:12,flexWrap:'wrap',alignItems:'center'}}>
+          <div className="number-plate-container" style={{ width: 330 }}>
+            <div className="number-plate-wrapper">
+              <div className="number-plate-badge">IND</div>
+              <div className="tricolor-strip">
+                <div className="saffron"></div>
+                <div className="white"></div>
+                <div className="green"></div>
+              </div>
+              <input
+                type="text"
+                placeholder="Search Vehicle Number"
+                value={search}
+                onChange={e => setSearch(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                className="number-plate-input"
+                maxLength={12}
+              />
             </div>
-            <input
-              type="text"
-              placeholder="Search Vehicle Number"
-              value={search}
-              onChange={e => setSearch(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-              className="number-plate-input"
-              maxLength={12}
-            />
+            <div className="security-features">
+              <div className="hologram"></div>
+              <div className="chakra">⚙</div>
+            </div>
           </div>
-          <div className="security-features">
-            <div className="hologram"></div>
-            <div className="chakra">⚙</div>
-          </div>
+          <select
+            value={expiryFilter}
+            onChange={e => setExpiryFilter(e.target.value)}
+            className="filter-select"
+          >
+            <option value="all">All</option>
+            <option value="expired">Expired</option>
+            <option value="expiring">Expiring Soon (≤30d)</option>
+            <option value="valid">Valid (&gt;30d)</option>
+          </select>
+          <button
+            className="action-btn flat-btn sort-btn"
+            onClick={() => setSortAsc(s => !s)}
+          >
+            Sort Reg Date {sortAsc ? '▲' : '▼'}
+          </button>
         </div>
-        <select
-          value={expiryFilter}
-          onChange={e => setExpiryFilter(e.target.value)}
-          className="filter-select"
-        >
-          <option value="all">All</option>
-          <option value="expired">Expired</option>
-          <option value="expiring">Expiring Soon (≤30d)</option>
-          <option value="valid">Valid (&gt;30d)</option>
-        </select>
-        <button
-          className="action-btn flat-btn sort-btn"
-          onClick={() => setSortAsc(s => !s)}
-        >
-          Sort Reg Date {sortAsc ? '▲' : '▼'}
-        </button>
-      </div>
+      )}
       {loading && <div>Loading vehicle data...</div>}
       {error && <div style={{color:'red'}}>{error}</div>}
-      <div className="table-caption-row">
-        <div />
+      <div className="table-caption-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={() => {
+            if (!displayed || displayed.length === 0) return;
+            const exportData = displayed.map(({ Action, ...row }) => row);
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "RTOData");
+            XLSX.writeFile(workbook, "rto_data.xlsx");
+          }} title="Download Excel" style={{ padding: '8px 16px', background: '#2196f3', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <FaDownload size={18} />
+          </button>
+          <button onClick={() => {
+            const printContents = document.getElementById('vehicle-rto-table-print-area')?.innerHTML;
+            if (!printContents) return;
+            const printWindow = window.open('', '', 'height=600,width=900');
+            printWindow.document.write('<html><head><title>Print RTO Data</title>');
+            printWindow.document.write('<style>body{font-family:sans-serif;} table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ccc;padding:8px;} th{background:#f5f8fa;} .print-hide{display:none !important;}</style>');
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(printContents);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
+          }} title="Print" style={{ padding: '8px 16px', background: '#4caf50', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <FaPrint size={18} />
+          </button>
+        </div>
         <div
           style={{
             marginBottom: 8,
@@ -211,42 +249,46 @@ export default function VehicleRTOdataTable({ clientId, onViewAll }) {
           Showing {displayed.length} of {filtered.length} records
         </div>
       </div>
-  <div className="table-container">
+  <div className="table-container" id="vehicle-rto-table-print-area">
     <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
-          <thead>
-            <tr>
-              <th>S. No.</th>
-              <th>Vehicle No.</th>
-              <th>Registration Date</th>
-              <th>Insurance Exp</th>
-              <th>Road Tax Exp</th>
-              <th>Fitness Exp</th>
-              <th>Pollution Exp</th>
-              <th>Action</th>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Vehicle No.</th>
+          {!hideSearchSortFilter && <th>Registration Date</th>}
+          <th>Insurance Exp</th>
+          <th>Road Tax Exp</th>
+          <th>Fitness Exp</th>
+          <th>Pollution Exp</th>
+          <th className="print-hide">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {displayed.length === 0 ? (
+          <tr><td colSpan={hideSearchSortFilter ? 7 : 8}>No vehicle data found.</td></tr>
+        ) : (
+          displayed.map((v, idx) => (
+            <tr key={v.rc_regn_no || idx}>
+              <td>{idx + 1}</td>
+              <td>{v.rc_regn_no || '-'}</td>
+              {!hideSearchSortFilter && <td>{formatExpiry(v.rc_regn_dt, false)}</td>}
+              <td>{formatExpiry(v.insurance_exp || v.rc_insurance_upto, true)}</td>
+              <td>{formatExpiry(v.road_tax_exp || v.rc_tax_upto, true)}</td>
+              <td>{formatExpiry(v.fitness_exp || v.rc_fit_upto, true)}</td>
+              <td>{formatExpiry(v.pollution_exp || v.rc_pucc_upto, true)}</td>
+              <td className="print-hide" style={{textAlign:'center'}}>
+                <button className="action-btn flat-btn" style={{padding:'4px 10px',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={() => {
+                  // Always set the latest vehicle data from the full vehicleData array
+                  const found = vehicleData.find(item => item.rc_regn_no === v.rc_regn_no);
+                  setSelectedRtoData(found || v);
+                }} title="View Vehicle">
+                  <i className="ri-eye-line" style={{fontSize:18,verticalAlign:'middle'}} />
+                </button>
+              </td>
             </tr>
-          </thead>
-        <tbody>
-          {displayed.length === 0 ? (
-            <tr><td colSpan={8}>No vehicle data found.</td></tr>
-          ) : (
-            displayed.map((v, idx) => (
-              <tr key={v.rc_regn_no || idx}>
-                <td>{idx + 1}</td>
-                <td>{v.rc_regn_no || '-'}</td>
-                <td>{formatExpiry(v.rc_regn_dt, false)}</td>
-                <td>{formatExpiry(v.insurance_exp || v.rc_insurance_upto, true)}</td>
-                <td>{formatExpiry(v.road_tax_exp || v.rc_tax_upto, true)}</td>
-                <td>{formatExpiry(v.fitness_exp || v.rc_fit_upto, true)}</td>
-                <td>{formatExpiry(v.pollution_exp || v.rc_pucc_upto, true)}</td>
-                <td style={{textAlign:'center'}}>
-                  <button className="action-btn flat-btn" style={{padding:'4px 10px',fontSize:14}} onClick={() => { setSelectedVehicle(v); setSidebarOpen(true); }}>
-                    View Vehicle
-                  </button>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
+          ))
+        )}
+      </tbody>
       </table>
     </div>
 
@@ -289,35 +331,36 @@ export default function VehicleRTOdataTable({ clientId, onViewAll }) {
       )}
 
       <RightSidebar
-        open={sidebarOpen && !!selectedVehicle}
+        open={!!selectedRtoData}
         onClose={() => {
-          setSidebarOpen(false);
-          setTimeout(() => setSelectedVehicle(null), 300);
+          setTimeout(() => setSelectedRtoData(null), 300);
         }}
-        title={selectedVehicle ? `Vehicle RTO Data: ${selectedVehicle.rc_regn_no}` : ''}
+        title={selectedRtoData ? `Vehicle RTO Data: ${selectedRtoData.rc_regn_no}` : ''}
       >
-        {selectedVehicle && (
+        {selectedRtoData && selectedRtoData.rc_regn_no ? (
           <table className="latest-table" style={{ width: '100%', fontSize: 15 }}>
             <tbody>
-              <tr><td><b>Vehicle No</b></td><td>{selectedVehicle.rc_regn_no || '-'}</td></tr>
-              <tr><td><b>Owner Name</b></td><td>{selectedVehicle.rc_owner_name || '-'}</td></tr>
-              <tr><td><b>Registration Date</b></td><td>{formatExpiry(selectedVehicle.rc_regn_dt, false)}</td></tr>
-              <tr><td><b>Insurance Expiry</b></td><td>{formatExpiry(selectedVehicle.insurance_exp || selectedVehicle.rc_insurance_upto, false)}</td></tr>
-              <tr><td><b>Road Tax Expiry</b></td><td>{formatExpiry(selectedVehicle.road_tax_exp || selectedVehicle.rc_tax_upto, false)}</td></tr>
-              <tr><td><b>Fitness Expiry</b></td><td>{formatExpiry(selectedVehicle.fitness_exp || selectedVehicle.rc_fit_upto, false)}</td></tr>
-              <tr><td><b>Pollution Expiry</b></td><td>{formatExpiry(selectedVehicle.pollution_exp || selectedVehicle.rc_pucc_upto, false)}</td></tr>
-              <tr><td><b>Chassis No</b></td><td>{selectedVehicle.rc_chasi_no || '-'}</td></tr>
-              <tr><td><b>Engine No</b></td><td>{selectedVehicle.rc_engine_no || '-'}</td></tr>
-              <tr><td><b>Vehicle Class</b></td><td>{selectedVehicle.rc_vh_class_desc || '-'}</td></tr>
-              <tr><td><b>Fuel Type</b></td><td>{selectedVehicle.rc_fuel_desc || '-'}</td></tr>
-              <tr><td><b>Maker</b></td><td>{selectedVehicle.rc_maker_desc || '-'}</td></tr>
-              <tr><td><b>Model</b></td><td>{selectedVehicle.rc_maker_model || '-'}</td></tr>
-              <tr><td><b>RTO</b></td><td>{selectedVehicle.rc_off_cd || '-'}</td></tr>
-              <tr><td><b>State</b></td><td>{selectedVehicle.rc_state_cd || '-'}</td></tr>
-              <tr><td><b>Mobile No</b></td><td>{selectedVehicle.rc_mobile_no || '-'}</td></tr>
-              <tr><td><b>Address</b></td><td>{selectedVehicle.rc_present_address || '-'}</td></tr>
+              <tr><td><b>Vehicle No</b></td><td>{selectedRtoData.rc_regn_no || '-'}</td></tr>
+              <tr><td><b>Owner Name</b></td><td>{selectedRtoData.rc_owner_name || '-'}</td></tr>
+              <tr><td><b>Registration Date</b></td><td>{formatExpiry(selectedRtoData.rc_regn_dt, false)}</td></tr>
+              <tr><td><b>Insurance Expiry</b></td><td>{formatExpiry(selectedRtoData.insurance_exp || selectedRtoData.rc_insurance_upto, false)}</td></tr>
+              <tr><td><b>Road Tax Expiry</b></td><td>{formatExpiry(selectedRtoData.road_tax_exp || selectedRtoData.rc_tax_upto, false)}</td></tr>
+              <tr><td><b>Fitness Expiry</b></td><td>{formatExpiry(selectedRtoData.fitness_exp || selectedRtoData.rc_fit_upto, false)}</td></tr>
+              <tr><td><b>Pollution Expiry</b></td><td>{formatExpiry(selectedRtoData.pollution_exp || selectedRtoData.rc_pucc_upto, false)}</td></tr>
+              <tr><td><b>Chassis No</b></td><td>{selectedRtoData.rc_chasi_no || '-'}</td></tr>
+              <tr><td><b>Engine No</b></td><td>{selectedRtoData.rc_engine_no || '-'}</td></tr>
+              <tr><td><b>Vehicle Class</b></td><td>{selectedRtoData.rc_vh_class_desc || '-'}</td></tr>
+              <tr><td><b>Fuel Type</b></td><td>{selectedRtoData.rc_fuel_desc || '-'}</td></tr>
+              <tr><td><b>Maker</b></td><td>{selectedRtoData.rc_maker_desc || '-'}</td></tr>
+              <tr><td><b>Model</b></td><td>{selectedRtoData.rc_maker_model || '-'}</td></tr>
+              <tr><td><b>RTO</b></td><td>{selectedRtoData.rc_off_cd || '-'}</td></tr>
+              <tr><td><b>State</b></td><td>{selectedRtoData.rc_state_cd || '-'}</td></tr>
+              <tr><td><b>Mobile No</b></td><td>{selectedRtoData.rc_mobile_no || '-'}</td></tr>
+              <tr><td><b>Address</b></td><td>{selectedRtoData.rc_present_address || '-'}</td></tr>
             </tbody>
           </table>
+        ) : (
+          <div style={{padding:24, fontSize:16, color:'#b00'}}>No vehicle data found for this record.</div>
         )}
       </RightSidebar>
 

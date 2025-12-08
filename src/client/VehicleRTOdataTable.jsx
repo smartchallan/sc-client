@@ -1,9 +1,35 @@
 import React, { useEffect, useState } from "react";
+import { FaDownload, FaPrint } from "react-icons/fa";
+import * as XLSX from "xlsx";
 import "../shared/CommonDashboard.css";
 import CustomModal from "./CustomModal";
 import "../RegisterVehicle.css";
 
-export default function VehicleRTOdataTable({ clientId, onViewAll, hideControls, initialExpiryFilter, initialTab }) {
+export default function VehicleRTOdataTable({ clientId, onViewAll, hideControls, initialExpiryFilter, initialTab, selectedRtoData, setSelectedRtoData }) {
+  // Download as Excel
+  const handleDownloadExcel = () => {
+    if (!displayed || displayed.length === 0) return;
+    const exportData = displayed.map(({ _raw, ...row }) => row);
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "VehicleRTOData");
+    XLSX.writeFile(workbook, "vehicle_rto_data.xlsx");
+  };
+
+  // Print table
+  const handlePrintTable = () => {
+    const printContents = document.getElementById('vehicle-rto-table-print-area')?.innerHTML;
+    if (!printContents) return;
+    const printWindow = window.open('', '', 'height=600,width=900');
+    printWindow.document.write('<html><head><title>Print Vehicle RTO Data</title>');
+    printWindow.document.write('<style>body{font-family:sans-serif;} table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ccc;padding:8px;} th{background:#f5f8fa;}</style>');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write(printContents);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
+  };
   const formatExpiry = (dateStr, useColor = true) => {
     if (!dateStr || dateStr === '-') return '-';
     let d = null;
@@ -100,7 +126,9 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, hideControls,
       });
   }, [clientId]);
 
-  const [selectedVehicle, setSelectedVehicle] = useState(null);
+  // Use parent state if provided, else fallback to local state
+  const [localSelectedVehicle, setLocalSelectedVehicle] = useState(null);
+  const selectedVehicle = selectedRtoData !== undefined ? selectedRtoData : localSelectedVehicle;
   // Search, sort, filter state
   const [search, setSearch] = useState('');
   const [sortAsc, setSortAsc] = useState(false); // false = newest first
@@ -216,7 +244,15 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, hideControls,
           </div>
         </div>
       )}
-  <div className="table-container">
+  <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '8px 0', gap: 10 }}>
+    <button onClick={handleDownloadExcel} title="Download Excel" style={{ padding: '8px 16px', background: '#2196f3', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <FaDownload size={18} />
+    </button>
+    <button onClick={handlePrintTable} title="Print" style={{ padding: '8px 16px', background: '#4caf50', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <FaPrint size={18} />
+    </button>
+  </div>
+  <div className="table-container" id="vehicle-rto-table-print-area">
     <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
           <thead>
             <tr>
@@ -244,7 +280,10 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, hideControls,
                 <td>{formatExpiry(v.fitness_exp || v.rc_fit_upto, true)}</td>
                 <td>{formatExpiry(v.pollution_exp || v.rc_pucc_upto, true)}</td>
                 <td style={{textAlign:'center'}}>
-                  <button className="action-btn flat-btn" style={{padding:'4px 10px',fontSize:14}} onClick={() => setSelectedVehicle(v)}>
+                  <button className="action-btn flat-btn" style={{padding:'4px 10px',fontSize:14}} onClick={() => {
+                    if (setSelectedRtoData) setSelectedRtoData(v);
+                    else setLocalSelectedVehicle(v);
+                  }}>
                     View Vehicle
                   </button>
                 </td>
@@ -271,8 +310,14 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, hideControls,
       <CustomModal
         open={!!selectedVehicle}
         title={selectedVehicle ? `Vehicle RTO Data: ${selectedVehicle.rc_regn_no}` : ''}
-        onConfirm={() => setSelectedVehicle(null)}
-        onCancel={() => setSelectedVehicle(null)}
+        onConfirm={() => {
+          if (setSelectedRtoData) setSelectedRtoData(null);
+          else setLocalSelectedVehicle(null);
+        }}
+        onCancel={() => {
+          if (setSelectedRtoData) setSelectedRtoData(null);
+          else setLocalSelectedVehicle(null);
+        }}
         confirmText="Close"
         cancelText={null}
       >

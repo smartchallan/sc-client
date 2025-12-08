@@ -1,0 +1,66 @@
+/* Sleek, modern, and consistent table design for all dashboard tables */
+body .latest-table {
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  background: #fff !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04) !important;
+  border-radius: 0 !important;
+  overflow: hidden !important;
+  margin-bottom: 32px !important;
+}
+body .latest-table th, body .latest-table td {
+  padding: 14px 16px !important;
+  text-align: left !important;
+  border-bottom: 1px solid #f0f2f5 !important;
+  font-size: 90% !important;
+  vertical-align: middle !important;
+}
+body .latest-table th {
+  background: linear-gradient(90deg, #f5f8fa 80%, #eaf6ff 100%) !important;
+  color: #1a237e !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+  border-bottom: 2px solid #e3eaf1 !important;
+}
+body .latest-table tr:last-child td {
+  border-bottom: none !important;
+}
+body .latest-table tbody tr:hover {
+  background: #f6fbff !important;
+  transition: background 0.2s !important;
+}
+body .latest-table td {
+  color: #222 !important;
+}
+body .latest-table .status {
+  border-radius: 0 !important;
+  padding: 4px 10px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  display: inline-block !important;
+}
+body .latest-table .status.pending {
+  background: #fff3cd !important;
+  color: #b8860b !important;
+}
+body .latest-table .status.paid {
+  background: #d4edda !important;
+  color: #218838 !important;
+}
+body .latest-table .status.overdue {
+  background: #f8d7da !important;
+  color: #c82333 !important;
+}
+body .latest-table .cell-ellipsis {
+  max-width: 180px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+@media (max-width: 900px) {
+  body .latest-table th, body .latest-table td {
+    padding: 10px 6px !important;
+    font-size: 13px !important;
+  }
+}

@@ -1,29 +1,22 @@
+import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import "./LatestTable.css";
 // ...existing imports...
 // ...other imports...
 import LatestChallansTable from "./LatestChallansTable";
 import TrafficLightLoader from "../assets/TrafficLightLoader";
 import QuickActions from "./QuickActions";
-
-// Fetch all client challans on dashboard load
-// (move this after imports and inside ClientDashboard function)
-import React, { useState, useRef, useEffect, lazy, Suspense } from "react";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-// Chart.js for stat card graphs
-// Install with: npm install chart.js
-// Import Chart.js dynamically in useEffect
-import "../shared/CommonDashboard.css";
-import "./ClientDashboardOverrides.css";
-import "./ClientHome.css";
-import "./ClientProfile.css";
-import "./SpeedometerLoader.css"; /* For default loader styles */
-import ClientSidebar from "./ClientSidebar";
-import ClientProfile from "./ClientProfile";
-
-import RegisterVehicle from "../RegisterVehicle";
-import UserChallan from "../UserChallan";
-import MyVehicles from "./MyVehicles";
 import VehicleRTOdataTable from "./VehicleRTOdata";
+import VehicleSummaryTable from "./VehicleSummaryTable";
+import MyFleetTable from "./MyFleetTable";
+import RegisterVehicle from "../RegisterVehicle";
+import * as XLSX from "xlsx";
+import { FaDownload, FaPrint } from "react-icons/fa";
+import ClientSidebar from "./ClientSidebar";
+// ...existing code...
+// Move these inside the ClientDashboard function component
+import LatestRTOTable from "./LatestRTOTable";
 import MyChallans from "./MyChallans";
 const ChallanSettlement = React.lazy(() => import("./ChallanSettlement"));
 import MyBilling from "./MyBilling";
@@ -39,7 +32,56 @@ const DriverVerification = lazy(() => import("./DriverVerification"));
 const LazyVehicleFastag = lazy(() => import("./VehicleFastag"));
 
 function ClientDashboard() {
+  // Print filteredFleet table
+  const handlePrintTable = () => {
+    const printContents = document.getElementById('my-fleet-table-print-area')?.innerHTML;
+    if (!printContents) return;
+    const printWindow = window.open('', '', 'height=600,width=900');
+    printWindow.document.write('<html><head><title>Print My Fleet</title>');
+    printWindow.document.write('<style>body{font-family:sans-serif;} table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ccc;padding:8px;} th{background:#f5f8fa;}</style>');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write(printContents);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
+  };
+  // Download filteredFleet as Excel
+  const handleDownloadExcel = () => {
+    if (!filteredFleet || filteredFleet.length === 0) return;
+    // Prepare data: remove _raw if present, flatten if needed
+    const exportData = filteredFleet.map(({ _raw, ...row }) => row);
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "MyFleet");
+    XLSX.writeFile(workbook, "my_fleet.xlsx");
+  };
+  const [vehicleSearchText, setVehicleSearchText] = useState('');
+  const [vehicleSummary, setVehicleSummary] = useState([]);
+  const [loadingVehicleSummary, setLoadingVehicleSummary] = useState(false);
+  const [fleetLimit, setFleetLimit] = useState(50);
+  const [fleetOffset, setFleetOffset] = useState(0);
+  const [fleetAll, setFleetAll] = useState(false);
   // Read current logged-in user from localStorage when component mounts.
+  // State for challan filter in My Fleet
+  const [fleetChallanFilter, setFleetChallanFilter] = useState('all');
+  const [fleetRegnSearch, setFleetRegnSearch] = useState('');
+  const [fleetSort, setFleetSort] = useState('recent');
+  const filteredFleet = React.useMemo(() => {
+    let filtered = vehicleSummary.filter(row => {
+      const matchesVehicle = vehicleSearchText.trim() === '' || (row.vehicle_number || '').toLowerCase().includes(vehicleSearchText.trim().toLowerCase());
+      const matchesRegn = fleetRegnSearch.trim() === '' || (row.rc_regn_dt || row.registration_date || row.registered_at || '').toLowerCase().includes(fleetRegnSearch.trim().toLowerCase());
+      let matchesFilter = true;
+      if (fleetChallanFilter === 'pending') matchesFilter = (row.pending_challan_count ?? 0) > 0;
+      else if (fleetChallanFilter === 'disposed') matchesFilter = (row.disposed_challan_count ?? 0) > 0;
+      return matchesVehicle && matchesRegn && matchesFilter;
+    });
+    if (fleetSort === 'recent') filtered = filtered.slice().sort((a, b) => new Date(b.registered_at || b.rc_regn_dt || b.registration_date) - new Date(a.registered_at || a.rc_regn_dt || a.registration_date));
+    else if (fleetSort === 'oldest') filtered = filtered.slice().sort((a, b) => new Date(a.registered_at || a.rc_regn_dt || a.registration_date) - new Date(b.registered_at || b.rc_regn_dt || b.registration_date));
+    else if (fleetSort === 'pending') filtered = filtered.slice().sort((a, b) => (b.pending_challan_count ?? 0) - (a.pending_challan_count ?? 0));
+    else if (fleetSort === 'disposed') filtered = filtered.slice().sort((a, b) => (b.disposed_challan_count ?? 0) - (a.disposed_challan_count ?? 0));
+    return filtered;
+  }, [vehicleSummary, vehicleSearchText, fleetChallanFilter, fleetRegnSearch, fleetSort]);
   const [user, setUser] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('sc_user')) || {};
@@ -58,6 +100,63 @@ function ClientDashboard() {
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, []);
+
+  // Fetch vehicle summary whenever the user object changes (e.g., after login)
+  // Fetch fleet data (pagination-aware)
+  useEffect(() => {
+    const role = user?.user?.role;
+    const clientId = user?.user?.client_id || user?.user?.id;
+    if (!clientId || !(role === 'client' || role === 'customer')) return;
+    if (!fleetAll && fleetOffset === 0) setVehicleSummary([]); // reset table if not loading more
+    setLoadingVehicleSummary(true);
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+    let limit = fleetAll ? 1000000 : fleetLimit;
+    let offset = fleetAll ? 0 : fleetOffset;
+    fetch(`${baseUrl}/vehiclesummary`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_id: clientId, limit, offset })
+    })
+      .then(res => res.json())
+      .then(data => {
+        let arr = [];
+        if (Array.isArray(data)) arr = data;
+        else if (Array.isArray(data.data)) arr = data.data;
+        else if (data && Array.isArray(data.rows)) arr = data.rows;
+        else if (data && Array.isArray(data.result)) arr = data.result;
+        else if (data && data.data && Array.isArray(data.data.rows)) arr = data.data.rows;
+        else if (data && data.data && Array.isArray(data.data.items)) arr = data.data.items;
+        else if (data && Array.isArray(data.vehicles)) arr = data.vehicles;
+        else if (data && typeof data === 'object') {
+          for (const k of Object.keys(data)) {
+            if (Array.isArray(data[k])) { arr = data[k]; break; }
+          }
+        }
+        const normalized = (arr || []).map(r => ({
+          vehicle_id: r.vehicle_id || r.id || r._id || r.vehicleId || null,
+          vehicle_number: r.vehicle_number || r.rc_regn_no || r.regn_no || r.vehicle_no || r.registration_number || r.vh_regn_no || r.reg_no || r.regn || '-',
+          rc_regn_dt: r.rc_regn_dt || r.registration_date || r.registered_at || '-',
+          pending_challan_count: r.pending_challan_count ?? r.pending_count ?? r.pending_challans ?? r.pending ?? 0,
+          disposed_challan_count: r.disposed_challan_count ?? r.disposed_count ?? r.disposed_challans ?? r.disposed ?? 0,
+          insurance_exp: r.insurance_exp || r.insuranceUpto || r.rc_insurance_upto || r.insurance_expiry || r.insuranceExpiry || r.rc_insurance_upto || '-',
+          road_tax_exp: r.road_tax_exp || r.roadTaxExp || r.rc_tax_upto || r.road_tax || '-',
+          fitness_exp: r.fitness_exp || r.fitnessUpto || r.rc_fit_upto || '-',
+          pollution_exp: r.pollution_exp || r.pollutionUpto || r.rc_pucc_upto || '-',
+          registered_at: r.registered_at || r.registeredAt || r.registration_date || r.created_at || r.createdAt || null,
+          _raw: r
+        }));
+        if (fleetAll || fleetOffset === 0) {
+          setVehicleSummary(normalized);
+        } else {
+          setVehicleSummary(prev => [...prev, ...normalized]);
+        }
+        setLoadingVehicleSummary(false);
+      })
+      .catch(() => {
+        setVehicleSummary([]);
+        setLoadingVehicleSummary(false);
+      });
+  }, [user, fleetLimit, fleetOffset, fleetAll]);
   // Handler for 'View All' in Latest Challans Table
   React.useEffect(() => {
     window.handleViewAllChallans = () => setActiveMenu('Vehicle Challan Data');
@@ -105,13 +204,12 @@ function ClientDashboard() {
   // Vehicle RTO data for expiry tracking
   const [vehicleRtoData, setVehicleRtoData] = useState([]);
   const [loadingVehicleRto, setLoadingVehicleRto] = useState(false);
-  // Vehicle search text (lifted state so MyVehicles can render the input and VehicleDataTable can filter)
-  const [vehicleSearchText, setVehicleSearchText] = useState('');
   // Loader state
   const [showLoader, setShowLoader] = useState(false);
   // Active menu
   const [activeMenu, setActiveMenu] = useState("Dashboard");
   const [selectedChallan, setSelectedChallan] = useState(null);
+  const [selectedRtoData, setSelectedRtoData] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   // Initial filter state for Vehicle RTO Data
   const [vehicleRtoInitialFilter, setVehicleRtoInitialFilter] = useState(null);
@@ -694,8 +792,8 @@ function ClientDashboard() {
       const bTime = parseDate(b.created_at || b.createdAt || b.challan_date_time);
       return (bTime || 0) - (aTime || 0);
     });
-    // Take only 5 latest
-    const latestChallans = allChallans.slice(0, 5);
+  // Take only 10 latest
+  const latestChallans = allChallans.slice(0, 10);
     if (latestChallans.length === 0) {
       latestChallanRows = [<tr key="no-challans"><td colSpan={11} style={{textAlign:'center',color:'#888'}}>No challans found.</td></tr>];
     } else {
@@ -704,62 +802,24 @@ function ClientDashboard() {
           <td>{idx + 1}</td>
           <td>{c.vehicle_number}</td>
           <td>
-            <span title={c.challan_no} style={{cursor:'pointer'}}>
-              {c.challan_no && c.challan_no.length > 10 ? c.challan_no.slice(0,10) + '...' : c.challan_no}
-            </span>
-          </td>
-          <td>
             <span title={c.challan_date_time} style={{cursor:'pointer'}}>
-              {c.challan_date_time && c.challan_date_time.length > 10 ? c.challan_date_time.slice(0,10) + '...' : c.challan_date_time}
+              {(() => {
+                if (!c.challan_date_time) return '';
+                const dt = c.challan_date_time;
+                const match = dt.match(/\d{4}-\d{2}-\d{2}|\d{2}-\d{2}-\d{4}|\d{2}-[A-Za-z]{3}-\d{4}/);
+                return match ? match[0] : dt.slice(0,10);
+              })()}
             </span>
           </td>
           <td style={{ textAlign: 'center' }}>
-            {/* Google Maps icon logic */}
             {(() => {
-              const loc = c.challan_place || c.location || c.challan_location;
-              if (loc && typeof loc === 'string' && loc.trim()) {
-                const openMap = (address) => {
-                  setInfoModal({
-                    open: true,
-                    message: (
-                      <iframe
-                        title="Google Maps"
-                        width="910"
-                        height="500"
-                        style={{ border: 0, borderRadius: 12 }}
-                        src={`https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`}
-                        allowFullScreen
-                      />
-                    )
-                  });
-                };
-                return (
-                  <span
-                    style={{ cursor: 'pointer', color: '#4285F4', fontSize: 24, verticalAlign: 'middle' }}
-                    title="View on Google Maps"
-                    onClick={() => {
-                      // Try original address first
-                      const testImg = new window.Image();
-                      testImg.src = `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(loc)}&zoom=15&size=200x200&key=AIzaSyDUMMYKEY`;
-                      testImg.onload = () => openMap(loc);
-                      testImg.onerror = () => {
-                        // Remove flat/unit from start and retry
-                        const simplified = loc.replace(/^([\w-]+,?\s*)/, '');
-                        openMap(simplified);
-                      };
-                      // Fallback: open original immediately (for embed)
-                      setTimeout(() => openMap(loc), 500);
-                    }}
-                  >
-                    <i className="ri-map-pin-2-fill" />
-                  </span>
-                );
-              }
-              return 'Not Available';
+              const reg = c.sent_to_reg_court;
+              const virt = c.sent_to_virtual_court;
+              if (reg === 'Yes') return 'Reg Court';
+              if (virt === 'Yes') return 'Virtual Court';
+              return 'Online';
             })()}
           </td>
-          <td style={{ textAlign: 'center' }}>{formatRegCourtValue(c.sent_to_reg_court ?? c.sent_to_court_on ?? c.sent_to_court)}</td>
-          <td style={{ textAlign: 'center' }}>{formatRegCourtValue(c.sent_to_virtual_court ?? c.sent_to_virtual)}</td>
           <td style={{ textAlign: "center"}}>{c.fine_imposed}</td>
           <td><span className={c.challan_status === 'Pending' ? 'status pending' : c.challan_status === 'Disposed' ? 'status paid' : ''}>{c.challan_status}</span></td>
           <td>
@@ -772,12 +832,14 @@ function ClientDashboard() {
           <td style={{ textAlign: "center"}}>
             <button
               className="action-btn flat-btn"
+              style={{ fontSize: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               onClick={() => {
                 setSelectedChallan(c);
                 setSidebarOpen(true);
               }}
+              title="View Challan"
             >
-              View Challan
+              <i className="ri-eye-line" style={{ fontSize: '1.2em' }} />
             </button>
           </td>
         </tr>
@@ -1250,21 +1312,40 @@ function ClientDashboard() {
                 </div>
               </div>
             </div>
-            <LatestChallansTable
-              latestChallanRows={latestChallanRows}
-              loadingVehicleChallan={loadingVehicleChallan}
-              vehicleChallanError={vehicleChallanError}
-              totalCount={totalChallans}
-              limit={5}
-            />
-            <VehicleRTOdataTable
-              clientId={user.user && (user.user.id || user.user._id || user.user.client_id)}
-              onViewAll={() => setActiveMenu('Vehicle RTO Data')}
-              limit={10}
-              searchText={vehicleSearchText}
-              initialExpiryFilter={vehicleRtoInitialFilter?.expiryFilter}
-              initialTab={vehicleRtoInitialFilter?.tab}
-            />
+            <div style={{display:'flex',gap:24,marginBottom:24}}>
+              <div style={{width:'49%'}}>
+                <LatestChallansTable
+                  latestChallanRows={latestChallanRows.slice(0, 5)}
+                  loadingVehicleChallan={loadingVehicleChallan}
+                  vehicleChallanError={vehicleChallanError}
+                  totalCount={totalChallans}
+                  limit={5}
+                />
+              </div>
+              <div style={{width:'49%'}}>
+                <LatestRTOTable
+                  vehicleData={vehicleRtoData.slice(0, 5)}
+                  loading={loadingVehicleRto}
+                  error={vehicleRtoData && vehicleRtoData.error}
+                  setSelectedRtoData={setSelectedRtoData}
+                  totalCount={vehicleRtoData.length}
+                />
+              </div>
+            </div>
+            <div style={{marginBottom:24}}>
+              <VehicleSummaryTable
+                data={vehicleSummary}
+                loading={loadingVehicleSummary}
+                onRefresh={row => {
+                  // Optionally re-fetch for this vehicle
+                  // Could call /vehiclesummary again or a specific refresh endpoint
+                }}
+                onView={row => {
+                  setSelectedRtoData(row);
+                }}
+              />
+            </div>
+            {/* Registered vehicles table removed from dashboard as requested */}
             {/* QuickActions moved to a shared component rendered below so it's available on every page */}
             {/* Removed dashboard 'due' data section as requested */}
           </>
@@ -1274,17 +1355,118 @@ function ClientDashboard() {
             <ClientProfile />
           </div>
         )}
-        {activeMenu === "Register Vehicle" && <RegisterVehicle />}
+            {activeMenu === "Register Vehicle" && <RegisterVehicle />}
+        {activeMenu === "My Fleet" && (
+          <div style={{marginBottom:24}}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12, gap: 10 }}>
+              <button onClick={handleDownloadExcel} title="Download Excel" style={{ padding: '8px 16px', background: '#2196f3', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <FaDownload size={18} />
+              </button>
+              <button onClick={handlePrintTable} title="Print" style={{ padding: '8px 16px', background: '#4caf50', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <FaPrint size={18} />
+              </button>
+            </div>
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              gap: 16,
+              marginBottom: 18,
+              background: '#f5f8fa',
+              borderRadius: 10,
+              padding: '16px 18px',
+              boxShadow: '0 2px 8px 0 rgba(30,136,229,0.07)',
+              border: '1.5px solid #e3eaf1',
+            }}>
+              <input
+                type="text"
+                placeholder="Search vehicle number..."
+                value={vehicleSearchText}
+                onChange={e => setVehicleSearchText(e.target.value)}
+                style={{padding:'8px 14px',fontSize:15,borderRadius:6,border:'1.5px solid #2196f3',minWidth:180,background:'#fff'}}
+              />
+              <input
+                type="text"
+                placeholder="Search registration date..."
+                value={fleetRegnSearch || ''}
+                onChange={e => setFleetRegnSearch(e.target.value)}
+                style={{padding:'8px 14px',fontSize:15,borderRadius:6,border:'1.5px solid #2196f3',minWidth:160,background:'#fff'}}
+              />
+              <select
+                value={fleetChallanFilter}
+                onChange={e => setFleetChallanFilter(e.target.value)}
+                style={{padding:'8px 14px',fontSize:15,borderRadius:6,border:'1.5px solid #2196f3',background:'#fff'}}
+              >
+                <option value="all">All Challans</option>
+                <option value="pending">Pending Challan</option>
+                <option value="disposed">Disposed Challan</option>
+              </select>
+              <select
+                value={fleetSort}
+                onChange={e => setFleetSort(e.target.value)}
+                style={{padding:'8px 14px',fontSize:15,borderRadius:6,border:'1.5px solid #2196f3',background:'#fff'}}
+              >
+                <option value="recent">Sort: Most Recent</option>
+                <option value="oldest">Sort: Oldest</option>
+                <option value="pending">Sort: Pending Challans</option>
+                <option value="disposed">Sort: Disposed Challans</option>
+              </select>
+              <label htmlFor="fleet-load-more" style={{fontWeight:600,marginLeft:8}}>Load more:</label>
+              <select
+                id="fleet-load-more"
+                value={fleetAll ? 'all' : fleetLimit}
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val === 'all') {
+                    setFleetAll(true);
+                    setFleetLimit('all');
+                    setFleetOffset(0);
+                  } else {
+                    setFleetAll(false);
+                    setFleetLimit(parseInt(val, 10));
+                    setFleetOffset(0);
+                  }
+                }}
+                style={{padding:'8px 14px',fontSize:15,borderRadius:6,border:'1.5px solid #2196f3',background:'#fff'}}
+              >
+                <option value={50}>50 more</option>
+                <option value={100}>100 more</option>
+                <option value={200}>200 more</option>
+                <option value="all">All</option>
+              </select>
+              {!fleetAll && (
+                <button
+                  className="action-btn"
+                  style={{marginLeft:8,padding:'8px 20px',fontSize:15,borderRadius:6,border:'1.5px solid #2196f3',background:'#2196f3',color:'#fff',fontWeight:600,cursor:'pointer'}}
+                  disabled={loadingVehicleSummary}
+                  onClick={() => setFleetOffset(prev => prev + fleetLimit)}
+                >
+                  Load More
+                </button>
+              )}
+            </div>
+            <div id="my-fleet-table-print-area">
+              <MyFleetTable
+                data={filteredFleet}
+                loading={loadingVehicleSummary}
+                onRefresh={row => {}}
+                onView={row => {}}
+                totalCount={typeof vehicleSummary === 'object' && vehicleSummary._totalCount ? vehicleSummary._totalCount : (Array.isArray(vehicleSummary) && vehicleSummary.totalCount ? vehicleSummary.totalCount : (typeof window !== 'undefined' && window.fleetTotalCount ? window.fleetTotalCount : undefined))}
+              />
+            </div>
+          </div>
+        )}
         {activeMenu === "Vehicle RTO Data" && (
           <VehicleRTOdataTable
-            clientId={user.user && (user.user.id || user.user._id || user.user.client_id)}
-            limit={0}
+            clientId={user.user && (user.user.client_id || user.user.id || user.user._id)}
+            selectedRtoData={selectedRtoData}
+            setSelectedRtoData={setSelectedRtoData}
             searchText={vehicleSearchText}
             initialExpiryFilter={vehicleRtoInitialFilter?.expiryFilter}
             initialTab={vehicleRtoInitialFilter?.tab}
           />
         )}
-        {activeMenu === "Vehicle Challan Data" && <MyChallans />}
+  {activeMenu === "Vehicle Challan Data" && <MyChallans />}
         {activeMenu === "Challan Settlement" && (
           <React.Suspense fallback={<div>Loading...</div>}>
             <ChallanSettlement />
@@ -1303,40 +1485,37 @@ function ClientDashboard() {
             <LazyVehicleFastag />
           </Suspense>
         )}
-      {/* Shared quick actions bar available on every page (placed inside main so it flows under content) */}
-      <div className="main-quick-actions-wrapper" style={{ padding: '0 30px 30px 30px' }}>
-        <QuickActions
-          title="Quick Actions"
-          sticky={true}
-          onAddVehicle={() => setActiveMenu('Register Vehicle')}
-          onBulkUpload={() => {
-            setActiveMenu('Register Vehicle');
-            // Give the page a little time to render and then try to scroll/focus the file input and highlight the upload card
-            setTimeout(() => {
-              try {
-                const el = document.querySelector('input[type=file][accept*=".xlsx"]');
-                if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); try { el.focus(); } catch(e){} }
-              } catch (e) {}
-              try {
-                const card = document.querySelector('.upload-card');
-                if (card) {
-                  // restart animation if already applied
-                  card.classList.remove('highlight-upload');
-                  // trigger reflow to restart CSS animation
-                  // eslint-disable-next-line no-unused-expressions
-                  void card.offsetWidth;
-                  card.classList.add('highlight-upload');
-                  // remove class after animation completes (2.5s)
-                  setTimeout(() => card.classList.remove('highlight-upload'), 2600);
-                }
-              } catch (e) {}
-            }, 300);
-          }}
-          onPay={() => setInfoModal({ open: true, message: 'Feature not rolled out yet. Stay tuned. We will notify you.' })}
-          onReports={() => setReportsModal({ open: true })}
-          onContact={() => setSupportModal(true)}
-        />
-      </div>
+      {/* Shared quick actions bar available on every page except Vehicle Challan Data */}
+      {!(selectedChallan || selectedRtoData) && activeMenu !== "Vehicle Challan Data" && (
+        <div className="main-quick-actions-wrapper" style={{ padding: '0 30px 30px 30px' }}>
+          <QuickActions
+            title="Quick Actions"
+            sticky={true}
+            onAddVehicle={() => setActiveMenu('Register Vehicle')}
+            onBulkUpload={() => {
+              setActiveMenu('Register Vehicle');
+              setTimeout(() => {
+                try {
+                  const el = document.querySelector('input[type=file][accept*=".xlsx"]');
+                  if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); try { el.focus(); } catch(e){} }
+                } catch (e) {}
+                try {
+                  const card = document.querySelector('.upload-card');
+                  if (card) {
+                    card.classList.remove('highlight-upload');
+                    void card.offsetWidth;
+                    card.classList.add('highlight-upload');
+                    setTimeout(() => card.classList.remove('highlight-upload'), 2600);
+                  }
+                } catch (e) {}
+              }, 300);
+            }}
+            onPay={() => setInfoModal({ open: true, message: 'Feature not rolled out yet. Stay tuned. We will notify you.' })}
+            onReports={() => setReportsModal({ open: true })}
+            onContact={() => setSupportModal(true)}
+          />
+        </div>
+      )}
       </main>
       <CustomModal
         open={infoModal.open}
@@ -1424,6 +1603,38 @@ function ClientDashboard() {
               <tr><td><b>Amount of Fine Imposed</b></td><td>{selectedChallan.amount_of_fine_imposed}</td></tr>
               <tr><td><b>Act</b></td><td>{Array.isArray(selectedChallan.offence_details) && selectedChallan.offence_details.length > 0 ? selectedChallan.offence_details[0].act : ''}</td></tr>
               <tr><td><b>Offence Details</b></td><td><ul style={{margin:0,paddingLeft:18}}>{Array.isArray(selectedChallan.offence_details) && selectedChallan.offence_details.map((o, j) => (<li key={j} className="cell-ellipsis" title={o.name}>{o.name}</li>))}</ul></td></tr>
+            </tbody>
+          </table>
+        )}
+      </RightSidebar>
+
+      <RightSidebar
+        open={!!selectedRtoData}
+        onClose={() => {
+          setTimeout(() => setSelectedRtoData(null), 300);
+        }}
+        title={selectedRtoData ? `RTO Data: ${selectedRtoData.rc_regn_no}` : ''}
+      >
+        {selectedRtoData && (
+          <table className="latest-table" style={{ width: '100%', fontSize: 15 }}>
+            <tbody>
+              <tr><td><b>Vehicle Number</b></td><td>{selectedRtoData.rc_regn_no || selectedRtoData.vehicle_number || '-'}</td></tr>
+              <tr><td><b>Owner Name</b></td><td>{selectedRtoData.rc_owner_name || selectedRtoData.owner_name || '-'}</td></tr>
+              <tr><td><b>Registration Date</b></td><td>{selectedRtoData.rc_regn_dt || '-'}</td></tr>
+              <tr><td><b>Insurance Expiry</b></td><td>{selectedRtoData.insurance_exp || selectedRtoData.rc_insurance_upto || '-'}</td></tr>
+              <tr><td><b>Road Tax Expiry</b></td><td>{selectedRtoData.road_tax_exp || selectedRtoData.rc_tax_upto || '-'}</td></tr>
+              <tr><td><b>Fitness Expiry</b></td><td>{selectedRtoData.fitness_exp || selectedRtoData.rc_fit_upto || '-'}</td></tr>
+              <tr><td><b>Pollution Expiry</b></td><td>{selectedRtoData.pollution_exp || selectedRtoData.rc_pucc_upto || '-'}</td></tr>
+              <tr><td><b>Chassis No</b></td><td>{selectedRtoData.rc_chasi_no || '-'}</td></tr>
+              <tr><td><b>Engine No</b></td><td>{selectedRtoData.rc_engine_no || '-'}</td></tr>
+              <tr><td><b>Vehicle Class</b></td><td>{selectedRtoData.rc_vh_class_desc || '-'}</td></tr>
+              <tr><td><b>Fuel Type</b></td><td>{selectedRtoData.rc_fuel_desc || '-'}</td></tr>
+              <tr><td><b>Maker</b></td><td>{selectedRtoData.rc_maker_desc || '-'}</td></tr>
+              <tr><td><b>Model</b></td><td>{selectedRtoData.rc_maker_model || '-'}</td></tr>
+              <tr><td><b>RTO</b></td><td>{selectedRtoData.rc_off_cd || '-'}</td></tr>
+              <tr><td><b>State</b></td><td>{selectedRtoData.rc_state_cd || '-'}</td></tr>
+              <tr><td><b>Mobile No</b></td><td>{selectedRtoData.rc_mobile_no || '-'}</td></tr>
+              <tr><td><b>Address</b></td><td>{selectedRtoData.rc_present_address || '-'}</td></tr>
             </tbody>
           </table>
         )}

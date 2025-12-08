@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { ChallanTable } from "./MyChallans";
 import ChallanCartModal from "./ChallanCartModal";
+import CustomModal from "./CustomModal";
+import { FaTrash } from "react-icons/fa";
 
 export default function ChallanSettlement() {
   const [challanData, setChallanData] = useState([]);
@@ -8,6 +10,7 @@ export default function ChallanSettlement() {
   const [sortAsc, setSortAsc] = useState(false);
   const [cart, setCart] = useState([]);
   const [showCartSidebar, setShowCartSidebar] = useState(false);
+  const [showCartModal, setShowCartModal] = useState(false);
 
   useEffect(() => {
     async function fetchChallans() {
@@ -89,45 +92,47 @@ export default function ChallanSettlement() {
           </button>
         </div>
       </div>
-      <div style={{display:'flex',gap:16,marginBottom:12}}>
-        <div className="number-plate-container" style={{ width: 330 }}>
-          <div className="number-plate-wrapper">
-            <div className="number-plate-badge">IND</div>
-            <div className="tricolor-strip">
-              <div className="saffron"></div>
-              <div className="white"></div>
-              <div className="green"></div>
+      {!showCartSidebar && (
+        <div style={{display:'flex',gap:16,marginBottom:12}}>
+          <div className="number-plate-container" style={{ width: 330 }}>
+            <div className="number-plate-wrapper">
+              <div className="number-plate-badge">IND</div>
+              <div className="tricolor-strip">
+                <div className="saffron"></div>
+                <div className="white"></div>
+                <div className="green"></div>
+              </div>
+              <input
+                type="text"
+                placeholder="Search Vehicle Number"
+                value={search.vehicle}
+                onChange={e => setSearch(s => ({ ...s, vehicle: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') }))}
+                className="number-plate-input"
+                maxLength={12}
+              />
             </div>
-            <input
-              type="text"
-              placeholder="Search Vehicle Number"
-              value={search.vehicle}
-              onChange={e => setSearch(s => ({ ...s, vehicle: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') }))}
-              className="number-plate-input"
-              maxLength={12}
-            />
+            <div className="security-features">
+              <div className="hologram"></div>
+              <div className="chakra">⚙</div>
+            </div>
           </div>
-          <div className="security-features">
-            <div className="hologram"></div>
-            <div className="chakra">⚙</div>
-          </div>
+          <input
+            type="text"
+            placeholder="Search Challan Number"
+            value={search.challan}
+            onChange={e => setSearch(s => ({ ...s, challan: e.target.value }))}
+            style={{padding:'6px 12px',fontSize:15,borderRadius:4,border:'1px solid #ccc',width:180}}
+          />
+          <button
+            className="action-btn flat-btn"
+            style={{padding:'6px 16px',fontSize:15,borderRadius:4,border:'1px solid #ccc',background:'#f5f5f5',color:'#222'}}
+            onClick={() => setSortAsc(s => !s)}
+          >
+            Sort Date {sortAsc ? '▲' : '▼'}
+          </button>
+          {/* Cart sidebar trigger is not needed, sidebar will show automatically */}
         </div>
-        <input
-          type="text"
-          placeholder="Search Challan Number"
-          value={search.challan}
-          onChange={e => setSearch(s => ({ ...s, challan: e.target.value }))}
-          style={{padding:'6px 12px',fontSize:15,borderRadius:4,border:'1px solid #ccc',width:180}}
-        />
-        <button
-          className="action-btn flat-btn"
-          style={{padding:'6px 16px',fontSize:15,borderRadius:4,border:'1px solid #ccc',background:'#f5f5f5',color:'#222'}}
-          onClick={() => setSortAsc(s => !s)}
-        >
-          Sort Date {sortAsc ? '▲' : '▼'}
-        </button>
-        {/* Cart sidebar trigger is not needed, sidebar will show automatically */}
-      </div>
+      )}
       <ChallanTable
         title="Pending Challans"
         data={challanData}
@@ -148,7 +153,7 @@ export default function ChallanSettlement() {
           height: '100vh',
           background: '#fff',
           boxShadow: '0 0 24px rgba(0,0,0,0.13)',
-          zIndex: 1200,
+          zIndex: 9999, // Increased zIndex for topmost stacking
           transition: 'right 0.35s cubic-bezier(.7,.2,.2,1)',
           padding: '28px 24px 24px 24px',
           display: 'flex',
@@ -192,12 +197,67 @@ export default function ChallanSettlement() {
           <button
             className="action-btn"
             style={{ background: 'linear-gradient(135deg, #0072ff, #00a651)', color: 'white', border: 'none', borderRadius: 8, padding: '12px 24px', fontSize: 16, fontWeight: 500, cursor: 'pointer', width: '100%' }}
-            onClick={() => alert('Proceed to settlement/payment (not implemented)')}
+            onClick={() => setShowCartModal(true)}
           >
             Proceed to Settle ({cart.length})
           </button>
         )}
       </div>
+      <CustomModal open={showCartModal} onClose={() => setShowCartModal(false)}>
+  <div style={{padding:24, minWidth:700, maxWidth:900}}>
+    <h2 style={{marginBottom:18, fontWeight:700, fontSize:22, color:'#1976d2'}}>Your Challan Cart</h2>
+    <div style={{maxWidth:'100%',overflowX:'auto',marginBottom:18}}>
+      <table style={{width:'100%',borderCollapse:'separate',borderSpacing:0,background:'#f8f9fa',borderRadius:8,boxShadow:'0 1px 6px rgba(0,0,0,0.07)'}}>
+        <thead>
+          <tr style={{background:'#e3e3e3',fontWeight:600,fontSize:16}}>
+            <th style={{padding:'12px 8px',textAlign:'left',verticalAlign:'middle',minWidth:160}}>Vehicle Number</th>
+            <th style={{padding:'12px 8px',textAlign:'left',verticalAlign:'middle',minWidth:10}}>Challan Number</th>
+            <th style={{padding:'12px 8px',textAlign:'right',verticalAlign:'middle',minWidth:120}}>Amount</th>
+            <th style={{padding:'12px 8px',textAlign:'center',verticalAlign:'middle',width:60}}>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {cart.length === 0 ? (
+            <tr>
+              <td colSpan={4} style={{color:'#888',textAlign:'center',padding:'24px 0'}}>No challans in cart.</td>
+            </tr>
+          ) : (
+            cart.map((c) => (
+              <tr key={c.challan_no} style={{borderBottom:'1px solid #eee'}}>
+                <td style={{padding:'12px 8px',textAlign:'left',verticalAlign:'middle',fontWeight:500,fontSize:15,color:'#222'}}>{c.vehicle_number}</td>
+                <td style={{padding:'12px 8px',textAlign:'left',verticalAlign:'middle',fontWeight:500,fontSize:15,color:'#1976d2'}}>{c.challan_no}</td>
+                <td style={{padding:'12px 8px',textAlign:'right',verticalAlign:'middle',fontWeight:500,fontSize:15,color:'#0072ff'}}>₹{c.fine_imposed}</td>
+                <td style={{padding:'12px 8px',textAlign:'center',verticalAlign:'middle'}}>
+                  <button
+                    className="action-btn flat-btn"
+                    style={{background:'none',color:'#ff5252',fontSize:18,border:'none',padding:0,cursor:'pointer'}}
+                    title="Remove"
+                    onClick={() => handleRemoveFromCart(c)}
+                  >
+                    <FaTrash />
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+    {cart.length > 0 && (
+      <div style={{borderTop:'1px solid #e3e3e3',paddingTop:14,marginBottom:8}}>
+        <div style={{display:'flex',justifyContent:'space-between',fontSize:17,fontWeight:600,color:'#222'}}>
+          <span>Total Challans:</span>
+          <span>{cart.length}</span>
+        </div>
+        <div style={{display:'flex',justifyContent:'space-between',fontSize:17,fontWeight:600,color:'#0072ff',marginTop:6}}>
+          <span>Total Amount:</span>
+          <span>₹{cart.reduce((sum,c)=>sum+Number(c.fine_imposed||0),0)}</span>
+        </div>
+      </div>
+    )}
+    {/* Remove the submit button from the modal */}
+  </div>
+</CustomModal>
     </div>
   );
 }

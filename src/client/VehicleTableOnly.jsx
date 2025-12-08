@@ -3,12 +3,15 @@
 
 
 import React, { useState, useEffect } from "react";
+import { FaDownload, FaPrint } from "react-icons/fa";
+import * as XLSX from "xlsx";
 import { toast } from 'react-toastify';
 import "./VehicleTableOnly.css";
 import CustomModal from "./CustomModal";
 
 export default function VehicleTableOnly() {
   const [vehicles, setVehicles] = useState([]);
+  const [visibleCount, setVisibleCount] = useState(10);
   const [fetchingVehicles, setFetchingVehicles] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -56,7 +59,8 @@ export default function VehicleTableOnly() {
       (v.chasis_number && v.chasis_number.toUpperCase().includes(searchVal));
     const matchesStatus =
       !statusFilter || (v.status && v.status.toUpperCase() === statusFilter.toUpperCase());
-    return matchesSearch && matchesStatus;
+    const notDeleted = v.status && v.status.toUpperCase() !== 'DELETED';
+    return matchesSearch && matchesStatus && notDeleted;
   });
 
   // Sort by registered_at
@@ -96,82 +100,116 @@ export default function VehicleTableOnly() {
       ) : filteredVehicles.length === 0 ? (
         <div style={{ color: '#888' }}>No vehicles registered yet.</div>
       ) : (
+        <>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, gap: 10 }}>
+          <button onClick={() => {
+            if (!filteredVehicles || filteredVehicles.length === 0) return;
+            const exportData = filteredVehicles.slice(0, visibleCount).map(({ Actions, ...row }) => row);
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Vehicles");
+            XLSX.writeFile(workbook, "vehicles.xlsx");
+          }} title="Download Excel" style={{ padding: '8px 16px', background: '#2196f3', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <FaDownload size={18} />
+          </button>
+          <button onClick={() => {
+            const printContents = document.getElementById('vehicle-tableonly-print-area')?.innerHTML;
+            if (!printContents) return;
+            const printWindow = window.open('', '', 'height=600,width=900');
+            printWindow.document.write('<html><head><title>Print Vehicles</title>');
+            printWindow.document.write('<style>body{font-family:sans-serif;} table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ccc;padding:8px;} th{background:#f5f8fa;} .print-hide{display:none !important;}</style>');
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(printContents);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
+          }} title="Print" style={{ padding: '8px 16px', background: '#4caf50', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <FaPrint size={18} />
+          </button>
+        </div>
+        <div id="vehicle-tableonly-print-area">
         <table className="vehicle-challan-table">
           <thead>
             <tr>
-              <th><i className="ri-car-line" style={{marginRight: 4}}></i>Vehicle No.</th>
-              <th><i className="ri-engine-line" style={{marginRight: 4}}></i>Engine No.</th>
-              <th><i className="ri-vip-diamond-line" style={{marginRight: 4}}></i>Chassis No.</th>
-              <th><i className="ri-shield-check-line" style={{marginRight: 4}}></i>Status</th>
-              <th
-                style={{ cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                title="Sort by Registered At"
-              >
-                <i className="ri-calendar-check-line" style={{marginRight: 4}}></i>Reg. Date {sortOrder === 'asc' ? '▲' : '▼'}
-              </th>
-              {/* <th><i className="ri-database-2-line" style={{marginRight: 4}}></i>Data</th> */}
-              <th><i className="ri-settings-3-line" style={{marginRight: 4}}></i>Actions</th>
+              <th>Vehicle No.</th>
+              <th>Engine No.</th>
+              <th>Chassis No.</th>
+              <th>Status</th>
+              <th>Type</th>
+              <th>Registration Date</th>
+              <th>Data</th>
+              <th className="print-hide">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredVehicles.map((v, idx) => {
+            {filteredVehicles.slice(0, visibleCount).map((v, idx) => {
               let status = (v.status || 'Not Available').toUpperCase();
               let statusColor = '#888';
               if (status === 'ACTIVE') statusColor = '#43e97b';
               else if (status === 'INACTIVE') statusColor = '#ffa726';
               else if (status === 'DELETED') statusColor = '#e57373';
-
-              // Action handlers with custom modal
               const handleInactivate = () => setModal({ open: true, action: 'inactivate', vehicle: v });
               const handleActivate = () => setModal({ open: true, action: 'activate', vehicle: v });
               const handleDelete = () => setModal({ open: true, action: 'delete', vehicle: v });
-
               return (
                 <tr key={v.id || v._id || idx}>
                   <td style={{fontWeight:600, color:'#42a5f5', letterSpacing:1}}>{v.vehicle_number || <span style={{color:'#bbb'}}>N/A</span>}</td>
                   <td>{v.engine_number || <span style={{color:'#bbb'}}>N/A</span>}</td>
                   <td>{v.chasis_number || <span style={{color:'#bbb'}}>N/A</span>}</td>
                   <td style={{ color: statusColor, fontWeight: 700, letterSpacing: 1 }}>{status}</td>
+                  <td>{v.vehicle_type || <span style={{color:'#bbb'}}>N/A</span>}</td>
                   <td>{v.registered_at ? <span style={{color:'#43e97b', fontWeight:600}}>{new Date(v.registered_at).toLocaleString()}</span> : <span style={{color:'#bbb'}}>N/A</span>}</td>
-                  {/* Data column removed */}
                   <td>
-                    {status === 'INACTIVE' ? (
-                      <span
-                        title="Activate Vehicle"
-                        style={{ cursor: 'pointer', marginRight: 12, fontSize: 18, color: '#43e97b' }}
-                        onClick={handleActivate}
-                        role="button"
-                        aria-label="Activate Vehicle"
-                      >
-                        <i className="ri-checkbox-circle-line"></i>
-                      </span>
-                    ) : (
-                      <span
-                        title="Inactivate Vehicle"
-                        style={{ cursor: 'pointer', marginRight: 12, fontSize: 18, color: '#ffa726' }}
-                        onClick={handleInactivate}
-                        role="button"
-                        aria-label="Inactivate Vehicle"
-                      >
-                        <i className="ri-close-circle-line"></i>
-                      </span>
-                    )}
-                    <span
-                      title="Delete Vehicle"
-                      style={{ cursor: 'pointer', color: '#e57373', fontSize: 18 }}
-                      onClick={handleDelete}
-                      role="button"
-                      aria-label="Delete Vehicle"
+                    <button
+                      className="action-btn flat-btn"
+                      style={{padding:'4px 10px',fontSize:13,borderRadius:4,border:'1px solid #ccc',background:'#f5f5f5',color:'#222'}}
+                      onClick={async () => {
+                        setModal({ open: true, action: 'fetch', vehicle: v, message: 'Loading...' });
+                        try {
+                          const res = await fetch(`${API_ROOT}/fetchvehicledetails?vehicle_number=${encodeURIComponent(v.vehicle_number)}`);
+                          const data = await res.json();
+                          setModal({ open: true, action: 'fetch', vehicle: v, message: JSON.stringify(data, null, 2) });
+                        } catch (err) {
+                          setModal({ open: true, action: 'fetch', vehicle: v, message: 'Failed to fetch data.' });
+                        }
+                      }}
                     >
-                      <i className="ri-delete-bin-6-line"></i>
-                    </span>
+                      Fetch Data
+                    </button>
+                  </td>
+                  <td className="print-hide">
+                    {status === 'INACTIVE' ? (
+                      <span title="Activate Vehicle" style={{ cursor: 'pointer', marginRight: 12, fontSize: 18, color: '#43e97b' }} onClick={handleActivate} role="button" aria-label="Activate Vehicle"><i className="ri-checkbox-circle-line"></i></span>
+                    ) : (
+                      <span title="Inactivate Vehicle" style={{ cursor: 'pointer', marginRight: 12, fontSize: 18, color: '#ffa726' }} onClick={handleInactivate} role="button" aria-label="Inactivate Vehicle"><i className="ri-close-circle-line"></i></span>
+                    )}
+                    <span title="Delete Vehicle" style={{ cursor: 'pointer', color: '#e57373', fontSize: 18 }} onClick={handleDelete} role="button" aria-label="Delete Vehicle"><i className="ri-delete-bin-6-line"></i></span>
                   </td>
                 </tr>
               );
             })}
           </tbody>
-        </table>
+  </table>
+  </div>
+        {/* Load more dropdown */}
+        {filteredVehicles.length > visibleCount && (
+          <div style={{ marginTop: 16, textAlign: 'center' }}>
+            <select
+              className="form-control"
+              style={{ maxWidth: 180, display: 'inline-block' }}
+              value={visibleCount}
+              onChange={e => setVisibleCount(Number(e.target.value))}
+            >
+              <option value={visibleCount}>Show More...</option>
+              {filteredVehicles.length >= 50 && <option value={visibleCount + 50}>Show 50 more</option>}
+              {filteredVehicles.length >= 100 && <option value={visibleCount + 100}>Show 100 more</option>}
+              {filteredVehicles.length >= 200 && <option value={visibleCount + 200}>Show 200 more</option>}
+              <option value={filteredVehicles.length}>Show All</option>
+            </select>
+          </div>
+        )}
+        </>
       )}
       {/* Custom Modal for confirmation */}
       <CustomModal
@@ -180,11 +218,12 @@ export default function VehicleTableOnly() {
           modal.action === 'inactivate' ? 'Are you sure you want to inactivate this vehicle?'
           : modal.action === 'activate' ? 'Are you sure you want to activate this vehicle?'
           : modal.action === 'delete' ? 'Are you sure you want to delete this vehicle?'
-          : modal.action === 'info' ? 'Vehicle Inactive' 
+          : modal.action === 'info' ? 'Vehicle Inactive'
+          : modal.action === 'fetch' ? `API Response for ${modal.vehicle?.vehicle_number}`
           : ''
         }
         onConfirm={async () => {
-          if (modal.action === 'info') {
+          if (modal.action === 'info' || modal.action === 'fetch') {
             setModal({ open: false, action: null, vehicle: null });
             return;
           }
@@ -212,14 +251,17 @@ export default function VehicleTableOnly() {
           setModal({ open: false, action: null, vehicle: null });
         }}
         onCancel={() => setModal({ open: false, action: null, vehicle: null })}
-        confirmText={modal.action === 'delete' ? 'Delete' : modal.action === 'activate' ? 'Activate' : modal.action === 'inactivate' ? 'Inactivate' : modal.action === 'info' ? 'OK' : 'Yes'}
-        cancelText={modal.action === 'info' ? null : 'Cancel'}
+        confirmText={modal.action === 'delete' ? 'Delete' : modal.action === 'activate' ? 'Activate' : modal.action === 'inactivate' ? 'Inactivate' : modal.action === 'info' || modal.action === 'fetch' ? 'OK' : 'Yes'}
+        cancelText={modal.action === 'info' || modal.action === 'fetch' ? null : 'Cancel'}
       >
         {modal.action === 'delete' && (
           <span style={{color:'red', fontWeight:600}}>This action is non-reversible.<br/>Your vehicle and all related data will be deleted permanently.</span>
         )}
         {modal.action === 'info' && (
           <span style={{color:'#d35400', fontWeight:500}}>Please activate your vehicle first.</span>
+        )}
+        {modal.action === 'fetch' && (
+          <pre style={{background:'#f5f5f5',padding:12,borderRadius:6,maxHeight:400,overflow:'auto',fontSize:13}}>{modal.message}</pre>
         )}
       </CustomModal>
     </div>
