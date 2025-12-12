@@ -6,7 +6,7 @@ import CustomModal from "../client/CustomModal";
 const FIELD_OPTIONS = [
   { value: "vehicle_number", label: "Vehicle Number" },
   { value: "engine_number", label: "Engine Number" },
-  { value: "chasis_number", label: "Chasis Number" },
+  { value: "chassis_number", label: "chassis Number" },
 ];
 
 export default function AdminRegisterVehicle({ dealers = [], clients = [], vehicles = [] }) {
@@ -67,7 +67,7 @@ export default function AdminRegisterVehicle({ dealers = [], clients = [], vehic
         client_id: selectedClient,
         vehicle_number: selectedField === "vehicle_number" ? fieldValue : undefined,
         engine_number: selectedField === "engine_number" ? fieldValue : undefined,
-        chasis_number: selectedField === "chasis_number" ? fieldValue : undefined,
+        chassis_number: selectedField === "chassis_number" ? fieldValue : undefined,
       };
       const res = await fetch(API_ROOT + REGISTER_ENDPOINT, {
         method: "POST",
@@ -108,7 +108,7 @@ export default function AdminRegisterVehicle({ dealers = [], clients = [], vehic
       <ToastContainer position="top-right" autoClose={2000} />
       <h1 className="page-title">Register New Vehicle (Admin)</h1>
       <p className="page-subtitle">
-        As admin, please select a <b>Dealer</b>, then a <b>Client</b> under that dealer, then register the vehicle using <b>any one</b> of the following details: <b>Vehicle Number</b>, <b>Engine Number</b>, or <b>Chasis Number</b>.
+        As admin, please select a <b>Dealer</b>, then a <b>Client</b> under that dealer, then register the vehicle using <b>any one</b> of the following details: <b>Vehicle Number</b>, <b>Engine Number</b>, or <b>chassis Number</b>.
       </p>
       <div className="modern-form-card">
         <form className="vehicle-form" onSubmit={handleSubmit} autoComplete="off">
@@ -221,7 +221,7 @@ export default function AdminRegisterVehicle({ dealers = [], clients = [], vehic
                 <tr>
                   <th>Vehicle Number</th>
                   <th>Engine Number</th>
-                  <th>Chasis Number</th>
+                  <th>chassis Number</th>
                   <th>Status</th>
                   <th>Registered At</th>
                   <th>Actions</th>
@@ -244,7 +244,7 @@ export default function AdminRegisterVehicle({ dealers = [], clients = [], vehic
                     <tr key={v.id || v._id || idx}>
                       <td>{v.vehicle_number || 'Not Available'}</td>
                       <td>{v.engine_number || 'Not Available'}</td>
-                      <td>{v.chasis_number || 'Not Available'}</td>
+                      <td>{v.chassis_number || 'Not Available'}</td>
                       <td style={{ color: statusColor, fontWeight: 600, letterSpacing: 1 }}>{status}</td>
                       <td>{v.registered_at ? new Date(v.registered_at).toLocaleString() : 'Not Available'}</td>
                       <td>

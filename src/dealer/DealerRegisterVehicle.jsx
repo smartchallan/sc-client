@@ -7,7 +7,7 @@ import "./DealerRegisterVehicle.css";
 const FIELD_OPTIONS = [
   { value: "vehicle_number", label: "Vehicle Number" },
   { value: "engine_number", label: "Engine Number", disabled: true },
-  { value: "chasis_number", label: "Chasis Number", disabled: true },
+  { value: "chassis_number", label: "chassis Number", disabled: true },
 ];
 
 export default function DealerRegisterVehicle({ clients: propClients }) {
@@ -80,7 +80,7 @@ export default function DealerRegisterVehicle({ clients: propClients }) {
         client_id: selectedClient,
         vehicle_number: selectedField === "vehicle_number" ? fieldValue : undefined,
         engine_number: selectedField === "engine_number" ? fieldValue : undefined,
-        chasis_number: selectedField === "chasis_number" ? fieldValue : undefined,
+        chassis_number: selectedField === "chassis_number" ? fieldValue : undefined,
       };
       const res = await fetch(API_ROOT + REGISTER_ENDPOINT, {
         method: "POST",
@@ -120,7 +120,7 @@ export default function DealerRegisterVehicle({ clients: propClients }) {
       <ToastContainer position="top-right" autoClose={2000} />
       <h1 className="page-title">Register New Vehicle</h1>
       <p className="page-subtitle">
-        As dealer, please select a <b>Client</b> under you, then register the vehicle using <b>any one</b> of the following details: <b>Vehicle Number</b>, <b>Engine Number</b>, or <b>Chasis Number</b>.
+        As dealer, please select a <b>Client</b> under you, then register the vehicle using <b>any one</b> of the following details: <b>Vehicle Number</b>, <b>Engine Number</b>, or <b>chassis Number</b>.
       </p>
       <div className="modern-form-card">
         <form className="vehicle-form" onSubmit={handleSubmit} style={{display: 'flex', flexWrap: 'wrap', gap: 16}}>
@@ -259,7 +259,7 @@ export default function DealerRegisterVehicle({ clients: propClients }) {
                   <th>S. No.</th>
                   <th>Vehicle Number</th>
                   <th>Engine Number</th>
-                  <th>Chasis Number</th>
+                  <th>chassis Number</th>
                   <th>Status</th>
                   <th>Registered At</th>
                 </tr>
@@ -313,7 +313,7 @@ export default function DealerRegisterVehicle({ clients: propClients }) {
                           </span>
                         </td>
                         <td>{v.engine_number || 'Not Available'}</td>
-                        <td>{v.chasis_number || 'Not Available'}</td>
+                        <td>{v.chassis_number || 'Not Available'}</td>
                         <td style={{ color: statusColor, fontWeight: 600, letterSpacing: 1 }}>{status}</td>
                         <td>{v.registered_at ? new Date(v.registered_at).toLocaleString() : 'Not Available'}</td>
                       </tr>

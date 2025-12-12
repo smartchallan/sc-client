@@ -48,7 +48,7 @@ function ClientVehiclesPage({ clients, initialClientId }) {
       return (
         (v.vehicle_number && v.vehicle_number.toUpperCase().includes(s)) ||
         (v.engine_number && v.engine_number.toUpperCase().includes(s)) ||
-        (v.chasis_number && v.chasis_number.toUpperCase().includes(s))
+        (v.chassis_number && v.chassis_number.toUpperCase().includes(s))
       );
     }
     return true;
@@ -96,7 +96,7 @@ function ClientVehiclesPage({ clients, initialClientId }) {
             className="form-control"
             style={{minWidth:140,flex:'1 1 180px',maxWidth:260}}
             type="text"
-            placeholder="Search by Vehicle/Engine/Chasis"
+            placeholder="Search by Vehicle/Engine/chassis"
             value={search}
             onChange={e => setSearch(e.target.value.toUpperCase())}
             disabled={!selectedClient}
@@ -149,7 +149,7 @@ function ClientVehiclesPage({ clients, initialClientId }) {
                 <th>S. No.</th>
                 <th>Vehicle Number</th>
                 <th>Engine Number</th>
-                <th>Chasis Number</th>
+                <th>chassis Number</th>
                 <th>Status</th>
                 <th>Registered At</th>
               </tr>
@@ -205,7 +205,7 @@ function ClientVehiclesPage({ clients, initialClientId }) {
                         </span>
                       </td>
                       <td>{v.engine_number || 'Not Available'}</td>
-                      <td>{v.chasis_number || 'Not Available'}</td>
+                      <td>{v.chassis_number || 'Not Available'}</td>
                       <td style={{ color: statusColor, fontWeight: 600, letterSpacing: 1 }}>{status}</td>
                       <td>{v.registered_at ? new Date(v.registered_at).toLocaleString() : 'Not Available'}</td>
                     </tr>

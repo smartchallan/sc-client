@@ -1,4 +1,537 @@
+import { FaFilePdf } from "react-icons/fa";
+// import { FaFilePdf } from "react-icons/fa"; 
+import { FaFileExcel } from "react-icons/fa";
+import { RiArrowDownSLine } from "react-icons/ri";
+import { RiCheckDoubleLine } from "react-icons/ri";
+import { RiFileList2Line } from "react-icons/ri";
+import { RiPrinterLine } from "react-icons/ri";
+import { RiDownload2Line } from "react-icons/ri";
+import { RiArrowRightSLine } from "react-icons/ri";
+import { RiCarLine } from "react-icons/ri";
+import { FaPrint } from "react-icons/fa";
+// ...existing code...
 import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { FaDownload } from "react-icons/fa";
+// ...existing code...
+import "react-toastify/dist/ReactToastify.css";
+import "./LatestTable.css";
+// ...existing code...
+// ...existing code...
+// ...existing code...
+// ...existing code...
+// ...existing code...
+// ...existing code...
+// ...existing code...
+// ...existing code...
+// ...existing code...
+import "./RightSidebar.css";
+// ...existing code...
+// ...existing code...
+// ...existing code...
+// ...existing code...
+// ...existing code...
+// ...existing code...
+
+// ...existing code...
+
+// Helper to prettify keys for display
+function prettifyKey(key) {
+  const map = {
+    rc_regn_no: 'Registration No',
+    rc_owner_name: 'Owner Name',
+    rc_regn_dt: 'Registration Date',
+    rc_insurance_upto: 'Insurance Expiry',
+    rc_tax_upto: 'Road Tax Expiry',
+    rc_fit_upto: 'Fitness Expiry',
+    rc_pucc_upto: 'Pollution Expiry',
+    rc_chasi_no: 'Chassis No',
+    rc_eng_no: 'Engine No',
+    rc_vh_class_desc: 'Vehicle Class',
+    rc_fuel_desc: 'Fuel Type',
+    rc_maker_desc: 'Maker',
+    rc_maker_model: 'Model',
+    rc_off_cd: 'RTO',
+    rc_state_cd: 'State',
+    rc_mobile_no: 'Mobile No',
+    rc_present_address: 'Address',
+    challan_no: 'Challan No',
+    challan_date_time: 'Date/Time',
+    challan_place: 'Location',
+    offence_details: 'Offence Details',
+    fine_imposed: 'Fine Imposed',
+    received_amount: 'Received Amount',
+    challan_status: 'Status',
+    department: 'Department',
+    driver_name: 'Driver Name',
+    owner_name: 'Owner Name',
+    remark: 'Remark',
+    court_name: 'Court Name',
+    court_address: 'Court Address',
+    state_code: 'State Code',
+    rto_distric_name: 'RTO District',
+    document_impounded: 'Document Impounded',
+    sent_to_court_on: 'Sent to Court On',
+    sent_to_reg_court: 'Sent to Reg Court',
+    sent_to_virtual_court: 'Sent to Virtual Court',
+    date_of_proceeding: 'Date of Proceeding',
+    dl_no: 'DL No',
+    amount_of_fine_imposed: 'Amount of Fine Imposed',
+    receipt_no: 'Receipt No',
+    name_of_violator: 'Name of Violator',
+    rto_cd: 'RTO Code',
+    rc_color: 'Color',
+    rc_gvw: 'Gross Vehicle Weight',
+    rc_no_cyl: 'No. of Cylinders',
+    rc_status: 'RC Status',
+    rc_fuel_cd: 'Fuel Code',
+    rc_non_use: 'Non Use',
+    rc_pucc_no: 'PUCC No',
+    rc_unld_wt: 'Unladen Weight',
+    rc_vh_type: 'Vehicle Type',
+    rc_financer: 'Financer',
+    rc_maker_cd: 'Maker Code',
+    rc_model_cd: 'Model Code',
+    rc_norms_cd: 'Norms Code',
+    rc_owner_sr: 'Owner Serial',
+    rc_sale_amt: 'Sale Amount',
+    rc_seat_cap: 'Seating Capacity',
+    rc_tax_mode: 'Tax Mode',
+    rc_vch_catg: 'Vehicle Category',
+    rc_vh_class: 'Vehicle Class',
+    rc_cubic_cap: 'Cubic Capacity',
+    rc_goods_tax: 'Goods Tax',
+    rc_stand_cap: 'Standing Capacity',
+    rc_wheelbase: 'Wheelbase',
+    rc_norms_desc: 'Norms',
+    rc_owner_cd_desc: 'Owner Category',
+    rc_passenger_tax: 'Passenger Tax',
+    rc_registered_at: 'Registered At',
+    rc_vch_catg_desc: 'Vehicle Category',
+    rc_body_type_desc: 'Body Type',
+    rc_insurance_comp: 'Insurance Company',
+    rc_insurance_policy_no: 'Insurance Policy No',
+    rc_blacklist_status: 'Blacklist Status',
+    rc_permanent_address: 'Permanent Address',
+    rc_vehicle_surrendered_to_dealer: 'Vehicle Surrendered to Dealer',
+    // Add more as needed
+  };
+  if (map[key]) return map[key];
+  // Fallback: prettify snake_case or camelCase
+  return key.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, l => l.toUpperCase());
+}
+// ...existing code...
+
+
+// --- SidebarVehicleReport component ---
+function SidebarVehicleReport({ vehicleChallanData }) {
+  const [rtoOpen, setRtoOpen] = useState(false);
+  const [pendingOpen, setPendingOpen] = useState(false);
+  const [disposedOpen, setDisposedOpen] = useState(false);
+  const [downloadDialog, setDownloadDialog] = useState({ open: false, section: null, data: null });
+  // errorModal declared only once
+  const [errorModal, setErrorModal] = useState({ open: false, message: '' });
+  if (!vehicleChallanData || typeof vehicleChallanData !== 'object') {
+    return <div style={{color:'#e74c3c',fontWeight:600}}>No data found for this vehicle.</div>;
+  }
+  // Support both {data: {...}} and flat object
+  const data = vehicleChallanData.data || vehicleChallanData;
+  const { rto_data, pending_data, disposed_data, ...rest } = data;
+  // RTO details: flatten if nested under VehicleDetails
+  const rtoDetails = rto_data && rto_data.VehicleDetails ? rto_data.VehicleDetails : rto_data;
+  // Custom error modal state
+  // (removed duplicate declaration)
+  // Helper for toast or modal
+  const showToast = (msg) => {
+    if (window.toast) window.toast.info(msg);
+    else if (window.ReactToastify && window.ReactToastify.toast) window.ReactToastify.toast.info(msg);
+    else setErrorModal({ open: true, message: msg });
+  };
+
+  // Download/Print handlers
+  const handleDownload = (section, data) => {
+    if (!data || (Array.isArray(data) && data.length === 0) || (typeof data === 'object' && Object.keys(data).length === 0)) {
+      showToast('Sorry no details available to download or print');
+      return;
+    }
+    setDownloadDialog({ open: true, section, data });
+  };
+  const handlePrint = (section, data) => {
+    if (!data || (Array.isArray(data) && data.length === 0) || (typeof data === 'object' && Object.keys(data).length === 0)) {
+      showToast('Sorry no details available to download or print');
+      return;
+    }
+    // Print logic
+    let printContent = '';
+    if (section === 'rto') {
+      // Try to get vehicle number from data
+      const vehicleNumber = data.vehicle_number || data.rc_regn_no || data.regn_no || data.registration_no || '';
+      printContent = `<h2>RTO Vehicle Details${vehicleNumber ? ` - ${vehicleNumber}` : ''}</h2><table style='width:100%;font-size:14px;'>` +
+        Object.entries(data).map(([k,v]) => `<tr><td style='font-weight:600;width:40%'>${prettifyKey(k)}</td><td>${typeof v === 'object' ? JSON.stringify(v) : v}</td></tr>`).join('') + '</table>';
+    } else if (section === 'pending' || section === 'disposed') {
+      // Each challan on a separate page, visually distinct
+      printContent = data.map((challan, idx) => `
+        <div style='page-break-after: always; padding: 32px 0 24px 0; width: 90%; margin: 0 auto;'>
+          <div style='background: linear-gradient(90deg, #f5f8fa 60%, #e3eaf1 100%); border-radius: 16px; box-shadow: 0 2px 12px #0001; padding: 32px 40px 28px 40px; margin-bottom: 24px; border: 2px solid #1976d2;'>
+            <div style='display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;'>
+              <h2 style='margin: 0; color: #1976d2; font-size: 2em;'>${section === 'pending' ? 'Pending' : 'Disposed'} Challan</h2>
+              <span style='font-size: 1.1em; color: #888;'>#${idx + 1}</span>
+            </div>
+            <table style='width:100%;font-size:15px; border-collapse: collapse;'>
+              <tbody>
+                ${Object.entries(challan).map(([k,v]) => `
+                  <tr>
+                    <td style='font-weight:600; width:38%; padding: 7px 12px; background: #f0f4fa; border-bottom: 1px solid #e3eaf1;'>${prettifyKey(k)}</td>
+                    <td style='padding: 7px 12px; border-bottom: 1px solid #e3eaf1;'>${Array.isArray(v) ? v.map((item,i) => typeof item === 'object' ? JSON.stringify(item) : item).join(', ') : (typeof v === 'object' ? JSON.stringify(v) : v)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `).join('');
+    }
+    const win = window.open('', '', 'height=700,width=900');
+    win.document.write('<html><head><title>Print</title><style>@media print { div[style*="page-break-after"] { page-break-after: always !important; } }</style></head><body>' + printContent + '</body></html>');
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); win.close(); }, 500);
+  };
+
+  // Download as Excel
+  const downloadExcel = (section, data) => {
+    let rows = [];
+    if (section === 'rto') {
+      rows = [data];
+    } else if (section === 'pending' || section === 'disposed') {
+      rows = data;
+    }
+    if (!rows.length) { showToast('Sorry no details available to download or print'); return; }
+    // Use XLSX if available, else fallback to CSV
+    if (window.XLSX) {
+      const ws = window.XLSX.utils.json_to_sheet(rows);
+      const wb = window.XLSX.utils.book_new();
+      window.XLSX.utils.book_append_sheet(wb, ws, section);
+      window.XLSX.writeFile(wb, `${section}-details.xlsx`);
+    } else {
+      // Fallback: CSV
+      const headers = Object.keys(rows[0]);
+      const csv = [headers.join(','), ...rows.map(r => headers.map(h => r[h]).join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${section}-details.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+    setDownloadDialog({ open: false, section: null, data: null });
+  };
+
+  // Download as PDF
+  const downloadPDF = (section, data) => {
+    try {
+      const doc = new jsPDF();
+      let y = 15;
+      if (section === 'rto') {
+        // Professional color palette
+        const accent = [44, 62, 80]; // dark blue-gray
+        const labelColor = [60, 60, 60];
+        const valueColor = [30, 30, 30];
+        const bgColor = [255, 255, 255];
+        const borderColor = [220, 220, 220];
+        // Heading bar
+        doc.setFillColor(...accent);
+        doc.roundedRect(8, y-10, 194, 16, 4, 4, 'F');
+        doc.setFontSize(20);
+        doc.setTextColor(255,255,255);
+        doc.setFont('times', 'bold');
+        doc.text('RTO Vehicle Details', 16, y+1);
+        y += 16;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(12);
+        // Single-column layout: each key/value in its own card row
+        const entries = Object.entries(data);
+        const cardX = 18, cardW = 175, cardPad = 3, rowHeight = 16;
+        for (let i = 0; i < entries.length; i++) {
+          const [k, v] = entries[i];
+          // Paginate if near bottom
+          if (y > 270) {
+            doc.addPage();
+            y = 20;
+          }
+          // Card row background
+          doc.setFillColor(245, 248, 250);
+          doc.roundedRect(cardX, y-6, cardW, rowHeight, 3, 3, 'F');
+          // Border
+          doc.setDrawColor(...borderColor);
+          doc.setLineWidth(0.3);
+          doc.roundedRect(cardX, y-6, cardW, rowHeight, 3, 3);
+          // Label
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(...labelColor);
+          doc.text(`${prettifyKey(k)}`, cardX + cardPad, y);
+          // Value
+          doc.setFont('times', 'normal');
+          doc.setTextColor(...valueColor);
+          let value = typeof v === 'object' ? JSON.stringify(v) : v;
+          const splitValue = doc.splitTextToSize(value, cardW - 60);
+          doc.text(splitValue, cardX + 60, y);
+          y += rowHeight + 2;
+        }
+        y += 8;
+      } else if (section === 'pending' || section === 'disposed') {
+        const mainColor = section === 'pending' ? [231, 76, 60] : [67, 160, 71];
+        doc.setFontSize(20);
+        doc.setTextColor(...mainColor);
+        doc.text(`${section === 'pending' ? 'Pending' : 'Disposed'} Challans`, 10, y);
+        y += 10;
+        data.forEach((challan, idx) => {
+          if (idx > 0) {
+            doc.addPage();
+            y = 15;
+          }
+          // Section header for each challan
+          doc.setFillColor(...mainColor);
+          doc.roundedRect(8, y-7, 194, 12, 3, 3, 'F');
+          doc.setTextColor(255,255,255);
+          doc.setFontSize(15);
+          doc.text(`Challan #${idx+1}`, 14, y+2);
+          y += 12;
+          doc.setTextColor(33,33,33);
+          doc.setFontSize(12);
+          Object.entries(challan).forEach(([k,v]) => {
+            doc.setFont('helvetica', 'bold');
+            doc.text(`${prettifyKey(k)}:`, 12, y);
+            doc.setFont('helvetica', 'normal');
+            let value = Array.isArray(v) ? v.map((item,i) => typeof item === 'object' ? JSON.stringify(item) : item).join(', ') : (typeof v === 'object' ? JSON.stringify(v) : v);
+            // Wrap text if too long
+            const splitValue = doc.splitTextToSize(value, 120);
+            doc.text(splitValue, 70, y);
+            y += Math.max(7, splitValue.length * 6);
+          });
+          y += 4;
+        });
+      }
+      doc.save(`${section}-details.pdf`);
+    } catch (e) {
+      showToast('PDF download failed. Please try again.');
+    }
+    setDownloadDialog({ open: false, section: null, data: null });
+  };
+
+  return (
+    <div style={{padding:8}}>
+      {/* RTO Section */}
+      <div
+        style={{
+          marginBottom:14,
+          borderBottom:'1px solid #e3eaf1',
+          padding:'16px 18px',
+          display:'flex',
+          alignItems:'center',
+          background:'#f5f8fa',
+          borderRadius:10,
+          boxShadow:'0 2px 8px #1976d210',
+          transition:'background 0.2s',
+        }}
+        onMouseOver={e=>e.currentTarget.style.background='#e3eaf1'}
+        onMouseOut={e=>e.currentTarget.style.background='#f5f8fa'}
+      >
+        <span style={{marginRight:10}}><RiCarLine size={22} color="#1976d2" /></span>
+        <span style={{fontWeight:700, fontSize:16, color:'#1976d2', flex:1, cursor:'pointer', display:'flex', alignItems:'center'}} onClick={()=>setRtoOpen(o=>!o)}>
+          RTO Vehicle Details
+          <span style={{marginLeft:8}}>{rtoOpen ? <RiArrowDownSLine size={22} /> : <RiArrowRightSLine size={22} />}</span>
+        </span>
+        <span style={{marginLeft:8, display:'flex', gap:8}}>
+          <RiDownload2Line style={{cursor:'pointer'}} size={22} title="Download" onClick={()=>handleDownload('rto', rtoDetails)} />
+          <RiPrinterLine style={{cursor:'pointer'}} size={22} title="Print" onClick={()=>handlePrint('rto', rtoDetails)} />
+        </span>
+      </div>
+      {rtoOpen && rtoDetails && (
+        <div style={{
+          marginBottom:18,
+          background:'linear-gradient(120deg, #f5f8fa 60%, #e3eaf1 100%)',
+          borderRadius:14,
+          boxShadow:'0 4px 24px #1976d220',
+          padding:'24px 24px 18px 24px',
+          border:'1.5px solid #1976d2',
+          maxWidth:480,
+          marginLeft:'auto',
+          marginRight:'auto',
+        }}>
+          <div style={{display:'flex',alignItems:'center',marginBottom:18}}>
+            <RiCarLine size={28} color="#1976d2" style={{marginRight:10}} />
+            <span style={{fontWeight:700,fontSize:20,color:'#1976d2',letterSpacing:0.5}}>RTO Vehicle Details</span>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px 18px'}}>
+            {Object.entries(rtoDetails).map(([k,v]) => (
+              <React.Fragment key={k}>
+                <div style={{fontWeight:600,color:'#1976d2',fontSize:15,background:'#e3eaf1',borderRadius:6,padding:'7px 10px'}}>{prettifyKey(k)}</div>
+                <div style={{color:'#333',fontSize:15,background:'#fff',borderRadius:6,padding:'7px 10px',wordBreak:'break-word',boxShadow:'0 1px 4px #1976d210'}}>{typeof v === 'object' ? JSON.stringify(v) : v}</div>
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* Pending Challans Section */}
+      <div
+        style={{
+          marginBottom:14,
+          borderBottom:'1px solid #e3eaf1',
+          padding:'16px 18px',
+          display:'flex',
+          alignItems:'center',
+          background:'#fff5f5',
+          borderRadius:10,
+          boxShadow:'0 2px 8px #e74c3c10',
+          transition:'background 0.2s',
+        }}
+        onMouseOver={e=>e.currentTarget.style.background='#ffeaea'}
+        onMouseOut={e=>e.currentTarget.style.background='#fff5f5'}
+      >
+        <span style={{marginRight:10}}><RiFileList2Line size={22} color="#e74c3c" /></span>
+        <span style={{fontWeight:700, color:'#e74c3c', fontSize:15, flex:1, cursor:'pointer', display:'flex', alignItems:'center'}} onClick={()=>setPendingOpen(o=>!o)}>
+          Pending Challans ({Array.isArray(pending_data) ? pending_data.length : 0})
+          <span style={{marginLeft:8}}>{pendingOpen ? <RiArrowDownSLine size={22} /> : <RiArrowRightSLine size={22} />}</span>
+        </span>
+        <span style={{marginLeft:8, display:'flex', gap:8}}>
+          <RiDownload2Line style={{cursor:'pointer'}} size={22} title="Download" onClick={()=>handleDownload('pending', pending_data)} />
+          <RiPrinterLine style={{cursor:'pointer'}} size={22} title="Print" onClick={()=>handlePrint('pending', pending_data)} />
+        </span>
+      </div>
+      {pendingOpen && Array.isArray(pending_data) && pending_data.length > 0 && (
+        <div style={{marginBottom:18, background:'#fff', borderRadius:8, boxShadow:'0 1px 6px #e74c3c10', padding:'8px 0'}}>
+          {pending_data.map((challan, idx) => (
+            <ChallanCard key={challan.challan_no || idx} challan={challan} color="#e74c3c" />
+          ))}
+        </div>
+      )}
+      {/* Disposed Challans Section */}
+      <div
+        style={{
+          marginBottom:14,
+          borderBottom:'1px solid #e3eaf1',
+          padding:'16px 18px',
+          display:'flex',
+          alignItems:'center',
+          background:'#f5fff5',
+          borderRadius:10,
+          boxShadow:'0 2px 8px #43a04710',
+          transition:'background 0.2s',
+        }}
+        onMouseOver={e=>e.currentTarget.style.background='#eafbe7'}
+        onMouseOut={e=>e.currentTarget.style.background='#f5fff5'}
+      >
+        <span style={{marginRight:10}}><RiCheckDoubleLine size={22} color="#43a047" /></span>
+        <span style={{fontWeight:700, color:'#43a047', fontSize:15, flex:1, cursor:'pointer', display:'flex', alignItems:'center'}} onClick={()=>setDisposedOpen(o=>!o)}>
+          Disposed Challans ({Array.isArray(disposed_data) ? disposed_data.length : 0})
+          <span style={{marginLeft:8}}>{disposedOpen ? <RiArrowDownSLine size={22} /> : <RiArrowRightSLine size={22} />}</span>
+        </span>
+        <span style={{marginLeft:8, display:'flex', gap:8}}>
+          <RiDownload2Line style={{cursor:'pointer'}} size={22} title="Download" onClick={()=>handleDownload('disposed', disposed_data)} />
+          <RiPrinterLine style={{cursor:'pointer'}} size={22} title="Print" onClick={()=>handlePrint('disposed', disposed_data)} />
+        </span>
+      </div>
+      {disposedOpen && Array.isArray(disposed_data) && disposed_data.length > 0 && (
+        <div style={{marginBottom:18, background:'#fff', borderRadius:8, boxShadow:'0 1px 6px #43a04710', padding:'8px 0'}}>
+          {disposed_data.map((challan, idx) => (
+            <ChallanCard key={challan.challan_no || idx} challan={challan} color="#43a047" />
+          ))}
+        </div>
+      )}
+
+      {/* Enhanced Download dialog for format selection */}
+      {downloadDialog.open && (
+        <div style={{position:'fixed',top:0,left:0,width:'100vw',height:'100vh',background:'#0006',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{background:'#fff',padding:32,borderRadius:16,minWidth:320,boxShadow:'0 4px 32px #0003',textAlign:'center',maxWidth:400}}>
+            <div style={{fontWeight:700,fontSize:20,marginBottom:8,color:'#1976d2',letterSpacing:0.5}}>Export Vehicle Data</div>
+            <div style={{fontSize:15,color:'#555',marginBottom:18}}>
+              Choose a format to download your data. <br />
+              <span style={{color:'#888',fontSize:13}}>PDF is best for printing and sharing, Excel for analysis and editing.</span>
+            </div>
+            <div style={{display:'flex',justifyContent:'center',gap:32,marginBottom:18}}>
+              <div style={{display:'flex',flexDirection:'column',alignItems:'center',cursor:'pointer',padding:12,borderRadius:10,transition:'box-shadow 0.2s',boxShadow:'0 2px 8px #1976d220'}}
+                   title="Download as Excel (XLSX)"
+                   onClick={()=>downloadExcel(downloadDialog.section, downloadDialog.data)}
+                   onMouseOver={e=>e.currentTarget.style.boxShadow='0 2px 16px #2e7d3233'}
+                   onMouseOut={e=>e.currentTarget.style.boxShadow='0 2px 8px #1976d220'}>
+                <FaFileExcel size={40} style={{color:'#2e7d32',marginBottom:6}} />
+                <span style={{fontWeight:600,color:'#2e7d32',fontSize:15}}>Excel</span>
+                <span style={{fontSize:12,color:'#888'}}>Edit & Analyze</span>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',alignItems:'center',cursor:'pointer',padding:12,borderRadius:10,transition:'box-shadow 0.2s',boxShadow:'0 2px 8px #1976d220'}}
+                   title="Download as PDF (for printing)"
+                   onClick={()=>downloadPDF(downloadDialog.section, downloadDialog.data)}
+                   onMouseOver={e=>e.currentTarget.style.boxShadow='0 2px 16px #c6282833'}
+                   onMouseOut={e=>e.currentTarget.style.boxShadow='0 2px 8px #1976d220'}>
+                <FaFilePdf size={40} style={{color:'#c62828',marginBottom:6}} />
+                <span style={{fontWeight:600,color:'#c62828',fontSize:15}}>PDF</span>
+                <span style={{fontSize:12,color:'#888'}}>Print & Share</span>
+              </div>
+            </div>
+            <button style={{marginTop:8,padding:'8px 24px',borderRadius:8,border:'1.5px solid #1976d2',background:'#fff',color:'#1976d2',fontWeight:700,cursor:'pointer',fontSize:15,boxShadow:'0 1px 4px #1976d220'}} onClick={()=>setDownloadDialog({open:false,section:null,data:null})}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Custom error modal */}
+      {errorModal.open && (
+        <div style={{position:'fixed',top:0,left:0,width:'100vw',height:'100vh',background:'#0007',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{background:'#fff',padding:28,borderRadius:14,minWidth:260,boxShadow:'0 2px 16px #0002',textAlign:'center',maxWidth:340}}>
+            <div style={{fontWeight:700,fontSize:18,marginBottom:12,color:'#c62828'}}>Error</div>
+            <div style={{fontSize:15,color:'#555',marginBottom:18}}>{errorModal.message}</div>
+            <button style={{padding:'8px 24px',borderRadius:8,border:'1.5px solid #c62828',background:'#fff',color:'#c62828',fontWeight:700,cursor:'pointer',fontSize:15,boxShadow:'0 1px 4px #c6282820'}} onClick={()=>setErrorModal({open:false,message:''})}>Close</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- ChallanCard component ---
+function ChallanCard({ challan, color }) {
+  const [open, setOpen] = useState(false);
+  // Key fields to show in summary
+  const summaryFields = [
+    'challan_no', 'challan_date_time', 'challan_place', 'offence_details', 'fine_imposed', 'received_amount', 'challan_status', 'department', 'driver_name', 'owner_name', 'remark'
+  ];
+  return (
+    <div style={{border:`1px solid ${color}33`,borderRadius:8,marginBottom:12,padding:8,background:'#fff', boxShadow:open?'0 2px 8px #0001':'none'}}>
+      <div style={{display:'flex', alignItems:'center', cursor:'pointer'}} onClick={()=>setOpen(o=>!o)}>
+        <span style={{fontWeight:600, color, flex:1}}>{challan.challan_no || 'Challan'}</span>
+        <span style={{fontSize:15, marginLeft:8}}>{open ? '▼' : '▶'}</span>
+      </div>
+      <table style={{width:'100%',fontSize:14, marginTop:open?8:0, display:open?'table':'none'}}>
+        <tbody>
+          {Object.entries(challan).map(([k,v]) => (
+            <tr key={k}>
+              <td style={{fontWeight:600, width:'40%'}}>{prettifyKey(k)}</td>
+              <td>{Array.isArray(v)
+                ? v.map((item, i) => typeof item === 'object' ? <div key={i}>{Object.entries(item).map(([ik,iv]) => <span key={ik}><b>{prettifyKey(ik)}:</b> {iv} </span>)}</div> : <span key={i}>{item}</span>)
+                : (typeof v === 'object' ? JSON.stringify(v) : v)
+              }</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {!open && (
+        <table style={{width:'100%',fontSize:14, marginTop:8}}>
+          <tbody>
+            {summaryFields.filter(f=>challan[f]).map(f => (
+              <tr key={f}>
+                <td style={{fontWeight:600, width:'40%'}}>{prettifyKey(f)}</td>
+                <td>{f === 'offence_details' && Array.isArray(challan[f])
+                  ? challan[f].map((o,i) => <span key={i}>{o.name} ({o.act})</span>)
+                  : challan[f]
+                }</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./LatestTable.css";
@@ -12,9 +545,9 @@ import VehicleSummaryTable from "./VehicleSummaryTable";
 import MyFleetTable from "./MyFleetTable";
 import RegisterVehicle from "../RegisterVehicle";
 import * as XLSX from "xlsx";
-import { FaDownload, FaPrint } from "react-icons/fa";
 import ClientSidebar from "./ClientSidebar";
 // ...existing code...
+// Move these inside the ClientDashboard function component
 // Move these inside the ClientDashboard function component
 import LatestRTOTable from "./LatestRTOTable";
 import MyChallans from "./MyChallans";
@@ -32,6 +565,18 @@ const DriverVerification = lazy(() => import("./DriverVerification"));
 const LazyVehicleFastag = lazy(() => import("./VehicleFastag"));
 
 function ClientDashboard() {
+  // --- Refresh confirmation modal state ---
+  // For vehicle refresh confirmation
+  const [refreshModal, setRefreshModal] = useState({ open: false, vehicle: null });
+  const [upcomingRenewalRange, setUpcomingRenewalRange] = useState(15);
+  // Keep window.upcomingRenewalRange in sync for MyFleetTable highlighting
+  useEffect(() => {
+    window.upcomingRenewalRange = upcomingRenewalRange;
+  }, [upcomingRenewalRange]);
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
+  const [selectedVehicleReport, setSelectedVehicleReport] = useState(null);
+  // const [vehicleChallanData, setVehicleChallanData] = useState(null);
+  // const [sidebarOpen, setSidebarOpen] = useState(false);
   // Print filteredFleet table
   const handlePrintTable = () => {
     const printContents = document.getElementById('my-fleet-table-print-area')?.innerHTML;
@@ -65,23 +610,66 @@ function ClientDashboard() {
   // Read current logged-in user from localStorage when component mounts.
   // State for challan filter in My Fleet
   const [fleetChallanFilter, setFleetChallanFilter] = useState('all');
-  const [fleetRegnSearch, setFleetRegnSearch] = useState('');
-  const [fleetSort, setFleetSort] = useState('recent');
+  // Removed registration search and sort for My Fleet
+  const [urgentRenewalFilter, setUrgentRenewalFilter] = useState('none');
+  const [upcomingRenewalFilter, setUpcomingRenewalFilter] = useState('none');
   const filteredFleet = React.useMemo(() => {
     let filtered = vehicleSummary.filter(row => {
       const matchesVehicle = vehicleSearchText.trim() === '' || (row.vehicle_number || '').toLowerCase().includes(vehicleSearchText.trim().toLowerCase());
-      const matchesRegn = fleetRegnSearch.trim() === '' || (row.rc_regn_dt || row.registration_date || row.registered_at || '').toLowerCase().includes(fleetRegnSearch.trim().toLowerCase());
       let matchesFilter = true;
       if (fleetChallanFilter === 'pending') matchesFilter = (row.pending_challan_count ?? 0) > 0;
       else if (fleetChallanFilter === 'disposed') matchesFilter = (row.disposed_challan_count ?? 0) > 0;
-      return matchesVehicle && matchesRegn && matchesFilter;
+      // Urgent Renewals logic
+      if (urgentRenewalFilter !== 'none') {
+        const now = new Date();
+        const isExpired = (field) => {
+          let dateStr = '';
+          if (field && typeof field === 'object' && field.value) dateStr = field.value;
+          else dateStr = field;
+          if (!dateStr || dateStr === '-') return false;
+          let d;
+          if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(dateStr)) d = new Date(dateStr.replace(/-/g, ' '));
+          else if (/\d{2}-\d{2}-\d{4}/.test(dateStr)) {
+            const [day, month, year] = dateStr.split('-');
+            d = new Date(`${year}-${month}-${day}`);
+          } else if (/\d{4}-\d{2}-\d{2}/.test(dateStr)) d = new Date(dateStr);
+          else d = new Date(dateStr);
+          if (!d || isNaN(d.getTime())) return false;
+          return d < now;
+        };
+        if (urgentRenewalFilter === 'insurance' && !isExpired(row.rc_insurance_upto || row.insurance_exp)) return false;
+        if (urgentRenewalFilter === 'roadTax' && !isExpired(row.rc_tax_upto || row.road_tax_exp)) return false;
+        if (urgentRenewalFilter === 'fitness' && !isExpired(row.rc_fit_upto || row.fitness_exp)) return false;
+        if (urgentRenewalFilter === 'pollution' && !isExpired(row.rc_pucc_upto || row.pollution_exp)) return false;
+      }
+      // Upcoming Renewals logic
+      if (upcomingRenewalFilter !== 'none') {
+        const now = new Date();
+        const isUpcoming = (field) => {
+          let dateStr = '';
+          if (field && typeof field === 'object' && field.value) dateStr = field.value;
+          else dateStr = field;
+          if (!dateStr || dateStr === '-') return false;
+          let d;
+          if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(dateStr)) d = new Date(dateStr.replace(/-/g, ' '));
+          else if (/\d{2}-\d{2}-\d{4}/.test(dateStr)) {
+            const [day, month, year] = dateStr.split('-');
+            d = new Date(`${year}-${month}-${day}`);
+          } else if (/\d{4}-\d{2}-\d{2}/.test(dateStr)) d = new Date(dateStr);
+          else d = new Date(dateStr);
+          if (!d || isNaN(d.getTime())) return false;
+          const diffDays = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+          return diffDays >= 0 && diffDays <= upcomingRenewalRange;
+        };
+        if (upcomingRenewalFilter === 'insurance' && !isUpcoming(row.rc_insurance_upto || row.insurance_exp)) return false;
+        if (upcomingRenewalFilter === 'roadTax' && !isUpcoming(row.rc_tax_upto || row.road_tax_exp)) return false;
+        if (upcomingRenewalFilter === 'fitness' && !isUpcoming(row.rc_fit_upto || row.fitness_exp)) return false;
+        if (upcomingRenewalFilter === 'pollution' && !isUpcoming(row.rc_pucc_upto || row.pollution_exp)) return false;
+      }
+      return matchesVehicle && matchesFilter;
     });
-    if (fleetSort === 'recent') filtered = filtered.slice().sort((a, b) => new Date(b.registered_at || b.rc_regn_dt || b.registration_date) - new Date(a.registered_at || a.rc_regn_dt || a.registration_date));
-    else if (fleetSort === 'oldest') filtered = filtered.slice().sort((a, b) => new Date(a.registered_at || a.rc_regn_dt || a.registration_date) - new Date(b.registered_at || b.rc_regn_dt || b.registration_date));
-    else if (fleetSort === 'pending') filtered = filtered.slice().sort((a, b) => (b.pending_challan_count ?? 0) - (a.pending_challan_count ?? 0));
-    else if (fleetSort === 'disposed') filtered = filtered.slice().sort((a, b) => (b.disposed_challan_count ?? 0) - (a.disposed_challan_count ?? 0));
     return filtered;
-  }, [vehicleSummary, vehicleSearchText, fleetChallanFilter, fleetRegnSearch, fleetSort]);
+  }, [vehicleSummary, vehicleSearchText, fleetChallanFilter, urgentRenewalFilter, upcomingRenewalFilter, upcomingRenewalRange]);
   const [user, setUser] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('sc_user')) || {};
@@ -987,13 +1575,13 @@ function ClientDashboard() {
             return ({ "S. No.": idx + 1, vehicle_number: vnum, ...r2 });
           });
           // Preferred column order and friendly labels for RTO exports
-          const preferredOrder = ["S. No.", "vehicle_number", "owner_name", "engine_no", "chasis_no", "registration_no", "regn_no", "rc_no", "insurance_exp", "road_tax_exp", "fitness_exp", "pollution_exp", "created_at", "createdAt"];
+          const preferredOrder = ["S. No.", "vehicle_number", "owner_name", "engine_no", "chassis_no", "registration_no", "regn_no", "rc_no", "insurance_exp", "road_tax_exp", "fitness_exp", "pollution_exp", "created_at", "createdAt"];
           const labelMap = {
             "S. No.": "S. No.",
             vehicle_number: "Vehicle Number",
             owner_name: "Owner Name",
             engine_no: "Engine Number",
-            chasis_no: "Chassis Number",
+            chassis_no: "Chassis Number",
             registration_no: "Registration No",
             regn_no: "Registration No",
             rc_no: "RC No",
@@ -1337,13 +1925,50 @@ function ClientDashboard() {
                 data={vehicleSummary}
                 loading={loadingVehicleSummary}
                 onRefresh={row => {
-                  // Optionally re-fetch for this vehicle
-                  // Could call /vehiclesummary again or a specific refresh endpoint
+                  setRefreshModal({ open: true, vehicle: row });
                 }}
-                onView={row => {
-                  setSelectedRtoData(row);
+                onView={async row => {
+                  setSelectedVehicle(row);
+                  setSidebarOpen(true);
+                  setSelectedVehicleReport(null);
+                  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+                  const clientID = row.client_id || row.clientID || user?.user?.client_id || user?.user?.id;
+                  const vehicleNumber = row.vehicle_number || row.vehicleNumber;
+                  setTimeout(async () => {
+                    try {
+                      const res = await fetch(`${baseUrl}/getvehiclereport`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ clientID, vehicleNumber })
+                      });
+                      const data = await res.json();
+                      setSelectedVehicleReport(data);
+                    } catch (e) {
+                      setSelectedVehicleReport({ error: 'Failed to fetch vehicle report.' });
+                    }
+                  }, 0);
                 }}
               />
+
+      <RightSidebar
+        open={sidebarOpen && !!selectedVehicle}
+        onClose={() => {
+          setSelectedVehicle(null);
+          setSelectedVehicleReport(null);
+        }}
+        title={selectedVehicle ? `Vehicle #${selectedVehicle.vehicle_number} Report` : "Challan Data"}
+      >
+        {sidebarOpen && selectedVehicle && selectedVehicleReport === null ? (
+          <div style={{padding:24, textAlign:'center'}}>
+            <span className="loader-spinner" style={{display:'inline-block',marginBottom:8}}></span>
+            <div>Loading vehicle report...</div>
+          </div>
+        ) : (
+          <SidebarVehicleReport vehicleChallanData={selectedVehicleReport} />
+        )}
+      </RightSidebar>
+
+
             </div>
             {/* Registered vehicles table removed from dashboard as requested */}
             {/* QuickActions moved to a shared component rendered below so it's available on every page */}
@@ -1385,16 +2010,17 @@ function ClientDashboard() {
                 onChange={e => setVehicleSearchText(e.target.value)}
                 style={{padding:'8px 14px',fontSize:15,borderRadius:6,border:'1.5px solid #2196f3',minWidth:180,background:'#fff'}}
               />
-              <input
-                type="text"
-                placeholder="Search registration date..."
-                value={fleetRegnSearch || ''}
-                onChange={e => setFleetRegnSearch(e.target.value)}
-                style={{padding:'8px 14px',fontSize:15,borderRadius:6,border:'1.5px solid #2196f3',minWidth:160,background:'#fff'}}
-              />
               <select
                 value={fleetChallanFilter}
-                onChange={e => setFleetChallanFilter(e.target.value)}
+                onChange={e => {
+                  setFleetChallanFilter(e.target.value);
+                  if (e.target.value !== 'all') {
+                    setUrgentRenewalFilter('none');
+                    setUpcomingRenewalFilter('none');
+                    window.urgentRenewalFilter = 'none';
+                    window.upcomingRenewalFilter = 'none';
+                  }
+                }}
                 style={{padding:'8px 14px',fontSize:15,borderRadius:6,border:'1.5px solid #2196f3',background:'#fff'}}
               >
                 <option value="all">All Challans</option>
@@ -1402,57 +2028,105 @@ function ClientDashboard() {
                 <option value="disposed">Disposed Challan</option>
               </select>
               <select
-                value={fleetSort}
-                onChange={e => setFleetSort(e.target.value)}
-                style={{padding:'8px 14px',fontSize:15,borderRadius:6,border:'1.5px solid #2196f3',background:'#fff'}}
-              >
-                <option value="recent">Sort: Most Recent</option>
-                <option value="oldest">Sort: Oldest</option>
-                <option value="pending">Sort: Pending Challans</option>
-                <option value="disposed">Sort: Disposed Challans</option>
-              </select>
-              <label htmlFor="fleet-load-more" style={{fontWeight:600,marginLeft:8}}>Load more:</label>
-              <select
-                id="fleet-load-more"
-                value={fleetAll ? 'all' : fleetLimit}
+                value={urgentRenewalFilter}
                 onChange={e => {
-                  const val = e.target.value;
-                  if (val === 'all') {
-                    setFleetAll(true);
-                    setFleetLimit('all');
-                    setFleetOffset(0);
-                  } else {
-                    setFleetAll(false);
-                    setFleetLimit(parseInt(val, 10));
-                    setFleetOffset(0);
+                  setUrgentRenewalFilter(e.target.value);
+                  window.urgentRenewalFilter = e.target.value;
+                  if (e.target.value !== 'none') {
+                    setFleetChallanFilter('all');
+                    setUpcomingRenewalFilter('none');
+                    window.upcomingRenewalFilter = 'none';
                   }
                 }}
-                style={{padding:'8px 14px',fontSize:15,borderRadius:6,border:'1.5px solid #2196f3',background:'#fff'}}
+                style={{padding:'8px 14px',fontSize:15,borderRadius:6,border:'1.5px solid #e67e22',background:'#fff',color:'#e67e22',fontWeight:600,marginRight:10}}
               >
-                <option value={50}>50 more</option>
-                <option value={100}>100 more</option>
-                <option value={200}>200 more</option>
-                <option value="all">All</option>
+                <option value="none">Urgent Renewals</option>
+                <option value="insurance">Insurance</option>
+                <option value="roadTax">Road Tax</option>
+                <option value="fitness">Fitness</option>
+                <option value="pollution">Pollution</option>
               </select>
-              {!fleetAll && (
-                <button
-                  className="action-btn"
-                  style={{marginLeft:8,padding:'8px 20px',fontSize:15,borderRadius:6,border:'1.5px solid #2196f3',background:'#2196f3',color:'#fff',fontWeight:600,cursor:'pointer'}}
-                  disabled={loadingVehicleSummary}
-                  onClick={() => setFleetOffset(prev => prev + fleetLimit)}
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <select
+                  value={upcomingRenewalFilter}
+                  onChange={e => {
+                    setUpcomingRenewalFilter(e.target.value);
+                    window.upcomingRenewalFilter = e.target.value;
+                    if (e.target.value !== 'none') {
+                      setFleetChallanFilter('all');
+                      setUrgentRenewalFilter('none');
+                      window.urgentRenewalFilter = 'none';
+                    }
+                  }}
+                  style={{padding:'8px 14px',fontSize:15,borderRadius:6,border:'1.5px solid #3498db',background:'#fff',color:'#3498db',fontWeight:600}}
                 >
-                  Load More
-                </button>
-              )}
+                  <option value="none">Upcoming Renewals</option>
+                  <option value="insurance">Insurance</option>
+                  <option value="roadTax">Road Tax</option>
+                  <option value="fitness">Fitness</option>
+                  <option value="pollution">Pollution</option>
+                </select>
+                {upcomingRenewalFilter !== 'none' && (
+                  <>
+                    <input
+                      type="range"
+                      min={1}
+                      max={50}
+                      value={upcomingRenewalRange}
+                      onChange={e => setUpcomingRenewalRange(Number(e.target.value))}
+                      style={{marginLeft:8}}
+                    />
+                    <span style={{fontWeight:600,color:'#3498db',marginLeft:4}}>{upcomingRenewalRange} days</span>
+                  </>
+                )}
+              </div>
             </div>
             <div id="my-fleet-table-print-area">
               <MyFleetTable
                 data={filteredFleet}
                 loading={loadingVehicleSummary}
                 onRefresh={row => {}}
-                onView={row => {}}
+                onView={async row => {
+                  setSelectedVehicle(row);
+                  setSidebarOpen(true);
+                  setSelectedVehicleReport(null);
+                  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+                  const clientID = row.client_id || row.clientID || user?.user?.client_id || user?.user?.id;
+                  const vehicleNumber = row.vehicle_number || row.vehicleNumber;
+                  setTimeout(async () => {
+                    try {
+                      const res = await fetch(`${baseUrl}/getvehiclereport`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ clientID, vehicleNumber })
+                      });
+                      const data = await res.json();
+                      setSelectedVehicleReport(data);
+                    } catch (e) {
+                      setSelectedVehicleReport({ error: 'Failed to fetch vehicle report.' });
+                    }
+                  }, 0);
+                }}
                 totalCount={typeof vehicleSummary === 'object' && vehicleSummary._totalCount ? vehicleSummary._totalCount : (Array.isArray(vehicleSummary) && vehicleSummary.totalCount ? vehicleSummary.totalCount : (typeof window !== 'undefined' && window.fleetTotalCount ? window.fleetTotalCount : undefined))}
+                upcomingRenewalRange={upcomingRenewalRange}
               />
+              <RightSidebar
+                open={sidebarOpen && !!selectedVehicle && activeMenu === "My Fleet"}
+                onClose={() => {
+                  setSelectedVehicle(null);
+                  setSelectedVehicleReport(null);
+                }}
+                title={selectedVehicle ? `Vehicle #${selectedVehicle.vehicle_number} Report` : "Vehicle Report"}
+              >
+                {sidebarOpen && selectedVehicle && selectedVehicleReport === null ? (
+                  <div style={{padding:24, textAlign:'center'}}>
+                    <span className="loader-spinner" style={{display:'inline-block',marginBottom:8}}></span>
+                    <div>Loading vehicle report...</div>
+                  </div>
+                ) : (
+                  <SidebarVehicleReport vehicleChallanData={selectedVehicleReport} />
+                )}
+              </RightSidebar>
             </div>
           </div>
         )}
@@ -1510,7 +2184,7 @@ function ClientDashboard() {
                 } catch (e) {}
               }, 300);
             }}
-            onPay={() => setInfoModal({ open: true, message: 'Feature not rolled out yet. Stay tuned. We will notify you.' })}
+            onPay={() => setActiveMenu('Challan Settlement')}
             onReports={() => setReportsModal({ open: true })}
             onContact={() => setSupportModal(true)}
           />
@@ -1550,7 +2224,7 @@ function ClientDashboard() {
         confirmText="Close"
         cancelText={null}
       >
-               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ color: '#333' }}>Select a report to generate and download:</div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button className="action-btn" onClick={generateRtoReport} title="Generate RTO Data Report" disabled={exporting.rto}>
@@ -1564,7 +2238,7 @@ function ClientDashboard() {
         </div>
       </CustomModal>
       <RightSidebar
-        open={!!selectedChallan}
+        open={sidebarOpen && !!selectedChallan}
         onClose={() => {
           setTimeout(() => setSelectedChallan(null), 300);
         }}

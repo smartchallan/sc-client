@@ -59,9 +59,40 @@ export default function ChallanSettlement() {
 
   return (
     <div className="dashboard-latest">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0 }}>
-        <h2 style={{ margin: 0 }}>Challan Settlement</h2>
-        <div style={{ position: 'relative', marginLeft: 16, marginRight: 2 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 0, width: '100%' }}>
+        {/* <h2 style={{ margin: 0 }}>Challan Settlement</h2> */}
+        <div
+          ref={el => {
+            if (el && cart.length > 0) {
+              // Only set once to avoid jumpiness
+              if (!el.dataset.fixed) {
+                const rect = el.getBoundingClientRect();
+                el.style.position = 'fixed';
+                el.style.top = rect.top + window.scrollY + 'px';
+                el.style.left = rect.left + window.scrollX + 'px';
+                el.style.zIndex = 11000;
+                el.style.background = 'rgba(255,255,255,0.95)';
+                el.style.borderRadius = '12px';
+                el.style.boxShadow = '0 2px 12px #1976d220';
+                el.style.padding = '6px 10px';
+                el.style.transition = 'box-shadow 0.2s';
+                el.dataset.fixed = 'true';
+              }
+            } else if (el) {
+              el.style.position = 'relative';
+              el.style.top = '';
+              el.style.left = '';
+              el.style.zIndex = '';
+              el.style.background = '';
+              el.style.borderRadius = '';
+              el.style.boxShadow = '';
+              el.style.padding = '';
+              el.style.transition = '';
+              el.dataset.fixed = '';
+            }
+          }}
+          style={{ marginLeft: 'auto', marginRight: 0 }}
+        >
           <button
             className="action-btn flat-btn"
             style={{ background: 'none', border: 'none', boxShadow: 'none', padding: 0, margin: 0, cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center' }}
@@ -138,34 +169,38 @@ export default function ChallanSettlement() {
         data={challanData}
         search={search}
         sortAsc={sortAsc}
-  addToCart={handleAddToCart}
-  removeFromCart={handleRemoveFromCart}
-  cart={cart}
-  settlementMode={true}
+        addToCart={handleAddToCart}
+        removeFromCart={handleRemoveFromCart}
+        cart={cart}
+        settlementMode={true}
+        setSelectedChallan={() => {}}
+        setSidebarOpen={() => {}}
       />
       {/* Right sidebar cart */}
       <div
         style={{
           position: 'fixed',
           top: 0,
-          right: showCartSidebar && cart.length > 0 ? 0 : '-380px',
-          width: 360,
+          right: showCartSidebar && cart.length > 0 ? 0 : '-400px',
+          width: 400,
           height: '100vh',
-          background: '#fff',
-          boxShadow: '0 0 24px rgba(0,0,0,0.13)',
-          zIndex: 9999, // Increased zIndex for topmost stacking
+          background: 'linear-gradient(120deg, #f5f8fa 60%, #e3eaf1 100%)',
+          boxShadow: '0 8px 32px 0 rgba(30,136,229,0.13)',
+          zIndex: 9999,
           transition: 'right 0.35s cubic-bezier(.7,.2,.2,1)',
-          padding: '28px 24px 24px 24px',
+          padding: '44px 36px 36px 36px',
           display: 'flex',
           flexDirection: 'column',
-          borderLeft: '2px solid #e3e3e3',
+          borderLeft: 'none',
+          borderTopLeftRadius: 22,
+          borderBottomLeftRadius: 22,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-          <h2 style={{ fontSize: 20, margin: 0 }}>Challan Cart <span style={{ color: '#0072ff' }}>({cart.length})</span></h2>
+          <h2 style={{ fontSize: 22, margin: 0, color: '#1976d2', fontWeight: 800, letterSpacing: 0.2 }}>Challan Cart <span style={{ color: '#0072ff', fontWeight: 700 }}>({cart.length})</span></h2>
           <button
             className="action-btn flat-btn"
-            style={{ background: '#eee', color: '#1976d2', fontSize: 18, borderRadius: 6, padding: '2px 12px', fontWeight: 700 }}
+            style={{ background: '#e3eaf1', color: '#1976d2', fontSize: 22, borderRadius: 8, padding: '2px 16px', fontWeight: 700, border: 'none', boxShadow: '0 1px 4px #1976d210' }}
             onClick={() => setShowCartSidebar(false)}
             title="Close Cart Sidebar"
           >
@@ -174,16 +209,26 @@ export default function ChallanSettlement() {
         </div>
         <div style={{ flex: 1, overflowY: 'auto', marginBottom: 12 }}>
           {cart.length === 0 ? (
-            <div style={{ color: '#888', textAlign: 'center', marginTop: 40 }}>No challans in cart.</div>
+            <div style={{ color: '#888', textAlign: 'center', marginTop: 40, fontWeight: 600, fontSize: 18 }}>No challans in cart.</div>
           ) : (
             <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none' }}>
               {cart.map((c, i) => (
-                <li key={c.challan_no} style={{ marginBottom: 18, borderBottom: '1px solid #eee', paddingBottom: 10 }}>
-                  <div style={{ fontWeight: 600, fontSize: 16, color: '#1976d2' }}>{c.challan_no}</div>
-                  <div style={{ fontSize: 15, color: '#333', margin: '2px 0 4px 0' }}>₹{c.fine_imposed} <span style={{ color: '#888', fontSize: 13 }}>({c.vehicle_number})</span></div>
+                <li key={c.challan_no} style={{
+                  marginBottom: 18,
+                  borderBottom: '1.5px solid #e3eaf1',
+                  padding: '18px 18px 14px 18px',
+                  background: '#fff',
+                  borderRadius: 10,
+                  boxShadow: '0 2px 8px #1976d210',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4
+                }}>
+                  <div style={{ fontWeight: 700, fontSize: 17, color: '#1976d2', letterSpacing: 0.2 }}>{c.challan_no}</div>
+                  <div style={{ fontSize: 15, color: '#333', margin: '2px 0 4px 0', fontWeight: 500 }}>₹{c.fine_imposed} <span style={{ color: '#888', fontSize: 13, fontWeight: 400 }}>({c.vehicle_number})</span></div>
                   <button
                     className="action-btn flat-btn"
-                    style={{ background: '#eee', color: '#1976d2', fontSize: 13, borderRadius: 5, padding: '2px 10px', marginTop: 2 }}
+                    style={{ background: '#e3eaf1', color: '#d32f2f', fontSize: 15, borderRadius: 6, padding: '3px 14px', marginTop: 2, fontWeight: 700, border: 'none', alignSelf: 'flex-end', boxShadow: '0 1px 4px #d32f2f10' }}
                     onClick={() => handleRemoveFromCart(c)}
                   >
                     Remove

@@ -76,8 +76,8 @@ export default function LatestRTOTable({ vehicleData = [], loading, error, setSe
                   <td>{v.fitness_exp || v.rc_fit_upto || '-'}</td>
                   <td>{v.pollution_exp || v.rc_pucc_upto || '-'}</td>
                   <td className="print-hide" style={{textAlign:'center'}}>
-                    <button className="action-btn flat-btn" style={{padding:'4px 10px',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={() => setSelectedRtoData && setSelectedRtoData(v)} title="View Vehicle">
-                      <i className="ri-eye-line" style={{fontSize:18,verticalAlign:'middle'}} />
+                    <button className="action-btn flat-btn" style={{fontSize:'80%',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={() => setSelectedRtoData && setSelectedRtoData(v)} title="View Vehicle">
+                      <i className="ri-eye-line" style={{fontSize: '1.2em'}} />
                     </button>
                   </td>
                 </tr>

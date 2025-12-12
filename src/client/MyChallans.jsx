@@ -152,7 +152,7 @@ export function ChallanTable({ title, data, search = {}, sortAsc = true, addToCa
                           setSelectedChallan(c);
                           setSidebarOpen(true);
                         }}>
-                        <i className="ri-eye-line" style={{marginRight:4}}></i> View
+                        <i className="ri-eye-line" style={{fontSize:20}}></i>
                       </button>
                     </td>
                   </tr>

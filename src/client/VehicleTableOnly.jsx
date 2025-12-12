@@ -56,7 +56,7 @@ export default function VehicleTableOnly() {
       !searchVal ||
       (v.vehicle_number && v.vehicle_number.toUpperCase().includes(searchVal)) ||
       (v.engine_number && v.engine_number.toUpperCase().includes(searchVal)) ||
-      (v.chasis_number && v.chasis_number.toUpperCase().includes(searchVal));
+      (v.chassis_number && v.chassis_number.toUpperCase().includes(searchVal));
     const matchesStatus =
       !statusFilter || (v.status && v.status.toUpperCase() === statusFilter.toUpperCase());
     const notDeleted = v.status && v.status.toUpperCase() !== 'DELETED';
@@ -79,7 +79,7 @@ export default function VehicleTableOnly() {
           type="text"
           className="form-control"
           style={{ minWidth: 200, maxWidth: 300, textTransform: 'uppercase' }}
-          placeholder="Search by Vehicle No, Engine No or Chasis No"
+          placeholder="Search by Vehicle No, Engine No or chassis No"
           value={search}
           onChange={e => setSearch(e.target.value.toUpperCase())}
         />
@@ -156,7 +156,7 @@ export default function VehicleTableOnly() {
                 <tr key={v.id || v._id || idx}>
                   <td style={{fontWeight:600, color:'#42a5f5', letterSpacing:1}}>{v.vehicle_number || <span style={{color:'#bbb'}}>N/A</span>}</td>
                   <td>{v.engine_number || <span style={{color:'#bbb'}}>N/A</span>}</td>
-                  <td>{v.chasis_number || <span style={{color:'#bbb'}}>N/A</span>}</td>
+                  <td>{v.chassis_number || <span style={{color:'#bbb'}}>N/A</span>}</td>
                   <td style={{ color: statusColor, fontWeight: 700, letterSpacing: 1 }}>{status}</td>
                   <td>{v.vehicle_type || <span style={{color:'#bbb'}}>N/A</span>}</td>
                   <td>{v.registered_at ? <span style={{color:'#43e97b', fontWeight:600}}>{new Date(v.registered_at).toLocaleString()}</span> : <span style={{color:'#bbb'}}>N/A</span>}</td>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FaDownload, FaPrint } from "react-icons/fa";
+import { FaDownload, FaPrint, FaEye } from "react-icons/fa";
 import * as XLSX from "xlsx";
 import "../shared/CommonDashboard.css";
 import CustomModal from "./CustomModal";
@@ -150,15 +150,15 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
   return (
     <div className="dashboard-latest" >
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 0, padding: '0 0 10px 0' }}>
-        <div style={{ width: 6, height: 28, background: '#4caf50', borderRadius: 3, marginRight: 12 }} />
+        <div style={{ width: 4, height: 32, background: 'linear-gradient(135deg, #2196f3 0%, #21cbf3 100%)', borderRadius: 3, marginRight: 14 }} />
         <h2 style={{
           margin: 0,
-          fontSize: 20,
-          // fontWeight: 800,
-          color: '#222',
+          fontSize: 19,
+          color: '#1565c0',
           letterSpacing: '0.01em',
           fontFamily: 'Segoe UI, Arial, sans-serif',
-          lineHeight: 1.2
+          lineHeight: 1.2,
+          fontWeight: 700,
         }}>Vehicle RTO Data</h2>
       </div>
       {!hideSearchSortFilter && (
@@ -260,7 +260,7 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
           <th>Road Tax Exp</th>
           <th>Fitness Exp</th>
           <th>Pollution Exp</th>
-          <th className="print-hide">Action</th>
+          <th className="print-hide" style={{color:'#1565c0',fontWeight:700,fontSize:15,textAlign:'center'}}>Action</th>
         </tr>
       </thead>
       <tbody>
@@ -277,12 +277,12 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
               <td>{formatExpiry(v.fitness_exp || v.rc_fit_upto, true)}</td>
               <td>{formatExpiry(v.pollution_exp || v.rc_pucc_upto, true)}</td>
               <td className="print-hide" style={{textAlign:'center'}}>
-                <button className="action-btn flat-btn" style={{padding:'4px 10px',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={() => {
+                <button className="action-btn flat-btn" title="View Vehicle" style={{fontSize:'80%',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={() => {
                   // Always set the latest vehicle data from the full vehicleData array
                   const found = vehicleData.find(item => item.rc_regn_no === v.rc_regn_no);
                   setSelectedRtoData(found || v);
-                }} title="View Vehicle">
-                  <i className="ri-eye-line" style={{fontSize:18,verticalAlign:'middle'}} />
+                }}>
+                  <i className="ri-eye-line" style={{fontSize:'1.2em'}} />
                 </button>
               </td>
             </tr>

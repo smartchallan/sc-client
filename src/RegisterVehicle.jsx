@@ -7,7 +7,7 @@ import * as XLSX from 'xlsx';
 const FIELD_OPTIONS = [
   { value: "vehicle_number", label: "Vehicle Number" },
   { value: "engine_number", label: "Engine Number" },
-  { value: "chasis_number", label: "Chasis Number" },
+  { value: "chassis_number", label: "chassis Number" },
 ];
 
 export default function RegisterVehicle() {
@@ -157,7 +157,7 @@ export default function RegisterVehicle() {
         admin_id: ids.admin_id, // ensure admin_id is always present
         vehicle_number: registerField === "vehicle_number" ? registerValue : undefined,
         engine_number: registerField === "engine_number" ? registerValue : undefined,
-        chasis_number: registerField === "chasis_number" ? registerValue : undefined,
+        chassis_number: registerField === "chassis_number" ? registerValue : undefined,
       };
       const res = await fetch(API_ROOT + REGISTER_ENDPOINT, {
         method: "POST",
@@ -296,7 +296,7 @@ export default function RegisterVehicle() {
       <ToastContainer position="top-right" autoClose={2000} />
       <h1 className="page-title">Register New Vehicle</h1>
       <p className="page-subtitle">
-        You can register your vehicle using <b>any one</b> of the following details: <b>Vehicle Number</b>, <b>Engine Number</b>, or <b>Chasis Number</b>.
+        You can register your vehicle using <b>any one</b> of the following details: <b>Vehicle Number</b>, <b>Engine Number</b>, or <b>chassis Number</b>.
       </p>
       <div className="modern-form-card">
         <form className="vehicle-form" onSubmit={handleSubmit} style={{display: 'flex', flexWrap: 'wrap', gap: 16}}>
@@ -441,7 +441,7 @@ export default function RegisterVehicle() {
                 <input
                   type="text"
                   className="number-plate-input"
-                  placeholder="Search by Vehicle No, Engine No or Chasis No"
+                  placeholder="Search by Vehicle No, Engine No or chassis No"
                   value={searchValue}
                   onChange={e => setSearchValue(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
                   maxLength={20}
@@ -475,7 +475,7 @@ export default function RegisterVehicle() {
                   <th style={{ textAlign: 'center' }}>S. No.</th>
                   <th style={{ textAlign: 'center' }}>Vehicle Number</th>
                   <th style={{ textAlign: 'center' }}>Engine Number</th>
-                  <th style={{ textAlign: 'center' }}>Chasis Number</th>
+                  <th style={{ textAlign: 'center' }}>chassis Number</th>
                   <th style={{ textAlign: 'center' }}>Status</th>
                   <th style={{ textAlign: 'center' }}>
                     Registered At
@@ -499,7 +499,7 @@ export default function RegisterVehicle() {
                       !searchVal ||
                       (v.vehicle_number && v.vehicle_number.toUpperCase().includes(searchVal)) ||
                       (v.engine_number && v.engine_number.toUpperCase().includes(searchVal)) ||
-                      (v.chasis_number && v.chasis_number.toUpperCase().includes(searchVal));
+                      (v.chassis_number && v.chassis_number.toUpperCase().includes(searchVal));
                     const matchesStatus =
                       !statusFilter || (v.status && v.status.toUpperCase() === statusFilter.toUpperCase());
                     return matchesSearch && matchesStatus;
@@ -557,7 +557,7 @@ export default function RegisterVehicle() {
                           </span>
                         </td>
                         <td>{v.engine_number || 'Not Available'}</td>
-                        <td>{v.chasis_number || 'Not Available'}</td>
+                        <td>{v.chassis_number || 'Not Available'}</td>
                         <td style={{ color: statusColor, fontWeight: 600, letterSpacing: 1 }}>{status}</td>
                         <td>{v.registered_at ? new Date(v.registered_at).toLocaleString() : 'Not Available'}</td>
                         <td>
@@ -631,7 +631,7 @@ export default function RegisterVehicle() {
                 <div><b>Owner:</b> John Doe</div>
                 <div><b>Vehicle No:</b> {sidebarVehicle.vehicle_number || '-'}</div>
                 <div><b>Engine No:</b> {sidebarVehicle.engine_number || '-'}</div>
-                <div><b>Chasis No:</b> {sidebarVehicle.chasis_number || '-'}</div>
+                <div><b>chassis No:</b> {sidebarVehicle.chassis_number || '-'}</div>
                 <div><b>Type:</b> Car</div>
                 <div><b>Fuel:</b> Petrol</div>
                 <div><b>Reg Date:</b> 2022-01-15</div>
@@ -714,7 +714,7 @@ export default function RegisterVehicle() {
                 !searchVal ||
                 (v.vehicle_number && v.vehicle_number.toUpperCase().includes(searchVal)) ||
                 (v.engine_number && v.engine_number.toUpperCase().includes(searchVal)) ||
-                (v.chasis_number && v.chasis_number.toUpperCase().includes(searchVal));
+                (v.chassis_number && v.chassis_number.toUpperCase().includes(searchVal));
               const matchesStatus =
                 !statusFilter || (v.status && v.status.toUpperCase() === statusFilter.toUpperCase());
               return matchesSearch && matchesStatus;
@@ -770,7 +770,7 @@ export default function RegisterVehicle() {
                     <th>S. No.</th>
                     <th>Vehicle Number</th>
                     <th>Engine Number</th>
-                    <th>Chasis Number</th>
+                    <th>chassis Number</th>
                     <th>Status</th>
                     <th>
                       Registered At
@@ -797,7 +797,7 @@ export default function RegisterVehicle() {
                           <td>{idx + 1}</td>
                           <td>{v.vehicle_number || 'Not Available'}</td>
                           <td>{v.engine_number || 'Not Available'}</td>
-                          <td>{v.chasis_number || 'Not Available'}</td>
+                          <td>{v.chassis_number || 'Not Available'}</td>
                           <td style={{ color: '#dc2626', fontWeight: 600, letterSpacing: 1 }}>DELETED</td>
                           <td>{v.registered_at ? new Date(v.registered_at).toLocaleString() : 'Not Available'}</td>
                           <td>
