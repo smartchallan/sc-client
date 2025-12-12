@@ -565,6 +565,9 @@ const DriverVerification = lazy(() => import("./DriverVerification"));
 const LazyVehicleFastag = lazy(() => import("./VehicleFastag"));
 
 function ClientDashboard() {
+  // Track if navigation to My Fleet was triggered by a specific renewal stat card or challan filter
+  const [goToFleetRenewal, setGoToFleetRenewal] = useState(null); // null | 'insurance' | 'roadTax' | 'fitness' | 'pollution'
+  const [goToFleetChallanFilter, setGoToFleetChallanFilter] = useState(null); // null | 'pending' | 'disposed'
   // --- Refresh confirmation modal state ---
   // For vehicle refresh confirmation
   const [refreshModal, setRefreshModal] = useState({ open: false, vehicle: null });
@@ -1781,11 +1784,15 @@ function ClientDashboard() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8 }}>
-                    <div key="pending" className={`status-badge`} style={{ cursor: 'default' }}>
+                    <div key="pending" className={`status-badge`} style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                      title="Show vehicles with pending challans"
+                      onClick={() => { setGoToFleetChallanFilter('pending'); setActiveMenu('My Fleet'); }}>
                       <div style={{ color: '#e74c3c', fontWeight: 700 }}>{loadingVehicleChallan ? '...' : dashboardPendingCount}</div>
                       <div style={{ fontSize: 12, color: '#666' }}>Pending</div>
                     </div>
-                    <div key="disposed" className={`status-badge`} style={{ cursor: 'default' }}>
+                    <div key="disposed" className={`status-badge`} style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                      title="Show vehicles with disposed challans"
+                      onClick={() => { setGoToFleetChallanFilter('disposed'); setActiveMenu('My Fleet'); }}>
                       <div style={{ color: '#66bb6a', fontWeight: 700 }}>{loadingVehicleChallan ? '...' : dashboardDisposedCount}</div>
                       <div style={{ fontSize: 12, color: '#666' }}>Disposed</div>
                     </div>
@@ -1817,28 +1824,52 @@ function ClientDashboard() {
                       {loadingVehicleRto ? '...' : vehicleRenewalsTotal}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-start', marginTop: 10 }}>
+                  <div style={{ display: 'flex', gap: 9, justifyContent: 'flex-start', marginTop: 10 }}>
                     <div
                       className={`status-badge`}
                       style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                      title="Show only vehicles with expired insurance"
+                      title="Show vehicles with expired insurance"
                       onClick={() => {
-                        setActiveMenu('Vehicle RTO Data');
-                        setVehicleRtoInitialFilter({ expiryFilter: 'expired', tab: 'insurance' });
+                        setGoToFleetRenewal('insurance');
+                        setActiveMenu('My Fleet');
                       }}
                     >
                       <div style={{ color: '#ff5252', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.insurance}</div>
                       <div style={{ fontSize: 12, color: '#666' }}>Insurance</div>
                     </div>
-                    <div className={`status-badge`} style={{ cursor: 'default' }}>
+                    <div
+                      className={`status-badge`}
+                      style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                      title="Show vehicles with expired road tax"
+                      onClick={() => {
+                        setGoToFleetRenewal('roadTax');
+                        setActiveMenu('My Fleet');
+                      }}
+                    >
                       <div style={{ color: '#ff8a65', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.roadTax}</div>
                       <div style={{ fontSize: 12, color: '#666' }}>Road Tax</div>
                     </div>
-                    <div className={`status-badge`} style={{ cursor: 'default' }}>
+                    <div
+                      className={`status-badge`}
+                      style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                      title="Show vehicles with expired fitness certificate"
+                      onClick={() => {
+                        setGoToFleetRenewal('fitness');
+                        setActiveMenu('My Fleet');
+                      }}
+                    >
                       <div style={{ color: '#f4b400', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.fitness}</div>
                       <div style={{ fontSize: 12, color: '#666' }}>Fitness</div>
                     </div>
-                    <div className={`status-badge`} style={{ cursor: 'default' }}>
+                    <div
+                      className={`status-badge`}
+                      style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                      title="Show vehicles with expired pollution certificate"
+                      onClick={() => {
+                        setGoToFleetRenewal('pollution');
+                        setActiveMenu('My Fleet');
+                      }}
+                    >
                       <div style={{ color: '#42a5f5', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.pollution}</div>
                       <div style={{ fontSize: 12, color: '#666' }}>Pollution</div>
                     </div>
@@ -1870,16 +1901,23 @@ function ClientDashboard() {
                       {loadingVehicleChallan ? '...' : `₹${formatBriefAmount(totalFineAmount)}`}
                     </div>
                   </div>
-                  <div className="stat-value" style={{ marginTop: 8 }}>
+                  <div className="stat-value" style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
                     {loadingVehicleChallan
                       ? '...'
-                      : (
-                          <>
-                            <span style={{color: 'red', fontWeight: 600, fontSize: '0.55em'}}>Pending: ₹{formatBriefAmount(pendingFineTotal)}</span>
-                            <span style={{margin: '0 6px', color: '#999', fontSize: '0.55em'}}>|</span>
-                            <span style={{fontSize: '0.55em'}}>Paid: ₹{formatBriefAmount(disposedFineTotal)}</span>
-                          </>
-                        )}
+                      : <>
+                          <span style={{color: 'red', fontWeight: 600, fontSize: '0.80em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                            title="Show vehicles with pending challans"
+                            onClick={() => { setActiveMenu('Vehicle Challan Data'); }}>
+                            Pending: ₹{formatBriefAmount(pendingFineTotal)}
+                          </span>
+                          <span style={{margin: '0 6px', color: '#999', fontSize: '0.55em'}}>|</span>
+                          <span style={{fontSize: '0.55em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                            title="Show vehicles with paid challans"
+                            onClick={() => { setActiveMenu('Vehicle Challan Data'); }}>
+                            Paid: ₹{formatBriefAmount(disposedFineTotal)}
+                          </span>
+                        </>
+                    }
                   </div>
                 </div>
                 <div className="stat-chart-container">
@@ -1983,6 +2021,13 @@ function ClientDashboard() {
             {activeMenu === "Register Vehicle" && <RegisterVehicle />}
         {activeMenu === "My Fleet" && (
           <div style={{marginBottom:24}}>
+            {/* Set urgentRenewalFilter or challan filter if navigated from stat cards */}
+            {goToFleetRenewal && urgentRenewalFilter !== goToFleetRenewal && (
+              (() => { setUrgentRenewalFilter(goToFleetRenewal); setGoToFleetRenewal(null); return null; })()
+            )}
+            {goToFleetChallanFilter && fleetChallanFilter !== goToFleetChallanFilter && (
+              (() => { setFleetChallanFilter(goToFleetChallanFilter); setGoToFleetChallanFilter(null); return null; })()
+            )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12, gap: 10 }}>
               <button onClick={handleDownloadExcel} title="Download Excel" style={{ padding: '8px 16px', background: '#2196f3', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <FaDownload size={18} />
@@ -2023,6 +2068,7 @@ function ClientDashboard() {
                 }}
                 style={{padding:'8px 14px',fontSize:15,borderRadius:6,border:'1.5px solid #2196f3',background:'#fff'}}
               >
+                <option value="all">Select Challan Status</option>
                 <option value="all">All Challans</option>
                 <option value="pending">Pending Challan</option>
                 <option value="disposed">Disposed Challan</option>
@@ -2040,7 +2086,7 @@ function ClientDashboard() {
                 }}
                 style={{padding:'8px 14px',fontSize:15,borderRadius:6,border:'1.5px solid #e67e22',background:'#fff',color:'#e67e22',fontWeight:600,marginRight:10}}
               >
-                <option value="none">Urgent Renewals</option>
+                <option value="none">Select Urgent Renewals</option>
                 <option value="insurance">Insurance</option>
                 <option value="roadTax">Road Tax</option>
                 <option value="fitness">Fitness</option>
@@ -2060,7 +2106,7 @@ function ClientDashboard() {
                   }}
                   style={{padding:'8px 14px',fontSize:15,borderRadius:6,border:'1.5px solid #3498db',background:'#fff',color:'#3498db',fontWeight:600}}
                 >
-                  <option value="none">Upcoming Renewals</option>
+                  <option value="none">Select Upcoming Renewals</option>
                   <option value="insurance">Insurance</option>
                   <option value="roadTax">Road Tax</option>
                   <option value="fitness">Fitness</option>

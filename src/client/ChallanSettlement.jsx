@@ -308,12 +308,6 @@ export default function ChallanSettlement() {
               </div>
             </div>
           )}
-          <div style={{display:'flex',justifyContent:'flex-end',marginTop:24}}>
-            <button
-              onClick={() => setShowCartModal(false)}
-              style={{background:'#eee',color:'#1976d2',border:'none',borderRadius:6,padding:'10px 28px',fontSize:16,fontWeight:600,cursor:'pointer',marginLeft:8}}
-            >Close</button>
-          </div>
         </div>
       </CustomModal>
     </div>
