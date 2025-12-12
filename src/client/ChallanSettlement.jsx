@@ -93,34 +93,36 @@ export default function ChallanSettlement() {
           }}
           style={{ marginLeft: 'auto', marginRight: 0 }}
         >
-          <button
-            className="action-btn flat-btn"
-            style={{ background: 'none', border: 'none', boxShadow: 'none', padding: 0, margin: 0, cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center' }}
-            title="View Cart"
-            onClick={() => setShowCartSidebar(true)}
-          >
-            <i className="ri-shopping-cart-2-line" style={{ fontSize: 28, color: '#1976d2', verticalAlign: 'middle' }}></i>
-            {cart.length > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: -6,
-                right: -8,
-                background: '#ff5252',
-                color: '#fff',
-                borderRadius: '50%',
-                minWidth: 20,
-                height: 20,
-                fontSize: 13,
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.13)',
-                padding: '0 6px',
-                zIndex: 2
-              }}>{cart.length}</span>
-            )}
-          </button>
+          {!showCartSidebar && (
+            <button
+              className="action-btn flat-btn"
+              style={{ background: 'none', border: 'none', boxShadow: 'none', padding: 0, margin: 0, cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center' }}
+              title="View Cart"
+              onClick={() => setShowCartSidebar(true)}
+            >
+              <i className="ri-shopping-cart-2-line" style={{ fontSize: 28, color: '#1976d2', verticalAlign: 'middle' }}></i>
+              {cart.length > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: -6,
+                  right: -8,
+                  background: '#ff5252',
+                  color: '#fff',
+                  borderRadius: '50%',
+                  minWidth: 20,
+                  height: 20,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.13)',
+                  padding: '0 6px',
+                  zIndex: 2
+                }}>{cart.length}</span>
+              )}
+            </button>
+          )}
         </div>
       </div>
       {!showCartSidebar && (
@@ -249,60 +251,71 @@ export default function ChallanSettlement() {
         )}
       </div>
       <CustomModal open={showCartModal} onClose={() => setShowCartModal(false)}>
-  <div style={{padding:24, minWidth:700, maxWidth:900}}>
-    <h2 style={{marginBottom:18, fontWeight:700, fontSize:22, color:'#1976d2'}}>Your Challan Cart</h2>
-    <div style={{maxWidth:'100%',overflowX:'auto',marginBottom:18}}>
-      <table style={{width:'100%',borderCollapse:'separate',borderSpacing:0,background:'#f8f9fa',borderRadius:8,boxShadow:'0 1px 6px rgba(0,0,0,0.07)'}}>
-        <thead>
-          <tr style={{background:'#e3e3e3',fontWeight:600,fontSize:16}}>
-            <th style={{padding:'12px 8px',textAlign:'left',verticalAlign:'middle',minWidth:160}}>Vehicle Number</th>
-            <th style={{padding:'12px 8px',textAlign:'left',verticalAlign:'middle',minWidth:10}}>Challan Number</th>
-            <th style={{padding:'12px 8px',textAlign:'right',verticalAlign:'middle',minWidth:120}}>Amount</th>
-            <th style={{padding:'12px 8px',textAlign:'center',verticalAlign:'middle',width:60}}>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {cart.length === 0 ? (
-            <tr>
-              <td colSpan={4} style={{color:'#888',textAlign:'center',padding:'24px 0'}}>No challans in cart.</td>
-            </tr>
-          ) : (
-            cart.map((c) => (
-              <tr key={c.challan_no} style={{borderBottom:'1px solid #eee'}}>
-                <td style={{padding:'12px 8px',textAlign:'left',verticalAlign:'middle',fontWeight:500,fontSize:15,color:'#222'}}>{c.vehicle_number}</td>
-                <td style={{padding:'12px 8px',textAlign:'left',verticalAlign:'middle',fontWeight:500,fontSize:15,color:'#1976d2'}}>{c.challan_no}</td>
-                <td style={{padding:'12px 8px',textAlign:'right',verticalAlign:'middle',fontWeight:500,fontSize:15,color:'#0072ff'}}>₹{c.fine_imposed}</td>
-                <td style={{padding:'12px 8px',textAlign:'center',verticalAlign:'middle'}}>
-                  <button
-                    className="action-btn flat-btn"
-                    style={{background:'none',color:'#ff5252',fontSize:18,border:'none',padding:0,cursor:'pointer'}}
-                    title="Remove"
-                    onClick={() => handleRemoveFromCart(c)}
-                  >
-                    <FaTrash />
-                  </button>
-                </td>
-              </tr>
-            ))
+        <div style={{padding:24, minWidth:700, maxWidth:900, position:'relative'}}>
+          <button
+            onClick={() => setShowCartModal(false)}
+            style={{position:'absolute',top:16,right:16,background:'none',border:'none',fontSize:28,color:'#888',cursor:'pointer',zIndex:10}}
+            title="Close"
+            aria-label="Close"
+          >×</button>
+          <h2 style={{marginBottom:18, fontWeight:700, fontSize:22, color:'#1976d2'}}>Your Challan Cart</h2>
+          <div style={{maxWidth:'100%',overflowX:'auto',marginBottom:18}}>
+            <table style={{width:'100%',borderCollapse:'separate',borderSpacing:0,background:'#f8f9fa',borderRadius:8,boxShadow:'0 1px 6px rgba(0,0,0,0.07)'}}>
+              <thead>
+                <tr style={{background:'#e3e3e3',fontWeight:600,fontSize:16}}>
+                  <th style={{padding:'12px 8px',textAlign:'left',verticalAlign:'middle',minWidth:160}}>Vehicle Number</th>
+                  <th style={{padding:'12px 8px',textAlign:'left',verticalAlign:'middle',minWidth:10}}>Challan Number</th>
+                  <th style={{padding:'12px 8px',textAlign:'right',verticalAlign:'middle',minWidth:120}}>Amount</th>
+                  <th style={{padding:'12px 8px',textAlign:'center',verticalAlign:'middle',width:60}}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cart.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{color:'#888',textAlign:'center',padding:'24px 0'}}>No challans in cart.</td>
+                  </tr>
+                ) : (
+                  cart.map((c) => (
+                    <tr key={c.challan_no} style={{borderBottom:'1px solid #eee'}}>
+                      <td style={{padding:'12px 8px',textAlign:'left',verticalAlign:'middle',fontWeight:500,fontSize:15,color:'#222'}}>{c.vehicle_number}</td>
+                      <td style={{padding:'12px 8px',textAlign:'left',verticalAlign:'middle',fontWeight:500,fontSize:15,color:'#1976d2'}}>{c.challan_no}</td>
+                      <td style={{padding:'12px 8px',textAlign:'right',verticalAlign:'middle',fontWeight:500,fontSize:15,color:'#0072ff'}}>₹{c.fine_imposed}</td>
+                      <td style={{padding:'12px 8px',textAlign:'center',verticalAlign:'middle'}}>
+                        <button
+                          className="action-btn flat-btn"
+                          style={{background:'none',color:'#ff5252',fontSize:18,border:'none',padding:0,cursor:'pointer'}}
+                          title="Remove"
+                          onClick={() => handleRemoveFromCart(c)}
+                        >
+                          <FaTrash />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          {cart.length > 0 && (
+            <div style={{borderTop:'1px solid #e3e3e3',paddingTop:14,marginBottom:8}}>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:17,fontWeight:600,color:'#222'}}>
+                <span>Total Challans:</span>
+                <span>{cart.length}</span>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:17,fontWeight:600,color:'#0072ff',marginTop:6}}>
+                <span>Total Amount:</span>
+                <span>₹{cart.reduce((sum,c)=>sum+Number(c.fine_imposed||0),0)}</span>
+              </div>
+            </div>
           )}
-        </tbody>
-      </table>
-    </div>
-    {cart.length > 0 && (
-      <div style={{borderTop:'1px solid #e3e3e3',paddingTop:14,marginBottom:8}}>
-        <div style={{display:'flex',justifyContent:'space-between',fontSize:17,fontWeight:600,color:'#222'}}>
-          <span>Total Challans:</span>
-          <span>{cart.length}</span>
+          <div style={{display:'flex',justifyContent:'flex-end',marginTop:24}}>
+            <button
+              onClick={() => setShowCartModal(false)}
+              style={{background:'#eee',color:'#1976d2',border:'none',borderRadius:6,padding:'10px 28px',fontSize:16,fontWeight:600,cursor:'pointer',marginLeft:8}}
+            >Close</button>
+          </div>
         </div>
-        <div style={{display:'flex',justifyContent:'space-between',fontSize:17,fontWeight:600,color:'#0072ff',marginTop:6}}>
-          <span>Total Amount:</span>
-          <span>₹{cart.reduce((sum,c)=>sum+Number(c.fine_imposed||0),0)}</span>
-        </div>
-      </div>
-    )}
-    {/* Remove the submit button from the modal */}
-  </div>
-</CustomModal>
+      </CustomModal>
     </div>
   );
 }
