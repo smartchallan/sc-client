@@ -1,8 +1,10 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { FaDownload, FaPrint } from "react-icons/fa";
 import * as XLSX from "xlsx";
 
 export default function LatestRTOTable({ vehicleData = [], loading, error, setSelectedRtoData, totalCount }) {
+  const navigate = useNavigate();
   return (
     <div className="dashboard-latest" style={{
       background: '#fff',
@@ -50,42 +52,76 @@ export default function LatestRTOTable({ vehicleData = [], loading, error, setSe
       {error && <div style={{color:'red'}}>{error}</div>}
       {/* Caption row removed, now next to title */}
       
-      <div className="table-container" id="latest-rto-table-print-area">
-        <table className="latest-table" style={{ width: '100%' }}>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Vehicle No.</th>
-              <th>Insurance</th>
-              <th>RoadTax</th>
-              <th>Fitness</th>
-              <th>Pollution</th>
-              <th className="print-hide">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {vehicleData.length === 0 ? (
+      {vehicleData.length === 0 ? (
+        <div className="table-container" id="latest-rto-table-print-area">
+          <table className="latest-table" style={{ width: '100%' }}>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Vehicle No.</th>
+                <th>Insurance</th>
+                <th>RoadTax</th>
+                <th>Fitness</th>
+                <th>Pollution</th>
+                <th className="print-hide">Action</th>
+              </tr>
+            </thead>
+            <tbody>
               <tr><td colSpan={7}>No vehicle data found.</td></tr>
-            ) : (
-              vehicleData.map((v, idx) => (
-                <tr key={v.rc_regn_no || idx}>
-                  <td>{idx + 1}</td>
-                  <td>{v.rc_regn_no || '-'}</td>
-                  <td>{v.insurance_exp || v.rc_insurance_upto || '-'}</td>
-                  <td>{v.road_tax_exp || v.rc_tax_upto || '-'}</td>
-                  <td>{v.fitness_exp || v.rc_fit_upto || '-'}</td>
-                  <td>{v.pollution_exp || v.rc_pucc_upto || '-'}</td>
-                  <td className="print-hide" style={{textAlign:'center'}}>
-                    <button className="action-btn flat-btn" style={{fontSize:'80%',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={() => setSelectedRtoData && setSelectedRtoData(v)} title="View Vehicle">
-                      <i className="ri-eye-line" style={{fontSize: '1.2em'}} />
-                    </button>
-                  </td>
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div>
+          <div className="table-container" id="latest-rto-table-print-area">
+            <table className="latest-table" style={{ width: '100%' }}>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Vehicle No.</th>
+                  <th>Insurance</th>
+                  <th>RoadTax</th>
+                  <th>Fitness</th>
+                  <th>Pollution</th>
+                  <th className="print-hide">Action</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {vehicleData.map((v, idx) => (
+                  <tr key={v.rc_regn_no || idx}>
+                    <td>{idx + 1}</td>
+                    <td>{v.rc_regn_no || '-'}</td>
+                    <td>{v.insurance_exp || v.rc_insurance_upto || '-'}</td>
+                    <td>{v.road_tax_exp || v.rc_tax_upto || '-'}</td>
+                    <td>{v.fitness_exp || v.rc_fit_upto || '-'}</td>
+                    <td>{v.pollution_exp || v.rc_pucc_upto || '-'}</td>
+                    <td className="print-hide" style={{textAlign:'center'}}>
+                      <button className="action-btn flat-btn" style={{fontSize:'80%',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={() => setSelectedRtoData && setSelectedRtoData(v)} title="View Vehicle">
+                        <i className="ri-eye-line" style={{fontSize: '1.2em'}} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ textAlign: 'right', marginTop: 12, marginLeft: 20}}>
+            <button
+              className="action-btn"
+              onClick={e => {
+                e.preventDefault();
+                if (typeof window !== 'undefined' && window.handleViewAllRtoData) {
+                  window.handleViewAllRtoData();
+                } else {
+                  navigate('/vehiclertodata');
+                }
+              }}
+            >
+              View All
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -642,7 +642,7 @@ export default function RegisterVehicle() {
           {/* Challan Data Card */}
           <div style={{marginBottom:0,background:'#fff',border:'1.5px solid #ffe082',borderRadius:8,padding:'12px 12px 8px 12px',boxShadow:'0 1px 6px #ffb3001a',position:'relative'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
-              <div style={{fontWeight:600,fontSize:15,color:'#ff9800'}}>Vehicle Challan Data</div>
+              <div style={{fontWeight:600,fontSize:15,color:'#ff9800'}}>Vehicle Challans</div>
               <button onClick={()=>setSidebarVehicle(s => s ? {...s, showChallan:false} : s)} style={{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#888',fontWeight:700}} title="Close">×</button>
             </div>
             {(sidebarVehicle.showChallan !== false) && (

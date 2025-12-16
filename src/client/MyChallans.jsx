@@ -1,3 +1,92 @@
+// Table utility for date formatting
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  let d = null;
+  if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(dateStr)) d = new Date(dateStr.replace(/-/g, ' '));
+  else if (/\d{2}-\d{2}-\d{4}/.test(dateStr)) { const [day, month, year] = dateStr.split('-'); d = new Date(`${year}-${month}-${day}`); }
+  else if (/\d{4}-\d{2}-\d{2}/.test(dateStr)) d = new Date(dateStr);
+  else d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
+}
+
+function ChallanTableV2({ title, data, onView }) {
+  return (
+    <div className="dashboard-latest" style={{ background: '#fff', borderRadius: 14, boxShadow: '0 2px 12px 0 rgba(30,136,229,0.07)', border: '1.5px solid #e3eaf1', padding: '0 0 18px 0', marginBottom: 0, minHeight: 340, transition: 'box-shadow 0.2s', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, padding: '0 24px 0 0', minHeight: 54 }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div style={{ width: 4, height: 32, background: 'linear-gradient(135deg, #2196f3 0%, #21cbf3 100%)', borderRadius: 3, marginRight: 14 }} />
+          <h2 style={{ margin: 0, fontSize: 19, color: '#1565c0', letterSpacing: '0.01em', fontFamily: 'Segoe UI, Arial, sans-serif', lineHeight: 1.2, fontWeight: 700 }}>{title}</h2>
+        </div>
+        <div style={{ color: '#1565c0', fontSize: 14, background: '#f5f8fa', border: '1.5px solid #2196f3', borderRadius: 6, padding: '4px 12px', fontWeight: 700, display: 'inline-block', marginLeft: 16, boxShadow: '0 1px 4px #21cbf322' }}>
+          Showing {data.length} records
+        </div>
+      </div>
+      <div className="table-container">
+        <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Vehicle No.</th>
+              <th>Challan No</th>
+              <th>Date/Time</th>
+              <th>Location</th>
+              {title.toLowerCase().includes('pending') && <th>Sent to Reg Court</th>}
+              {title.toLowerCase().includes('pending') && <th>Sent to Virtual Court</th>}
+              <th>Fine Imposed</th>
+              {title.toLowerCase().includes('disposed') && <th>Fine Paid</th>}
+              <th>Status</th>
+              <th>Offence Details</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.length === 0 ? (
+              <tr><td colSpan={title.toLowerCase().includes('pending') ? 11 : 10}>No challans found.</td></tr>
+            ) : (
+              data.map((c, idx) => (
+                <tr key={c.challan_no || idx}>
+                  <td>{idx + 1}</td>
+                  <td>{c.vehicle_number || '-'}</td>
+                  <td>{c.challan_no || '-'}</td>
+                  <td>{formatDate(c.challan_date_time || c.created_at || c.createdAt)}</td>
+                  <td>{c.challan_place || c.location || c.challan_location || c.address || c.owner_address || '-'}</td>
+                  {title.toLowerCase().includes('pending') && (
+                    <td>{c.sent_to_reg_court ?? c.sent_to_court_on ?? c.sent_to_court ?? '-'}</td>
+                  )}
+                  {title.toLowerCase().includes('pending') && (
+                    <td>{c.sent_to_virtual_court ?? c.sent_to_virtual ?? '-'}</td>
+                  )}
+                  <td>{c.fine_imposed ?? '-'}</td>
+                  {title.toLowerCase().includes('disposed') && (
+                    <td>{c.received_amount ?? '-'}</td>
+                  )}
+                  <td>
+                    <span className={`modern-table-status ${c.challan_status === 'Pending' ? 'pending' : c.challan_status === 'Disposed' ? 'paid' : ''}`}>{c.challan_status}</span>
+                  </td>
+                  <td>
+                    <ul className="modern-table-offence-list">
+                      {Array.isArray(c.offence_details) && c.offence_details.map((o, i) => (
+                        <li key={i} className="cell-ellipsis" title={o.name}>{o.name}</li>
+                      ))}
+                    </ul>
+                  </td>
+                  <td>
+                    <button
+                      className="action-btn flat-btn"
+                      onClick={() => onView(c)}>
+                      <i className="ri-eye-line" style={{fontSize:20}}></i>
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 import "./LatestTable.css";
 
 import React, { useState, useEffect } from "react";
@@ -24,7 +113,8 @@ export function ChallanTable({ title, data, search = {}, sortAsc = true, addToCa
     return String(v);
   }
   // Filter and sort logic for table
-  const [visibleCount, setVisibleCount] = useState(10);
+  const DEFAULT_LIMIT = 30;
+  const [visibleCount, setVisibleCount] = useState(DEFAULT_LIMIT);
   const [infoModal, setInfoModal] = useState({ open: false, message: '' });
   const filtered = Array.isArray(data)
     ? data.filter(c => {
@@ -40,10 +130,8 @@ export function ChallanTable({ title, data, search = {}, sortAsc = true, addToCa
     return sortAsc ? aTime - bTime : bTime - aTime;
   });
   const limited = sorted.slice(0, visibleCount);
-  const hasMore = filtered.length > visibleCount; 
   const [showFull, setShowFull] = useState({});
   // sidebarOpen and setSidebarOpen are now passed from parent
-  const DEFAULT_LIMIT = 10;
   return (
     <div>
       <div className="modern-table-container">
@@ -159,13 +247,7 @@ export function ChallanTable({ title, data, search = {}, sortAsc = true, addToCa
                 ))}
               </tbody>
             </table>
-            {hasMore && (
-              <div className="modern-table-showmore">
-                <button className="action-btn flat-btn" onClick={() => setVisibleCount(v => v + DEFAULT_LIMIT)}>
-                  Show More
-                </button>
-              </div>
-            )}
+            {/* Load more UI removed for consistency with VehicleRtoData */}
           </>
         )}
       </div>
@@ -183,6 +265,10 @@ export function ChallanTable({ title, data, search = {}, sortAsc = true, addToCa
 export default function MyChallans() {
   const [challanData, setChallanData] = useState({ Disposed_data: [], Pending_data: [] });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Separate visible counts for each table
+  // Removed separate visible counts for each table
+  const [pendingVisibleCount, setPendingVisibleCount] = useState(0);
+  const [disposedVisibleCount, setDisposedVisibleCount] = useState(0);
   useEffect(() => {
     async function fetchChallans() {
       try {
@@ -254,7 +340,7 @@ export default function MyChallans() {
   const [selectedChallan, setSelectedChallan] = useState(null);
   return (
     <div className="my-challans-content">
-      <h1 className="page-title">My Challans</h1>
+      {/* <h2 className="page-title">Vehicle Challans</h2> */}
       <p className="page-subtitle">View and manage your Settled and Disposed challans</p>
       {!sidebarOpen && (
         <div className="main-quick-actions-wrapper">
@@ -308,23 +394,21 @@ export default function MyChallans() {
         </button>
       </div>
       <div style={{marginTop: '18px'}}>
-        <ChallanTable
+        <ChallanTableV2
           title="Pending Challans"
           data={challanData.Pending_data}
-          search={search}
-          sortAsc={sortAsc}
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-          setSelectedChallan={setSelectedChallan}
+          onView={c => {
+            setSelectedChallan(c);
+            setSidebarOpen(true);
+          }}
         />
-        <ChallanTable
+        <ChallanTableV2
           title="Disposed Challans"
           data={challanData.Disposed_data}
-          search={search}
-          sortAsc={sortAsc}
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-          setSelectedChallan={setSelectedChallan}
+          onView={c => {
+            setSelectedChallan(c);
+            setSidebarOpen(true);
+          }}
         />
       </div>
       {sidebarOpen && selectedChallan && (

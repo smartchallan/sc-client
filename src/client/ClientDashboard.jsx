@@ -1,3 +1,4 @@
+import DisposedChallansPage from "./DisposedChallansPage";
 import { FaFilePdf } from "react-icons/fa";
 // import { FaFilePdf } from "react-icons/fa"; 
 import { FaFileExcel } from "react-icons/fa";
@@ -698,15 +699,14 @@ function ClientDashboard() {
     const role = user?.user?.role;
     const clientId = user?.user?.client_id || user?.user?.id;
     if (!clientId || !(role === 'client' || role === 'customer')) return;
-    if (!fleetAll && fleetOffset === 0) setVehicleSummary([]); // reset table if not loading more
+    setVehicleSummary([]);
     setLoadingVehicleSummary(true);
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-    let limit = fleetAll ? 1000000 : fleetLimit;
-    let offset = fleetAll ? 0 : fleetOffset;
+    // Always fetch all data: very high limit, offset 0
     fetch(`${baseUrl}/vehiclesummary`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client_id: clientId, limit, offset })
+      body: JSON.stringify({ client_id: clientId, limit: 1000000, offset: 0 })
     })
       .then(res => res.json())
       .then(data => {
@@ -750,10 +750,16 @@ function ClientDashboard() {
   }, [user, fleetLimit, fleetOffset, fleetAll]);
   // Handler for 'View All' in Latest Challans Table
   React.useEffect(() => {
-    window.handleViewAllChallans = () => setActiveMenu('Vehicle Challan Data');
+    window.handleViewAllChallans = () => setActiveMenu('Vehicle Challans');
     // Also provide a handler for Vehicle RTO Data view all from VehicleDataTable
     window.handleViewAllRtoData = () => setActiveMenu('Vehicle RTO Data');
-    return () => { delete window.handleViewAllChallans; delete window.handleViewAllRtoData; };
+    // Handler for Vehicle Summary Table (My Fleet)
+    window.handleViewAllMyFleet = () => setActiveMenu('My Fleet');
+    return () => {
+      delete window.handleViewAllChallans;
+      delete window.handleViewAllRtoData;
+      delete window.handleViewAllMyFleet;
+    };
   }, []);
   // User role for sidebar
   const userRole = 'client';
@@ -788,7 +794,7 @@ function ClientDashboard() {
   const [clientData, setClientData] = useState(null);
   const [selectedVehicleStatus, setSelectedVehicleStatus] = useState(null);
   const [loadingClient, setLoadingClient] = useState(true);
-  // Vehicle challan data
+  // Vehicle Challans
   const [vehicleChallanData, setVehicleChallanData] = useState([]);
   const [loadingVehicleChallan, setLoadingVehicleChallan] = useState(false);
   const [vehicleChallanError, setVehicleChallanError] = useState("");
@@ -1679,7 +1685,7 @@ function ClientDashboard() {
               {activeMenu === 'Dashboard' ? 'Dashboard'
                 : activeMenu === 'Profile' ? 'Profile'
                 : activeMenu === 'Registered Vehicles' ? 'Registered Vehicles'
-                : activeMenu === 'Challans' ? 'Vehicle Challan Data'
+                : activeMenu === 'Challans' ? 'Vehicle Challans'
                 : activeMenu === 'Billing' ? 'My Billing'
                 : activeMenu === 'Settings' ? 'Settings'
                 : activeMenu}
@@ -1907,13 +1913,13 @@ function ClientDashboard() {
                       : <>
                           <span style={{color: 'red', fontWeight: 600, fontSize: '0.80em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
                             title="Show vehicles with pending challans"
-                            onClick={() => { setActiveMenu('Vehicle Challan Data'); }}>
+                            onClick={() => { setActiveMenu('Vehicle Challans'); }}>
                             Pending: ₹{formatBriefAmount(pendingFineTotal)}
                           </span>
                           <span style={{margin: '0 6px', color: '#999', fontSize: '0.55em'}}>|</span>
                           <span style={{fontSize: '0.55em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
                             title="Show vehicles with paid challans"
-                            onClick={() => { setActiveMenu('Vehicle Challan Data'); }}>
+                            onClick={() => { setActiveMenu('Vehicle Challans'); }}>
                             Paid: ₹{formatBriefAmount(disposedFineTotal)}
                           </span>
                         </>
@@ -2129,7 +2135,7 @@ function ClientDashboard() {
             </div>
             <div id="my-fleet-table-print-area">
               <MyFleetTable
-                data={filteredFleet}
+                data={vehicleSummary}
                 loading={loadingVehicleSummary}
                 onRefresh={row => {}}
                 onView={async row => {
@@ -2155,6 +2161,21 @@ function ClientDashboard() {
                 }}
                 totalCount={typeof vehicleSummary === 'object' && vehicleSummary._totalCount ? vehicleSummary._totalCount : (Array.isArray(vehicleSummary) && vehicleSummary.totalCount ? vehicleSummary.totalCount : (typeof window !== 'undefined' && window.fleetTotalCount ? window.fleetTotalCount : undefined))}
                 upcomingRenewalRange={upcomingRenewalRange}
+                onShowMoreRecords={val => {
+                  if (val === 'all') {
+                    setFleetAll(true);
+                  } else {
+                    setFleetAll(false);
+                    setFleetLimit(prev => prev + Number(val));
+                    setFleetOffset(prev => prev + Number(val));
+                  }
+                }}
+                onResetRecords={() => {
+                  setFleetAll(false);
+                  setFleetLimit(50);
+                  setFleetOffset(0);
+                }}
+                filteredFleet={filteredFleet}
               />
               <RightSidebar
                 open={sidebarOpen && !!selectedVehicle && activeMenu === "My Fleet"}
@@ -2186,7 +2207,8 @@ function ClientDashboard() {
             initialTab={vehicleRtoInitialFilter?.tab}
           />
         )}
-  {activeMenu === "Vehicle Challan Data" && <MyChallans />}
+  {activeMenu === "Vehicle Challans" && <MyChallans />}
+  {activeMenu === "Disposed Challans" && <DisposedChallansPage />}
         {activeMenu === "Challan Settlement" && (
           <React.Suspense fallback={<div>Loading...</div>}>
             <ChallanSettlement />
@@ -2205,8 +2227,8 @@ function ClientDashboard() {
             <LazyVehicleFastag />
           </Suspense>
         )}
-      {/* Shared quick actions bar available on every page except Vehicle Challan Data */}
-      {!(selectedChallan || selectedRtoData) && activeMenu !== "Vehicle Challan Data" && (
+      {/* Shared quick actions bar available on every page except Vehicle Challans */}
+      {!(selectedChallan || selectedRtoData) && activeMenu !== "Vehicle Challans" && (
         <div className="main-quick-actions-wrapper" style={{ padding: '0 30px 30px 30px' }}>
           <QuickActions
             title="Quick Actions"

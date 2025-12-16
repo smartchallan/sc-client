@@ -86,7 +86,7 @@ const LatestChallansTable = ({ latestChallanRows, loadingVehicleChallan, vehicle
           </table>
         </div>
 
-        <div style={{ textAlign: 'right', marginTop: 12 }}>
+        <div style={{ textAlign: 'right', marginTop: 12, marginLeft: 20 }}>
           <button
             className="action-btn"
             onClick={e => {

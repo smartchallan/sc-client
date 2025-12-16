@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import SelectShowMore from "./SelectShowMore";
 import { FaDownload, FaPrint, FaEye } from "react-icons/fa";
 import * as XLSX from "xlsx";
 import "../shared/CommonDashboard.css";
@@ -8,6 +9,17 @@ import "./RightSidebar.css";
 import "../RegisterVehicle.css";
 
 export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoData, setSelectedRtoData, hideSearchSortFilter }) {
+      // Urgent renewals filter: multiple types and day range
+      const [urgentTypes, setUrgentTypes] = useState([]); // e.g. ['insurance', 'roadtax']
+      const [showUrgentDropdown, setShowUrgentDropdown] = useState(false);
+      const [urgentRange, setUrgentRange] = useState(15); // days, default 15
+    // Expired filter: multiple types
+    const [expiredTypes, setExpiredTypes] = useState([]); // e.g. ['insurance', 'roadtax']
+    const [showExpiredDropdown, setShowExpiredDropdown] = useState(false);
+  // Document type: 'insurance', 'roadtax', 'fitness', 'pollution'
+  const [docType, setDocType] = useState('insurance');
+  // Renewal period: 'all', 'urgent', 'upcoming'
+  const [renewalPeriod, setRenewalPeriod] = useState('all');
   const formatExpiry = (dateStr, useColor = true) => {
     if (!dateStr || dateStr === '-') return '-';
     let d = null;
@@ -107,8 +119,7 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
   // Sidebar state is now managed by parent
   // Search, sort, filter state
   const [search, setSearch] = useState('');
-  const [sortAsc, setSortAsc] = useState(false); // false = newest first
-  const [expiryFilter, setExpiryFilter] = useState('all'); // all, expired, expiring, valid
+  // Removed sortAsc and expiryFilter state
 
   // Helper to determine expiry status
   const getExpiryStatus = (v) => {
@@ -132,37 +143,105 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
   if (search.trim() !== '') {
     filtered = filtered.filter(v => (v.rc_regn_no || '').toString().toUpperCase().includes(search.trim().toUpperCase()));
   }
-  if (expiryFilter !== 'all') {
-    filtered = filtered.filter(v => getExpiryStatus(v) === expiryFilter);
+  // Apply expired filter (multi)
+  if (expiredTypes.length > 0) {
+    filtered = filtered.filter(v => {
+      return expiredTypes.some(type => {
+        let exp = '-';
+        if (type === 'insurance') exp = v.insurance_exp || v.rc_insurance_upto;
+        else if (type === 'roadtax') exp = v.road_tax_exp || v.rc_tax_upto;
+        else if (type === 'fitness') exp = v.fitness_exp || v.rc_fit_upto;
+        else if (type === 'pollution') exp = v.pollution_exp || v.rc_pucc_upto;
+        if (!exp || exp === '-') return false;
+        let d = null;
+        if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(exp)) d = new Date(exp.replace(/-/g, ' '));
+        else if (/\d{2}-\d{2}-\d{4}/.test(exp)) { const [day, month, year] = exp.split('-'); d = new Date(`${year}-${month}-${day}`); }
+        else if (/\d{4}-\d{2}-\d{2}/.test(exp)) d = new Date(exp);
+        else d = new Date(exp);
+        if (isNaN(d.getTime())) return false;
+        const now = new Date();
+        return d < now;
+      });
+    });
   }
-  filtered = filtered.slice().sort((a, b) => {
-    const parse = s => s ? new Date(String(s).replace(/(\d{2})-(\d{2})-(\d{4})/, '$2/$1/$3')) : new Date(0);
-    const dateA = parse(a.rc_regn_dt);
-    const dateB = parse(b.rc_regn_dt);
-    return sortAsc ? dateA - dateB : dateB - dateA;
-  });
-  // Always show 20 records by default
-  const DEFAULT_LIMIT = 20;
-  const [recordsToShow, setRecordsToShow] = useState(DEFAULT_LIMIT);
-  useEffect(() => { setRecordsToShow(DEFAULT_LIMIT); }, [search, expiryFilter, sortAsc, vehicleData]);
-  const displayed = recordsToShow > 0 ? filtered.slice(0, recordsToShow) : filtered;
+  // Apply urgent renewals filter (multi, range)
+  if (urgentTypes.length > 0) {
+    filtered = filtered.filter(v => {
+      return urgentTypes.some(type => {
+        let exp = '-';
+        if (type === 'insurance') exp = v.insurance_exp || v.rc_insurance_upto;
+        else if (type === 'roadtax') exp = v.road_tax_exp || v.rc_tax_upto;
+        else if (type === 'fitness') exp = v.fitness_exp || v.rc_fit_upto;
+        else if (type === 'pollution') exp = v.pollution_exp || v.rc_pucc_upto;
+        if (!exp || exp === '-') return false;
+        let d = null;
+        if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(exp)) d = new Date(exp.replace(/-/g, ' '));
+        else if (/\d{2}-\d{2}-\d{4}/.test(exp)) { const [day, month, year] = exp.split('-'); d = new Date(`${year}-${month}-${day}`); }
+        else if (/\d{4}-\d{2}-\d{2}/.test(exp)) d = new Date(exp);
+        else d = new Date(exp);
+        if (isNaN(d.getTime())) return false;
+        const now = new Date();
+        const diffDays = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && diffDays <= urgentRange;
+      });
+    });
+  }
+  // Apply document and renewal period filters
+  if (renewalPeriod !== 'all') {
+    filtered = filtered.filter(v => {
+      let exp = '-';
+      if (docType === 'insurance') exp = v.insurance_exp || v.rc_insurance_upto;
+      else if (docType === 'roadtax') exp = v.road_tax_exp || v.rc_tax_upto;
+      else if (docType === 'fitness') exp = v.fitness_exp || v.rc_fit_upto;
+      else if (docType === 'pollution') exp = v.pollution_exp || v.rc_pucc_upto;
+      if (!exp || exp === '-') return false;
+      let d = null;
+      if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(exp)) d = new Date(exp.replace(/-/g, ' '));
+      else if (/\d{2}-\d{2}-\d{4}/.test(exp)) { const [day, month, year] = exp.split('-'); d = new Date(`${year}-${month}-${day}`); }
+      else if (/\d{4}-\d{2}-\d{2}/.test(exp)) d = new Date(exp);
+      else d = new Date(exp);
+      if (isNaN(d.getTime())) return false;
+      const now = new Date();
+      const diffDays = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+      if (renewalPeriod === 'urgent') return diffDays <= 7;
+      if (renewalPeriod === 'upcoming') return diffDays > 7 && diffDays <= 30;
+      return true;
+    });
+  }
+  // Removed expiryFilter and sorting logic
+  // Show 30 records by default
+  const DEFAULT_LIMIT = 30;
+  const [visibleCount, setVisibleCount] = useState(DEFAULT_LIMIT);
+  useEffect(() => { setVisibleCount(DEFAULT_LIMIT); }, [search, vehicleData]);
+  const displayed = visibleCount > 0 ? filtered.slice(0, visibleCount) : filtered;
 
   return (
-    <div className="dashboard-latest" >
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 0, padding: '0 0 10px 0' }}>
-        <div style={{ width: 4, height: 32, background: 'linear-gradient(135deg, #2196f3 0%, #21cbf3 100%)', borderRadius: 3, marginRight: 14 }} />
-        <h2 style={{
-          margin: 0,
-          fontSize: 19,
-          color: '#1565c0',
-          letterSpacing: '0.01em',
-          fontFamily: 'Segoe UI, Arial, sans-serif',
-          lineHeight: 1.2,
-          fontWeight: 700,
-        }}>Vehicle RTO Data</h2>
+    <div className="dashboard-latest">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, padding: '0 24px 0 0', minHeight: 54 }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div style={{ width: 4, height: 32, background: 'linear-gradient(135deg, #2196f3 0%, #21cbf3 100%)', borderRadius: 3, marginRight: 14 }} />
+          <h2 style={{ margin: 0, fontSize: 19, color: '#1565c0', letterSpacing: '0.01em', fontFamily: 'Segoe UI, Arial, sans-serif', lineHeight: 1.2, fontWeight: 700 }}>Vehicle RTO Data</h2>
+        </div>
+        <div style={{ color: '#1565c0', fontSize: 14, background: '#f5f8fa', border: '1.5px solid #2196f3', borderRadius: 6, padding: '4px 12px', fontWeight: 700, display: 'inline-block', marginLeft: 16, boxShadow: '0 1px 4px #21cbf322' }}>
+          Showing {displayed.length} of {filtered.length} records
+        </div>
       </div>
+      {/* Controls section, separated from table, matching My Fleet */}
       {!hideSearchSortFilter && (
-        <div style={{display:'flex',gap:16,marginBottom:12,flexWrap:'wrap',alignItems:'center'}}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 16,
+          marginBottom: 18,
+          marginTop: 0,
+          flexWrap: 'wrap',
+          background: '#f5f8fa',
+          borderRadius: 8,
+          padding: '16px 18px 10px 18px',
+          border: '1.5px solid #e3eaf1',
+          boxShadow: '0 1px 4px #21cbf322',
+          position: 'relative'
+        }}>
           <div className="number-plate-container" style={{ width: 330 }}>
             <div className="number-plate-wrapper">
               <div className="number-plate-badge">IND</div>
@@ -185,148 +264,169 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
               <div className="chakra">⚙</div>
             </div>
           </div>
-          <select
-            value={expiryFilter}
-            onChange={e => setExpiryFilter(e.target.value)}
-            className="filter-select"
-          >
-            <option value="all">All</option>
-            <option value="expired">Expired</option>
-            <option value="expiring">Expiring Soon (≤30d)</option>
-            <option value="valid">Valid (&gt;30d)</option>
-          </select>
-          <button
-            className="action-btn flat-btn sort-btn"
-            onClick={() => setSortAsc(s => !s)}
-          >
-            Sort Reg Date {sortAsc ? '▲' : '▼'}
-          </button>
+          {/* Expired records filter */}
+          <div style={{ position: 'relative' }}>
+            <button
+              className="filter-select"
+              style={{ minWidth: 180, textAlign: 'left', padding: '8px 12px', border: '1px solid #bcd', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
+              onClick={() => setShowExpiredDropdown(v => !v)}
+            >
+              {expiredTypes.length === 0 ? 'Select expired records' : expiredTypes.map(t => {
+                if (t === 'insurance') return 'Insurance';
+                if (t === 'roadtax') return 'Road Tax';
+                if (t === 'fitness') return 'Fitness';
+                if (t === 'pollution') return 'Pollution';
+                return t;
+              }).join(', ')}
+              <span style={{ float: 'right', fontWeight: 700, fontSize: 16, marginLeft: 8 }}>▼</span>
+            </button>
+            {showExpiredDropdown && (
+              <div style={{ position: 'absolute', top: 38, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #bcd', borderRadius: 8, boxShadow: '0 2px 8px #0001', minWidth: 180, padding: 8 }}>
+                {['insurance', 'roadtax', 'fitness', 'pollution'].map(type => (
+                  <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={expiredTypes.includes(type)}
+                      onChange={e => {
+                        if (e.target.checked) setExpiredTypes(prev => [...prev, type]);
+                        else setExpiredTypes(prev => prev.filter(t => t !== type));
+                      }}
+                    />
+                    {type === 'insurance' ? 'Insurance' : type === 'roadtax' ? 'Road Tax' : type.charAt(0).toUpperCase() + type.slice(1)}
+                  </label>
+                ))}
+                <div style={{ textAlign: 'right', marginTop: 6 }}>
+                  <button style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#f5f8fa', cursor: 'pointer' }} onClick={() => setShowExpiredDropdown(false)}>Close</button>
+                </div>
+              </div>
+            )}
+          </div>
+          {/* Urgent renewals filter */}
+          <div style={{ position: 'relative' }}>
+            <button
+              className="filter-select"
+              style={{ minWidth: 180, textAlign: 'left', padding: '8px 12px', border: '1px solid #bcd', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
+              onClick={() => setShowUrgentDropdown(v => !v)}
+            >
+              {urgentTypes.length === 0 ? 'Select urgent renewals' : urgentTypes.map(t => {
+                if (t === 'insurance') return 'Insurance';
+                if (t === 'roadtax') return 'Road Tax';
+                if (t === 'fitness') return 'Fitness';
+                if (t === 'pollution') return 'Pollution';
+                return t;
+              }).join(', ')}
+              <span style={{ float: 'right', fontWeight: 700, fontSize: 16, marginLeft: 8 }}>▼</span>
+            </button>
+            {showUrgentDropdown && (
+              <div style={{ position: 'absolute', top: 38, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #bcd', borderRadius: 8, boxShadow: '0 2px 8px #0001', minWidth: 220, padding: 8 }}>
+                {['insurance', 'roadtax', 'fitness', 'pollution'].map(type => (
+                  <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={urgentTypes.includes(type)}
+                      onChange={e => {
+                        if (e.target.checked) setUrgentTypes(prev => [...prev, type]);
+                        else setUrgentTypes(prev => prev.filter(t => t !== type));
+                      }}
+                    />
+                    {type === 'insurance' ? 'Insurance' : type === 'roadtax' ? 'Road Tax' : type.charAt(0).toUpperCase() + type.slice(1)}
+                  </label>
+                ))}
+                <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 13 }}>Days:</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={urgentRange}
+                    onChange={e => {
+                      let val = Number(e.target.value);
+                      if (isNaN(val) || val < 1) val = 1;
+                      if (val > 50) val = 50;
+                      setUrgentRange(val);
+                    }}
+                    style={{ width: 50, fontSize: 14, padding: '2px 6px', borderRadius: 4, border: '1px solid #bcd' }}
+                  />
+                  <span style={{ fontSize: 13 }}>(1-50)</span>
+                </div>
+                <div style={{ textAlign: 'right', marginTop: 6 }}>
+                  <button style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#f5f8fa', cursor: 'pointer' }} onClick={() => setShowUrgentDropdown(false)}>Close</button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
-      {loading && <div>Loading vehicle data...</div>}
-      {error && <div style={{color:'red'}}>{error}</div>}
-      <div className="table-caption-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => {
-            if (!displayed || displayed.length === 0) return;
-            const exportData = displayed.map(({ Action, ...row }) => row);
-            const worksheet = XLSX.utils.json_to_sheet(exportData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "RTOData");
-            XLSX.writeFile(workbook, "rto_data.xlsx");
-          }} title="Download Excel" style={{ padding: '8px 16px', background: '#2196f3', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FaDownload size={18} />
-          </button>
-          <button onClick={() => {
-            const printContents = document.getElementById('vehicle-rto-table-print-area')?.innerHTML;
-            if (!printContents) return;
-            const printWindow = window.open('', '', 'height=600,width=900');
-            printWindow.document.write('<html><head><title>Print RTO Data</title>');
-            printWindow.document.write('<style>body{font-family:sans-serif;} table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ccc;padding:8px;} th{background:#f5f8fa;} .print-hide{display:none !important;}</style>');
-            printWindow.document.write('</head><body>');
-            printWindow.document.write(printContents);
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-            printWindow.focus();
-            setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
-          }} title="Print" style={{ padding: '8px 16px', background: '#4caf50', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FaPrint size={18} />
-          </button>
-        </div>
-        <div
-          style={{
-            marginBottom: 8,
-            color: '#222',
-            fontSize: 15,
-            background: '#e3f7d6',
-            border: '1.5px solid #4caf50',
-            borderRadius: 6,
-            padding: '4px 12px',
-            fontWeight: 600,
-            display: 'inline-block',
-          }}
-        >
-          Showing {displayed.length} of {filtered.length} records
-        </div>
-      </div>
-  <div className="table-container" id="vehicle-rto-table-print-area">
-    <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Vehicle No.</th>
-          {!hideSearchSortFilter && <th>Registration Date</th>}
-          <th>Insurance Exp</th>
-          <th>Road Tax Exp</th>
-          <th>Fitness Exp</th>
-          <th>Pollution Exp</th>
-          <th className="print-hide" style={{color:'#1565c0',fontWeight:700,fontSize:15,textAlign:'center'}}>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {displayed.length === 0 ? (
-          <tr><td colSpan={hideSearchSortFilter ? 7 : 8}>No vehicle data found.</td></tr>
-        ) : (
-          displayed.map((v, idx) => (
-            <tr key={v.rc_regn_no || idx}>
-              <td>{idx + 1}</td>
-              <td>{v.rc_regn_no || '-'}</td>
-              {!hideSearchSortFilter && <td>{formatExpiry(v.rc_regn_dt, false)}</td>}
-              <td>{formatExpiry(v.insurance_exp || v.rc_insurance_upto, true)}</td>
-              <td>{formatExpiry(v.road_tax_exp || v.rc_tax_upto, true)}</td>
-              <td>{formatExpiry(v.fitness_exp || v.rc_fit_upto, true)}</td>
-              <td>{formatExpiry(v.pollution_exp || v.rc_pucc_upto, true)}</td>
-              <td className="print-hide" style={{textAlign:'center'}}>
-                <button className="action-btn flat-btn" title="View Vehicle" style={{fontSize:'80%',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={() => {
-                  // Always set the latest vehicle data from the full vehicleData array
-                  const found = vehicleData.find(item => item.rc_regn_no === v.rc_regn_no);
-                  setSelectedRtoData(found || v);
-                }}>
-                  <i className="ri-eye-line" style={{fontSize:'1.2em'}} />
-                </button>
-              </td>
+      <div className="table-container" id="vehicle-rto-table-print-area">
+        <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Vehicle No.</th>
+              {!hideSearchSortFilter && <th>Registration Date</th>}
+              <th
+                style={expiredTypes.includes('insurance') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}}
+              >Insurance Exp</th>
+              <th
+                style={expiredTypes.includes('roadtax') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}}
+              >Road Tax Exp</th>
+              <th
+                style={expiredTypes.includes('fitness') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}}
+              >Fitness Exp</th>
+              <th
+                style={expiredTypes.includes('pollution') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}}
+              >Pollution Exp</th>
+              <th className="print-hide" style={{color:'#1565c0',fontWeight:700,fontSize:15,textAlign:'center'}}>Action</th>
             </tr>
-          ))
-        )}
-      </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {displayed.length === 0 ? (
+              <tr><td colSpan={hideSearchSortFilter ? 7 : 8}>No vehicle data found.</td></tr>
+            ) : (
+              displayed.map((v, idx) => (
+                <tr key={v.rc_regn_no || idx}>
+                  <td>{idx + 1}</td>
+                  <td>{v.rc_regn_no || '-'}</td>
+                  {!hideSearchSortFilter && <td>{formatExpiry(v.rc_regn_dt, false)}</td>}
+                  <td
+                    style={expiredTypes.includes('insurance') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
+                  >{formatExpiry(v.insurance_exp || v.rc_insurance_upto, true)}</td>
+                  <td
+                    style={expiredTypes.includes('roadtax') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
+                  >{formatExpiry(v.road_tax_exp || v.rc_tax_upto, true)}</td>
+                  <td
+                    style={expiredTypes.includes('fitness') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
+                  >{formatExpiry(v.fitness_exp || v.rc_fit_upto, true)}</td>
+                  <td
+                    style={expiredTypes.includes('pollution') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
+                  >{formatExpiry(v.pollution_exp || v.rc_pucc_upto, true)}</td>
+                  <td className="print-hide" style={{textAlign:'center'}}>
+                    <button className="action-btn flat-btn" title="View Vehicle" style={{fontSize:'80%',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={() => {
+                      // Always set the latest vehicle data from the full vehicleData array
+                      const found = vehicleData.find(item => item.rc_regn_no === v.rc_regn_no);
+                      setSelectedRtoData(found || v);
+                    }}>
+                      <i className="ri-eye-line" style={{fontSize:'1.2em'}} />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
-      {(recordsToShow < filtered.length) && (
-        <div style={{ textAlign: 'left', marginTop: 16, marginBottom: 8 }}>
-          <span style={{
-            fontWeight: 600,
-            marginRight: 12,
-            color: '#1976d2',
-            fontSize: 15
-          }}>
-            Show more records:
-          </span>
-          <select
-            style={{
-              padding: '7px 16px',
-              borderRadius: 6,
-              border: '1.5px solid #1976d2',
-              fontSize: 15,
-              fontWeight: 600,
-              color: '#1976d2',
-              background: '#f5faff',
-              outline: 'none',
-              marginRight: 8
+      {filtered.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, marginLeft: 24 }}>
+          <span style={{ color: '#1976d2', fontSize: 15 }}>Show more records:</span>
+          <SelectShowMore
+            onShowMoreRecords={val => {
+              if (val === 'all') setVisibleCount(filtered.length);
+              else setVisibleCount(Number(val));
             }}
-            value={0}
-            onChange={e => {
-              const val = e.target.value;
-              if (val === 'all') setRecordsToShow(filtered.length);
-              else setRecordsToShow(prev => Math.min(prev + Number(val), filtered.length));
-            }}
-          >
-            <option value={0} disabled>Select</option>
-            <option value={50}>50 more</option>
-            <option value={100}>100 more</option>
-            <option value={200}>200 more</option>
-            <option value="all">All records</option>
-          </select>
+            onResetRecords={() => setVisibleCount(DEFAULT_LIMIT)}
+            maxCount={filtered.length}
+          />
         </div>
       )}
 

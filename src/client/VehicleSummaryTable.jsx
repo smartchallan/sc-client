@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./VehicleSummaryTable.css";
 import { FaSyncAlt } from "react-icons/fa";
 import * as XLSX from "xlsx";
@@ -7,7 +8,17 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView }
   // If API response is { total, vehicles: [...] }, use vehicles array
   const vehicles = Array.isArray(data?.vehicles) ? data.vehicles : (Array.isArray(data) ? data : []);
   // Sort by registered_at DESC
-  const sorted = [...vehicles].sort((a, b) => new Date(b.registered_at) - new Date(a.registered_at));
+  const sortedAll = [...vehicles].sort((a, b) => new Date(b.registered_at) - new Date(a.registered_at));
+  // Show only first 50 records by default
+  const DEFAULT_VISIBLE = 50;
+  const [visibleLimit, setVisibleLimit] = React.useState(DEFAULT_VISIBLE);
+  const sorted = sortedAll.slice(0, visibleLimit);
+
+  const navigate = useNavigate();
+  // Handler for View All
+  const handleViewAll = () => {
+    navigate('/myfleet');
+  };
 
   return (
     <div className="dashboard-latest" style={{
@@ -34,12 +45,21 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView }
             fontWeight: 700,
           }}>Vehicle Summary</h2>
         </div>
-        {/* <div style={{ color: '#1565c0', fontSize: 14, background: '#f5f8fa', border: '1.5px solid #2196f3', borderRadius: 6, padding: '4px 12px', fontWeight: 700, display: 'inline-block', marginLeft: 16, boxShadow: '0 1px 4px #21cbf322' }}>
-          Showing {sorted.length} records
-        </div> */}
+          <button
+            className="action-btn"
+            style={{ marginTop: 10 }}
+            onClick={e => {
+              e.preventDefault();
+              if (typeof window !== 'undefined' && window.handleViewAllMyFleet) {
+                window.handleViewAllMyFleet();
+              }
+            }}
+          >
+            View All
+          </button>
       </div>
-      
-  <div className="vehicle-summary-table-container" id="vehicle-summary-table-print-area">
+
+      <div className="vehicle-summary-table-container" id="vehicle-summary-table-print-area">
         <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
           <thead>
             <tr>
