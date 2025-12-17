@@ -119,7 +119,30 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
   // Sidebar state is now managed by parent
   // Search, sort, filter state
   const [search, setSearch] = useState('');
-  // Removed sortAsc and expiryFilter state
+  // Sorting state for each date column
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
+
+  // Helper to handle sort
+  const handleSort = (key) => {
+    setSortConfig(prev => {
+      if (prev.key === key) {
+        // Toggle direction
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
+  // Helper to get date value for sorting
+  const getDateValue = (v, key) => {
+    let val = v[key];
+    if (!val || val === '-') return 0;
+    if (typeof val === 'object' && val.value) val = val.value;
+    if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(val)) return new Date(val.replace(/-/g, ' ')).getTime();
+    if (/\d{2}-\d{2}-\d{4}/.test(val)) { const [d, m, y] = val.split('-'); return new Date(`${y}-${m}-${d}`).getTime(); }
+    if (/\d{4}-\d{2}-\d{2}/.test(val)) return new Date(val).getTime();
+    return new Date(val).getTime();
+  };
 
   // Helper to determine expiry status
   const getExpiryStatus = (v) => {
@@ -208,7 +231,15 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
       return true;
     });
   }
-  // Removed expiryFilter and sorting logic
+  // Apply sorting for date columns
+  if (sortConfig.key) {
+    filtered = [...filtered].sort((a, b) => {
+      const aVal = getDateValue(a, sortConfig.key);
+      const bVal = getDateValue(b, sortConfig.key);
+      if (sortConfig.direction === 'asc') return aVal - bVal;
+      return bVal - aVal;
+    });
+  }
   // Show 30 records by default
   const DEFAULT_LIMIT = 30;
   const [visibleCount, setVisibleCount] = useState(DEFAULT_LIMIT);
@@ -335,18 +366,14 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
                 <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 13 }}>Days:</span>
                   <input
-                    type="number"
+                    type="range"
                     min={1}
                     max={50}
                     value={urgentRange}
-                    onChange={e => {
-                      let val = Number(e.target.value);
-                      if (isNaN(val) || val < 1) val = 1;
-                      if (val > 50) val = 50;
-                      setUrgentRange(val);
-                    }}
-                    style={{ width: 50, fontSize: 14, padding: '2px 6px', borderRadius: 4, border: '1px solid #bcd' }}
+                    onChange={e => setUrgentRange(Number(e.target.value))}
+                    style={{ width: 120 }}
                   />
+                  <span style={{ fontSize: 13, minWidth: 28, display: 'inline-block', textAlign: 'center', fontWeight: 600, color: '#1976d2' }}>{urgentRange}</span>
                   <span style={{ fontSize: 13 }}>(1-50)</span>
                 </div>
                 <div style={{ textAlign: 'right', marginTop: 6 }}>
@@ -363,19 +390,52 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
             <tr>
               <th>#</th>
               <th>Vehicle No.</th>
-              {!hideSearchSortFilter && <th>Registration Date</th>}
+              {!hideSearchSortFilter && (
+                <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('rc_regn_dt')}>
+                  Registration Date
+                  <span style={{fontSize:13,marginLeft:2}}>{sortConfig.key === 'rc_regn_dt' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+                </th>
+              )}
               <th
-                style={expiredTypes.includes('insurance') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}}
-              >Insurance Exp</th>
+                style={{
+                  ...(expiredTypes.includes('insurance') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}),
+                  cursor: 'pointer', userSelect: 'none'
+                }}
+                onClick={() => handleSort('insurance_exp')}
+              >
+                Insurance Exp
+                <span style={{fontSize:13,marginLeft:2}}>{sortConfig.key === 'insurance_exp' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+              </th>
               <th
-                style={expiredTypes.includes('roadtax') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}}
-              >Road Tax Exp</th>
+                style={{
+                  ...(expiredTypes.includes('roadtax') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}),
+                  cursor: 'pointer', userSelect: 'none'
+                }}
+                onClick={() => handleSort('road_tax_exp')}
+              >
+                Road Tax Exp
+                <span style={{fontSize:13,marginLeft:2}}>{sortConfig.key === 'road_tax_exp' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+              </th>
               <th
-                style={expiredTypes.includes('fitness') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}}
-              >Fitness Exp</th>
+                style={{
+                  ...(expiredTypes.includes('fitness') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}),
+                  cursor: 'pointer', userSelect: 'none'
+                }}
+                onClick={() => handleSort('fitness_exp')}
+              >
+                Fitness Exp
+                <span style={{fontSize:13,marginLeft:2}}>{sortConfig.key === 'fitness_exp' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+              </th>
               <th
-                style={expiredTypes.includes('pollution') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}}
-              >Pollution Exp</th>
+                style={{
+                  ...(expiredTypes.includes('pollution') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}),
+                  cursor: 'pointer', userSelect: 'none'
+                }}
+                onClick={() => handleSort('pollution_exp')}
+              >
+                Pollution Exp
+                <span style={{fontSize:13,marginLeft:2}}>{sortConfig.key === 'pollution_exp' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+              </th>
               <th className="print-hide" style={{color:'#1565c0',fontWeight:700,fontSize:15,textAlign:'center'}}>Action</th>
             </tr>
           </thead>
