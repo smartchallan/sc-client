@@ -294,7 +294,7 @@ export default function RegisterVehicle() {
   return (
     <div className="register-vehicle-content">
       <ToastContainer position="top-right" autoClose={2000} />
-      <h1 className="page-title">Register New Vehicle</h1>
+      {/* <h1 className="page-title">Register New Vehicle</h1> */}
       <p className="page-subtitle">
         You can register your vehicle using <b>any one</b> of the following details: <b>Vehicle Number</b>, <b>Engine Number</b>, or <b>chassis Number</b>.
       </p>
@@ -525,21 +525,21 @@ export default function RegisterVehicle() {
                         <td>{idx + 1}</td>
                         <td>
                           <span
-                            style={{
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              background: 'linear-gradient(90deg, #ffe082 0%, #f8b500 100%)',
-                              color: '#7c5700',
-                              padding: '3px 14px',
-                              borderRadius: '18px',
-                              fontSize: '1.08em',
-                              boxShadow: '0 2px 8px #f8b50022',
-                              border: '1.5px solid #ffe082',
-                              letterSpacing: 0.5,
-                              transition: 'box-shadow 0.2s, background 0.2s, color 0.2s',
-                              display: 'inline-block',
-                              textShadow: '0 1px 0 #fff, 0 2px 8px #f8b50022',
-                            }}
+                            // style={{
+                            //   fontWeight: 700,
+                            //   cursor: 'pointer',
+                            //   background: 'linear-gradient(90deg, #ffe082 0%, #f8b500 100%)',
+                            //   color: '#7c5700',
+                            //   padding: '3px 14px',
+                            //   borderRadius: '18px',
+                            //   fontSize: '1.08em',
+                            //   boxShadow: '0 2px 8px #f8b50022',
+                            //   border: '1.5px solid #ffe082',
+                            //   letterSpacing: 0.5,
+                            //   transition: 'box-shadow 0.2s, background 0.2s, color 0.2s',
+                            //   display: 'inline-block',
+                            //   textShadow: '0 1px 0 #fff, 0 2px 8px #f8b50022',
+                            // }}
                             onMouseOver={e => {
                               e.currentTarget.style.background='linear-gradient(90deg, #ffe082 0%, #ffd54f 100%)';
                               e.currentTarget.style.color='#a67c00';

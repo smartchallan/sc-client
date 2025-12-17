@@ -16,6 +16,16 @@ body .latest-table th, body .latest-table td {
   font-size: 90% !important;
   vertical-align: middle !important;
 }
+/* Override for grouped Challans header */
+body .latest-table th.challans-header {
+  text-align: center !important;
+}
+/* Center alignment for challan sub-columns and counts */
+body .latest-table th.challan-sub-header,
+body .latest-table td.pending-challan-count,
+body .latest-table td.disposed-challan-count {
+  text-align: center !important;
+}
 body .latest-table th {
   background: linear-gradient(90deg, #f5f8fa 80%, #eaf6ff 100%) !important;
   color: #1a237e !important;
