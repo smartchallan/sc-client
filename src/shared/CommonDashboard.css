@@ -376,6 +376,52 @@ body {
 
 }
 
+/* Sidebar submenu styling for grouped items (e.g., Challan Management) */
+.nav-submenu {
+  margin-top: 4px;
+}
+
+.nav-subitem {
+  padding: 8px 20px 8px 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  margin-bottom: 4px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #e3f0ff;
+  opacity: 0.9;
+  transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.16s;
+}
+
+.nav-subitem i {
+  margin-right: 10px;
+  font-size: 18px;
+  color: #e3f0ff;
+  transition: color 0.18s, filter 0.18s;
+}
+
+.nav-subitem:hover {
+  background: linear-gradient(90deg, rgba(255,255,255,0.14) 0%, rgba(66,165,245,0.35) 100%);
+  color: #ffffff;
+  transform: translateX(2px);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+}
+
+.nav-subitem.active {
+  background: linear-gradient(90deg, #66bb6a 0%, #43e97b 100%);
+  color: #ffffff;
+  transform: translateX(2px);
+  box-shadow: 0 4px 14px rgba(102,187,106,0.18);
+  font-weight: 600;
+}
+
+.nav-subitem:hover i,
+.nav-subitem.active i {
+  color: #ffffff;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.10));
+}
+
 .user-profile {
   padding: 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);

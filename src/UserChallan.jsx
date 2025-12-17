@@ -113,7 +113,7 @@ export default function UserChallan() {
       {/* Disposed Challans Table */}
       <div className="dashboard-latest">
         <div className="latest-header">
-          <h2>Disposed Challans</h2>
+          {/* <h2>Disposed Challans</h2> */}
         </div>
         <div style={{ textAlign: 'left', marginTop: 8, marginBottom: 8 }}>
           <span style={{ fontWeight: 600, marginRight: 12, color: '#1976d2', fontSize: 15 }}>Show more records:</span>

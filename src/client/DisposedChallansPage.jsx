@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from "react";
 import RightSidebar from "./RightSidebar";
 import QuickActions from "./QuickActions";
-// Reuse ChallanTableV2 from MyChallans.jsx
+import SelectShowMore from "./SelectShowMore";
+import CustomModal from "./CustomModal";
+import { FiDownloadCloud, FiPrinter } from "react-icons/fi";
+import * as XLSX from "xlsx";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
+import scLogo from "../assets/sc-logo.png";
+import "./LatestTable.css";
+import "./RightSidebar.css";
+import "../RegisterVehicle.css";
+// Reuse ChallanTableV2 pattern from MyChallans.jsx
 
 function formatDate(dateStr) {
   if (!dateStr) return '-';
@@ -14,7 +24,22 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
 }
 
-function ChallanTableV2({ title, data, onView }) {
+function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset, searchTerm, setSearchTerm, onClickDownload, onClickPrint }) {
+  const effectiveVisible = typeof visibleCount === 'number' && visibleCount > 0
+    ? visibleCount
+    : data.length;
+
+  const filteredData = Array.isArray(data)
+    ? data.filter((c) => {
+        if (!searchTerm) return true;
+        const term = searchTerm.toLowerCase();
+        const v = String(c.vehicle_number || "").toLowerCase();
+        const n = String(c.challan_no || "").toLowerCase();
+        return v.includes(term) || n.includes(term);
+      })
+    : [];
+
+  const limitedData = filteredData.slice(0, effectiveVisible);
   return (
     <div className="dashboard-latest" style={{ background: '#fff', borderRadius: 14, boxShadow: '0 2px 12px 0 rgba(30,136,229,0.07)', border: '1.5px solid #e3eaf1', padding: '0 0 18px 0', marginBottom: 0, minHeight: 340, transition: 'box-shadow 0.2s', position: 'relative', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, padding: '0 24px 0 0', minHeight: 54 }}>
@@ -23,10 +48,54 @@ function ChallanTableV2({ title, data, onView }) {
           <h2 style={{ margin: 0, fontSize: 19, color: '#1565c0', letterSpacing: '0.01em', fontFamily: 'Segoe UI, Arial, sans-serif', lineHeight: 1.2, fontWeight: 700 }}>{title}</h2>
         </div>
         <div style={{ color: '#1565c0', fontSize: 14, background: '#f5f8fa', border: '1.5px solid #2196f3', borderRadius: 6, padding: '4px 12px', fontWeight: 700, display: 'inline-block', marginLeft: 16, boxShadow: '0 1px 4px #21cbf322' }}>
-          Showing {data.length} records
+          Showing {Math.min(filteredData.length, effectiveVisible)} of {filteredData.length} records
         </div>
       </div>
-      <div className="table-container">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 24px 8px 24px', borderTop: '1px solid #e3eaf1', borderBottom: '1px solid #e3eaf1', background: '#f7f9fc' }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="number-plate-container" style={{ minWidth: 220, maxWidth: 330 }}>
+            <div className="number-plate-wrapper">
+              <div className="number-plate-badge">IND</div>
+              <div className="tricolor-strip">
+                <div className="saffron"></div>
+                <div className="white"></div>
+                <div className="green"></div>
+              </div>
+              <input
+                type="text"
+                className="number-plate-input"
+                placeholder="Search by Vehicle / Challan No"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                maxLength={20}
+              />
+            </div>
+            <div className="security-features">
+              <div className="hologram"></div>
+              <div className="chakra">⚙</div>
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            title="Download"
+            onClick={onClickDownload}
+            style={{ background: '#e3f2fd', border: '1px solid #bbdefb', borderRadius: 999, cursor: 'pointer', color: '#0d47a1', fontSize: 18, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <FiDownloadCloud />
+            <span style={{ fontSize: 13, fontWeight: 600 }}>Download</span>
+          </button>
+          <button
+            title="Print Table"
+            onClick={onClickPrint}
+            style={{ background: '#f3e5f5', border: '1px solid #e1bee7', borderRadius: 999, cursor: 'pointer', color: '#4a148c', fontSize: 18, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <FiPrinter />
+            <span style={{ fontSize: 13, fontWeight: 600 }}>Print</span>
+          </button>
+        </div>
+      </div>
+      <div className="table-container" id="disposed-challans-table-print-area">
         <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
           <thead>
             <tr>
@@ -43,16 +112,31 @@ function ChallanTableV2({ title, data, onView }) {
             </tr>
           </thead>
           <tbody>
-            {data.length === 0 ? (
+            {filteredData.length === 0 ? (
               <tr><td colSpan={10}>No challans found.</td></tr>
             ) : (
-              data.map((c, idx) => (
+              limitedData.map((c, idx) => (
                 <tr key={c.challan_no || idx}>
                   <td>{idx + 1}</td>
                   <td>{c.vehicle_number || '-'}</td>
                   <td>{c.challan_no || '-'}</td>
                   <td>{formatDate(c.challan_date_time || c.created_at || c.createdAt)}</td>
-                  <td>{c.challan_place || c.location || c.challan_location || c.address || c.owner_address || '-'}</td>
+                  <td>
+                    {(() => {
+                      const loc = c.challan_place || c.location || c.challan_location || c.address || c.owner_address;
+                      if (loc && typeof loc === 'string' && loc.trim()) {
+                        return (
+                          <span
+                            title={loc}
+                            style={{ cursor: 'default', color: '#4285F4', fontSize: 20, verticalAlign: 'middle' }}
+                          >
+                            <i className="ri-map-pin-2-fill" />
+                          </span>
+                        );
+                      }
+                      return 'Not Available';
+                    })()}
+                  </td>
                   <td>{c.fine_imposed ?? '-'}</td>
                   <td>{c.received_amount ?? '-'}</td>
                   <td>
@@ -78,14 +162,177 @@ function ChallanTableV2({ title, data, onView }) {
           </tbody>
         </table>
       </div>
+      {filteredData.length > 30 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, marginLeft: 24 }}>
+          <span style={{ color: '#1976d2', fontSize: 15 }}>
+            Show more records:
+          </span>
+          <SelectShowMore
+            onShowMoreRecords={onShowMore}
+            onResetRecords={onReset}
+            maxCount={filteredData.length}
+          />
+        </div>
+      )}
     </div>
   );
 }
+
+// Build printable HTML for disposed challans table (without Action column)
+const buildPrintableDisposedTableHtml = () => {
+  const printArea = document.getElementById("disposed-challans-table-print-area");
+  if (!printArea) return null;
+  const table = printArea.querySelector("table");
+  if (!table) return null;
+
+  const printTable = table.cloneNode(true);
+
+  try {
+    const theadRows = printTable.querySelectorAll("thead tr");
+    theadRows.forEach((tr) => {
+      const cells = tr.querySelectorAll("th");
+      if (cells.length >= 1) {
+        tr.removeChild(cells[cells.length - 1]);
+      }
+    });
+
+    const bodyRows = printTable.querySelectorAll("tbody tr");
+    bodyRows.forEach((tr) => {
+      const cells = tr.querySelectorAll("td");
+      if (cells.length >= 1) {
+        tr.removeChild(cells[cells.length - 1]);
+      }
+    });
+  } catch (e) {
+    // ignore
+  }
+
+  return printTable.outerHTML;
+};
+
+const handleDisposedPrint = () => {
+  const tableHtml = buildPrintableDisposedTableHtml();
+  if (!tableHtml) return;
+
+  const win = window.open("", "", "height=700,width=1200");
+  if (!win) return;
+  win.document.write("<html><head><title>Disposed Challans</title>");
+  win.document.write('<link rel="stylesheet" href="/src/LatestTable.css" />');
+  win.document.write(
+    "<style>body { margin: 16px; font-family: Segoe UI, Arial, sans-serif; } .sc-branding { display:flex; align-items:center; gap:12px; margin-bottom:16px; } .sc-branding-logo { height:24px !important; max-width:120px !important; object-fit:contain !important; } .sc-branding-text { display:flex; flex-direction:column; } .sc-branding-title { font-size:18px; font-weight:700; color:#1565c0; margin:0; } .sc-branding-sub { font-size:11px; color:#555; margin:4px 0 0; } body .latest-table th, body .latest-table td { padding: 6px 8px !important; font-size: 80% !important; } table { width:100%; border-collapse:collapse; }</style>"
+  );
+  win.document.write("</head><body>");
+  win.document.write('<div class="sc-branding">');
+  win.document.write(
+    `<img class="sc-branding-logo" src="${scLogo}" alt="Smart Challan Logo" />`
+  );
+  win.document.write('<div class="sc-branding-text">');
+  win.document.write('<p class="sc-branding-sub">Disposed Challans Summary</p>');
+  win.document.write("</div>");
+  win.document.write("</div>");
+  win.document.write(tableHtml);
+  win.document.write("</body></html>");
+  win.document.close();
+  win.print();
+};
+
+const handleDisposedDownloadPdf = () => {
+  const tableHtml = buildPrintableDisposedTableHtml();
+  if (!tableHtml) return;
+
+  const container = document.createElement("div");
+  container.style.position = "fixed";
+  container.style.left = "-9999px";
+  container.style.top = "0";
+  container.innerHTML = `
+    <div class="sc-branding">
+      <img class="sc-branding-logo" style="height:36px; max-width:180px; object-fit:contain;" src="${scLogo}" alt="Smart Challan Logo" />
+      <div class="sc-branding-text">
+        <p class="sc-branding-sub">Disposed Challans Summary</p>
+      </div>
+    </div>
+    ${tableHtml}
+  `;
+  document.body.appendChild(container);
+
+  setTimeout(() => {
+    html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      ignoreElements: (element) => {
+        return (
+          element instanceof SVGElement ||
+          element.tagName?.toLowerCase() === "svg"
+        );
+      },
+    })
+      .then((canvas) => {
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+        const pdf = new jsPDF("l", "pt", "a4");
+
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+
+        const marginX = 20;
+        const marginY = 20;
+        const availableWidth = pageWidth - marginX * 2;
+        const availableHeight = pageHeight - marginY * 2;
+
+        const imgWidth = availableWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        let heightLeft = imgHeight;
+        let position = marginY;
+
+        pdf.addImage(imgData, "JPEG", marginX, position, imgWidth, imgHeight);
+        heightLeft -= availableHeight;
+
+        while (heightLeft > 0) {
+          pdf.addPage();
+          position = marginY - (imgHeight - heightLeft);
+          pdf.addImage(imgData, "JPEG", marginX, position, imgWidth, imgHeight);
+          heightLeft -= availableHeight;
+        }
+
+        pdf.save("DisposedChallans.pdf");
+      })
+      .finally(() => {
+        document.body.removeChild(container);
+      });
+  }, 400);
+};
+
+const handleDisposedDownloadExcel = (rows) => {
+  if (!Array.isArray(rows) || rows.length === 0) return;
+  const exportData = rows.map((c) => ({
+    "Vehicle Number": c.vehicle_number,
+    "Challan No": c.challan_no,
+    "Challan Date/Time": c.challan_date_time || c.created_at || c.createdAt,
+    Location:
+      c.challan_place ||
+      c.location ||
+      c.challan_location ||
+      c.address ||
+      c.owner_address,
+    "Fine Imposed": c.fine_imposed,
+    "Fine Paid": c.received_amount,
+    Status: c.challan_status,
+  }));
+  const ws = XLSX.utils.json_to_sheet(exportData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "DisposedChallans");
+  XLSX.writeFile(wb, "DisposedChallans.xlsx");
+};
 
 export default function DisposedChallansPage() {
   const [challanData, setChallanData] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedChallan, setSelectedChallan] = useState(null);
+  const DEFAULT_LIMIT = 30;
+  const [visibleCount, setVisibleCount] = useState(DEFAULT_LIMIT);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState("excel");
   useEffect(() => {
     async function fetchChallans() {
       try {
@@ -127,7 +374,7 @@ export default function DisposedChallansPage() {
   }, []);
   return (
     <div className="my-challans-content">
-      <h2 className="page-title">Disposed Challans</h2>
+      {/* <h2 className="page-title">Disposed Challans</h2> */}
       <p className="page-subtitle">View and manage your Disposed challans</p>
       {!sidebarOpen && (
         <div className="main-quick-actions-wrapper">
@@ -150,6 +397,19 @@ export default function DisposedChallansPage() {
             setSelectedChallan(c);
             setSidebarOpen(true);
           }}
+          visibleCount={visibleCount}
+          onShowMore={val => {
+            if (val === 'all') setVisibleCount(challanData.length);
+            else setVisibleCount(Number(val));
+          }}
+          onReset={() => setVisibleCount(DEFAULT_LIMIT)}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          onClickDownload={() => {
+            setDownloadFormat('excel');
+            setShowDownloadModal(true);
+          }}
+          onClickPrint={handleDisposedPrint}
         />
       </div>
       {sidebarOpen && selectedChallan && (
@@ -193,6 +453,46 @@ export default function DisposedChallansPage() {
           </table>
         </RightSidebar>
       )}
+      <CustomModal
+        open={showDownloadModal}
+        title="Download Disposed Challans"
+        description="Choose the format in which you want to download the challans."
+        confirmText={downloadFormat === 'excel' ? 'Download Excel' : 'Download PDF'}
+        cancelText="Cancel"
+        onConfirm={() => {
+          const rows = Array.isArray(challanData) ? challanData : [];
+          if (downloadFormat === 'excel') {
+            handleDisposedDownloadExcel(rows);
+          } else {
+            handleDisposedDownloadPdf();
+          }
+          setShowDownloadModal(false);
+        }}
+        onCancel={() => setShowDownloadModal(false)}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start', marginTop: 4 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+            <input
+              type="radio"
+              name="download-format-disposed"
+              value="excel"
+              checked={downloadFormat === 'excel'}
+              onChange={() => setDownloadFormat('excel')}
+            />
+            <span>Excel (.xlsx)</span>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+            <input
+              type="radio"
+              name="download-format-disposed"
+              value="pdf"
+              checked={downloadFormat === 'pdf'}
+              onChange={() => setDownloadFormat('pdf')}
+            />
+            <span>PDF (using print layout)</span>
+          </label>
+        </div>
+      </CustomModal>
     </div>
   );
 }
