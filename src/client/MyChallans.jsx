@@ -268,20 +268,23 @@ function ChallanTableV2({ title, data, onView, onClickDownload, onClickPrint }) 
             {title && (title.toLowerCase().includes("pending") || title.toLowerCase().includes("disposed")) && (
               <div
                 style={{
-                  color: "#1b5e20",
                   fontSize: 14,
-                  background: "#e8f5e9",
-                  border: "1.5px solid #a5d6a7",
                   borderRadius: 6,
                   padding: "4px 12px",
                   fontWeight: 700,
-                  boxShadow: "0 1px 4px #a5d6a722",
+                  boxShadow: "0 1px 4px #00000022",
+                  color: title.toLowerCase().includes("pending") ? "#b71c1c" : "#1b5e20",
+                  background: title.toLowerCase().includes("pending") ? "#ffebee" : "#e8f5e9",
+                  border: title.toLowerCase().includes("pending") ? "1.5px solid #ef9a9a" : "1.5px solid #a5d6a7",
                 }}
               >
                 {title.toLowerCase().includes("pending")
 	              ? "Total Challan Value: "
 	              : "Total Fine Paid: "}
-                {(title.toLowerCase().includes("pending") ? totalFine : totalPaid).toLocaleString("en-IN")}
+                <span style={{ marginLeft: 4 }}>
+                  {"₹"}
+                  {(title.toLowerCase().includes("pending") ? totalFine : totalPaid).toLocaleString("en-IN")}
+                </span>
               </div>
             )}
           </div>

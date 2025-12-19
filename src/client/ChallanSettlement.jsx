@@ -161,7 +161,11 @@ export default function ChallanSettlement() {
             marginRight: 12,
           }}
         >
-          Total Challan Value: {totalSettlementValue.toLocaleString('en-IN')}
+          Total Challan Value:
+          <span style={{ marginLeft: 4 }}>
+            {"₹"}
+            {totalSettlementValue.toLocaleString('en-IN')}
+          </span>
         </div>
         <div
           ref={el => {

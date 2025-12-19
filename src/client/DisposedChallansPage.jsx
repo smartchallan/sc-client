@@ -62,7 +62,11 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
               Showing {Math.min(filteredData.length, effectiveVisible)} of {filteredData.length} records
             </div>
             <div style={{ color: '#1b5e20', fontSize: 14, background: '#e8f5e9', border: '1.5px solid #a5d6a7', borderRadius: 6, padding: '4px 12px', fontWeight: 700, boxShadow: '0 1px 4px #a5d6a722' }}>
-              Total Fine Paid: {totalPaid.toLocaleString('en-IN')}
+              Total Challan Paid:
+              <span style={{ marginLeft: 4 }}>
+                {"₹"}
+                {totalPaid.toLocaleString('en-IN')}
+              </span>
             </div>
           </div>
         )}
