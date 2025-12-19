@@ -29,7 +29,7 @@ export default function LatestRTOTable({ vehicleData = [], loading, error, setSe
             fontFamily: 'Segoe UI, Arial, sans-serif',
             lineHeight: 1.2,
             fontWeight: 700,
-          }}>RTO Data</h2>
+          }}>RTO Details</h2>
         </div>
         <div
           style={{

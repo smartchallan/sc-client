@@ -269,9 +269,9 @@ function DealerDashboard() {
 				{sidebarOpen && window.innerWidth <= 900 && (
 					<div className="sidebar-overlay show" onClick={() => setSidebarOpen(false)} />
 				)}
-					{(sidebarOpen || window.innerWidth <= 900) && (
-						<DealerSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
-					)}
+				{sidebarOpen && (
+					<DealerSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
+				)}
 				<main className="main-content">
 					<div className="header" style={{marginBottom: 24}}>
 						<div className="header-left" style={{display:'flex',alignItems:'center',gap:16}}>

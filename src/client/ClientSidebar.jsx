@@ -35,22 +35,22 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
   // Always show client menu for client sidebar
   const menu = [
     { icon: "ri-home-4-line", label: "Dashboard" },
-    { icon: "ri-car-line", label: "Register Vehicle" },
     { icon: "ri-truck-line", label: "My Fleet" },
-    { icon: "ri-car-line", label: "Vehicle RTO Data" },
     {
       icon: "ri-file-list-3-line",
       label: "Challan Management",
       group: true,
       children: [
-        { icon: "ri-file-list-3-line", label: "Vehicle Challans" },
+        { icon: "ri-file-list-3-line", label: "Pending Challans" },
         { icon: "ri-check-double-line", label: "Disposed Challans" },
         { icon: "ri-shopping-cart-2-line", label: "Challan Settlement" },
       ],
     },
+    { icon: "ri-car-line", label: "RTO Details" },
     // { icon: "ri-shopping-cart-2-line", label: "Challan Settlement" },
-    { icon: "ri-id-card-line", label: "Driver Verification" },
-    { icon: "ri-bank-card-line", label: "Vehicle Fastag" },
+    { icon: "ri-id-card-line", label: "DL Details" },
+    { icon: "ri-bank-card-line", label: "Fastag Details" },
+    { icon: "ri-car-line", label: "Register Vehicle" },
     { icon: "ri-money-rupee-circle-line", label: "My Billing" },
     { icon: "ri-user-3-line", label: "Profile" },
     { icon: "ri-logout-box-r-line", label: "Logout", logout: true },
@@ -97,6 +97,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
             );
           } else if (item.group && item.children) {
             const isChildActive = item.children.some((child) => activeMenu === child.label);
+            const isOpen = challanMenuOpen || isChildActive;
             return (
               <div
                 key={item.label}
@@ -110,11 +111,11 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
                   <i className={item.icon} style={{ color: '#006400' }}></i>
                   <span style={{ flex: 1 }}>{item.label}</span>
                   <i
-                    className={challanMenuOpen ? "ri-arrow-up-s-line" : "ri-arrow-down-s-line"}
+                    className={isOpen ? "ri-arrow-up-s-line" : "ri-arrow-down-s-line"}
                     style={{ marginLeft: 8, fontSize: 18 }}
                   />
                 </div>
-                {challanMenuOpen && (
+                {isOpen && (
                   <div className="nav-submenu">
                     {item.children.map((child) => (
                       <div

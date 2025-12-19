@@ -9,38 +9,35 @@
   max-height: 460px;
   overflow-y: auto;
   width: 100%;
+  position: relative;
 }
 
-.vehicle-summary-table-container table {
+/* Ensure the inner table doesn't clip sticky headers */
+.vehicle-summary-table-container .latest-table {
   table-layout: fixed;
   width: 100%;
+  overflow: visible !important;
+  margin-bottom: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
 }
 
-.vehicle-summary-table-container table thead tr:first-child th {
+/* Make the entire header (both rows) sticky as one block */
+.vehicle-summary-table-container table thead {
   position: sticky;
   top: 0;
-  background: #fff;
   z-index: 3;
-  box-shadow: 0 2px 4px rgba(30,136,229,0.07);
-  height: 40px;
 }
 
-.vehicle-summary-table-container table thead tr:nth-child(2) th {
-  position: sticky;
-  top: 40px;
+.vehicle-summary-table-container table thead th {
   background: #fff;
-  z-index: 2;
-  box-shadow: 0 2px 4px rgba(30,136,229,0.07);
 }
 
 .vehicle-summary-table-container table th,
 .vehicle-summary-table-container table td {
   min-width: 120px;
 }
-.vehicle-summary-table-container table {
-  table-layout: fixed;
-  width: 100%;
-}
+/* Avoid duplicate declarations; table layout handled above */
 /* Custom container for Vehicle Summary table height */
 /* .vehicle-summary-table-container {
 	height: 500px;

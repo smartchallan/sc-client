@@ -595,7 +595,7 @@ function AdminDashboard() {
       {sidebarOpen && window.innerWidth <= 900 && (
         <div className="sidebar-overlay show" onClick={() => setSidebarOpen(false)} />
       )}
-      {(sidebarOpen || window.innerWidth <= 900) && (
+      {sidebarOpen && (
         <AdminSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
       )}
       <main className="main-content admin-home-content" style={{flex: 1, minHeight: '100vh', transition: 'all 0.35s cubic-bezier(.4,1.3,.5,1)', WebkitTransition: 'all 0.35s cubic-bezier(.4,1.3,.5,1)'}}>

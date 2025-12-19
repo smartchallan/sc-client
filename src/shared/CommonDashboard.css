@@ -1152,12 +1152,13 @@ main.main-content,
 @media (max-width: 600px) {
   .sidebar {
     flex-direction: column;
-    width: 100vw;
+    width: 80vw;
+    max-width: 320px;
     padding: 8px 0;
-    align-items: center;
-    overflow-x: auto;
+    align-items: stretch;
+    overflow-x: hidden;
   }
-  
+
   .logo-container {
     flex-direction: column;
     gap: 8px;

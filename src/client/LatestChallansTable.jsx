@@ -27,7 +27,7 @@ const LatestChallansTable = ({ latestChallanRows, loadingVehicleChallan, vehicle
             fontFamily: 'Segoe UI, Arial, sans-serif',
             lineHeight: 1.2,
             fontWeight: 700,
-          }}>Challan Data</h2>
+          }}>Latest Challans</h2>
         </div>
         <div
           style={{

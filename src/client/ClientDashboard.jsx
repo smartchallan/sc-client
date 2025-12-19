@@ -168,7 +168,7 @@ function SidebarVehicleReport({ vehicleChallanData }) {
     if (section === 'rto') {
       // Try to get vehicle number from data
       const vehicleNumber = data.vehicle_number || data.rc_regn_no || data.regn_no || data.registration_no || '';
-      printContent = `<h2>RTO Vehicle Details${vehicleNumber ? ` - ${vehicleNumber}` : ''}</h2><table style='width:100%;font-size:14px;'>` +
+      printContent = `<h2>RTO Details${vehicleNumber ? ` - ${vehicleNumber}` : ''}</h2><table style='width:100%;font-size:14px;'>` +
         Object.entries(data).map(([k,v]) => `<tr><td style='font-weight:600;width:40%'>${prettifyKey(k)}</td><td>${typeof v === 'object' ? JSON.stringify(v) : v}</td></tr>`).join('') + '</table>';
     } else if (section === 'pending' || section === 'disposed') {
       // Each challan on a separate page, visually distinct
@@ -199,7 +199,7 @@ function SidebarVehicleReport({ vehicleChallanData }) {
         <div style="width:4px;height:28px;background:linear-gradient(135deg,#2196f3 0%,#21cbf3 100%);border-radius:3px;"></div>
         <div style="display:flex;flex-direction:column;">
           <div style="font-size:18px;font-weight:700;color:#1565c0;">Smart Challan</div>
-          <div style="font-size:11px;color:#555;">${section === 'rto' ? 'RTO Vehicle Details' : (section === 'pending' ? 'Pending Challans' : 'Disposed Challans')} Summary</div>
+          <div style="font-size:11px;color:#555;">${section === 'rto' ? 'RTO Details' : (section === 'pending' ? 'Pending Challans' : 'Disposed Challans')} Summary</div>
         </div>
       </div>
     `;
@@ -278,7 +278,7 @@ function SidebarVehicleReport({ vehicleChallanData }) {
       doc.setFontSize(9);
       doc.setTextColor(100, 100, 100);
       const subtitle = section === 'rto'
-        ? 'RTO Vehicle Details'
+        ? 'RTO Details'
         : section === 'pending'
           ? 'Pending Challans'
           : 'Disposed Challans';
@@ -396,7 +396,7 @@ function SidebarVehicleReport({ vehicleChallanData }) {
       >
         <span style={{marginRight:10}}><RiCarLine size={22} color="#1976d2" /></span>
         <span style={{fontWeight:700, fontSize:16, color:'#1976d2', flex:1, cursor:'pointer', display:'flex', alignItems:'center'}} onClick={()=>setRtoOpen(o=>!o)}>
-          RTO Vehicle Details
+          RTO Details
           <span style={{marginLeft:8}}>{rtoOpen ? <RiArrowDownSLine size={22} /> : <RiArrowRightSLine size={22} />}</span>
         </span>
         <span style={{marginLeft:8, display:'flex', gap:8}}>
@@ -418,7 +418,7 @@ function SidebarVehicleReport({ vehicleChallanData }) {
         }}>
           <div style={{display:'flex',alignItems:'center',marginBottom:18}}>
             <RiCarLine size={28} color="#1976d2" style={{marginRight:10}} />
-            <span style={{fontWeight:700,fontSize:20,color:'#1976d2',letterSpacing:0.5}}>RTO Vehicle Details</span>
+            <span style={{fontWeight:700,fontSize:20,color:'#1976d2',letterSpacing:0.5}}>RTO Details</span>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px 18px'}}>
             {Object.entries(rtoDetails).map(([k,v]) => (
@@ -603,6 +603,7 @@ import MyFleetTable from "./MyFleetTable";
 import RegisterVehicle from "../RegisterVehicle";
 import * as XLSX from "xlsx";
 import ClientSidebar from "./ClientSidebar";
+import ClientProfile from "./ClientProfile";
 // ...existing code...
 // Move these inside the ClientDashboard function component
 // Move these inside the ClientDashboard function component
@@ -806,7 +807,7 @@ function ClientDashboard() {
   }, [user, fleetLimit, fleetOffset, fleetAll]);
   // Handler for 'View All' in Latest Challans Table
   React.useEffect(() => {
-    window.handleViewAllChallans = () => setActiveMenu('Vehicle Challans');
+    window.handleViewAllChallans = () => setActiveMenu('Pending Challans');
     // Also provide a handler for Vehicle RTO Data view all from VehicleDataTable
     window.handleViewAllRtoData = () => setActiveMenu('Vehicle RTO Data');
     // Handler for Vehicle Summary Table (My Fleet)
@@ -863,7 +864,8 @@ function ClientDashboard() {
   const [activeMenu, setActiveMenu] = useState("Dashboard");
   const [selectedChallan, setSelectedChallan] = useState(null);
   const [selectedRtoData, setSelectedRtoData] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Sidebar: closed on very small screens (< 600px), open otherwise
+  const [sidebarOpen, setSidebarOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth > 600 : true));
   // Initial filter state for Vehicle RTO Data
   const [vehicleRtoInitialFilter, setVehicleRtoInitialFilter] = useState(null);
 
@@ -1673,7 +1675,25 @@ function ClientDashboard() {
         try {
           setExporting(e => ({ ...e, challan: true }));
           const numbered = rows.map((r, idx) => ({ "S. No.": idx + 1, vehicle_number: r.vehicle_number || '', ...r }));
-          const preferredOrder = ["S. No.", "vehicle_number", "challan_no", "challan_date_time", "created_at", "createdAt", "challan_status", "fine_imposed", "received_amount", "receipt_no", "owner_name", "driver_name", "department", "rto_distric_name", "state_code", "statusType"];
+          const preferredOrder = [
+            "S. No.",
+            "vehicle_number",
+            "challan_no",
+            "challan_date_time",
+            "created_at",
+            "createdAt",
+            "challan_status",
+            "fine_imposed",
+            "received_amount",
+            "receipt_no",
+            "owner_name",
+            "driver_name",
+            "department",
+            "rto_distric_name",
+            "state_code",
+            "offence_details_pretty",
+            "statusType"
+          ];
           const labelMap = {
             "S. No.": "S. No.",
             vehicle_number: "Vehicle Number",
@@ -1690,9 +1710,17 @@ function ClientDashboard() {
             department: "Department",
             rto_distric_name: "RTO District",
             state_code: "State Code",
+            offence_details_pretty: "Offence Details",
             statusType: "Status Type"
           };
-          const csv = arrayToCsvWithOrder(numbered, preferredOrder, labelMap);
+          // Derive a readable offence details column so full text is included in export
+          const enriched = numbered.map(r => ({
+            ...r,
+            offence_details_pretty: Array.isArray(r.offence_details)
+              ? r.offence_details.map(o => o && o.name ? o.name : '').filter(Boolean).join('; ')
+              : ''
+          }));
+          const csv = arrayToCsvWithOrder(enriched, preferredOrder, labelMap);
           const name = `challan-data-report-${new Date().toISOString().slice(0,10)}.csv`;
           downloadCsv(csv, name);
         } finally {
@@ -1714,7 +1742,7 @@ function ClientDashboard() {
       {sidebarOpen && window.innerWidth <= 900 && (
         <div className="sidebar-overlay show" onClick={() => setSidebarOpen(false)} />
       )}
-      {(sidebarOpen || window.innerWidth <= 900) && (
+      {sidebarOpen && (
         <ClientSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
       )}
       <main className="main-content admin-home-content" style={{flex: 1, minHeight: '100vh', transition: 'all 0.35s cubic-bezier(.4,1.3,.5,1)', WebkitTransition: 'all 0.35s cubic-bezier(.4,1.3,.5,1)'}}>
@@ -1734,7 +1762,7 @@ function ClientDashboard() {
               {activeMenu === 'Dashboard' ? 'Dashboard'
                 : activeMenu === 'Profile' ? 'Profile'
                 : activeMenu === 'Registered Vehicles' ? 'Registered Vehicles'
-                : activeMenu === 'Challans' ? 'Vehicle Challans'
+                : activeMenu === 'Challans' ? 'Pending Challans'
                 : activeMenu === 'Billing' ? 'My Billing'
                 : activeMenu === 'Settings' ? 'Settings'
                 : activeMenu}
@@ -1910,9 +1938,9 @@ function ClientDashboard() {
                   </div>
                   <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8 }}>
                     <div key="pending" className={`status-badge`} style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                      title="View pending vehicle challans"
+                      title="View pending challans"
                       onClick={() => {
-                        setActiveMenu('Vehicle Challans');
+                        setActiveMenu('Pending Challans');
                         // Optionally, set a global filter flag if MyChallans supports it later
                       }}>
                       <div style={{ color: '#e74c3c', fontWeight: 700 }}>{loadingVehicleChallan ? '...' : dashboardPendingCount}</div>
@@ -2036,8 +2064,8 @@ function ClientDashboard() {
                       ? '...'
                       : <>
                           <span style={{color: 'red', fontWeight: 600, fontSize: '0.80em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                            title="Show vehicles with pending challans"
-                            onClick={() => { setActiveMenu('Vehicle Challans'); }}>
+                            title="Show pending challans"
+                            onClick={() => { setActiveMenu('Pending Challans'); }}>
                             Pending: ₹{formatBriefAmount(pendingFineTotal)}
                           </span>
                           <span style={{margin: '0 6px', color: '#999', fontSize: '0.55em'}}>|</span>
@@ -2066,26 +2094,6 @@ function ClientDashboard() {
                     </div>
                   ) : null}
                 </div>
-              </div>
-            </div>
-            <div style={{display:'flex',gap:24,marginBottom:24}}>
-              <div style={{width:'49%'}}>
-                <LatestChallansTable
-                  latestChallanRows={latestChallanRows.slice(0, 5)}
-                  loadingVehicleChallan={loadingVehicleChallan}
-                  vehicleChallanError={vehicleChallanError}
-                  totalCount={totalChallans}
-                  limit={5}
-                />
-              </div>
-              <div style={{width:'49%'}}>
-                <LatestRTOTable
-                  vehicleData={vehicleRtoData.slice(0, 5)}
-                  loading={loadingVehicleRto}
-                  error={vehicleRtoData && vehicleRtoData.error}
-                  setSelectedRtoData={setSelectedRtoData}
-                  totalCount={vehicleRtoData.length}
-                />
               </div>
             </div>
             <div style={{marginBottom:24}}>
@@ -2117,27 +2125,46 @@ function ClientDashboard() {
                   }, 0);
                 }}
               />
-
-      <RightSidebar
-        open={sidebarOpen && !!selectedVehicle}
-        onClose={() => {
-          setSelectedVehicle(null);
-          setSelectedVehicleReport(null);
-        }}
-        title={selectedVehicle ? `Vehicle #${selectedVehicle.vehicle_number} Report` : "Challan Data"}
-      >
-        {sidebarOpen && selectedVehicle && selectedVehicleReport === null ? (
-          <div style={{padding:24, textAlign:'center'}}>
-            <span className="loader-spinner" style={{display:'inline-block',marginBottom:8}}></span>
-            <div>Loading vehicle report...</div>
-          </div>
-        ) : (
-          <SidebarVehicleReport vehicleChallanData={selectedVehicleReport} />
-        )}
-      </RightSidebar>
-
-
             </div>
+
+            <div style={{display:'flex',gap:24,marginBottom:24}}>
+              <div style={{width:'49%'}}>
+                <LatestChallansTable
+                  latestChallanRows={latestChallanRows.slice(0, 5)}
+                  loadingVehicleChallan={loadingVehicleChallan}
+                  vehicleChallanError={vehicleChallanError}
+                  totalCount={totalChallans}
+                  limit={5}
+                />
+              </div>
+              <div style={{width:'49%'}}>
+                <LatestRTOTable
+                  vehicleData={vehicleRtoData.slice(0, 5)}
+                  loading={loadingVehicleRto}
+                  error={vehicleRtoData && vehicleRtoData.error}
+                  setSelectedRtoData={setSelectedRtoData}
+                  totalCount={vehicleRtoData.length}
+                />
+              </div>
+            </div>
+
+            <RightSidebar
+              open={sidebarOpen && !!selectedVehicle}
+              onClose={() => {
+                setSelectedVehicle(null);
+                setSelectedVehicleReport(null);
+              }}
+              title={selectedVehicle ? `Vehicle #${selectedVehicle.vehicle_number} Report` : "Challan Data"}
+            >
+              {sidebarOpen && selectedVehicle && selectedVehicleReport === null ? (
+                <div style={{padding:24, textAlign:'center'}}>
+                  <span className="loader-spinner" style={{display:'inline-block',marginBottom:8}}></span>
+                  <div>Loading vehicle report...</div>
+                </div>
+              ) : (
+                <SidebarVehicleReport vehicleChallanData={selectedVehicleReport} />
+              )}
+            </RightSidebar>
             {/* Registered vehicles table removed from dashboard as requested */}
             {/* QuickActions moved to a shared component rendered below so it's available on every page */}
             {/* Removed dashboard 'due' data section as requested */}
@@ -2218,7 +2245,7 @@ function ClientDashboard() {
             </div>
           </div>
         )}
-        {activeMenu === "Vehicle RTO Data" && (
+        {activeMenu === "RTO Details" && (
           <VehicleRTOdataTable
             clientId={user.user && (user.user.client_id || user.user.id || user.user._id)}
             selectedRtoData={selectedRtoData}
@@ -2228,7 +2255,7 @@ function ClientDashboard() {
             initialTab={vehicleRtoInitialFilter?.tab}
           />
         )}
-  {activeMenu === "Vehicle Challans" && <MyChallans />}
+  {activeMenu === "Pending Challans" && <MyChallans />}
   {activeMenu === "Disposed Challans" && <DisposedChallansPage />}
         {activeMenu === "Challan Settlement" && (
           <React.Suspense fallback={<div>Loading...</div>}>
@@ -2238,18 +2265,18 @@ function ClientDashboard() {
         {activeMenu === "Challans" && <UserChallan />}
         {activeMenu === "My Billing" && <MyBilling clientId={user.user && (user.user.id || user.user._id)} />}
         {activeMenu === "Settings" && <UserSettings users={[]} />}
-        {activeMenu === "Driver Verification" && (
+        {activeMenu === "DL Details" && (
           <Suspense fallback={<div>Loading...</div>}>
             <DriverVerification />
           </Suspense>
         )}
-        {activeMenu === "Vehicle Fastag" && (
+        {activeMenu === "Fastag Details" && (
           <Suspense fallback={<div>Loading...</div>}>
             <LazyVehicleFastag />
           </Suspense>
         )}
-      {/* Shared quick actions bar available on every page except Vehicle Challans */}
-      {!(selectedChallan || selectedRtoData) && activeMenu !== "Vehicle Challans" && (
+      {/* Shared quick actions bar available on every page except Pending Challans */}
+      {!(selectedChallan || selectedRtoData) && activeMenu !== "Pending Challans" && (
         <div className="main-quick-actions-wrapper" style={{ padding: '0 30px 30px 30px' }}>
           <QuickActions
             title="Quick Actions"

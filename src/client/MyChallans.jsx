@@ -181,7 +181,7 @@ function ChallanTableV2({ title, data, onView, onClickDownload, onClickPrint }) 
               <input
                 type="text"
                 className="number-plate-input"
-                placeholder="Search by Vehicle / Challan No"
+                placeholder="Vechicle No. / Challan no."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
                 maxLength={20}
@@ -475,6 +475,16 @@ const buildPrintableChallanTableHtml = () => {
         tr.removeChild(cells[cells.length - 1]);
       }
     });
+
+    // Ensure offence details are fully visible in print/PDF (no ellipsis)
+    const offenceCells = printTable.querySelectorAll('.cell-ellipsis');
+    offenceCells.forEach((el) => {
+      el.classList.remove('cell-ellipsis');
+      el.style.whiteSpace = 'normal';
+      el.style.overflow = 'visible';
+      el.style.textOverflow = 'clip';
+      el.style.maxWidth = 'none';
+    });
   } catch (e) {
     // ignore and fall back to original clone
   }
@@ -594,6 +604,9 @@ const handleChallanDownloadExcel = (rows) => {
     "Fine Imposed": c.fine_imposed,
     "Fine Paid": c.received_amount,
     Status: c.challan_status,
+    "Offence Details": Array.isArray(c.offence_details)
+      ? c.offence_details.map((o) => o && o.name ? o.name : '').filter(Boolean).join('; ')
+      : '',
   }));
   const ws = XLSX.utils.json_to_sheet(exportData);
   const wb = XLSX.utils.book_new();
@@ -1009,7 +1022,7 @@ export default function MyChallans() {
               checked={downloadFormat === 'pdf'}
               onChange={() => setDownloadFormat('pdf')}
             />
-            <span>PDF (using print layout)</span>
+            <span>PDF</span>
           </label>
         </div>
       </CustomModal>

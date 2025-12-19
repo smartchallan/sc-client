@@ -31,7 +31,6 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView }
       minHeight: 340,
       transition: 'box-shadow 0.2s',
       position: 'relative',
-      overflow: 'hidden',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, padding: '0 24px 0 0', minHeight: 54 }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>

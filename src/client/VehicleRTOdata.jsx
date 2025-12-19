@@ -801,7 +801,7 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
               checked={downloadFormat === 'pdf'}
               onChange={() => setDownloadFormat('pdf')}
             />
-            <span>PDF (using print layout)</span>
+            <span>PDF</span>
           </label>
         </div>
       </CustomModal>
