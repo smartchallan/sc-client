@@ -35,7 +35,17 @@ function getChallanTimestamp(raw) {
   return isNaN(ts) ? 0 : ts;
 }
 
-function ChallanTableV2({ title, data, onView, onClickDownload, onClickPrint }) {
+export function ChallanTableV2({
+  title,
+  data,
+  onView,
+  onClickDownload,
+  onClickPrint,
+  settlementMode = false,
+  cart = [],
+  addToCart,
+  removeFromCart,
+}) {
   const DEFAULT_LIMIT = 30;
   const [visibleCount, setVisibleCount] = React.useState(DEFAULT_LIMIT);
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -44,6 +54,7 @@ function ChallanTableV2({ title, data, onView, onClickDownload, onClickPrint }) 
   const [showChallanTypeDropdown, setShowChallanTypeDropdown] = React.useState(false);
   const challanTypeDropdownRef = React.useRef(null);
   const [sortConfig, setSortConfig] = React.useState({ key: null, direction: "desc" });
+  const [mapModal, setMapModal] = React.useState({ open: false, location: null });
 
   const filteredData = React.useMemo(() => {
     if (!Array.isArray(data)) return [];
@@ -265,26 +276,77 @@ function ChallanTableV2({ title, data, onView, onClickDownload, onClickPrint }) 
             >
               Showing {Math.min(filteredData.length, limitedData.length)} of {filteredData.length} records
             </div>
-            {title && (title.toLowerCase().includes("pending") || title.toLowerCase().includes("disposed")) && (
+            {title && (title.toLowerCase().includes("pending") || title.toLowerCase().includes("disposed") || title.toLowerCase().includes("challan settlement")) && (
               <div
                 style={{
-                  fontSize: 14,
-                  borderRadius: 6,
-                  padding: "4px 12px",
-                  fontWeight: 700,
-                  boxShadow: "0 1px 4px #00000022",
-                  color: title.toLowerCase().includes("pending") ? "#b71c1c" : "#1b5e20",
-                  background: title.toLowerCase().includes("pending") ? "#ffebee" : "#e8f5e9",
-                  border: title.toLowerCase().includes("pending") ? "1.5px solid #ef9a9a" : "1.5px solid #a5d6a7",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
                 }}
               >
-                {title.toLowerCase().includes("pending")
-	              ? "Total Challan Value: "
-	              : "Total Fine Paid: "}
-                <span style={{ marginLeft: 4 }}>
-                  {"₹"}
-                  {(title.toLowerCase().includes("pending") ? totalFine : totalPaid).toLocaleString("en-IN")}
-                </span>
+                <div
+                  style={{
+                    fontSize: 14,
+                    borderRadius: 6,
+                    padding: "4px 12px",
+                    fontWeight: 700,
+                    boxShadow: "0 1px 4px #00000022",
+                    color: title.toLowerCase().includes("disposed") ? "#1b5e20" : "#b71c1c",
+                    background: title.toLowerCase().includes("disposed") ? "#e8f5e9" : "#ffebee",
+                    border: title.toLowerCase().includes("disposed") ? "1.5px solid #a5d6a7" : "1.5px solid #ef9a9a",
+                  }}
+                >
+                  {title.toLowerCase().includes("disposed")
+                    ? "Total Fine Paid: "
+                    : "Total Challan Value: "}
+                  <span style={{ marginLeft: 4 }}>
+                    {"₹"}
+                    {(title.toLowerCase().includes("disposed") ? totalPaid : totalFine).toLocaleString("en-IN")}
+                  </span>
+                </div>
+                {settlementMode && Array.isArray(cart) && (
+                  <button
+                    type="button"
+                    className="action-btn flat-btn"
+                    disabled={cart.length === 0}
+                    title={cart.length === 0 ? "No challans in cart" : "View challan cart"}
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        const ev = new CustomEvent("challan-cart-toggle");
+                        window.dispatchEvent(ev);
+                      }
+                    }}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "4px 10px",
+                      fontSize: 13,
+                      opacity: cart.length === 0 ? 0.55 : 1,
+                    }}
+                  >
+                    <i className="ri-shopping-cart-2-line" style={{ fontSize: 18 }} />
+                    {cart.length > 0 && (
+                      <span
+                        style={{
+                          minWidth: 18,
+                          height: 18,
+                          borderRadius: 999,
+                          background: "#e53935",
+                          color: "#fff",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 11,
+                          fontWeight: 600,
+                          padding: "0 4px",
+                        }}
+                      >
+                        {cart.length}
+                      </span>
+                    )}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -605,6 +667,7 @@ function ChallanTableV2({ title, data, onView, onClickDownload, onClickPrint }) 
         >
           <thead>
             <tr>
+              {settlementMode && <th></th>}
               <th>#</th>
               <th>Vehicle No.</th>
               <th>Challan No</th>
@@ -652,7 +715,8 @@ function ChallanTableV2({ title, data, onView, onClickDownload, onClickPrint }) 
               <tr>
                 <td
                   colSpan={
-                    title.toLowerCase().includes("pending") ? 11 : 10
+                    (title.toLowerCase().includes("pending") ? 11 : 10) +
+                    (settlementMode ? 1 : 0)
                   }
                 >
                   No challans found.
@@ -661,6 +725,25 @@ function ChallanTableV2({ title, data, onView, onClickDownload, onClickPrint }) 
             ) : (
               limitedData.map((c, idx) => (
                 <tr key={c.challan_no || idx}>
+                  {settlementMode && (
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={
+                          Array.isArray(cart) &&
+                          cart.some((s) => s.challan_no === c.challan_no)
+                        }
+                        onChange={() => {
+                          if (!addToCart || !removeFromCart) return;
+                          const inCart =
+                            Array.isArray(cart) &&
+                            cart.some((s) => s.challan_no === c.challan_no);
+                          if (inCart) removeFromCart(c);
+                          else addToCart(c);
+                        }}
+                      />
+                    </td>
+                  )}
                   <td>{idx + 1}</td>
                   <td>{c.vehicle_number || "-"}</td>
                   <td>{c.challan_no || "-"}</td>
@@ -687,8 +770,11 @@ function ChallanTableV2({ title, data, onView, onClickDownload, onClickPrint }) 
                         return (
                           <span
                             title={loc}
+                            onClick={() =>
+                              setMapModal({ open: true, location: loc })
+                            }
                             style={{
-                              cursor: "default",
+                              cursor: "pointer",
                               color: "#4285F4",
                               fontSize: 20,
                               verticalAlign: "middle",
@@ -788,6 +874,28 @@ function ChallanTableV2({ title, data, onView, onClickDownload, onClickPrint }) 
           />
         </div>
       )}
+
+      <CustomModal
+        open={mapModal.open}
+        title="Challan Location Map"
+        onConfirm={() => setMapModal({ open: false, location: null })}
+        onCancel={() => setMapModal({ open: false, location: null })}
+        confirmText="OK"
+        cancelText={null}
+      >
+        {mapModal.location && (
+          <div className="map-frame-wrapper">
+            <iframe
+              title="Google Maps"
+              style={{ border: 0, borderRadius: 12, width: '100%' }}
+              src={`https://www.google.com/maps?q=${encodeURIComponent(
+                mapModal.location
+              )}&output=embed`}
+              allowFullScreen
+            />
+          </div>
+        )}
+      </CustomModal>
     </div>
   );
 }
@@ -849,7 +957,7 @@ const buildPrintableChallanTableHtml = () => {
 };
 
 // Print challan table in a new window using branding header (same style as My Fleet)
-const handleChallanPrint = () => {
+export const handleChallanPrint = () => {
   const tableHtml = buildPrintableChallanTableHtml();
   if (!tableHtml) return;
 
@@ -943,7 +1051,7 @@ const handleChallanDownloadPdf = () => {
 };
 
 // Download challans as Excel (similar mapping style to My Fleet)
-const handleChallanDownloadExcel = (rows) => {
+export const handleChallanDownloadExcel = (rows) => {
   if (!Array.isArray(rows) || rows.length === 0) return;
   const exportData = rows.map((c) => ({
     "Vehicle Number": c.vehicle_number,
@@ -986,7 +1094,8 @@ export function ChallanTable({
   sidebarOpen,
   setSidebarOpen,
   setSelectedChallan,
-  onToggleSort
+  onToggleSort,
+  onVisibleCountChange,
 }) {
   // Utility to format Reg Court values
   function formatRegCourtValue(v) {
@@ -1038,19 +1147,28 @@ export function ChallanTable({
     return sortAsc ? aTime - bTime : bTime - aTime;
   });
   const limited = sorted.slice(0, visibleCount);
+  // Report visible vs total counts to parent (e.g., ChallanSettlement header)
+  useEffect(() => {
+    if (typeof onVisibleCountChange === 'function') {
+      const visible = Math.min(filtered.length, visibleCount);
+      onVisibleCountChange(visible, filtered.length);
+    }
+  }, [filtered.length, visibleCount, onVisibleCountChange]);
   const [showFull, setShowFull] = useState({});
   // sidebarOpen and setSidebarOpen are now passed from parent
   return (
     <div>
       <div className="modern-table-container">
-        <div className="modern-table-header">
-          <h2>{title} <span className="modern-table-count">({filtered.length})</span></h2>
-          {filtered.length > 0 && (
-            <div className="modern-table-caption">
-              Showing {Math.min(filtered.length, visibleCount)} of {filtered.length} challans
-            </div>
-          )}
-        </div>
+        {title && (
+          <div className="modern-table-header">
+            <h2>{title} <span className="modern-table-count">({filtered.length})</span></h2>
+            {filtered.length > 0 && !settlementMode && (
+              <div className="modern-table-caption">
+                Showing {Math.min(filtered.length, visibleCount)} of {filtered.length} challans
+              </div>
+            )}
+          </div>
+        )}
         {filtered.length === 0 ? (
           <div className="modern-table-empty">No challans found.</div>
         ) : (

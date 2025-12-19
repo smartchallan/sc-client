@@ -834,7 +834,7 @@ export default function MyFleetTable({
               value="pdf"
               checked={downloadFormat === 'pdf'}
               onChange={() => setDownloadFormat('pdf')} />
-            <span>PDF (using print layout)</span>
+            <span>PDF</span>
           </label>
         </div>
       </CustomModal>

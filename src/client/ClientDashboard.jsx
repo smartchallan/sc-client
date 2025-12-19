@@ -1,4 +1,5 @@
 import DisposedChallansPage from "./DisposedChallansPage";
+import PayChallans from "./PayChallans";
 import { FaFilePdf } from "react-icons/fa";
 // import { FaFilePdf } from "react-icons/fa"; 
 import { FaFileExcel } from "react-icons/fa";
@@ -609,7 +610,7 @@ import ClientProfile from "./ClientProfile";
 // Move these inside the ClientDashboard function component
 import LatestRTOTable from "./LatestRTOTable";
 import MyChallans from "./MyChallans";
-const ChallanSettlement = React.lazy(() => import("./ChallanSettlement"));
+// const ChallanSettlement = React.lazy(() => import("./ChallanSettlement"));
 import MyBilling from "./MyBilling";
 import UserSettings from "./UserSettings";
 import CustomModal from "./CustomModal";
@@ -2269,13 +2270,9 @@ function ClientDashboard() {
             initialTab={vehicleRtoInitialFilter?.tab}
           />
         )}
-  {activeMenu === "Pending Challans" && <MyChallans />}
-  {activeMenu === "Disposed Challans" && <DisposedChallansPage />}
-        {activeMenu === "Challan Settlement" && (
-          <React.Suspense fallback={<div>Loading...</div>}>
-            <ChallanSettlement />
-          </React.Suspense>
-        )}
+    {activeMenu === "Pending Challans" && <MyChallans />}
+    {activeMenu === "Disposed Challans" && <DisposedChallansPage />}
+      {activeMenu === "Pay Challans" && <PayChallans />}
         {activeMenu === "Challans" && <UserChallan />}
         {activeMenu === "My Billing" && <MyBilling clientId={user.user && (user.user.id || user.user._id)} />}
         {activeMenu === "Settings" && <UserSettings users={[]} />}
@@ -2314,7 +2311,7 @@ function ClientDashboard() {
                 } catch (e) {}
               }, 300);
             }}
-            onPay={() => setActiveMenu('Challan Settlement')}
+            onPay={() => setActiveMenu('Pay Challans')}
             onReports={() => setReportsModal({ open: true })}
             onContact={() => setSupportModal(true)}
           />

@@ -43,11 +43,10 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
       children: [
         { icon: "ri-file-list-3-line", label: "Pending Challans" },
         { icon: "ri-check-double-line", label: "Disposed Challans" },
-        { icon: "ri-shopping-cart-2-line", label: "Challan Settlement" },
+        { icon: "ri-wallet-3-line", label: "Pay Challans" },
       ],
     },
     { icon: "ri-car-line", label: "RTO Details" },
-    // { icon: "ri-shopping-cart-2-line", label: "Challan Settlement" },
     { icon: "ri-id-card-line", label: "DL Details" },
     { icon: "ri-bank-card-line", label: "Fastag Details" },
     { icon: "ri-car-line", label: "Register Vehicle" },

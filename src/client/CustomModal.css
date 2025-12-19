@@ -13,7 +13,7 @@
   box-shadow: 0 8px 32px rgba(0,0,0,0.18);
   padding: 32px 28px 24px 28px;
   min-width: 320px;
-  max-width: 90vw;
+  max-width: 96vw;
   /* Keep modal within viewport height and allow internal scrolling for large content */
   max-height: 90vh;
   overflow: auto;
@@ -162,4 +162,14 @@
   max-height: calc(80vh);
   display: block;
   margin: 0 auto;
+}
+
+/* Bigger map viewport for challan location modal */
+.custom-modal-content .map-frame-wrapper {
+  width: 80vw;
+  max-width: 1200px;
+}
+
+.custom-modal-content .map-frame-wrapper iframe {
+  height: 60vh !important;
 }
