@@ -121,6 +121,15 @@ export default function ChallanSettlement() {
     return true;
   }) : [];
 
+  const totalSettlementValue = Array.isArray(filteredChallans)
+    ? filteredChallans.reduce((sum, c) => {
+        const v = c.fine_imposed;
+        if (v === null || v === undefined || v === "") return sum;
+        const num = parseFloat(String(v).replace(/[,₹\s]/g, ""));
+        return Number.isNaN(num) ? sum : sum + num;
+      }, 0)
+    : 0;
+
   // Add to cart logic
   const handleAddToCart = challan => {
     if (!cart.some(c => c.challan_no === challan.challan_no)) {
@@ -134,8 +143,26 @@ export default function ChallanSettlement() {
 
   return (
     <div className="dashboard-latest">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 0, width: '100%' }}>
-        {/* <h2 style={{ margin: 0 }}>Challan Settlement</h2> */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div style={{ width: 4, height: 32, background: 'linear-gradient(135deg, #f7971e 0%, #ffd200 100%)', borderRadius: 3, marginRight: 14 }} />
+          <h2 style={{ margin: 0, fontSize: 19, color: '#b26a00', letterSpacing: '0.01em', fontFamily: 'Segoe UI, Arial, sans-serif', lineHeight: 1.2, fontWeight: 700 }}>Challan Settlement</h2>
+        </div>
+        <div
+          style={{
+            color: '#1b5e20',
+            fontSize: 14,
+            background: '#e8f5e9',
+            border: '1.5px solid #a5d6a7',
+            borderRadius: 6,
+            padding: '4px 12px',
+            fontWeight: 700,
+            boxShadow: '0 1px 4px #a5d6a722',
+            marginRight: 12,
+          }}
+        >
+          Total Challan Value: {totalSettlementValue.toLocaleString('en-IN')}
+        </div>
         <div
           ref={el => {
             if (el && cart.length > 0) {

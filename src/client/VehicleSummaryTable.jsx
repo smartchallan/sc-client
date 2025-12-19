@@ -69,13 +69,13 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView }
               <th>Road Tax Upto</th>
               <th>Fitness Upto</th>
               <th>Pollution Upto</th>
-              <th colSpan={2} style={{textAlign:'center'}}>Vehicle Challans</th>
+              <th colSpan={2} className="challans-header">Vehicle Challans</th>
               <th>View</th>
             </tr>
             <tr>
               <th colSpan={7}></th>
-              <th style={{textAlign:'center',color:'#e74c3c'}}>Pending</th>
-              <th style={{textAlign:'center',color:'#43a047'}}>Settled</th>
+              <th className="challan-sub-header" style={{color:'#e74c3c'}}>Pending</th>
+              <th className="challan-sub-header" style={{color:'#43a047'}}>Settled</th>
               <th></th>
             </tr>
           </thead>

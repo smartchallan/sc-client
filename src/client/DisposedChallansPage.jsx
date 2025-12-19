@@ -40,6 +40,15 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
     : [];
 
   const limitedData = filteredData.slice(0, effectiveVisible);
+
+  const totalPaid = Array.isArray(filteredData)
+    ? filteredData.reduce((sum, c) => {
+        const val = c.received_amount;
+        if (val === null || val === undefined || val === "") return sum;
+        const num = parseFloat(String(val).replace(/[,₹\s]/g, ""));
+        return Number.isNaN(num) ? sum : sum + num;
+      }, 0)
+    : 0;
   return (
     <div className="dashboard-latest" style={{ background: '#fff', borderRadius: 14, boxShadow: '0 2px 12px 0 rgba(30,136,229,0.07)', border: '1.5px solid #e3eaf1', padding: '0 0 18px 0', marginBottom: 0, minHeight: 340, transition: 'box-shadow 0.2s', position: 'relative', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, padding: '0 24px 0 0', minHeight: 54 }}>
@@ -47,9 +56,16 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
           <div style={{ width: 4, height: 32, background: 'linear-gradient(135deg, #2196f3 0%, #21cbf3 100%)', borderRadius: 3, marginRight: 14 }} />
           <h2 style={{ margin: 0, fontSize: 19, color: '#1565c0', letterSpacing: '0.01em', fontFamily: 'Segoe UI, Arial, sans-serif', lineHeight: 1.2, fontWeight: 700 }}>{title}</h2>
         </div>
-        <div style={{ color: '#1565c0', fontSize: 14, background: '#f5f8fa', border: '1.5px solid #2196f3', borderRadius: 6, padding: '4px 12px', fontWeight: 700, display: 'inline-block', marginLeft: 16, boxShadow: '0 1px 4px #21cbf322' }}>
-          Showing {Math.min(filteredData.length, effectiveVisible)} of {filteredData.length} records
-        </div>
+        {filteredData.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 16 }}>
+            <div style={{ color: '#1565c0', fontSize: 14, background: '#f5f8fa', border: '1.5px solid #2196f3', borderRadius: 6, padding: '4px 12px', fontWeight: 700, boxShadow: '0 1px 4px #21cbf322' }}>
+              Showing {Math.min(filteredData.length, effectiveVisible)} of {filteredData.length} records
+            </div>
+            <div style={{ color: '#1b5e20', fontSize: 14, background: '#e8f5e9', border: '1.5px solid #a5d6a7', borderRadius: 6, padding: '4px 12px', fontWeight: 700, boxShadow: '0 1px 4px #a5d6a722' }}>
+              Total Fine Paid: {totalPaid.toLocaleString('en-IN')}
+            </div>
+          </div>
+        )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 24px 8px 24px', borderTop: '1px solid #e3eaf1', borderBottom: '1px solid #e3eaf1', background: '#f7f9fc' }}>
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>

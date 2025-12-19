@@ -274,7 +274,19 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
 
   // Helper to get date value for sorting
   const getDateValue = (v, key) => {
-    let val = v[key];
+    let val;
+    // For expiry columns, mirror the same fallback logic used for display
+    if (key === 'insurance_exp') {
+      val = v.insurance_exp || v.rc_insurance_upto;
+    } else if (key === 'road_tax_exp') {
+      val = v.road_tax_exp || v.rc_tax_upto;
+    } else if (key === 'fitness_exp') {
+      val = v.fitness_exp || v.rc_fit_upto;
+    } else if (key === 'pollution_exp') {
+      val = v.pollution_exp || v.rc_pucc_upto;
+    } else {
+      val = v[key];
+    }
     if (!val || val === '-') return 0;
     if (typeof val === 'object' && val.value) val = val.value;
     if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(val)) return new Date(val.replace(/-/g, ' ')).getTime();

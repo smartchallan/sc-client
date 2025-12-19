@@ -264,6 +264,11 @@ function DealerDashboard() {
 	
 	const toggleSidebar = () => setSidebarOpen(s => !s);
 
+	// Header hamburger: toggle sidebar open/closed on all screen sizes.
+	const handleHeaderMenuToggle = () => {
+		setSidebarOpen(s => !s);
+	};
+
 		return (
 			<div className={`dashboard-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
 				{sidebarOpen && window.innerWidth <= 900 && (
@@ -275,7 +280,7 @@ function DealerDashboard() {
 				<main className="main-content">
 					<div className="header" style={{marginBottom: 24}}>
 						<div className="header-left" style={{display:'flex',alignItems:'center',gap:16}}>
-							<div className="menu-toggle" style={{fontSize:22,cursor:'pointer'}} onClick={toggleSidebar}>
+							<div className="menu-toggle" style={{fontSize:22,cursor:'pointer'}} onClick={handleHeaderMenuToggle}>
 								<i className="ri-menu-line"></i>
 							</div>
 							<div className="header-title" style={{fontWeight:600}}>

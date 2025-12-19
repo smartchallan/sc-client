@@ -1347,6 +1347,16 @@ function ClientDashboard() {
 
   const toggleSidebar = () => setSidebarOpen(s => !s);
 
+  // Header hamburger: toggle sidebar open/closed on all screen sizes.
+  // Also clear any right-side detail panels so they don't appear unexpectedly.
+  const handleHeaderMenuToggle = () => {
+    setSelectedVehicle(null);
+    setSelectedVehicleReport(null);
+    setSelectedChallan(null);
+    setSelectedRtoData(null);
+    setSidebarOpen(s => !s);
+  };
+
   // Get initials for header (first two letters from first two words, or first two letters)
   let headerInitials = "";
   if (user && user.user && user.user.name) {
@@ -1755,7 +1765,7 @@ function ClientDashboard() {
   `}</style>
         <div className="header" style={{marginBottom: 24}}>
             <div className="header-left" style={{display:'flex',alignItems:'center',gap:16}}>
-            <div className="menu-toggle" style={{fontSize:22,cursor:'pointer'}} onClick={toggleSidebar}>
+            <div className="menu-toggle" style={{fontSize:22,cursor:'pointer'}} onClick={handleHeaderMenuToggle}>
               <i className="ri-menu-line"></i>
             </div>
             <div className="header-title" style={{fontWeight:600}}>
@@ -2148,23 +2158,25 @@ function ClientDashboard() {
               </div>
             </div>
 
-            <RightSidebar
-              open={sidebarOpen && !!selectedVehicle}
-              onClose={() => {
-                setSelectedVehicle(null);
-                setSelectedVehicleReport(null);
-              }}
-              title={selectedVehicle ? `Vehicle #${selectedVehicle.vehicle_number} Report` : "Challan Data"}
-            >
-              {sidebarOpen && selectedVehicle && selectedVehicleReport === null ? (
-                <div style={{padding:24, textAlign:'center'}}>
-                  <span className="loader-spinner" style={{display:'inline-block',marginBottom:8}}></span>
-                  <div>Loading vehicle report...</div>
-                </div>
-              ) : (
-                <SidebarVehicleReport vehicleChallanData={selectedVehicleReport} />
-              )}
-            </RightSidebar>
+            {selectedVehicle && activeMenu === "Dashboard" && (
+              <RightSidebar
+                open
+                onClose={() => {
+                  setSelectedVehicle(null);
+                  setSelectedVehicleReport(null);
+                }}
+                title={`Vehicle #${selectedVehicle.vehicle_number} Report`}
+              >
+                {selectedVehicleReport === null ? (
+                  <div style={{padding:24, textAlign:'center'}}>
+                    <span className="loader-spinner" style={{display:'inline-block',marginBottom:8}}></span>
+                    <div>Loading vehicle report...</div>
+                  </div>
+                ) : (
+                  <SidebarVehicleReport vehicleChallanData={selectedVehicleReport} />
+                )}
+              </RightSidebar>
+            )}
             {/* Registered vehicles table removed from dashboard as requested */}
             {/* QuickActions moved to a shared component rendered below so it's available on every page */}
             {/* Removed dashboard 'due' data section as requested */}
@@ -2225,23 +2237,25 @@ function ClientDashboard() {
                 }}
                 filteredFleet={filteredFleet}
               />
-              <RightSidebar
-                open={sidebarOpen && !!selectedVehicle && activeMenu === "My Fleet"}
-                onClose={() => {
-                  setSelectedVehicle(null);
-                  setSelectedVehicleReport(null);
-                }}
-                title={selectedVehicle ? `Vehicle #${selectedVehicle.vehicle_number} Report` : "Vehicle Report"}
-              >
-                {sidebarOpen && selectedVehicle && selectedVehicleReport === null ? (
-                  <div style={{padding:24, textAlign:'center'}}>
-                    <span className="loader-spinner" style={{display:'inline-block',marginBottom:8}}></span>
-                    <div>Loading vehicle report...</div>
-                  </div>
-                ) : (
-                  <SidebarVehicleReport vehicleChallanData={selectedVehicleReport} />
-                )}
-              </RightSidebar>
+              {selectedVehicle && activeMenu === "My Fleet" && (
+                <RightSidebar
+                  open
+                  onClose={() => {
+                    setSelectedVehicle(null);
+                    setSelectedVehicleReport(null);
+                  }}
+                  title={`Vehicle #${selectedVehicle.vehicle_number} Report`}
+                >
+                  {selectedVehicleReport === null ? (
+                    <div style={{padding:24, textAlign:'center'}}>
+                      <span className="loader-spinner" style={{display:'inline-block',marginBottom:8}}></span>
+                      <div>Loading vehicle report...</div>
+                    </div>
+                  ) : (
+                    <SidebarVehicleReport vehicleChallanData={selectedVehicleReport} />
+                  )}
+                </RightSidebar>
+              )}
             </div>
           </div>
         )}
@@ -2353,14 +2367,14 @@ function ClientDashboard() {
           <div style={{ fontSize: 13, color: '#666' }}>Files will download as CSV. If your browser blocks downloads, allow downloads for this site.</div>
         </div>
       </CustomModal>
-      <RightSidebar
-        open={sidebarOpen && !!selectedChallan}
-        onClose={() => {
-          setTimeout(() => setSelectedChallan(null), 300);
-        }}
-        title={selectedChallan ? `Challan Details: ${selectedChallan.challan_no}` : ''}
-      >
-        {selectedChallan && (
+      {selectedChallan && (
+        <RightSidebar
+          open
+          onClose={() => {
+            setTimeout(() => setSelectedChallan(null), 300);
+          }}
+          title={`Challan Details: ${selectedChallan.challan_no}`}
+        >
           <table className="latest-table" style={{ width: '100%', fontSize: 15 }}>
             <tbody>
               <tr><td><b>Status</b></td><td>{selectedChallan.challan_status}</td></tr>
@@ -2395,17 +2409,17 @@ function ClientDashboard() {
               <tr><td><b>Offence Details</b></td><td><ul style={{margin:0,paddingLeft:18}}>{Array.isArray(selectedChallan.offence_details) && selectedChallan.offence_details.map((o, j) => (<li key={j} className="cell-ellipsis" title={o.name}>{o.name}</li>))}</ul></td></tr>
             </tbody>
           </table>
-        )}
-      </RightSidebar>
+        </RightSidebar>
+      )}
 
-      <RightSidebar
-        open={!!selectedRtoData}
-        onClose={() => {
-          setTimeout(() => setSelectedRtoData(null), 300);
-        }}
-        title={selectedRtoData ? `RTO Data: ${selectedRtoData.rc_regn_no}` : ''}
-      >
-        {selectedRtoData && (
+      {selectedRtoData && (
+        <RightSidebar
+          open
+          onClose={() => {
+            setTimeout(() => setSelectedRtoData(null), 300);
+          }}
+          title={`RTO Data: ${selectedRtoData.rc_regn_no}`}
+        >
           <table className="latest-table" style={{ width: '100%', fontSize: 15 }}>
             <tbody>
               <tr><td><b>Vehicle Number</b></td><td>{selectedRtoData.rc_regn_no || selectedRtoData.vehicle_number || '-'}</td></tr>
@@ -2427,8 +2441,8 @@ function ClientDashboard() {
               <tr><td><b>Address</b></td><td>{selectedRtoData.rc_present_address || '-'}</td></tr>
             </tbody>
           </table>
-        )}
-      </RightSidebar>
+        </RightSidebar>
+      )}
     </div>
     </>
   );

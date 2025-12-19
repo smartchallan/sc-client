@@ -218,6 +218,11 @@ body {
   display: flex;
 }
 
+/* Ensure pages with sticky bottom quick actions have space below content */
+.my-challans-content {
+  padding-bottom: 90px;
+}
+
 /* Common Dashboard Layout */
 .dashboard-layout {
   display: flex;
@@ -240,7 +245,8 @@ body {
   display: flex;
   flex-direction: column;
   box-shadow: 2px 0 18px rgba(60, 120, 200, 0.10);
-  z-index: 10;
+  /* Place sidebar above the mobile overlay so it's visible when opened */
+  z-index: 1000;
   transition: background 0.3s, box-shadow 0.3s, transform 0.3s ease;
 }
 
