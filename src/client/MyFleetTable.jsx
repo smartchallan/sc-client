@@ -71,22 +71,18 @@ const buildPrintableTableHtml = () => {
     const theadRows = printTable.querySelectorAll('thead tr');
     theadRows.forEach((tr, rowIndex) => {
       const cells = tr.querySelectorAll('th');
-      if (cells.length >= 2) {
-        if (rowIndex === 0) {
-          tr.removeChild(cells[cells.length - 1]);
-          tr.removeChild(cells[cells.length - 2]);
-        } else {
-          tr.removeChild(cells[cells.length - 1]);
-        }
+      if (cells.length >= 1) {
+        // Remove the last header cell (View column) from all header rows for print/PDF
+        tr.removeChild(cells[cells.length - 1]);
       }
     });
 
     const bodyRows = printTable.querySelectorAll('tbody tr');
     bodyRows.forEach((tr) => {
       const cells = tr.querySelectorAll('td');
-      if (cells.length >= 2) {
+      if (cells.length >= 1) {
+        // Remove the last cell (View column) from each body row
         tr.removeChild(cells[cells.length - 1]);
-        tr.removeChild(cells[cells.length - 2]);
       }
     });
   } catch (e) {
@@ -187,7 +183,17 @@ const handleDownloadPdf = () => {
   }, 400);
 };
 
-export default function MyFleetTable({ data, loading, onRefresh, onView, totalCount, upcomingRenewalRange, filteredFleet = null }) {
+export default function MyFleetTable({
+  data,
+  loading,
+  onRefresh,
+  onView,
+  totalCount,
+  upcomingRenewalRange,
+  filteredFleet = null,
+  goToFleetRenewal = null,
+  onConsumeFleetRenewal,
+}) {
   // Sorting state for each date column
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
 
@@ -265,6 +271,33 @@ export default function MyFleetTable({ data, loading, onRefresh, onView, totalCo
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // When coming from the dashboard Vehicle Renewals stat card,
+  // auto-select the corresponding "expired" filter once.
+  useEffect(() => {
+    if (!goToFleetRenewal) return;
+
+    const mapRenewalToExpiredType = (key) => {
+      if (key === 'insurance') return 'insurance';
+      if (key === 'roadTax') return 'roadtax';
+      if (key === 'fitness') return 'fitness';
+      if (key === 'pollution') return 'pollution';
+      return null;
+    };
+
+    const mapped = mapRenewalToExpiredType(goToFleetRenewal);
+    if (mapped) {
+      // Match behaviour of manual expired filter selection:
+      // clear other filters and set the chosen expired type.
+      setUrgentTypes([]);
+      setChallanTypes([]);
+      setExpiredTypes([mapped]);
+    }
+
+    if (onConsumeFleetRenewal) {
+      onConsumeFleetRenewal();
+    }
+  }, [goToFleetRenewal, onConsumeFleetRenewal]);
   // Sort by selected column or registered_at DESC
   let sortedAll = [...(filteredFleet || data || [])];
   if (sortConfig.key) {
@@ -696,21 +729,20 @@ export default function MyFleetTable({ data, loading, onRefresh, onView, totalCo
                 <span style={{ fontSize: 13, marginLeft: 2 }}>{sortConfig.key === 'rc_pucc_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
               </th>
               <th colSpan={2} className="challans-header">Challans</th>
-              <th>Action</th>
               <th>View</th>
             </tr>
             <tr>
               <th colSpan={7}></th>
               <th className="challan-sub-header" style={{ color: '#e74c3c' }}>Pending</th>
               <th className="challan-sub-header" style={{ color: '#43a047' }}>Settled</th>
-              <th colSpan={2}></th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={11}>Loading...</td></tr>
+              <tr><td colSpan={10}>Loading...</td></tr>
             ) : sortedAll.length === 0 ? (
-              <tr><td colSpan={11}>No data found.</td></tr>
+              <tr><td colSpan={10}>No data found.</td></tr>
             ) : (
               visibleRows.map((row, idx) => (
                 <tr key={row.vehicle_id || idx}>
@@ -740,11 +772,6 @@ export default function MyFleetTable({ data, loading, onRefresh, onView, totalCo
                   <td className={row.disposed_challan_count > 0
                     ? 'disposed-challan-count'
                     : 'zero-challan-count'} style={{ textAlign: 'center', fontWeight: 600 }}>{row.disposed_challan_count ?? 0}</td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button className="action-btn flat-btn" title="Refresh" style={{ fontSize: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => onRefresh(row)}>
-                      <FaSyncAlt style={{ fontSize: '1.2em' }} />
-                    </button>
-                  </td>
                   <td style={{ textAlign: 'center' }}>
                     <button className="action-btn flat-btn" title="View" style={{ fontSize: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => onView(row)}>
                       <FaEye style={{ fontSize: '1.2em' }} />

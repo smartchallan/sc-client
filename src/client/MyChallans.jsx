@@ -10,24 +10,150 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
 }
 
+// Helper to get a comparable timestamp for challan date/time
+function getChallanTimestamp(raw) {
+  if (!raw) return 0;
+  let val = String(raw).trim();
+  if (!val) return 0;
+
+  // Take only date portion if there is time
+  const base = val.split(/[ T]/)[0];
+  let d = null;
+
+  if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(base)) {
+    d = new Date(base.replace(/-/g, ' '));
+  } else if (/\d{2}-\d{2}-\d{4}/.test(base)) {
+    const [day, month, year] = base.split('-');
+    d = new Date(`${year}-${month}-${day}`);
+  } else if (/\d{4}-\d{2}-\d{2}/.test(base)) {
+    d = new Date(base);
+  } else {
+    d = new Date(val);
+  }
+
+  const ts = d.getTime();
+  return isNaN(ts) ? 0 : ts;
+}
+
 function ChallanTableV2({ title, data, onView, onClickDownload, onClickPrint }) {
   const DEFAULT_LIMIT = 30;
   const [visibleCount, setVisibleCount] = React.useState(DEFAULT_LIMIT);
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [maxFineFilter, setMaxFineFilter] = React.useState(null);
+  const [challanTypeFilter, setChallanTypeFilter] = React.useState({ regCourt: false, virtualCourt: false });
+  const [showChallanTypeDropdown, setShowChallanTypeDropdown] = React.useState(false);
+  const challanTypeDropdownRef = React.useRef(null);
+  const [sortConfig, setSortConfig] = React.useState({ key: null, direction: 'desc' });
 
   const filteredData = React.useMemo(() => {
-    if (!Array.isArray(data) || !searchTerm) return Array.isArray(data) ? data : [];
-    const term = searchTerm.toLowerCase();
-    return data.filter((c) => {
-      const v = String(c.vehicle_number || "").toLowerCase();
-      const n = String(c.challan_no || "").toLowerCase();
-      return v.includes(term) || n.includes(term);
+    if (!Array.isArray(data)) return [];
+
+    const term = (searchTerm || "").toLowerCase();
+    const hasSearch = term.length > 0;
+
+    const parseFine = (val) => {
+      if (val === null || val === undefined || val === "") return NaN;
+      const num = parseFloat(String(val).replace(/[,₹\s]/g, ""));
+      return isNaN(num) ? NaN : num;
+    };
+
+    const normalizeCourtFlag = (val) => {
+      if (val === null || val === undefined) return null;
+      const s = String(val).trim().toLowerCase();
+      if (!s || s === '-' || s === 'na' || s === 'n/a') return null;
+      if (s === 'no') return false; // explicitly not sent
+      return true; // treat any other non-empty value as sent
+    };
+
+    const { regCourt, virtualCourt } = challanTypeFilter;
+
+    let result = data.filter((c) => {
+      if (hasSearch) {
+        const v = String(c.vehicle_number || "").toLowerCase();
+        const n = String(c.challan_no || "").toLowerCase();
+        if (!v.includes(term) && !n.includes(term)) return false;
+      }
+
+      if (maxFineFilter !== null) {
+        const fine = parseFine(c.fine_imposed);
+        if (!Number.isNaN(fine) && fine > maxFineFilter) return false;
+      }
+
+      // Challan type filter based on Reg / Virtual court columns
+      if (regCourt || virtualCourt) {
+        const regRaw = c.sent_to_reg_court ?? c.sent_to_court_on ?? c.sent_to_court;
+        const virtRaw = c.sent_to_virtual_court ?? c.sent_to_virtual;
+
+        const regFlag = normalizeCourtFlag(regRaw);
+        const virtFlag = normalizeCourtFlag(virtRaw);
+
+        let pass = true;
+        if (regCourt && !virtualCourt) {
+          pass = regFlag === true;
+        } else if (!regCourt && virtualCourt) {
+          pass = virtFlag === true;
+        } else if (regCourt && virtualCourt) {
+          pass = regFlag === true || virtFlag === true;
+        }
+
+        if (!pass) return false;
+      }
+
+      return true;
     });
-  }, [data, searchTerm]);
+
+    if (sortConfig.key) {
+      const sorted = [...result];
+      sorted.sort((a, b) => {
+        if (sortConfig.key === 'date') {
+          const daRaw = a.challan_date_time || a.created_at || a.createdAt;
+          const dbRaw = b.challan_date_time || b.created_at || b.createdAt;
+          const at = getChallanTimestamp(daRaw);
+          const bt = getChallanTimestamp(dbRaw);
+          return sortConfig.direction === 'asc' ? at - bt : bt - at;
+        }
+        if (sortConfig.key === 'fine') {
+          const fa = parseFine(a.fine_imposed);
+          const fb = parseFine(b.fine_imposed);
+          const av = Number.isNaN(fa) ? 0 : fa;
+          const bv = Number.isNaN(fb) ? 0 : fb;
+          return sortConfig.direction === 'asc' ? av - bv : bv - av;
+        }
+        return 0;
+      });
+      return sorted;
+    }
+
+    return result;
+  }, [data, searchTerm, maxFineFilter, challanTypeFilter, sortConfig]);
 
   React.useEffect(() => {
     setVisibleCount(DEFAULT_LIMIT);
   }, [searchTerm]);
+
+  const handleSort = (key) => {
+    setSortConfig((prev) => {
+      if (prev.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
+   // Close challan-type dropdown on outside click
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (challanTypeDropdownRef.current && !challanTypeDropdownRef.current.contains(event.target)) {
+        setShowChallanTypeDropdown(false);
+      }
+    };
+    if (showChallanTypeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showChallanTypeDropdown]);
 
   const limitedData = filteredData.slice(0, visibleCount);
 
@@ -43,7 +169,7 @@ function ChallanTableV2({ title, data, onView, onClickDownload, onClickPrint }) 
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 24px 8px 24px', borderTop: '1px solid #e3eaf1', borderBottom: '1px solid #e3eaf1', background: '#f7f9fc' }}>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div className="number-plate-container" style={{ minWidth: 220, maxWidth: 330 }}>
             <div className="number-plate-wrapper">
               <div className="number-plate-badge">IND</div>
@@ -65,6 +191,118 @@ function ChallanTableV2({ title, data, onView, onClickDownload, onClickPrint }) 
               <div className="hologram"></div>
               <div className="chakra">⚙</div>
             </div>
+          </div>
+          {/* Fine amount filter as max slider */}
+          {Array.isArray(data) && data.length > 0 && (() => {
+            const fines = data
+              .map(c => {
+                const v = c.fine_imposed;
+                if (v === null || v === undefined || v === "") return NaN;
+                const num = parseFloat(String(v).replace(/[,₹\s]/g, ""));
+                return isNaN(num) ? NaN : num;
+              })
+              .filter(v => !Number.isNaN(v));
+            if (fines.length === 0) return null;
+            const maxFine = Math.max(...fines);
+            const minFine = Math.min(...fines);
+            const effectiveMax = maxFineFilter === null ? maxFine : maxFineFilter;
+            return (
+              <div className="fine-filter-card">
+                <span className="fine-filter-label">Fine up to</span>
+                <input
+                  type="range"
+                  min={minFine}
+                  max={maxFine}
+                  step={1}
+                  value={effectiveMax}
+                  onChange={e => setMaxFineFilter(Number(e.target.value))}
+                  className="fine-filter-range"
+                />
+                <span className="fine-filter-value">₹{Math.round(effectiveMax)}</span>
+                {maxFineFilter !== null && (
+                  <button
+                    type="button"
+                    onClick={() => setMaxFineFilter(null)}
+                    className="fine-filter-reset-btn"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Challan type filter: Registered Court / Virtual Court (styled like My Fleet filters) */}
+          <div style={{ position: 'relative' }} ref={challanTypeDropdownRef} onMouseLeave={() => setShowChallanTypeDropdown(false)}>
+            <button
+              type="button"
+              className="filter-select"
+              style={{ minWidth: 180, textAlign: 'left', padding: '16px 15px', border: '1px solid #bcd', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
+              onClick={() => setShowChallanTypeDropdown(v => !v)}
+            >
+              {(!challanTypeFilter.regCourt && !challanTypeFilter.virtualCourt)
+                ? 'Select challan type'
+                : [
+                    challanTypeFilter.regCourt ? 'Registered court' : null,
+                    challanTypeFilter.virtualCourt ? 'Virtual court' : null,
+                  ].filter(Boolean).join(', ')}
+              {(challanTypeFilter.regCourt || challanTypeFilter.virtualCourt) && (
+                <span style={{
+                  marginLeft: 8,
+                  padding: '0 6px',
+                  borderRadius: 999,
+                  background: '#fff3e0',
+                  color: '#ef6c00',
+                  fontSize: 11,
+                  fontWeight: 600
+                }}>
+                  {Number(!!challanTypeFilter.regCourt) + Number(!!challanTypeFilter.virtualCourt)}
+                </span>
+              )}
+              <span style={{ float: 'right', fontWeight: 700, fontSize: 16, marginLeft: 8 }}>▼</span>
+            </button>
+            {showChallanTypeDropdown && (
+              <div style={{ position: 'absolute', top: 38, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #bcd', borderRadius: 8, boxShadow: '0 2px 8px #0001', minWidth: 190, padding: 8 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={challanTypeFilter.regCourt}
+                    onChange={(e) =>
+                      setChallanTypeFilter(prev => ({ ...prev, regCourt: e.target.checked }))
+                    }
+                  />
+                  Registered court
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={challanTypeFilter.virtualCourt}
+                    onChange={(e) =>
+                      setChallanTypeFilter(prev => ({ ...prev, virtualCourt: e.target.checked }))
+                    }
+                  />
+                  Virtual court
+                </label>
+                {(challanTypeFilter.regCourt || challanTypeFilter.virtualCourt) && (
+                  <div style={{ textAlign: 'right', marginTop: 6, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                    <button
+                      type="button"
+                      style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#fff', cursor: 'pointer' }}
+                      onClick={() => setChallanTypeFilter({ regCourt: false, virtualCourt: false })}
+                    >
+                      Reset
+                    </button>
+                    <button
+                      type="button"
+                      style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#f5f8fa', cursor: 'pointer' }}
+                      onClick={() => setShowChallanTypeDropdown(false)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -93,11 +331,27 @@ function ChallanTableV2({ title, data, onView, onClickDownload, onClickPrint }) 
               <th>#</th>
               <th>Vehicle No.</th>
               <th>Challan No</th>
-              <th>Date/Time</th>
+              <th
+                style={{ cursor: 'pointer', userSelect: 'none' }}
+                onClick={() => handleSort('date')}
+              >
+                Date/Time
+                <span style={{ fontSize: 13, marginLeft: 2 }}>
+                  {sortConfig.key === 'date' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}
+                </span>
+              </th>
               <th>Location</th>
               {title.toLowerCase().includes('pending') && <th>Reg Court</th>}
               {title.toLowerCase().includes('pending') && <th>Virtual Court</th>}
-              <th>Fine Imposed</th>
+              <th
+                style={{ cursor: 'pointer', userSelect: 'none' }}
+                onClick={() => handleSort('fine')}
+              >
+                Fine Imposed
+                <span style={{ fontSize: 13, marginLeft: 2 }}>
+                  {sortConfig.key === 'fine' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}
+                </span>
+              </th>
               {title.toLowerCase().includes('disposed') && <th>Fine Paid</th>}
               <th>Status</th>
               <th>Offence Details</th>
@@ -348,7 +602,23 @@ const handleChallanDownloadExcel = (rows) => {
 };
 
 // ...existing code...
-export function ChallanTable({ title, data, search = {}, sortAsc = true, addToCart, removeFromCart, cart, showCart, setShowCart, settlementMode, sidebarOpen, setSidebarOpen, setSelectedChallan }) {
+export function ChallanTable({
+  title,
+  data,
+  search = {},
+  sortAsc = true,
+  sortKey = 'date',
+  addToCart,
+  removeFromCart,
+  cart,
+  showCart,
+  setShowCart,
+  settlementMode,
+  sidebarOpen,
+  setSidebarOpen,
+  setSelectedChallan,
+  onToggleSort
+}) {
   // Utility to format Reg Court values
   function formatRegCourtValue(v) {
     if (v === null || v === undefined || v === '') return '-';
@@ -375,7 +645,25 @@ export function ChallanTable({ title, data, search = {}, sortAsc = true, addToCa
       })
     : [];
   const sorted = [...filtered].sort((a, b) => {
-    const parseDate = s => s ? new Date(String(s).replace(/(\d{2})-(\d{2})-(\d{4})/, '$2/$1/$3')).getTime() : 0;
+    const parseDate = (s) =>
+      s
+        ? new Date(String(s).replace(/(\d{2})-(\d{2})-(\d{4})/, '$2/$1/$3')).getTime()
+        : 0;
+
+    if (sortKey === 'fine') {
+      const parseFine = (val) => {
+        if (val === null || val === undefined || val === '') return Number.NaN;
+        const num = parseFloat(String(val).replace(/[,₹\s]/g, ''));
+        return Number.isNaN(num) ? Number.NaN : num;
+      };
+      const fa = parseFine(a.fine_imposed);
+      const fb = parseFine(b.fine_imposed);
+      const av = Number.isNaN(fa) ? 0 : fa;
+      const bv = Number.isNaN(fb) ? 0 : fb;
+      return sortAsc ? av - bv : bv - av;
+    }
+
+    // Default: sort by date/time
     const aTime = parseDate(a.created_at || a.createdAt || a.challan_date_time);
     const bTime = parseDate(b.created_at || b.createdAt || b.challan_date_time);
     return sortAsc ? aTime - bTime : bTime - aTime;
@@ -405,13 +693,29 @@ export function ChallanTable({ title, data, search = {}, sortAsc = true, addToCa
                   <th>#</th>
                   <th>Vehicle No.</th>
                   <th>Challan No</th>
-                  <th>Date/Time</th>
+                  <th
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                    onClick={typeof onToggleSort === 'function' ? () => onToggleSort('date') : undefined}
+                  >
+                    Date/Time
+                    <span style={{ fontSize: 13, marginLeft: 2 }}>
+                      {sortKey === 'date' ? (sortAsc ? '▲' : '▼') : '▲▼'}
+                    </span>
+                  </th>
                   <th>Location</th>
                   {title && title.toLowerCase().includes('pending') && <th>Sent to Reg Court</th>}
                   {title && title.toLowerCase().includes('pending') && <th>Sent to Virtual Court</th>}
-                  <th>Fine Imposed</th>
+                  <th
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                    onClick={typeof onToggleSort === 'function' ? () => onToggleSort('fine') : undefined}
+                  >
+                    Fine Imposed
+                    <span style={{ fontSize: 13, marginLeft: 2 }}>
+                      {sortKey === 'fine' ? (sortAsc ? '▲' : '▼') : '▲▼'}
+                    </span>
+                  </th>
                   {title && title.toLowerCase().includes('disposed') && <th>Fine Paid</th>}
-                  <th>Status</th>
+                  {!settlementMode && <th>Status</th>}
                   <th>Offence Details</th>
                   <th>Action</th>
                 </tr>
@@ -474,9 +778,11 @@ export function ChallanTable({ title, data, search = {}, sortAsc = true, addToCa
                     {title && title.toLowerCase().includes('disposed') && (
                       <td>{c.received_amount ?? '-'}</td>
                     )}
-                    <td>
-                      <span className={`modern-table-status ${c.challan_status === 'Pending' ? 'pending' : c.challan_status === 'Disposed' ? 'paid' : ''}`}>{c.challan_status}</span>
-                    </td>
+                    {!settlementMode && (
+                      <td>
+                        <span className={`modern-table-status ${c.challan_status === 'Pending' ? 'pending' : c.challan_status === 'Disposed' ? 'paid' : ''}`}>{c.challan_status}</span>
+                      </td>
+                    )}
                     <td>
                       <ul className="modern-table-offence-list">
                         {Array.isArray(c.offence_details) && c.offence_details.map((o, i) => (

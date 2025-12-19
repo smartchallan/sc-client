@@ -19,7 +19,7 @@ export default function RegisterVehicle() {
   const [registerError, setRegisterError] = useState("");
   // Table search/filter state
   const [searchValue, setSearchValue] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ACTIVE");
   const [loading, setLoading] = useState(false);
   const [sortDesc, setSortDesc] = useState(true); // true => newest first
   const [vehicles, setVehicles] = useState([]);
@@ -425,7 +425,7 @@ export default function RegisterVehicle() {
   </div>
       {/* Vehicle table below form */}
 
-  <div className="dashboard-latest modern-form-card">
+  <div id="registered-vehicles-section" className="dashboard-latest modern-form-card">
           <div style={{marginTop: 32}}>
           <h2 style={{fontSize: '1.2rem', marginBottom: 12}}>Active & Inactive Vehicles {vehicles && vehicles.filter(v => (v.status || '').toUpperCase() !== 'DELETED').length ? `(${vehicles.filter(v => (v.status || '').toUpperCase() !== 'DELETED').length})` : ''}</h2>
           {/* Search and status filter controls */}
@@ -762,7 +762,7 @@ export default function RegisterVehicle() {
           if (deletedVehicles.length === 0) return null;
           
           return (
-            <div className="deleted-vehicles-section">
+            <div id="deleted-vehicles-section" className="deleted-vehicles-section">
               <h2>Deleted Vehicles ({deletedVehicles.length})</h2>
               <table className="vehicle-challan-table" style={{ width: '100%', marginTop: 8 }}>
                 <thead>

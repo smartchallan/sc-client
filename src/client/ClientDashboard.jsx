@@ -10,6 +10,8 @@ import { RiDownload2Line } from "react-icons/ri";
 import { RiArrowRightSLine } from "react-icons/ri";
 import { RiCarLine } from "react-icons/ri";
 import { FaPrint } from "react-icons/fa";
+import { jsPDF } from "jspdf";
+import scLogo from "../assets/sc-logo.png";
 // ...existing code...
 import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { FaDownload } from "react-icons/fa";
@@ -191,8 +193,21 @@ function SidebarVehicleReport({ vehicleChallanData }) {
         </div>
       `).join('');
     }
+
+    const brandingHtml = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <div style="width:4px;height:28px;background:linear-gradient(135deg,#2196f3 0%,#21cbf3 100%);border-radius:3px;"></div>
+        <div style="display:flex;flex-direction:column;">
+          <div style="font-size:18px;font-weight:700;color:#1565c0;">Smart Challan</div>
+          <div style="font-size:11px;color:#555;">${section === 'rto' ? 'RTO Vehicle Details' : (section === 'pending' ? 'Pending Challans' : 'Disposed Challans')} Summary</div>
+        </div>
+      </div>
+    `;
+
     const win = window.open('', '', 'height=700,width=900');
-    win.document.write('<html><head><title>Print</title><style>@media print { div[style*="page-break-after"] { page-break-after: always !important; } }</style></head><body>' + printContent + '</body></html>');
+    win.document.write('<html><head><title>Print</title>');
+    win.document.write('<style>body{font-family:Segoe UI, Arial, sans-serif;font-size:13px;color:#333;} table{border-collapse:collapse;width:100%;} td,th{padding:6px 8px;border-bottom:1px solid #e3eaf1;} h2{margin:0 0 8px 0;} @media print { div[style*="page-break-after"] { page-break-after: always !important; } }</style>');
+    win.document.write('</head><body>' + brandingHtml + printContent + '</body></html>');
     win.document.close();
     win.focus();
     setTimeout(() => { win.print(); win.close(); }, 500);
@@ -232,7 +247,46 @@ function SidebarVehicleReport({ vehicleChallanData }) {
   const downloadPDF = (section, data) => {
     try {
       const doc = new jsPDF();
-      let y = 15;
+
+      // ---- Logo + title header (top strip) ----
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const headerHeight = 22; // reserve space at top
+
+      // Light background bar
+      doc.setFillColor(245, 248, 250);
+      doc.rect(0, 0, pageWidth, headerHeight, 'F');
+
+      // Logo on the left
+      try {
+        // jsPDF supports HTMLImageElement; use scLogo URL
+        const img = new Image();
+        img.src = scLogo;
+        // Note: addImage is sync once the image is cached. To
+        // keep this simple and robust, we draw the image at a
+        // fixed size; if it fails, we silently skip it.
+        doc.addImage(img, 'PNG', 8, 4, 30, 14);
+      } catch (_) {
+        // ignore logo errors, keep text header
+      }
+
+      // Title + subtitle next to logo
+      doc.setFontSize(12);
+      doc.setTextColor(21, 101, 192);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Smart Challan', 42, 10);
+
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      const subtitle = section === 'rto'
+        ? 'RTO Vehicle Details'
+        : section === 'pending'
+          ? 'Pending Challans'
+          : 'Disposed Challans';
+      doc.text(subtitle, 42, 15);
+
+      // Start content a bit below the header
+      let y = headerHeight + 6;
+
       if (section === 'rto') {
         // Professional color palette
         const accent = [44, 62, 80]; // dark blue-gray
@@ -240,14 +294,14 @@ function SidebarVehicleReport({ vehicleChallanData }) {
         const valueColor = [30, 30, 30];
         const bgColor = [255, 255, 255];
         const borderColor = [220, 220, 220];
-        // Heading bar
+        // Section heading under header
         doc.setFillColor(...accent);
-        doc.roundedRect(8, y-10, 194, 16, 4, 4, 'F');
-        doc.setFontSize(20);
+        doc.roundedRect(8, y - 8, 194, 14, 3, 3, 'F');
+        doc.setFontSize(14);
         doc.setTextColor(255,255,255);
         doc.setFont('times', 'bold');
-        doc.text('RTO Vehicle Details', 16, y+1);
-        y += 16;
+        doc.text('Vehicle Details', 14, y + 1);
+        y += 14;
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(12);
         // Single-column layout: each key/value in its own card row
@@ -282,10 +336,12 @@ function SidebarVehicleReport({ vehicleChallanData }) {
         y += 8;
       } else if (section === 'pending' || section === 'disposed') {
         const mainColor = section === 'pending' ? [231, 76, 60] : [67, 160, 71];
-        doc.setFontSize(20);
+        // Section title row under header
+        doc.setFontSize(14);
         doc.setTextColor(...mainColor);
+        doc.setFont('helvetica', 'bold');
         doc.text(`${section === 'pending' ? 'Pending' : 'Disposed'} Challans`, 10, y);
-        y += 10;
+        y += 8;
         data.forEach((challan, idx) => {
           if (idx > 0) {
             doc.addPage();
@@ -1097,15 +1153,8 @@ function ClientDashboard() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
-            onClick: (evt, elements) => {
-              if (elements && elements.length > 0) {
-                const idx = elements[0].index;
-                const label = ['active','inactive','deleted'][idx];
-                try { setSelectedVehicleStatus(label); } catch (e) {}
-                // navigate to Registered Vehicles view for details
-                try { setActiveMenu('Registered Vehicles'); } catch(e) {}
-              }
-            }
+            // Make Registered Vehicles chart non-interactive
+            onClick: null
           }
         });
         clearLoadingWithDelay('total');
@@ -1748,15 +1797,85 @@ function ClientDashboard() {
                         });
                       }
                       return [
-                        <div key="act" className={`status-badge`} style={{  }} >
+                        <div
+                          key="act"
+                          className={`status-badge`}
+                          style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                          title="View active registered vehicles"
+                          onClick={() => {
+                            setActiveMenu('Register Vehicle');
+                            setTimeout(() => {
+                              try {
+                                const section = document.getElementById('registered-vehicles-section');
+                                if (section) {
+                                  const rect = section.getBoundingClientRect();
+                                  const offset = rect.top + window.scrollY - 80; // account for header spacing
+                                  window.scrollTo({ top: offset < 0 ? 0 : offset, behavior: 'smooth' });
+                                }
+                                const select = document.querySelector('#registered-vehicles-section select.form-control');
+                                if (select) {
+                                  select.value = 'ACTIVE';
+                                  select.dispatchEvent(new Event('change', { bubbles: true }));
+                                }
+                              } catch (e) {}
+                            }, 300);
+                          }}
+                        >
                           <div style={{ color: '#42a5f5', fontWeight: 700 }}>{counts.active}</div>
                           <div style={{ fontSize: 12, color: '#666' }}>Active</div>
                         </div>,
-                        <div key="inact" className={`status-badge`} style={{ }} >
+                        <div
+                          key="inact"
+                          className={`status-badge`}
+                          style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                          title="View inactive registered vehicles"
+                          onClick={() => {
+                            setActiveMenu('Register Vehicle');
+                            setTimeout(() => {
+                              try {
+                                const section = document.getElementById('registered-vehicles-section');
+                                if (section) {
+                                  const rect = section.getBoundingClientRect();
+                                  const offset = rect.top + window.scrollY - 80;
+                                  window.scrollTo({ top: offset < 0 ? 0 : offset, behavior: 'smooth' });
+                                }
+                                const select = document.querySelector('#registered-vehicles-section select.form-control');
+                                if (select) {
+                                  select.value = 'INACTIVE';
+                                  select.dispatchEvent(new Event('change', { bubbles: true }));
+                                }
+                              } catch (e) {}
+                            }, 300);
+                          }}
+                        >
                           <div style={{ color: '#ffa726', fontWeight: 700 }}>{counts.inactive}</div>
                           <div style={{ fontSize: 12, color: '#666' }}>Inactive</div>
                         </div>,
-                        <div key="del" className={`status-badge`} style={{ }} >
+                        <div
+                          key="del"
+                          className={`status-badge`}
+                          style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                          title="View deleted vehicles"
+                          onClick={() => {
+                            setActiveMenu('Register Vehicle');
+                            let tries = 0;
+                            const maxTries = 10;
+                            const attemptScroll = () => {
+                              try {
+                                const section = document.getElementById('deleted-vehicles-section');
+                                if (section) {
+                                  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                  return;
+                                }
+                              } catch (e) {}
+                              if (tries < maxTries) {
+                                tries += 1;
+                                setTimeout(attemptScroll, 120);
+                              }
+                            };
+                            setTimeout(attemptScroll, 300);
+                          }}
+                        >
                           <div style={{ color: '#e15759', fontWeight: 700 }}>{counts.deleted}</div>
                           <div style={{ fontSize: 12, color: '#666' }}>Deleted</div>
                         </div>
@@ -1791,14 +1910,19 @@ function ClientDashboard() {
                   </div>
                   <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8 }}>
                     <div key="pending" className={`status-badge`} style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                      title="Show vehicles with pending challans"
-                      onClick={() => { setGoToFleetChallanFilter('pending'); setActiveMenu('My Fleet'); }}>
+                      title="View pending vehicle challans"
+                      onClick={() => {
+                        setActiveMenu('Vehicle Challans');
+                        // Optionally, set a global filter flag if MyChallans supports it later
+                      }}>
                       <div style={{ color: '#e74c3c', fontWeight: 700 }}>{loadingVehicleChallan ? '...' : dashboardPendingCount}</div>
                       <div style={{ fontSize: 12, color: '#666' }}>Pending</div>
                     </div>
                     <div key="disposed" className={`status-badge`} style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                      title="Show vehicles with disposed challans"
-                      onClick={() => { setGoToFleetChallanFilter('disposed'); setActiveMenu('My Fleet'); }}>
+                      title="View disposed challans"
+                      onClick={() => {
+                        setActiveMenu('Disposed Challans');
+                      }}>
                       <div style={{ color: '#66bb6a', fontWeight: 700 }}>{loadingVehicleChallan ? '...' : dashboardDisposedCount}</div>
                       <div style={{ fontSize: 12, color: '#666' }}>Disposed</div>
                     </div>
@@ -1919,7 +2043,7 @@ function ClientDashboard() {
                           <span style={{margin: '0 6px', color: '#999', fontSize: '0.55em'}}>|</span>
                           <span style={{fontSize: '0.55em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
                             title="Show vehicles with paid challans"
-                            onClick={() => { setActiveMenu('Vehicle Challans'); }}>
+                            onClick={() => { setActiveMenu('Disposed Challans'); }}>
                             Paid: ₹{formatBriefAmount(disposedFineTotal)}
                           </span>
                         </>
@@ -2027,7 +2151,7 @@ function ClientDashboard() {
             {activeMenu === "Register Vehicle" && <RegisterVehicle />}
         {activeMenu === "My Fleet" && (
           <div style={{marginBottom:24}}>
-                                    
+
             <div id="my-fleet-table-print-area">
               <MyFleetTable
                 data={vehicleSummary}
@@ -2056,6 +2180,8 @@ function ClientDashboard() {
                 }}
                 totalCount={typeof vehicleSummary === 'object' && vehicleSummary._totalCount ? vehicleSummary._totalCount : (Array.isArray(vehicleSummary) && vehicleSummary.totalCount ? vehicleSummary.totalCount : (typeof window !== 'undefined' && window.fleetTotalCount ? window.fleetTotalCount : undefined))}
                 upcomingRenewalRange={upcomingRenewalRange}
+                goToFleetRenewal={goToFleetRenewal}
+                onConsumeFleetRenewal={() => setGoToFleetRenewal(null)}
                 onShowMoreRecords={val => {
                   if (val === 'all') {
                     setFleetAll(true);

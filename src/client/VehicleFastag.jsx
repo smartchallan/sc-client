@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "../RegisterVehicle.css";
 
 // Add CSS animations for spinner and number plate effects
@@ -44,11 +44,73 @@ if (!document.querySelector('#fastag-animations')) {
 }
 
 export default function VehicleFastag() {
+  const API_ROOT = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+  const getClientId = () => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("sc_user"));
+      const user = stored && stored.user ? stored.user : {};
+      return user.client_id || user.id || user._id || null;
+    } catch {
+      return null;
+    }
+  };
+
   const [vehicleNumber, setVehicleNumber] = useState("");
   const [results, setResults] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [apiResponse, setApiResponse] = useState(null);
+  const [vehicles, setVehicles] = useState([]);
+  const [loadingVehicles, setLoadingVehicles] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [filteredVehicles, setFilteredVehicles] = useState([]);
+  const wrapperRef = useRef(null);
+
+  // Fetch registered vehicles for the logged-in client so we can
+  // offer them in a searchable dropdown for FasTag lookup.
+  useEffect(() => {
+    const clientId = getClientId();
+    if (!clientId) return;
+
+    setLoadingVehicles(true);
+    fetch(`${API_ROOT}/uservehicle?client_id=${clientId}`)
+      .then(res => res.json())
+      .then(data => {
+        let list = [];
+        if (Array.isArray(data)) list = data;
+        else if (Array.isArray(data.vehicles)) list = data.vehicles;
+        // Exclude deleted vehicles
+        list = list.filter(v => !v.status || String(v.status).toUpperCase() !== 'DELETED');
+        setVehicles(list);
+      })
+      .catch(() => {
+        setVehicles([]);
+      })
+      .finally(() => setLoadingVehicles(false));
+  }, []);
+
+  // Keep a filtered list of vehicles based on typed search, limited to 10
+  useEffect(() => {
+    const search = vehicleNumber.trim().toUpperCase();
+    let list = vehicles;
+    if (search) {
+      list = vehicles.filter(v =>
+        (v.vehicle_number || "").toUpperCase().includes(search)
+      );
+    }
+    setFilteredVehicles(list.slice(0, 10));
+  }, [vehicleNumber, vehicles]);
+
+  // Close dropdown when clicking outside the number plate wrapper
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -125,7 +187,7 @@ export default function VehicleFastag() {
           <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '30%'}}>
             <label htmlFor="vehicleNumber" style={{fontSize: 14, fontWeight: 500, marginBottom: 8, display: 'block'}}>Vehicle Number</label>
             <div className="number-plate-container">
-              <div className="number-plate-wrapper">
+              <div className="number-plate-wrapper" ref={wrapperRef} style={{ position: 'relative' }}>
                 <div className="number-plate-badge">IND</div>
                 <div className="tricolor-strip">
                   <div className="saffron"></div>
@@ -138,11 +200,70 @@ export default function VehicleFastag() {
                   name="vehicleNumber"
                   className="number-plate-input"
                   value={vehicleNumber}
-                  onChange={e => setVehicleNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                  placeholder="Enter vehicle number"
+                  onChange={e => {
+                    setVehicleNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''));
+                    setShowDropdown(true);
+                  }}
+                  placeholder={loadingVehicles ? "Loading registered vehicles..." : "Select or type vehicle number"}
                   disabled={loading}
                   maxLength={12}
+                  autoComplete="off"
+                  onFocus={() => setShowDropdown(true)}
                 />
+                {showDropdown && filteredVehicles.length > 0 && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      marginTop: 4,
+                      maxHeight: 260,
+                      overflowY: 'auto',
+                      background: '#fff',
+                      border: '1px solid #bcd',
+                      borderRadius: 6,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                      zIndex: 20,
+                    }}
+                  >
+                    {filteredVehicles.map(v => {
+                      const vn = (v.vehicle_number || '').toUpperCase();
+                      return (
+                        <div
+                          key={v.id || v._id || vn}
+                          onMouseDown={(e) => {
+                            // onMouseDown so the input doesn't lose focus before selection
+                            e.preventDefault();
+                            setVehicleNumber(vn);
+                            setShowDropdown(false);
+                          }}
+                          style={{
+                            padding: '6px 10px',
+                            cursor: 'pointer',
+                            fontSize: 14,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                          }}
+                          onMouseOver={e => e.currentTarget.style.background = '#f5f8fa'}
+                          onMouseOut={e => e.currentTarget.style.background = '#fff'}
+                        >
+                          <span style={{ fontWeight: 600 }}>{vn || 'Not Available'}</span>
+                          {v.status && (
+                            <span style={{
+                              fontSize: 11,
+                              color: '#666',
+                              textTransform: 'uppercase',
+                            }}>
+                              {v.status}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
               <div className="security-features">
                 <div className="hologram"></div>

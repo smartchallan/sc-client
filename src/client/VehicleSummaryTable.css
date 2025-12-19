@@ -6,6 +6,7 @@
 /* Vehicle Summary Table: Full width, sticky header, aligned columns */
 .vehicle-summary-table-container {
   /* height: 500px; */
+  max-height: 460px;
   overflow-y: auto;
   width: 100%;
 }
@@ -39,40 +40,6 @@
 .vehicle-summary-table-container table {
   table-layout: fixed;
   width: 100%;
-}
-.vehicle-summary-table-container table thead {
-  display: block;
-}
-.vehicle-summary-table-container table tbody {
-  display: block;
-  height: 460px;
-  overflow-y: auto;
-  width: 100%;
-}
-/* Sticky header for first row */
-/* Sticky header for first row */
-.vehicle-summary-table-container table thead tr:first-child th {
-  position: sticky;
-  top: 0;
-  background: #fff;
-  z-index: 3;
-  box-shadow: 0 2px 4px rgba(30,136,229,0.07);
-  height: 40px;
-  width: 100px;
-}
-/* Sticky header for second row */
-/* Sticky header for second row */
-.vehicle-summary-table-container table thead tr:nth-child(2) th {
-  position: sticky;
-  top: 40px;
-  background: #fff;
-  z-index: 2;
-  box-shadow: 0 2px 4px rgba(30,136,229,0.07);
-  width: 100px;
-}
-/* Set width for table data cells to align with header */
-.vehicle-summary-table-container table td {
-  width: 100px;
 }
 /* Custom container for Vehicle Summary table height */
 /* .vehicle-summary-table-container {

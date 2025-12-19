@@ -23,7 +23,8 @@ body .latest-table th.challans-header {
 /* Center alignment for challan sub-columns and counts */
 body .latest-table th.challan-sub-header,
 body .latest-table td.pending-challan-count,
-body .latest-table td.disposed-challan-count {
+body .latest-table td.disposed-challan-count,
+body .latest-table td.zero-challan-count {
   text-align: center !important;
 }
 body .latest-table th {
@@ -73,4 +74,178 @@ body .latest-table .cell-ellipsis {
     padding: 10px 6px !important;
     font-size: 13px !important;
   }
+}
+
+/* Fine amount slider filter styling for My Challans */
+.fine-filter-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 17px 12px;
+  border-radius: 6px;
+  border: 1px solid #bcd;
+  background: #fff;
+  margin-top: 8px;
+}
+
+.fine-filter-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #546e7a;
+  white-space: nowrap;
+}
+
+.fine-filter-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 140px;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #bbdefb 0%, #e3f2fd 100%);
+  outline: none;
+}
+
+.fine-filter-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #1565c0;
+  border: 2px solid #e3f2fd;
+  box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.18);
+  cursor: pointer;
+}
+
+.fine-filter-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #1565c0;
+  border: 2px solid #e3f2fd;
+  box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.18);
+  cursor: pointer;
+}
+
+.fine-filter-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #bbdefb 0%, #e3f2fd 100%);
+}
+
+.fine-filter-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1565c0;
+  min-width: 70px;
+}
+
+.fine-filter-reset-btn {
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid #cfd8dc;
+  background: #eceff1;
+  font-size: 11px;
+  font-weight: 600;
+  color: #455a64;
+  cursor: pointer;
+}
+
+.fine-filter-reset-btn:hover {
+  background: #e0e4e8;
+}
+
+/* Challan type dropdown filter styling */
+.challan-type-filter-wrapper {
+  position: relative;
+  margin-top: 8px;
+}
+
+.challan-type-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #d0e2ff;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1565c0;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(33, 150, 243, 0.14);
+}
+
+.challan-type-filter-pill.open {
+  background: #e3f2fd;
+}
+
+.challan-type-filter-label {
+  white-space: nowrap;
+}
+
+.challan-type-filter-count {
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #1565c0;
+  color: #fff;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.challan-type-filter-caret {
+  font-size: 11px;
+  color: #607d8b;
+}
+
+.challan-type-dropdown {
+  position: absolute;
+  top: 110%;
+  left: 0;
+  z-index: 20;
+  min-width: 190px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
+  border: 1px solid #e3eaf1;
+}
+
+.challan-type-option {
+  margin-bottom: 6px;
+}
+
+.challan-type-option label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #37474f;
+  cursor: pointer;
+}
+
+.challan-type-option input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+}
+
+.challan-type-reset-btn {
+  margin-top: 6px;
+  width: 100%;
+  padding: 4px 6px;
+  border-radius: 999px;
+  border: 1px solid #cfd8dc;
+  background: #eceff1;
+  font-size: 11px;
+  font-weight: 600;
+  color: #455a64;
+  cursor: pointer;
+}
+
+.challan-type-reset-btn:hover {
+  background: #e0e4e8;
 }

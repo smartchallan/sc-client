@@ -64,28 +64,27 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView }
           <thead>
             <tr>
               <th>#</th>
-              <th>Vehicle</th>
+              <th>Vehicle No.</th>
               <th>Registration Date</th>
               <th>Insurance Upto</th>
               <th>Road Tax Upto</th>
               <th>Fitness Upto</th>
               <th>Pollution Upto</th>
               <th colSpan={2} style={{textAlign:'center'}}>Vehicle Challans</th>
-              <th>Action</th>
               <th>View</th>
             </tr>
             <tr>
               <th colSpan={7}></th>
               <th style={{textAlign:'center',color:'#e74c3c'}}>Pending</th>
               <th style={{textAlign:'center',color:'#43a047'}}>Settled</th>
-              <th colSpan={2}></th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={11}>Loading...</td></tr>
+              <tr><td colSpan={10}>Loading...</td></tr>
             ) : sorted.length === 0 ? (
-              <tr><td colSpan={11}>No data found.</td></tr>
+              <tr><td colSpan={10}>No data found.</td></tr>
             ) : (
               sorted.map((row, idx) => (
                 <tr key={row.vehicle_id || idx}>
@@ -106,11 +105,6 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView }
                       ? 'disposed-challan-count'
                       : 'zero-challan-count'
                   } style={{textAlign:'center',fontWeight:600}}>{row.disposed_challan_count ?? 0}</td>
-                  <td style={{textAlign:'center'}}>
-                    <button className="action-btn flat-btn" title="Refresh" style={{fontSize:'80%',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={() => onRefresh(row)}>
-                      <FaSyncAlt style={{fontSize:'1.2em'}} />
-                    </button>
-                  </td>
                   <td style={{textAlign:'center'}}>
                     <button className="action-btn flat-btn" title="View Vehicle" style={{fontSize:'80%',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={() => onView(row)}>
                       <i className="ri-eye-line" style={{fontSize:'1.2em'}} />

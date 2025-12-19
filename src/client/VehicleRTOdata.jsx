@@ -1,12 +1,147 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import SelectShowMore from "./SelectShowMore";
 import { FaDownload, FaPrint, FaEye } from "react-icons/fa";
 import * as XLSX from "xlsx";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
+import scLogo from "../assets/sc-logo.png";
 import "../shared/CommonDashboard.css";
 import CustomModal from "./CustomModal";
 import RightSidebar from "./RightSidebar";
 import "./RightSidebar.css";
 import "../RegisterVehicle.css";
+
+// Build a printable / exportable version of the RTO table HTML (used by print and PDF)
+const buildPrintableRtoTableHtml = () => {
+  const printArea = document.getElementById("vehicle-rto-table-print-area");
+  if (!printArea) return null;
+  const table = printArea.querySelector("table");
+  if (!table) return null;
+
+  const printTable = table.cloneNode(true);
+  return printTable.outerHTML;
+};
+
+// Download RTO data as Excel
+const handleRtoDownloadExcel = (rows) => {
+  const exportData = rows.map((row, index) => ({
+    "#": index + 1,
+    "Vehicle Number": row.rc_regn_no || "-",
+    "Registration Date": row.rc_regn_dt || "-",
+    "Insurance Exp": row.insurance_exp || row.rc_insurance_upto || "-",
+    "Road Tax Exp": row.road_tax_exp || row.rc_tax_upto || "-",
+    "Fitness Exp": row.fitness_exp || row.rc_fit_upto || "-",
+    "Pollution Exp": row.pollution_exp || row.rc_pucc_upto || "-",
+    "Owner Name": row.rc_owner_name || "-",
+    "Chassis No": row.rc_chasi_no || "-",
+    "Engine No": row.rc_engine_no || "-",
+    "Vehicle Class": row.rc_vh_class_desc || "-",
+    "Fuel Type": row.rc_fuel_desc || "-",
+    "Maker": row.rc_maker_desc || "-",
+    "Model": row.rc_maker_model || "-",
+    "RTO": row.rc_off_cd || "-",
+    "State": row.rc_state_cd || "-",
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(exportData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "VehicleRTO");
+  XLSX.writeFile(wb, "VehicleRTOData.xlsx");
+};
+
+// Print RTO table in a new window using branding header
+const handleRtoPrint = () => {
+  const tableHtml = buildPrintableRtoTableHtml();
+  if (!tableHtml) return;
+
+  const win = window.open("", "", "height=700,width=1200");
+  if (!win) return;
+  win.document.write("<html><head><title>Vehicle RTO Data</title>");
+  win.document.write('<link rel="stylesheet" href="/src/LatestTable.css" />');
+  win.document.write(
+    "<style>body { margin: 16px; font-family: Segoe UI, Arial, sans-serif; } .sc-branding { display:flex; align-items:center; gap:12px; margin-bottom:16px; } .sc-branding-logo { height:24px !important; max-width:120px !important; object-fit:contain !important; } .sc-branding-text { display:flex; flex-direction:column; } .sc-branding-title { font-size:18px; font-weight:700; color:#1565c0; margin:0; } .sc-branding-sub { font-size:11px; color:#555; margin:4px 0 0; } body .latest-table th, body .latest-table td { padding: 6px 8px !important; font-size: 80% !important; text-align: center !important; } table { width:100%; border-collapse:collapse; } .print-hide { display:none !important; }</style>"
+  );
+  win.document.write("</head><body>");
+  win.document.write('<div class="sc-branding">');
+  win.document.write(
+    `<img class="sc-branding-logo" src="${scLogo}" alt="Smart Challan Logo" />`
+  );
+  win.document.write('<div class="sc-branding-text">');
+  win.document.write('<p class="sc-branding-sub">Vehicle RTO Data Summary</p>');
+  win.document.write("</div>");
+  win.document.write("</div>");
+  win.document.write(tableHtml);
+  win.document.write("</body></html>");
+  win.document.close();
+  win.print();
+};
+
+// Download branded PDF for RTO table directly using jsPDF (no print dialog)
+const handleRtoDownloadPdf = () => {
+  const tableHtml = buildPrintableRtoTableHtml();
+  if (!tableHtml) return;
+
+  const container = document.createElement("div");
+  container.style.position = "fixed";
+  container.style.left = "-9999px";
+  container.style.top = "0";
+  container.innerHTML = `
+    <style>
+      .print-hide { display: none !important; }
+    </style>
+    <div class="sc-branding">
+      <img class="sc-branding-logo" style="height:36px; max-width:180px; object-fit:contain;" src="${scLogo}" alt="Smart Challan Logo" />
+      <div class="sc-branding-text">
+        <p class="sc-branding-sub">Vehicle RTO Data Summary</p>
+      </div>
+    </div>
+    ${tableHtml}
+  `;
+  document.body.appendChild(container);
+
+  setTimeout(() => {
+    html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      ignoreElements: (element) => {
+        return element instanceof SVGElement || element.tagName?.toLowerCase() === "svg";
+      },
+    })
+      .then((canvas) => {
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+        const pdf = new jsPDF("l", "pt", "a4");
+
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+
+        const marginX = 20;
+        const marginY = 20;
+        const availableWidth = pageWidth - marginX * 2;
+        const availableHeight = pageHeight - marginY * 2;
+
+        const imgWidth = availableWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        let heightLeft = imgHeight;
+        let position = marginY;
+
+        pdf.addImage(imgData, "JPEG", marginX, position, imgWidth, imgHeight);
+        heightLeft -= availableHeight;
+
+        while (heightLeft > 0) {
+          pdf.addPage();
+          position = marginY - (imgHeight - heightLeft);
+          pdf.addImage(imgData, "JPEG", marginX, position, imgWidth, imgHeight);
+          heightLeft -= availableHeight;
+        }
+
+        pdf.save("VehicleRTOData.pdf");
+      })
+      .finally(() => {
+        document.body.removeChild(container);
+      });
+  }, 400);
+};
 
 export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoData, setSelectedRtoData, hideSearchSortFilter }) {
       // Urgent renewals filter: multiple types and day range
@@ -50,6 +185,10 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
   const [vehicleData, setVehicleData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState("excel"); // 'excel' | 'pdf'
+  const expiredDropdownRef = useRef(null);
+  const urgentDropdownRef = useRef(null);
 
   useEffect(() => {
     if (!clientId) return;
@@ -246,6 +385,23 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
   useEffect(() => { setVisibleCount(DEFAULT_LIMIT); }, [search, vehicleData]);
   const displayed = visibleCount > 0 ? filtered.slice(0, visibleCount) : filtered;
 
+  // Close dropdowns when clicking outside their areas
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (expiredDropdownRef.current && !expiredDropdownRef.current.contains(event.target)) {
+        setShowExpiredDropdown(false);
+      }
+      if (urgentDropdownRef.current && !urgentDropdownRef.current.contains(event.target)) {
+        setShowUrgentDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   return (
     <div className="dashboard-latest">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, padding: '0 24px 0 0', minHeight: 54 }}>
@@ -273,119 +429,204 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
           boxShadow: '0 1px 4px #21cbf322',
           position: 'relative'
         }}>
-          <div className="number-plate-container" style={{ width: 330 }}>
-            <div className="number-plate-wrapper">
-              <div className="number-plate-badge">IND</div>
-              <div className="tricolor-strip">
-                <div className="saffron"></div>
-                <div className="white"></div>
-                <div className="green"></div>
+          {/* Left side: number plate search + filters */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', flex: 1 }}>
+            <div className="number-plate-container" style={{ width: 330 }}>
+              <div className="number-plate-wrapper">
+                <div className="number-plate-badge">IND</div>
+                <div className="tricolor-strip">
+                  <div className="saffron"></div>
+                  <div className="white"></div>
+                  <div className="green"></div>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search Vehicle Number"
+                  value={search}
+                  onChange={e => setSearch(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                  className="number-plate-input"
+                  maxLength={12}
+                />
               </div>
-              <input
-                type="text"
-                placeholder="Search Vehicle Number"
-                value={search}
-                onChange={e => setSearch(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                className="number-plate-input"
-                maxLength={12}
-              />
+              <div className="security-features">
+                <div className="hologram"></div>
+                <div className="chakra">⚙</div>
+              </div>
             </div>
-            <div className="security-features">
-              <div className="hologram"></div>
-              <div className="chakra">⚙</div>
+            {/* Expired records filter */}
+            <div style={{ position: 'relative' }} ref={expiredDropdownRef}>
+              <button
+                className="filter-select"
+                style={{ minWidth: 180, textAlign: 'left', padding: '16px 15px', border: '1px solid #bcd', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
+                onClick={() => {
+                  const next = !showExpiredDropdown;
+                  setShowExpiredDropdown(next);
+                  if (next) setShowUrgentDropdown(false);
+                }}
+              >
+                {expiredTypes.length === 0 ? 'Select expired records' : expiredTypes.map(t => {
+                  if (t === 'insurance') return 'Insurance';
+                  if (t === 'roadtax') return 'Road Tax';
+                  if (t === 'fitness') return 'Fitness';
+                  if (t === 'pollution') return 'Pollution';
+                  return t;
+                }).join(', ')}
+                {expiredTypes.length > 0 && (
+                  <span style={{
+                    marginLeft: 8,
+                    padding: '0 6px',
+                    borderRadius: 999,
+                    background: '#e3f2fd',
+                    color: '#1565c0',
+                    fontSize: 11,
+                    fontWeight: 600
+                  }}>
+                    {expiredTypes.length}
+                  </span>
+                )}
+                <span style={{ float: 'right', fontWeight: 700, fontSize: 16, marginLeft: 8 }}>▼</span>
+              </button>
+              {showExpiredDropdown && (
+                <div style={{ position: 'absolute', top: 38, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #bcd', borderRadius: 8, boxShadow: '0 2px 8px #0001', minWidth: 180, padding: 8 }}>
+                  {['insurance', 'roadtax', 'fitness', 'pollution'].map(type => (
+                    <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={expiredTypes.includes(type)}
+                        onChange={e => {
+                          // only one filter (expired or urgent) active at a time
+                          setUrgentTypes([]);
+                          if (e.target.checked) setExpiredTypes(prev => [...prev, type]);
+                          else setExpiredTypes(prev => prev.filter(t => t !== type));
+                        }}
+                      />
+                      {type === 'insurance' ? 'Insurance' : type === 'roadtax' ? 'Road Tax' : type.charAt(0).toUpperCase() + type.slice(1)}
+                    </label>
+                  ))}
+                  <div style={{ textAlign: 'right', marginTop: 6, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                    <button
+                      style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#fff', cursor: 'pointer' }}
+                      onClick={() => setExpiredTypes([])}
+                    >
+                      Reset
+                    </button>
+                    <button
+                      style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#f5f8fa', cursor: 'pointer' }}
+                      onClick={() => setShowExpiredDropdown(false)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* Urgent renewals filter */}
+            <div style={{ position: 'relative' }} ref={urgentDropdownRef}>
+              <button
+                className="filter-select"
+                style={{ minWidth: 180, textAlign: 'left', padding: '16px 15px', border: '1px solid #bcd', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
+                onClick={() => {
+                  const next = !showUrgentDropdown;
+                  setShowUrgentDropdown(next);
+                  if (next) setShowExpiredDropdown(false);
+                }}
+              >
+                {urgentTypes.length === 0 ? 'Select urgent renewals' : urgentTypes.map(t => {
+                  if (t === 'insurance') return 'Insurance';
+                  if (t === 'roadtax') return 'Road Tax';
+                  if (t === 'fitness') return 'Fitness';
+                  if (t === 'pollution') return 'Pollution';
+                  return t;
+                }).join(', ')}
+                {urgentTypes.length > 0 && (
+                  <span style={{
+                    marginLeft: 8,
+                    padding: '0 6px',
+                    borderRadius: 999,
+                    background: '#e8f5e9',
+                    color: '#2e7d32',
+                    fontSize: 11,
+                    fontWeight: 600
+                  }}>
+                    {urgentTypes.length}
+                  </span>
+                )}
+                <span style={{ float: 'right', fontWeight: 700, fontSize: 16, marginLeft: 8 }}>▼</span>
+              </button>
+              {showUrgentDropdown && (
+                <div style={{ position: 'absolute', top: 38, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #bcd', borderRadius: 8, boxShadow: '0 2px 8px #0001', minWidth: 220, padding: 8 }}>
+                  {['insurance', 'roadtax', 'fitness', 'pollution'].map(type => (
+                    <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={urgentTypes.includes(type)}
+                        onChange={e => {
+                          // only one filter (expired or urgent) active at a time
+                          setExpiredTypes([]);
+                          if (e.target.checked) setUrgentTypes(prev => [...prev, type]);
+                          else setUrgentTypes(prev => prev.filter(t => t !== type));
+                        }}
+                      />
+                      {type === 'insurance' ? 'Insurance' : type === 'roadtax' ? 'Road Tax' : type.charAt(0).toUpperCase() + type.slice(1)}
+                    </label>
+                  ))}
+                  <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 13 }}>Days:</span>
+                    <input
+                      type="range"
+                      min={1}
+                      max={50}
+                      value={urgentRange}
+                      onChange={e => setUrgentRange(Number(e.target.value))}
+                      style={{ width: 120 }}
+                    />
+                    <span style={{ fontSize: 13, minWidth: 28, display: 'inline-block', textAlign: 'center', fontWeight: 600, color: '#1976d2' }}>{urgentRange}</span>
+                    <span style={{ fontSize: 13 }}>(1-50)</span>
+                  </div>
+                  <div style={{ textAlign: 'right', marginTop: 6, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                    <button
+                      style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#fff', cursor: 'pointer' }}
+                      onClick={() => { setUrgentTypes([]); setUrgentRange(15); }}
+                    >
+                      Reset
+                    </button>
+                    <button
+                      style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#f5f8fa', cursor: 'pointer' }}
+                      onClick={() => setShowUrgentDropdown(false)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-          {/* Expired records filter */}
-          <div style={{ position: 'relative' }}>
+          {/* Right-aligned Download and Print buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
             <button
-              className="filter-select"
-              style={{ minWidth: 180, textAlign: 'left', padding: '8px 12px', border: '1px solid #bcd', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
-              onClick={() => setShowExpiredDropdown(v => !v)}
+              title="Download"
+              onClick={() => {
+                setDownloadFormat('excel');
+                setShowDownloadModal(true);
+              }}
+              style={{ background: '#e3f2fd', border: '1px solid #bbdefb', borderRadius: 999, cursor: 'pointer', color: '#0d47a1', fontSize: 18, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}
             >
-              {expiredTypes.length === 0 ? 'Select expired records' : expiredTypes.map(t => {
-                if (t === 'insurance') return 'Insurance';
-                if (t === 'roadtax') return 'Road Tax';
-                if (t === 'fitness') return 'Fitness';
-                if (t === 'pollution') return 'Pollution';
-                return t;
-              }).join(', ')}
-              <span style={{ float: 'right', fontWeight: 700, fontSize: 16, marginLeft: 8 }}>▼</span>
+              <FaDownload />
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Download</span>
             </button>
-            {showExpiredDropdown && (
-              <div style={{ position: 'absolute', top: 38, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #bcd', borderRadius: 8, boxShadow: '0 2px 8px #0001', minWidth: 180, padding: 8 }}>
-                {['insurance', 'roadtax', 'fitness', 'pollution'].map(type => (
-                  <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={expiredTypes.includes(type)}
-                      onChange={e => {
-                        if (e.target.checked) setExpiredTypes(prev => [...prev, type]);
-                        else setExpiredTypes(prev => prev.filter(t => t !== type));
-                      }}
-                    />
-                    {type === 'insurance' ? 'Insurance' : type === 'roadtax' ? 'Road Tax' : type.charAt(0).toUpperCase() + type.slice(1)}
-                  </label>
-                ))}
-                <div style={{ textAlign: 'right', marginTop: 6 }}>
-                  <button style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#f5f8fa', cursor: 'pointer' }} onClick={() => setShowExpiredDropdown(false)}>Close</button>
-                </div>
-              </div>
-            )}
-          </div>
-          {/* Urgent renewals filter */}
-          <div style={{ position: 'relative' }}>
             <button
-              className="filter-select"
-              style={{ minWidth: 180, textAlign: 'left', padding: '8px 12px', border: '1px solid #bcd', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
-              onClick={() => setShowUrgentDropdown(v => !v)}
+              title="Print Table"
+              onClick={handleRtoPrint}
+              style={{ background: '#f3e5f5', border: '1px solid #e1bee7', borderRadius: 999, cursor: 'pointer', color: '#4a148c', fontSize: 18, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}
             >
-              {urgentTypes.length === 0 ? 'Select urgent renewals' : urgentTypes.map(t => {
-                if (t === 'insurance') return 'Insurance';
-                if (t === 'roadtax') return 'Road Tax';
-                if (t === 'fitness') return 'Fitness';
-                if (t === 'pollution') return 'Pollution';
-                return t;
-              }).join(', ')}
-              <span style={{ float: 'right', fontWeight: 700, fontSize: 16, marginLeft: 8 }}>▼</span>
+              <FaPrint />
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Print</span>
             </button>
-            {showUrgentDropdown && (
-              <div style={{ position: 'absolute', top: 38, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #bcd', borderRadius: 8, boxShadow: '0 2px 8px #0001', minWidth: 220, padding: 8 }}>
-                {['insurance', 'roadtax', 'fitness', 'pollution'].map(type => (
-                  <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={urgentTypes.includes(type)}
-                      onChange={e => {
-                        if (e.target.checked) setUrgentTypes(prev => [...prev, type]);
-                        else setUrgentTypes(prev => prev.filter(t => t !== type));
-                      }}
-                    />
-                    {type === 'insurance' ? 'Insurance' : type === 'roadtax' ? 'Road Tax' : type.charAt(0).toUpperCase() + type.slice(1)}
-                  </label>
-                ))}
-                <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13 }}>Days:</span>
-                  <input
-                    type="range"
-                    min={1}
-                    max={50}
-                    value={urgentRange}
-                    onChange={e => setUrgentRange(Number(e.target.value))}
-                    style={{ width: 120 }}
-                  />
-                  <span style={{ fontSize: 13, minWidth: 28, display: 'inline-block', textAlign: 'center', fontWeight: 600, color: '#1976d2' }}>{urgentRange}</span>
-                  <span style={{ fontSize: 13 }}>(1-50)</span>
-                </div>
-                <div style={{ textAlign: 'right', marginTop: 6 }}>
-                  <button style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#f5f8fa', cursor: 'pointer' }} onClick={() => setShowUrgentDropdown(false)}>Close</button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
       <div className="table-container" id="vehicle-rto-table-print-area">
-        <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
+        <table className="latest-table" style={{ width: '100%', minWidth: 900, marginTop: 8 }}>
           <thead>
             <tr>
               <th>#</th>
@@ -523,6 +764,47 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
           <div style={{padding:24, fontSize:16, color:'#b00'}}>No vehicle data found for this record.</div>
         )}
       </RightSidebar>
+
+      {/* Download format selection modal */}
+      <CustomModal
+        open={showDownloadModal}
+        title="Download Vehicle RTO Data"
+        description="Choose the format in which you want to download the RTO summary."
+        confirmText={downloadFormat === 'excel' ? 'Download Excel' : 'Download PDF'}
+        cancelText="Cancel"
+        onConfirm={() => {
+          if (downloadFormat === 'excel') {
+            handleRtoDownloadExcel(filtered);
+          } else {
+            handleRtoDownloadPdf();
+          }
+          setShowDownloadModal(false);
+        }}
+        onCancel={() => setShowDownloadModal(false)}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start', marginTop: 4 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+            <input
+              type="radio"
+              name="download-format-rto"
+              value="excel"
+              checked={downloadFormat === 'excel'}
+              onChange={() => setDownloadFormat('excel')}
+            />
+            <span>Excel (.xlsx)</span>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+            <input
+              type="radio"
+              name="download-format-rto"
+              value="pdf"
+              checked={downloadFormat === 'pdf'}
+              onChange={() => setDownloadFormat('pdf')}
+            />
+            <span>PDF (using print layout)</span>
+          </label>
+        </div>
+      </CustomModal>
 
     </div>
   );
