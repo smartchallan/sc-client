@@ -32,6 +32,18 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
     }
   } catch {}
 
+  const challanSettlementLive = import.meta.env.VITE_CHALLAN_SETTLEMENT_LIVE === "true";
+
+  const challanChildren = [
+    { icon: "ri-file-list-3-line", label: "Pending Challans" },
+    { icon: "ri-check-double-line", label: "Disposed Challans" },
+    { icon: "ri-wallet-3-line", label: "Pay Challans" },
+  ];
+
+  if (challanSettlementLive) {
+    challanChildren.push({ icon: "ri-list-check-2", label: "Challan Requests" });
+  }
+
   // Always show client menu for client sidebar
   const menu = [
     { icon: "ri-home-4-line", label: "Dashboard" },
@@ -40,11 +52,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
       icon: "ri-file-list-3-line",
       label: "Challan Management",
       group: true,
-      children: [
-        { icon: "ri-file-list-3-line", label: "Pending Challans" },
-        { icon: "ri-check-double-line", label: "Disposed Challans" },
-        { icon: "ri-wallet-3-line", label: "Pay Challans" },
-      ],
+      children: challanChildren,
     },
     { icon: "ri-car-line", label: "RTO Details" },
     { icon: "ri-id-card-line", label: "DL Details" },

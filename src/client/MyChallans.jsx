@@ -1314,6 +1314,7 @@ export function ChallanTable({
 export default function MyChallans() {
   const [challanData, setChallanData] = useState({ Disposed_data: [], Pending_data: [] });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
     async function fetchChallans() {
       try {
@@ -1367,6 +1368,8 @@ export default function MyChallans() {
         });
       } catch (err) {
         setChallanData({ Disposed_data: [], Pending_data: [] });
+      } finally {
+        setIsLoading(false);
       }
     }
     fetchChallans();
@@ -1393,19 +1396,57 @@ export default function MyChallans() {
         </div>
       )}
       <div style={{marginTop: '18px'}}>
-        <ChallanTableV2
-          title="Pending Challans"
-          data={challanData.Pending_data}
-          onView={c => {
-            setSelectedChallan(c);
-            setSidebarOpen(true);
-          }}
-          onClickDownload={() => {
-            setDownloadFormat('excel');
-            setShowDownloadModal(true);
-          }}
-          onClickPrint={handleChallanPrint}
-        />
+        {isLoading ? (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '40px 0',
+            }}
+          >
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '10px 18px',
+                borderRadius: 999,
+                background: '#e3f2fd',
+                border: '1px solid #bbdefb',
+                color: '#1565c0',
+                fontSize: 14,
+                fontWeight: 600,
+              }}
+            >
+              <span
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: '50%',
+                  border: '2px solid #90caf9',
+                  borderTopColor: '#1565c0',
+                  animation: 'sc-spin 0.8s linear infinite',
+                }}
+              />
+              <span>Loading pending challans - please wait...</span>
+            </div>
+          </div>
+        ) : (
+          <ChallanTableV2
+            title="Pending Challans"
+            data={challanData.Pending_data}
+            onView={c => {
+              setSelectedChallan(c);
+              setSidebarOpen(true);
+            }}
+            onClickDownload={() => {
+              setDownloadFormat('excel');
+              setShowDownloadModal(true);
+            }}
+            onClickPrint={handleChallanPrint}
+          />
+        )}
       </div>
       {sidebarOpen && selectedChallan && (
         <RightSidebar

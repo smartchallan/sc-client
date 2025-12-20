@@ -29,17 +29,65 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
     ? visibleCount
     : data.length;
 
+  const [maxFineFilter, setMaxFineFilter] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
+
+  const parseFine = (val) => {
+    if (val === null || val === undefined || val === '') return NaN;
+    const num = parseFloat(String(val).replace(/[,₹\s]/g, ''));
+    return Number.isNaN(num) ? NaN : num;
+  };
+
   const filteredData = Array.isArray(data)
     ? data.filter((c) => {
-        if (!searchTerm) return true;
-        const term = searchTerm.toLowerCase();
-        const v = String(c.vehicle_number || "").toLowerCase();
-        const n = String(c.challan_no || "").toLowerCase();
-        return v.includes(term) || n.includes(term);
+        const term = (searchTerm || '').toLowerCase();
+        if (term) {
+          const v = String(c.vehicle_number || '').toLowerCase();
+          const n = String(c.challan_no || '').toLowerCase();
+          if (!v.includes(term) && !n.includes(term)) return false;
+        }
+
+        if (maxFineFilter !== null) {
+          const fine = parseFine(c.fine_imposed);
+          if (!Number.isNaN(fine) && fine > maxFineFilter) return false;
+        }
+
+        return true;
       })
     : [];
 
-  const limitedData = filteredData.slice(0, effectiveVisible);
+  const sortedData = React.useMemo(() => {
+    if (!Array.isArray(filteredData)) return [];
+    if (!sortConfig.key) return filteredData;
+
+    const parseChallanDate = (s) => {
+      if (!s) return 0;
+      const str = String(s);
+      const normalized = str.replace(/(\d{2})-(\d{2})-(\d{4})/, '$2/$1/$3');
+      const t = Date.parse(normalized);
+      return Number.isNaN(t) ? 0 : t;
+    };
+
+    const sorted = [...filteredData];
+    sorted.sort((a, b) => {
+      if (sortConfig.key === 'date') {
+        const at = parseChallanDate(a.challan_date_time);
+        const bt = parseChallanDate(b.challan_date_time);
+        return sortConfig.direction === 'asc' ? at - bt : bt - at;
+      }
+      if (sortConfig.key === 'paid') {
+        const pa = parseFine(a.received_amount);
+        const pb = parseFine(b.received_amount);
+        const av = Number.isNaN(pa) ? 0 : pa;
+        const bv = Number.isNaN(pb) ? 0 : pb;
+        return sortConfig.direction === 'asc' ? av - bv : bv - av;
+      }
+      return 0;
+    });
+    return sorted;
+  }, [filteredData, sortConfig]);
+
+  const limitedData = sortedData.slice(0, effectiveVisible);
 
   const totalPaid = Array.isArray(filteredData)
     ? filteredData.reduce((sum, c) => {
@@ -72,7 +120,7 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
         )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 24px 8px 24px', borderTop: '1px solid #e3eaf1', borderBottom: '1px solid #e3eaf1', background: '#f7f9fc' }}>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div className="number-plate-container" style={{ minWidth: 220, maxWidth: 330 }}>
             <div className="number-plate-wrapper">
               <div className="number-plate-badge">IND</div>
@@ -95,6 +143,40 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
               <div className="chakra">⚙</div>
             </div>
           </div>
+
+          {Array.isArray(data) && data.length > 0 && (() => {
+            const fines = data
+              .map((c) => parseFine(c.fine_imposed))
+              .filter((v) => !Number.isNaN(v));
+            if (fines.length === 0) return null;
+            const maxFine = Math.max(...fines);
+            const minFine = Math.min(...fines);
+            const effectiveMax = maxFineFilter === null ? maxFine : maxFineFilter;
+            return (
+              <div className="fine-filter-card">
+                <span className="fine-filter-label">Fine up to</span>
+                <input
+                  type="range"
+                  min={minFine}
+                  max={maxFine}
+                  step={1}
+                  value={effectiveMax}
+                  onChange={(e) => setMaxFineFilter(Number(e.target.value))}
+                  className="fine-filter-range"
+                />
+                <span className="fine-filter-value">₹{Math.round(effectiveMax)}</span>
+                {maxFineFilter !== null && (
+                  <button
+                    type="button"
+                    onClick={() => setMaxFineFilter(null)}
+                    className="fine-filter-reset-btn"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            );
+          })()}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button
@@ -122,10 +204,54 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
               <th>#</th>
               <th>Vehicle No.</th>
               <th>Challan No</th>
-              <th>Date/Time</th>
+              <th
+                style={{ cursor: 'pointer', userSelect: 'none' }}
+                onClick={() =>
+                  setSortConfig((prev) => {
+                    if (prev.key === 'date') {
+                      return {
+                        key: 'date',
+                        direction: prev.direction === 'asc' ? 'desc' : 'asc',
+                      };
+                    }
+                    return { key: 'date', direction: 'asc' };
+                  })
+                }
+              >
+                Date/Time
+                <span style={{ fontSize: 13, marginLeft: 2 }}>
+                  {sortConfig.key === 'date'
+                    ? sortConfig.direction === 'asc'
+                      ? '▲'
+                      : '▼'
+                    : '▲▼'}
+                </span>
+              </th>
               <th>Location</th>
               <th>Fine Imposed</th>
-              <th>Fine Paid</th>
+              <th
+                style={{ cursor: 'pointer', userSelect: 'none' }}
+                onClick={() =>
+                  setSortConfig((prev) => {
+                    if (prev.key === 'paid') {
+                      return {
+                        key: 'paid',
+                        direction: prev.direction === 'asc' ? 'desc' : 'asc',
+                      };
+                    }
+                    return { key: 'paid', direction: 'asc' };
+                  })
+                }
+              >
+                Fine Paid
+                <span style={{ fontSize: 13, marginLeft: 2 }}>
+                  {sortConfig.key === 'paid'
+                    ? sortConfig.direction === 'asc'
+                      ? '▲'
+                      : '▼'
+                    : '▲▼'}
+                </span>
+              </th>
               <th>Status</th>
               <th>Offence Details</th>
               <th>Action</th>
@@ -359,6 +485,7 @@ const handleDisposedDownloadExcel = (rows) => {
 
 export default function DisposedChallansPage() {
   const [challanData, setChallanData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedChallan, setSelectedChallan] = useState(null);
   const DEFAULT_LIMIT = 30;
@@ -401,6 +528,8 @@ export default function DisposedChallansPage() {
         setChallanData(allDisposed);
       } catch (err) {
         setChallanData([]);
+      } finally {
+        setIsLoading(false);
       }
     }
     fetchChallans();
@@ -423,27 +552,65 @@ export default function DisposedChallansPage() {
         </div>
       )}
       <div style={{marginTop: '18px'}}>
-        <ChallanTableV2
-          title="Disposed Challans"
-          data={challanData}
-          onView={c => {
-            setSelectedChallan(c);
-            setSidebarOpen(true);
-          }}
-          visibleCount={visibleCount}
-          onShowMore={val => {
-            if (val === 'all') setVisibleCount(challanData.length);
-            else setVisibleCount(Number(val));
-          }}
-          onReset={() => setVisibleCount(DEFAULT_LIMIT)}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          onClickDownload={() => {
-            setDownloadFormat('excel');
-            setShowDownloadModal(true);
-          }}
-          onClickPrint={handleDisposedPrint}
-        />
+        {isLoading ? (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '40px 0',
+            }}
+          >
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '10px 18px',
+                borderRadius: 999,
+                background: '#e3f2fd',
+                border: '1px solid #bbdefb',
+                color: '#1565c0',
+                fontSize: 14,
+                fontWeight: 600,
+              }}
+            >
+              <span
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: '50%',
+                  border: '2px solid #90caf9',
+                  borderTopColor: '#1565c0',
+                  animation: 'sc-spin 0.8s linear infinite',
+                }}
+              />
+              <span>Loading disposed challans - please wait...</span>
+            </div>
+          </div>
+        ) : (
+          <ChallanTableV2
+            title="Disposed Challans"
+            data={challanData}
+            onView={c => {
+              setSelectedChallan(c);
+              setSidebarOpen(true);
+            }}
+            visibleCount={visibleCount}
+            onShowMore={val => {
+              if (val === 'all') setVisibleCount(challanData.length);
+              else setVisibleCount(Number(val));
+            }}
+            onReset={() => setVisibleCount(DEFAULT_LIMIT)}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            onClickDownload={() => {
+              setDownloadFormat('excel');
+              setShowDownloadModal(true);
+            }}
+            onClickPrint={handleDisposedPrint}
+          />
+        )}
       </div>
       {sidebarOpen && selectedChallan && (
         <RightSidebar

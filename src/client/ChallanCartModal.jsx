@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 
-export default function ChallanCartModal({ open, cart, onClose, onRemove }) {
+export default function ChallanCartModal({ open, cart, onClose, onRemove, onSubmittingChange, onCartSubmitted }) {
   const ONLINE_FEE = Number(import.meta.env.VITE_ONLINE_CHALLAN_FEE || 170);
   const VIRTUAL_COURT_FEE = Number(import.meta.env.VITE_VIRTUAL_COURT_FEE || 499);
   const REGISTERED_COURT_FEE = Number(import.meta.env.VITE_REGISTERED_COURT_FEE || 899);
@@ -8,13 +9,27 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove }) {
 
   const [showPayment, setShowPayment] = useState(false);
   const [transactionId, setTransactionId] = useState("");
+  const [requestId, setRequestId] = useState(null);
+  const [isSubmittingCart, setIsSubmittingCart] = useState(false);
+  const [isSubmittingTxn, setIsSubmittingTxn] = useState(false);
+  const [transactionError, setTransactionError] = useState("");
+
+  useEffect(() => {
+    if (typeof onSubmittingChange === 'function') {
+      onSubmittingChange(isSubmittingCart || isSubmittingTxn);
+    }
+  }, [isSubmittingCart, isSubmittingTxn, onSubmittingChange]);
 
   useEffect(() => {
     if (open) {
       setShowPayment(false);
       setTransactionId("");
+      setRequestId(null);
+      setIsSubmittingCart(false);
+      setIsSubmittingTxn(false);
+      setTransactionError("");
     }
-  }, [open, cart.length]);
+  }, [open]);
 
   const formatDateTime = () => {
     const now = new Date();
@@ -31,7 +46,7 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove }) {
   const submitCartRequest = async () => {
     const API_ROOT = import.meta.env.VITE_API_BASE_URL;
     if (!API_ROOT) {
-      alert("API base URL is not configured. Please contact support.");
+      toast.error("API base URL is not configured. Please contact support.");
       return;
     }
 
@@ -49,8 +64,6 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove }) {
     } catch (e) {
       // ignore, will send null ids
     }
-
-    const timestamp = formatDateTime();
 
     const lineItems = cart.map((c) => {
       const base = parseAmount(c.fine_imposed);
@@ -83,11 +96,10 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove }) {
       line_items: lineItems,
       status: "pending",
       last_updated_by: "client",
-      created_at: timestamp,
-      updated_at: timestamp,
     };
 
     try {
+      setIsSubmittingCart(true);
       const res = await fetch(`${API_ROOT}/cart`, {
         method: "POST",
         headers: {
@@ -99,22 +111,93 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove }) {
       if (!res.ok) {
         throw new Error(`Request failed with status ${res.status}`);
       }
+      try {
+        const data = await res.json();
+        const nested = data && data.data ? data.data : data;
+        if (nested && (nested.request_id || nested.id)) {
+          setRequestId(nested.request_id || nested.id);
+        }
+      } catch (e) {
+        // If response has no JSON body or unexpected shape, ignore and proceed
+      }
       // Successfully created cart request, move to payment/QR step
       setShowPayment(true);
+      toast.success("Challan settlement request created. Please complete the payment and enter the transaction ID.");
+      if (typeof onCartSubmitted === 'function') {
+        onCartSubmitted();
+      }
     } catch (err) {
       console.error("Failed to submit cart request", err);
-      alert("Failed to submit request. Please try again.");
+      toast.error("Failed to submit challan settlement request. Please try again.");
+    } finally {
+      setIsSubmittingCart(false);
     }
   };
 
-  const handleSubmit = () => {
+  const submitTransaction = async () => {
     if (!transactionId.trim()) {
-      alert("Please enter the UPI transaction / reference ID.");
+      setTransactionError("Please enter the UPI transaction / reference ID.");
       return;
     }
 
-    alert("Thank you. We have recorded your transaction ID and will verify the payment shortly.");
-    if (typeof onClose === "function") onClose();
+    setTransactionError("");
+
+    const API_ROOT = import.meta.env.VITE_API_BASE_URL;
+    if (!API_ROOT) {
+      toast.error("API base URL is not configured. Please contact support.");
+      return;
+    }
+
+    let clientId = null;
+    let dealerId = null;
+    let adminId = null;
+    try {
+      const stored = JSON.parse(localStorage.getItem("sc_user")) || {};
+      if (stored && stored.user) {
+        const u = stored.user;
+        clientId = u.client_id || u.id || u._id || null;
+        dealerId = u.dealer_id || null;
+        adminId = u.admin_id || null;
+      }
+    } catch (e) {
+      // ignore, will send null ids
+    }
+
+    if (!requestId) {
+      toast.error("Unable to find challan settlement request ID. Please contact support.");
+      return;
+    }
+
+    const payload = {
+      client_id: clientId,
+      admin_id: adminId,
+      dealer_id: dealerId,
+      request_id: requestId,
+      transaction_id: transactionId.trim(),
+    };
+
+    try {
+      setIsSubmittingTxn(true);
+      const res = await fetch(`${API_ROOT}/cart`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Request failed with status ${res.status}`);
+      }
+
+      toast.success("Thank you. We have recorded your transaction ID and will verify the payment shortly.");
+      if (typeof onClose === "function") onClose();
+    } catch (err) {
+      console.error("Failed to submit transaction ID", err);
+      toast.error("Failed to submit transaction ID. Please try again.");
+    } finally {
+      setIsSubmittingTxn(false);
+    }
   };
 
   const parseAmount = (val) => {
@@ -180,158 +263,217 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove }) {
           <div className="custom-modal-content">
         <h2>
           {showPayment
-            ? "Congrats, we have received your challan settlement request."
+            ? `Congrats, we have received your challan settlement request #${requestId}.`
             : `Challan Cart (${cart.length})`}
         </h2>
         <div style={{ lineHeight: 1.7, fontSize: 15 }}>
-          {cart.length === 0 ? (
+          {!showPayment && cart.length === 0 ? (
             <div>No challans in cart.</div>
           ) : (
             <>
-              <div style={{ maxHeight: 260, overflowY: 'auto', marginTop: 8 }}>
-                <table className="latest-table" style={{ width: '100%', fontSize: 13 }}>
-                  <thead>
-                    <tr>
-                      <th>Challan No</th>
-                      <th>Vehicle No.</th>
-                      <th>Type</th>
-                      <th>Challan Amount</th>
-                      <th>Service Fee</th>
-                      <th>GST @{GST_PERCENT}%</th>
-                      <th>Total</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cart.map((c) => {
-                      const base = parseAmount(c.fine_imposed);
-                      const fee = getServiceFee(c);
-                      const gst = (fee * GST_PERCENT) / 100;
-                      const lineTotal = base + fee + gst;
-                      const type = getChallanType(c);
-                      const label =
-                        type === "virtual"
-                          ? "Virtual Court"
-                          : type === "registered"
-                          ? "Registered Court"
-                          : "Online";
-                      return (
-                        <tr key={c.challan_no}>
-                          <td>{c.challan_no}</td>
-                          <td>{c.vehicle_number}</td>
-                          <td>{label}</td>
-                          <td>₹{base.toLocaleString('en-IN')}</td>
-                          <td>₹{fee.toLocaleString('en-IN')}</td>
-                          <td>₹{gst.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                          <td>₹{lineTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                          <td>
-                            <button
-                              className="action-btn flat-btn"
-                              style={{ background: '#eee', color: '#e53935', fontSize: 16, padding: '2px 6px' }}
-                              type="button"
-                              title="Remove from cart"
-                              onClick={() => onRemove && onRemove(c)}
-                            >
-                              <i className="ri-delete-bin-line" />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              <div style={{ marginTop: 12, fontSize: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Total challans</span>
-                  <span>{cart.length}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                  <span>Total challan amount</span>
-                  <span>₹{cartTotals.base.toLocaleString('en-IN')}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                  <span>Total service fee</span>
-                  <span>₹{cartTotals.fee.toLocaleString('en-IN')}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                  <span>Total GST @ {GST_PERCENT}%</span>
-                  <span>₹{cartTotals.gst.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontWeight: 600 }}>
-                  <span>Grand total</span>
-                  <span>₹{cartTotals.total.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
-                </div>
-              </div>
               {!showPayment && (
-                <button
-                  className="action-btn"
-                  type="button"
-                  style={{ marginTop: 16, width: '100%' }}
-                  onClick={submitCartRequest}
-                >
-                  Submit Request
-                </button>
+                <>
+                  <div style={{ maxHeight: 260, overflowY: 'auto', marginTop: 8 }}>
+                    <table className="latest-table" style={{ width: '100%', fontSize: 13 }}>
+                      <thead>
+                        <tr>
+                          <th>Challan No</th>
+                          <th>Vehicle No.</th>
+                          <th>Type</th>
+                          <th>Challan Amount</th>
+                          <th>Service Fee</th>
+                          <th>GST @{GST_PERCENT}%</th>
+                          <th>Total</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cart.map((c) => {
+                          const base = parseAmount(c.fine_imposed);
+                          const fee = getServiceFee(c);
+                          const gst = (fee * GST_PERCENT) / 100;
+                          const lineTotal = base + fee + gst;
+                          const type = getChallanType(c);
+                          const label =
+                            type === "virtual"
+                              ? "Virtual Court"
+                              : type === "registered"
+                              ? "Registered Court"
+                              : "Online";
+                          return (
+                            <tr key={c.challan_no}>
+                              <td>{c.challan_no}</td>
+                              <td>{c.vehicle_number}</td>
+                              <td>{label}</td>
+                              <td>₹{base.toLocaleString('en-IN')}</td>
+                              <td>₹{fee.toLocaleString('en-IN')}</td>
+                              <td>₹{gst.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                              <td>₹{lineTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                              <td>
+                                <button
+                                  className="action-btn flat-btn"
+                                  style={{ background: '#eee', color: '#e53935', fontSize: 16, padding: '2px 6px' }}
+                                  type="button"
+                                  title="Remove from cart"
+                                  onClick={() => onRemove && onRemove(c)}
+                                >
+                                  <i className="ri-delete-bin-line" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style={{ marginTop: 12, fontSize: 14 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Total challans</span>
+                      <span>{cart.length}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                      <span>Total challan amount</span>
+                      <span>₹{cartTotals.base.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                      <span>Total service fee</span>
+                      <span>₹{cartTotals.fee.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                      <span>Total GST @ {GST_PERCENT}%</span>
+                      <span>₹{cartTotals.gst.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontWeight: 600 }}>
+                      <span>Grand total</span>
+                      <span>₹{cartTotals.total.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                  <button
+                    className="action-btn"
+                    type="button"
+                    style={{ marginTop: 16, width: '100%' }}
+                    onClick={submitCartRequest}
+                    disabled={isSubmittingCart}
+                  >
+                    {isSubmittingCart ? "Submitting..." : "Submit Request"}
+                  </button>
+                </>
               )}
               {showPayment && (
                 <div
                   style={{
                     marginTop: 18,
-                    padding: 12,
-                    borderRadius: 10,
-                    border: '1px solid #e3eaf1',
-                    background: '#f5f8fa',
+                    padding: 18,
+                    borderRadius: 12,
+                    border: '1px solid #d0e2ff',
+                    background: 'linear-gradient(135deg, #f5f9ff 0%, #eef5ff 100%)',
                   }}
                 >
-                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'stretch' }}>
                     <div
                       style={{
-                        padding: 8,
+                        flex: '0 0 auto',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 12,
                         background: '#fff',
-                        borderRadius: 8,
-                        border: '1px solid #ddd',
+                        borderRadius: 10,
+                        border: '1px solid #d0d7e2',
+                        boxShadow: '0 4px 12px rgba(15, 76, 129, 0.12)',
                       }}
                     >
                       <img
-                        src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=demo@upi&pn=Smart%20Challan&am=1.00&cu=INR"
+                        src="https://api.qrserver.com/v1/create-qr-code/?size=190x190&data=upi://pay?pa=demo@upi&pn=Smart%20Challan&am=1.00&cu=INR"
                         alt="Sample UPI QR code"
-                        width={180}
-                        height={180}
+                        width={190}
+                        height={190}
                         style={{ display: 'block' }}
                       />
                     </div>
-                    <div style={{ flex: 1, minWidth: 220 }}>
-                      <p style={{ marginTop: 0, marginBottom: 6 }}>
-                        Scan this sample QR in any UPI app to make payment for your selected challans.
-                      </p>
-                      <p style={{ fontSize: 12, color: '#777', marginTop: 0, marginBottom: 10 }}>
-                        After making the payment, enter your UPI transaction / reference ID below and submit your request so our team can verify and mark the challans as paid.
-                      </p>
-                      <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>
-                        Transaction / UPI Reference ID
-                      </label>
-                      <input
-                        type="text"
-                        value={transactionId}
-                        onChange={(e) => setTransactionId(e.target.value)}
-                        placeholder="Enter transaction ID"
-                        style={{
-                          width: '100%',
-                          padding: '6px 8px',
-                          borderRadius: 6,
-                          border: '1px solid #cfd8e3',
-                          fontSize: 14,
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                      <button
-                        className="action-btn"
-                        type="button"
-                        style={{ marginTop: 10 }}
-                        onClick={handleSubmit}
-                      >
-                        Submit Request
-                      </button>
+                    <div style={{ flex: 1, minWidth: 260, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          padding: '4px 10px',
+                          borderRadius: 999,
+                          background: '#e8f5e9',
+                          color: '#2e7d32',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          marginBottom: 8,
+                        }}>
+                          <i className="ri-shield-check-line" style={{ fontSize: 16 }} />
+                          Secure UPI payment
+                        </div>
+                        <p style={{ marginTop: 0, marginBottom: 4, fontSize: 14 }}>
+                          Scan the QR in any UPI app to make payment for your selected challans.
+                        </p>
+                        <p style={{ fontSize: 12, color: '#57606a', marginTop: 0, marginBottom: 12 }}>
+                          After payment, enter your UPI transaction / reference ID below so our team can verify and mark the challans as paid.
+                        </p>
+                        <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                          Transaction / UPI Reference ID
+                        </label>
+                        <input
+                          type="text"
+                          value={transactionId}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setTransactionId(val);
+                            if (transactionError && val.trim()) {
+                              setTransactionError("");
+                            }
+                          }}
+                          placeholder="Enter transaction ID from your UPI app"
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            borderRadius: 8,
+                            border: transactionError ? '1px solid #e53935' : '1px solid #c5d0e6',
+                            fontSize: 14,
+                            boxSizing: 'border-box',
+                            outline: 'none',
+                          }}
+                        />
+                        {transactionError && (
+                          <div style={{ marginTop: 4, fontSize: 12, color: '#e53935' }}>
+                            {transactionError}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                        <button
+                          className="action-btn flat-btn"
+                          type="button"
+                          onClick={onClose}
+                          style={{
+                            padding: '6px 16px',
+                            fontSize: 13,
+                            opacity: isSubmittingTxn ? 0.7 : 1,
+                            cursor: isSubmittingTxn ? 'not-allowed' : 'pointer',
+                          }}
+                          disabled={isSubmittingTxn}
+                        >
+                          Close
+                        </button>
+                        <button
+                          className="action-btn"
+                          type="button"
+                          onClick={submitTransaction}
+                          style={{
+                            padding: '6px 18px',
+                            fontSize: 13,
+                            opacity: isSubmittingTxn ? 0.8 : 1,
+                            cursor: isSubmittingTxn ? 'wait' : 'pointer',
+                          }}
+                          disabled={isSubmittingTxn}
+                        >
+                          {isSubmittingTxn ? 'Submitting...' : 'Submit transaction'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

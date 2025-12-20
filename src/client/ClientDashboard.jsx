@@ -1,5 +1,6 @@
 import DisposedChallansPage from "./DisposedChallansPage";
 import PayChallans from "./PayChallans";
+import ChallanRequests from "./ChallanRequests";
 import { FaFilePdf } from "react-icons/fa";
 // import { FaFilePdf } from "react-icons/fa"; 
 import { FaFileExcel } from "react-icons/fa";
@@ -1353,6 +1354,20 @@ function ClientDashboard() {
     if (window.innerWidth <= 900) setSidebarOpen(false);
   };
 
+  useEffect(() => {
+    const handleGoPayChallans = () => {
+      handleMenuClick('Pay Challans');
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('client-go-pay-challans', handleGoPayChallans);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('client-go-pay-challans', handleGoPayChallans);
+      }
+    };
+  }, [challanSettlementLive]);
+
   const toggleSidebar = () => setSidebarOpen(s => !s);
 
   // Header hamburger: toggle sidebar open/closed on all screen sizes.
@@ -2280,6 +2295,7 @@ function ClientDashboard() {
     {activeMenu === "Pending Challans" && <MyChallans />}
     {activeMenu === "Disposed Challans" && <DisposedChallansPage />}
       {activeMenu === "Pay Challans" && challanSettlementLive && <PayChallans />}
+      {activeMenu === "Challan Requests" && <ChallanRequests />}
         {activeMenu === "Challans" && <UserChallan />}
         {activeMenu === "My Billing" && <MyBilling clientId={user.user && (user.user.id || user.user._id)} />}
         {activeMenu === "Settings" && <UserSettings users={[]} />}

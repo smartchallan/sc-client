@@ -249,3 +249,34 @@ body .latest-table .cell-ellipsis {
 .challan-type-reset-btn:hover {
   background: #e0e4e8;
 }
+
+/* Empty-state styling for Challan Requests */
+.challan-empty-emoji {
+  font-size: 38px;
+  margin-bottom: 8px;
+  display: inline-block;
+  animation: challan-empty-bounce 1.4s ease-in-out infinite;
+}
+
+@keyframes challan-empty-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.challan-pay-link-blink {
+  position: relative;
+  animation: challan-pay-blink 1.3s ease-in-out infinite;
+}
+
+@keyframes challan-pay-blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}

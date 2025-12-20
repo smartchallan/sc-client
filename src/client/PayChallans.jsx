@@ -10,11 +10,13 @@ export default function PayChallans() {
   const GST_PERCENT = Number(import.meta.env.VITE_CHALLAN_GST_PERCENT || 18);
 
   const [pendingChallans, setPendingChallans] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedChallan, setSelectedChallan] = useState(null);
   const [cart, setCart] = useState([]);
   const [cartSidebarOpen, setCartSidebarOpen] = useState(false);
   const [cartModalOpen, setCartModalOpen] = useState(false);
+  const [isSubmittingCart, setIsSubmittingCart] = useState(false);
 
   useEffect(() => {
     const handleToggle = () => {
@@ -73,6 +75,8 @@ export default function PayChallans() {
         setPendingChallans(allPending);
       } catch (err) {
         setPendingChallans([]);
+      } finally {
+        setIsLoading(false);
       }
     }
     fetchChallans();
@@ -138,22 +142,51 @@ export default function PayChallans() {
     <div className="my-challans-content">
       <p className="page-subtitle">Select pending challans for challan settlement and add them to your cart.</p>
 
-      <div style={{ marginTop: 18 }}>
-        <ChallanTableV2
-          title="Challan Settlement"
-          data={pendingChallans}
-          settlementMode={true}
-          addToCart={addToCart}
-          removeFromCart={removeFromCart}
-          cart={cart}
-          onView={(c) => {
-            setSelectedChallan(c);
-            setSidebarOpen(true);
-          }}
-          onClickDownload={() => handleChallanDownloadExcel(pendingChallans)}
-          onClickPrint={handleChallanPrint}
-        />
-      </div>
+      {isLoading ? (
+        <div style={{ marginTop: 32, textAlign: "center", color: "#555", fontSize: 14 }}>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 14px",
+              borderRadius: 999,
+              background: "#f5f8ff",
+              border: "1px solid #c5d0ff",
+            }}
+          >
+            <span
+              className="spinner-border"
+              style={{
+                width: 16,
+                height: 16,
+                border: "2px solid #90a4ff",
+                borderTopColor: "transparent",
+                borderRadius: "50%",
+                animation: "spin 0.8s linear infinite",
+              }}
+            />
+            <span>Loading pending challansplease wait...</span>
+          </div>
+        </div>
+      ) : (
+        <div style={{ marginTop: 18 }}>
+          <ChallanTableV2
+            title="Challan Settlement"
+            data={pendingChallans}
+            settlementMode={true}
+            addToCart={addToCart}
+            removeFromCart={removeFromCart}
+            cart={cart}
+            onView={(c) => {
+              setSelectedChallan(c);
+              setSidebarOpen(true);
+            }}
+            onClickDownload={() => handleChallanDownloadExcel(pendingChallans)}
+            onClickPrint={handleChallanPrint}
+          />
+        </div>
+      )}
 
       {sidebarOpen && selectedChallan && (
         <RightSidebar
@@ -273,17 +306,21 @@ export default function PayChallans() {
                     className="action-btn flat-btn"
                     type="button"
                     style={{ flex: 1, background: "#f5f5f5", color: "#555" }}
-                    onClick={() => setCart([])}
+                    onClick={() => !isSubmittingCart && setCart([])}
+                    disabled={isSubmittingCart}
                   >
                     Clear Cart
                   </button>
                   <button
                     className="action-btn"
                     type="button"
-                    style={{ flex: 1 }}
-                    onClick={() => setCartModalOpen(true)}
+                    style={{ flex: 1, opacity: isSubmittingCart ? 0.8 : 1, cursor: isSubmittingCart ? "wait" : "pointer" }}
+                    onClick={() => {
+                      if (!isSubmittingCart) setCartModalOpen(true);
+                    }}
+                    disabled={isSubmittingCart}
                   >
-                    Proceed to Settlement
+                    {isSubmittingCart ? "Processing..." : "Proceed to Settlement"}
                   </button>
                 </div>
               </div>
@@ -293,10 +330,15 @@ export default function PayChallans() {
       )}
 
       <ChallanCartModal
-        open={cartModalOpen && cart.length > 0}
+        open={cartModalOpen}
         cart={cart}
         onClose={() => setCartModalOpen(false)}
         onRemove={removeFromCart}
+        onSubmittingChange={setIsSubmittingCart}
+        onCartSubmitted={() => {
+          setCart([]);
+          setCartSidebarOpen(false);
+        }}
       />
     </div>
   );
