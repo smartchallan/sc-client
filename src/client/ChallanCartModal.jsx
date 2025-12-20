@@ -55,7 +55,7 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove }) {
     const lineItems = cart.map((c) => {
       const base = parseAmount(c.fine_imposed);
       const fee = getServiceFee(c);
-      const gstAmt = (base * GST_PERCENT) / 100;
+      const gstAmt = (fee * GST_PERCENT) / 100;
       const rawType = getChallanType(c); // 'online' | 'registered' | 'virtual'
       let challanType = "online";
       if (rawType === "virtual") challanType = "virtual";
@@ -152,7 +152,7 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove }) {
     (acc, c) => {
       const base = parseAmount(c.fine_imposed);
       const fee = getServiceFee(c);
-      const gst = (base * GST_PERCENT) / 100;
+      const gst = (fee * GST_PERCENT) / 100;
       acc.base += base;
       acc.fee += fee;
       acc.gst += gst;
@@ -206,7 +206,7 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove }) {
                     {cart.map((c) => {
                       const base = parseAmount(c.fine_imposed);
                       const fee = getServiceFee(c);
-                      const gst = (base * GST_PERCENT) / 100;
+                      const gst = (fee * GST_PERCENT) / 100;
                       const lineTotal = base + fee + gst;
                       const type = getChallanType(c);
                       const label =

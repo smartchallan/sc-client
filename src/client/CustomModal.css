@@ -88,7 +88,7 @@
 .custom-modal-icon {
   width: 56px;
   height: 56px;
-  margin: -36px auto 8px auto;
+  margin: -28px auto 12px auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -96,6 +96,7 @@
   background: #fff;
   box-shadow: 0 6px 18px rgba(0,0,0,0.12);
   font-size: 26px;
+  padding: 6px;
   color: #ff5252;
   animation: iconPop 0.28s cubic-bezier(.2,.9,.3,1);
 }

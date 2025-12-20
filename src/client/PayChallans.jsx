@@ -66,8 +66,8 @@ export default function PayChallans() {
         const parseDate = (s) =>
           s ? new Date(String(s).replace(/(\d{2})-(\d{2})-(\d{4})/, "$2/$1/$3")).getTime() : 0;
         allPending.sort((a, b) => {
-          const aTime = parseDate(a.created_at || a.createdAt || a.challan_date_time);
-          const bTime = parseDate(b.created_at || b.createdAt || b.challan_date_time);
+          const aTime = parseDate(a.challan_date_time);
+          const bTime = parseDate(b.challan_date_time);
           return (bTime || 0) - (aTime || 0);
         });
         setPendingChallans(allPending);
@@ -124,7 +124,7 @@ export default function PayChallans() {
     (acc, c) => {
       const base = parseAmount(c.fine_imposed);
       const fee = getServiceFee(c);
-      const gst = (base * GST_PERCENT) / 100;
+      const gst = (fee * GST_PERCENT) / 100;
       acc.base += base;
       acc.fee += fee;
       acc.gst += gst;
@@ -214,7 +214,7 @@ export default function PayChallans() {
                     {(() => {
                       const base = parseAmount(c.fine_imposed);
                       const fee = getServiceFee(c);
-                      const gst = (base * GST_PERCENT) / 100;
+                      const gst = (fee * GST_PERCENT) / 100;
                       const lineTotal = base + fee + gst;
                       const type = getChallanType(c);
                       const label =

@@ -136,10 +136,8 @@ export function ChallanTableV2({
       const sorted = [...result];
       sorted.sort((a, b) => {
         if (sortConfig.key === "date") {
-          const daRaw = a.challan_date_time || a.created_at || a.createdAt;
-          const dbRaw = b.challan_date_time || b.created_at || b.createdAt;
-          const at = getChallanTimestamp(daRaw);
-          const bt = getChallanTimestamp(dbRaw);
+          const at = getChallanTimestamp(a.challan_date_time);
+          const bt = getChallanTimestamp(b.challan_date_time);
           return sortConfig.direction === "asc" ? at - bt : bt - at;
         }
         if (sortConfig.key === "fine") {
@@ -747,13 +745,7 @@ export function ChallanTableV2({
                   <td>{idx + 1}</td>
                   <td>{c.vehicle_number || "-"}</td>
                   <td>{c.challan_no || "-"}</td>
-                  <td>
-                    {formatDate(
-                      c.challan_date_time ||
-                        c.created_at ||
-                        c.createdAt
-                    )}
-                  </td>
+                  <td>{c.challan_date_time || '-'}</td>
                   <td>
                     {(() => {
                       const loc =
@@ -1056,7 +1048,7 @@ export const handleChallanDownloadExcel = (rows) => {
   const exportData = rows.map((c) => ({
     "Vehicle Number": c.vehicle_number,
     "Challan No": c.challan_no,
-    "Challan Date/Time": c.challan_date_time || c.created_at || c.createdAt,
+    "Challan Date/Time": c.challan_date_time,
     Location:
       c.challan_place ||
       c.location ||

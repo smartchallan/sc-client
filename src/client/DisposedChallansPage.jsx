@@ -140,7 +140,7 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
                   <td>{idx + 1}</td>
                   <td>{c.vehicle_number || '-'}</td>
                   <td>{c.challan_no || '-'}</td>
-                  <td>{formatDate(c.challan_date_time || c.created_at || c.createdAt)}</td>
+                  <td>{c.challan_date_time || '-'}</td>
                   <td>
                     {(() => {
                       const loc = c.challan_place || c.location || c.challan_location || c.address || c.owner_address;
@@ -337,7 +337,7 @@ const handleDisposedDownloadExcel = (rows) => {
   const exportData = rows.map((c) => ({
     "Vehicle Number": c.vehicle_number,
     "Challan No": c.challan_no,
-    "Challan Date/Time": c.challan_date_time || c.created_at || c.createdAt,
+    "Challan Date/Time": c.challan_date_time,
     Location:
       c.challan_place ||
       c.location ||

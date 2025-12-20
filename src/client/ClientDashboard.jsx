@@ -624,6 +624,9 @@ const DriverVerification = lazy(() => import("./DriverVerification"));
 const LazyVehicleFastag = lazy(() => import("./VehicleFastag"));
 
 function ClientDashboard() {
+  // Feature flag for Pay Challans / Challan Settlement
+  const challanSettlementLive = import.meta.env.VITE_CHALLAN_SETTLEMENT_LIVE === 'true';
+
   // Track if navigation to My Fleet was triggered by a specific renewal stat card or challan filter
   const [goToFleetRenewal, setGoToFleetRenewal] = useState(null); // null | 'insurance' | 'roadTax' | 'fitness' | 'pollution'
   const [goToFleetChallanFilter, setGoToFleetChallanFilter] = useState(null); // null | 'pending' | 'disposed'
@@ -1334,16 +1337,20 @@ function ClientDashboard() {
     // Trigger useEffect to run again
     setRetryTrigger(prev => prev + 1);
   };
-  // Sidebar click handler
+  const [settlementComingSoonModal, setSettlementComingSoonModal] = useState(false);
+
+  // Sidebar / menu click handler
   const handleMenuClick = (label) => {
-    // Page loader disabled - only using graph loaders now
-    // setShowLoader(true);
-    // setTimeout(() => {
-      setActiveMenu(label);
-      // setShowLoader(false);
-      // on small screens, close sidebar after selecting a menu
+    // Gate Pay Challans behind feature flag
+    if (label === 'Pay Challans' && !challanSettlementLive) {
+      setSettlementComingSoonModal(true);
       if (window.innerWidth <= 900) setSidebarOpen(false);
-    // }, 300);
+      return;
+    }
+
+    setActiveMenu(label);
+    // on small screens, close sidebar after selecting a menu
+    if (window.innerWidth <= 900) setSidebarOpen(false);
   };
 
   const toggleSidebar = () => setSidebarOpen(s => !s);
@@ -2272,7 +2279,7 @@ function ClientDashboard() {
         )}
     {activeMenu === "Pending Challans" && <MyChallans />}
     {activeMenu === "Disposed Challans" && <DisposedChallansPage />}
-      {activeMenu === "Pay Challans" && <PayChallans />}
+      {activeMenu === "Pay Challans" && challanSettlementLive && <PayChallans />}
         {activeMenu === "Challans" && <UserChallan />}
         {activeMenu === "My Billing" && <MyBilling clientId={user.user && (user.user.id || user.user._id)} />}
         {activeMenu === "Settings" && <UserSettings users={[]} />}
@@ -2311,12 +2318,92 @@ function ClientDashboard() {
                 } catch (e) {}
               }, 300);
             }}
-            onPay={() => setActiveMenu('Pay Challans')}
+            onPay={() => handleMenuClick('Pay Challans')}
             onReports={() => setReportsModal({ open: true })}
             onContact={() => setSupportModal(true)}
           />
         </div>
       )}
+      <CustomModal
+        open={settlementComingSoonModal}
+        title="Coming soon"
+        description="We are rolling out this feature very soon. Contact sales for more details."
+        icon="ri-information-line"
+        onConfirm={() => setSettlementComingSoonModal(false)}
+        onCancel={() => setSettlementComingSoonModal(false)}
+        confirmText="OK"
+        cancelText={null}
+      >
+        {(() => {
+          const email = import.meta.env.VITE_SUPPORT_EMAIL || 'support@smartchallan.com';
+          const phone = import.meta.env.VITE_SUPPORT_PHONE || '+91-1234-567-890';
+          return (
+            <div style={{ lineHeight: 1.7, fontSize: 15, marginTop: 4 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  background: 'linear-gradient(120deg,#e3f2fd,#bbdefb)',
+                  color: '#0d47a1',
+                  marginBottom: 10,
+                }}
+              >
+                <span
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: '50%',
+                    background: '#ffffffcc',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 1px 6px rgba(0,0,0,0.12)',
+                  }}
+                >
+                  <i className="ri-rocket-line" style={{ fontSize: 20 }} />
+                </span>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontWeight: 700 }}>Challan settlement is almost here!</div>
+                  <div style={{ fontSize: 13 }}>Be among the first to get access by talking to our team.</div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  background: '#fff7e6',
+                  border: '1px solid #ffe0b2',
+                  color: '#e65100',
+                  textAlign: 'left',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <i className="ri-mail-line" style={{ fontSize: 18 }} />
+                  <span>
+                    <b>Email:</b>{' '}
+                    <a href={`mailto:${email}`} style={{ color: '#e65100', textDecoration: 'underline' }}>
+                      {email}
+                    </a>
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <i className="ri-phone-line" style={{ fontSize: 18 }} />
+                  <span>
+                    <b>Phone:</b>{' '}
+                    <a href={`tel:${phone}`} style={{ color: '#e65100', textDecoration: 'underline' }}>
+                      {phone}
+                    </a>
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </CustomModal>
       </main>
       <CustomModal
         open={infoModal.open}
@@ -2334,12 +2421,18 @@ function ClientDashboard() {
         confirmText="OK"
         cancelText={null}
       >
-        <div style={{lineHeight: 1.7, fontSize: 15}}>
-          <div><b>Email:</b> <a href="mailto:support@smartchallan.com">support@smartchallan.com</a></div>
-          <div><b>Phone:</b> <a href="tel:+911234567890">+91-1234-567-890</a></div>
-          <div style={{marginTop: 10}}><b>Support Hours:</b> Mon - Sat, 9 AM to 6 PM</div>
-          <div style={{color: '#b77', marginTop: 4}}>Public holidays: Team is not available. Next working day we will contact you.</div>
-        </div>
+        {(() => {
+          const email = import.meta.env.VITE_SUPPORT_EMAIL || 'support@smartchallan.com';
+          const phone = import.meta.env.VITE_SUPPORT_PHONE || '+91-1234-567-890';
+          return (
+            <div style={{lineHeight: 1.7, fontSize: 15}}>
+              <div><b>Email:</b> <a href={`mailto:${email}`}>{email}</a></div>
+              <div><b>Phone:</b> <a href={`tel:${phone}`}>{phone}</a></div>
+              <div style={{marginTop: 10}}><b>Support Hours:</b> Mon - Sat, 9 AM to 6 PM</div>
+              <div style={{color: '#b77', marginTop: 4}}>Public holidays: Team is not available. Next working day we will contact you.</div>
+            </div>
+          );
+        })()}
       </CustomModal>
       <CustomModal
         open={reportsModal.open}
