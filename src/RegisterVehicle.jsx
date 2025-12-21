@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import CustomModal from "./client/CustomModal";
-import * as XLSX from 'xlsx';
+import SelectShowMore from "./client/SelectShowMore";
+import "./RegisterVehicle.css";
 
 const FIELD_OPTIONS = [
   { value: "vehicle_number", label: "Vehicle Number" },
@@ -469,25 +470,26 @@ export default function RegisterVehicle() {
           ) : vehicles.filter(v => (v.status || '').toUpperCase() !== 'DELETED').length === 0 ? (
             <div style={{color: '#888'}}>No active or inactive vehicles found.</div>
           ) : (
-            <table className="vehicle-challan-table" style={{ width: '100%', marginTop: 8 }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'center' }}>S. No.</th>
-                  <th style={{ textAlign: 'center' }}>Vehicle Number</th>
-                  <th style={{ textAlign: 'center' }}>Engine Number</th>
-                  <th style={{ textAlign: 'center' }}>chassis Number</th>
-                  <th style={{ textAlign: 'center' }}>Status</th>
-                  <th style={{ textAlign: 'center' }}>
-                    Registered At
-                    <span style={{marginLeft:6, cursor:'pointer', fontSize:16}} onClick={() => setSortDesc(s => !s)}>
-                      {sortDesc ? <i className="ri-arrow-down-s-line" title="Sort: Newest First"></i> : <i className="ri-arrow-up-s-line" title="Sort: Oldest First"></i>}
-                    </span>
-                  </th>
-                  <th style={{ textAlign: 'center' }}>Data</th>
-                  <th style={{ textAlign: 'center' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+            <div className="table-container" id="registered-vehicles-table-print-area">
+              <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'center' }}>S. No.</th>
+                    <th style={{ textAlign: 'center' }}>Vehicle Number</th>
+                    <th style={{ textAlign: 'center' }}>Engine Number</th>
+                    <th style={{ textAlign: 'center' }}>chassis Number</th>
+                    <th style={{ textAlign: 'center' }}>Status</th>
+                    <th style={{ textAlign: 'center' }}>
+                      Registered At
+                      <span style={{marginLeft:6, cursor:'pointer', fontSize:16}} onClick={() => setSortDesc(s => !s)}>
+                        {sortDesc ? <i className="ri-arrow-down-s-line" title="Sort: Newest First"></i> : <i className="ri-arrow-up-s-line" title="Sort: Oldest First"></i>}
+                      </span>
+                    </th>
+                    <th style={{ textAlign: 'center' }}>Data</th>
+                    <th style={{ textAlign: 'center' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
                 {vehicles
                   .filter(v => {
                     // Exclude deleted vehicles from main table
@@ -701,10 +703,11 @@ export default function RegisterVehicle() {
                   )}
                 </CustomModal>
               </tbody>
-            </table>
+              </table>
+            </div>
           )}
           
-          {/* Load More button for Active/Inactive Vehicles */}
+          {/* Load More / Show more control for Active/Inactive Vehicles */}
           {(() => {
             const filteredActiveVehicles = vehicles.filter(v => {
               const status = (v.status || '').toUpperCase();
@@ -721,34 +724,16 @@ export default function RegisterVehicle() {
             });
             if (filteredActiveVehicles.length > activeVehiclesLimit) {
               return (
-                <div style={{ textAlign: 'left', marginTop: 16 }}>
-                  <span style={{ fontWeight: 600, marginRight: 10, color: '#1976d2', fontSize: 15 }}>Show more records:</span>
-                  <select
-                    style={{
-                      padding: '7px 16px',
-                      borderRadius: 6,
-                      border: '1.5px solid #1976d2',
-                      fontSize: 15,
-                      fontWeight: 600,
-                      color: '#1976d2',
-                      background: '#f5faff',
-                      outline: 'none',
-                      marginRight: 8
-                    }}
-                    value={0}
-                    onChange={e => {
-                      const val = e.target.value;
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16 }}>
+                  <span style={{ fontWeight: 600, color: '#1976d2', fontSize: 15 }}>Show more records:</span>
+                  <SelectShowMore
+                    onShowMoreRecords={val => {
                       if (val === 'all') setActiveVehiclesLimit(filteredActiveVehicles.length);
-                      else setActiveVehiclesLimit(prev => Math.min(prev + Number(val), filteredActiveVehicles.length));
+                      else setActiveVehiclesLimit(Number(val));
                     }}
-                  >
-                    <option value={0} disabled>Select</option>
-                    <option value={10}>10 more</option>
-                    <option value={50}>50 more</option>
-                    <option value={100}>100 more</option>
-                    <option value={200}>200 more</option>
-                    <option value="all">All records</option>
-                  </select>
+                    onResetRecords={() => setActiveVehiclesLimit(10)}
+                    maxCount={filteredActiveVehicles.length}
+                  />
                 </div>
               );
             }
@@ -764,24 +749,25 @@ export default function RegisterVehicle() {
           return (
             <div id="deleted-vehicles-section" className="deleted-vehicles-section">
               <h2>Deleted Vehicles ({deletedVehicles.length})</h2>
-              <table className="vehicle-challan-table" style={{ width: '100%', marginTop: 8 }}>
-                <thead>
-                  <tr>
-                    <th>S. No.</th>
-                    <th>Vehicle Number</th>
-                    <th>Engine Number</th>
-                    <th>chassis Number</th>
-                    <th>Status</th>
-                    <th>
-                      Registered At
-                      <span style={{marginLeft:6, cursor:'pointer', fontSize:16}} onClick={() => setSortDesc(s => !s)}>
-                        {sortDesc ? <i className="ri-arrow-down-s-line" title="Sort: Newest First"></i> : <i className="ri-arrow-up-s-line" title="Sort: Oldest First"></i>}
-                      </span>
-                    </th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <div className="table-container" id="deleted-vehicles-table-print-area">
+                <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
+                  <thead>
+                    <tr>
+                      <th>S. No.</th>
+                      <th>Vehicle Number</th>
+                      <th>Engine Number</th>
+                      <th>chassis Number</th>
+                      <th>Status</th>
+                      <th>
+                        Registered At
+                        <span style={{marginLeft:6, cursor:'pointer', fontSize:16}} onClick={() => setSortDesc(s => !s)}>
+                          {sortDesc ? <i className="ri-arrow-down-s-line" title="Sort: Newest First"></i> : <i className="ri-arrow-up-s-line" title="Sort: Oldest First"></i>}
+                        </span>
+                      </th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                   {deletedVehicles
                     .sort((a, b) => {
                       const dateA = a.registered_at ? new Date(a.registered_at) : new Date(0);
@@ -814,18 +800,22 @@ export default function RegisterVehicle() {
                         </tr>
                       );
                     })}
-                </tbody>
-              </table>
-              
-              {/* Load More button for Deleted Vehicles */}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Load More / Show more control for Deleted Vehicles */}
               {deletedVehicles.length > deletedVehiclesLimit && (
-                <div style={{ textAlign: 'center', marginTop: 16 }}>
-                  <button 
-                    className="load-more-btn deleted"
-                    onClick={() => setDeletedVehiclesLimit(prev => prev + 10)}
-                  >
-                    Load More Deleted Vehicles ({deletedVehicles.length - deletedVehiclesLimit} remaining)
-                  </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16 }}>
+                  <span style={{ fontWeight: 600, color: '#b91c1c', fontSize: 15 }}>Show more deleted records:</span>
+                  <SelectShowMore
+                    onShowMoreRecords={val => {
+                      if (val === 'all') setDeletedVehiclesLimit(deletedVehicles.length);
+                      else setDeletedVehiclesLimit(Number(val));
+                    }}
+                    onResetRecords={() => setDeletedVehiclesLimit(10)}
+                    maxCount={deletedVehicles.length}
+                  />
                 </div>
               )}
             </div>

@@ -216,6 +216,17 @@ html, body {
   display: flex;
   gap: 8px;
 }
+
+/* Two-column row on dashboard for challan + RTO tables */
+.dashboard-two-column-row {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.dashboard-two-column-card {
+  width: 49%;
+}
 @media (max-width: 900px) {
   .admin-home-content {
     padding: 16px;
@@ -229,6 +240,9 @@ html, body {
   }
   .dashboard-latest, .dashboard-due {
     padding: 12px;
+  }
+  .dashboard-two-column-row {
+    gap: 16px;
   }
 }
 @media (max-width: 600px) {
@@ -257,5 +271,12 @@ html, body {
   }
   .due-date, .due-info {
     font-size: 12px;
+  }
+  .dashboard-two-column-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .dashboard-two-column-card {
+    width: 100% !important;
   }
 }

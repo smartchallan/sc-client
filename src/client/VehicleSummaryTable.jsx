@@ -58,7 +58,7 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView }
           </button>
       </div>
 
-      <div className="vehicle-summary-table-container" id="vehicle-summary-table-print-area">
+      <div className="vehicle-summary-table-container table-container" id="vehicle-summary-table-print-area">
         <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
           <thead>
             <tr>

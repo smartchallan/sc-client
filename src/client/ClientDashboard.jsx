@@ -1516,7 +1516,6 @@ function ClientDashboard() {
               style={{ fontSize: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               onClick={() => {
                 setSelectedChallan(c);
-                setSidebarOpen(true);
               }}
               title="View Challan"
             >
@@ -2138,7 +2137,6 @@ function ClientDashboard() {
                 }}
                 onView={async row => {
                   setSelectedVehicle(row);
-                  setSidebarOpen(true);
                   setSelectedVehicleReport(null);
                   const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
                   const clientID = row.client_id || row.clientID || user?.user?.client_id || user?.user?.id;
@@ -2160,8 +2158,8 @@ function ClientDashboard() {
               />
             </div>
 
-            <div style={{display:'flex',gap:24,marginBottom:24}}>
-              <div style={{width:'49%'}}>
+            <div className="dashboard-two-column-row">
+              <div className="dashboard-two-column-card">
                 <LatestChallansTable
                   latestChallanRows={latestChallanRows.slice(0, 5)}
                   loadingVehicleChallan={loadingVehicleChallan}
@@ -2170,7 +2168,7 @@ function ClientDashboard() {
                   limit={5}
                 />
               </div>
-              <div style={{width:'49%'}}>
+              <div className="dashboard-two-column-card">
                 <LatestRTOTable
                   vehicleData={vehicleRtoData.slice(0, 5)}
                   loading={loadingVehicleRto}
@@ -2221,7 +2219,6 @@ function ClientDashboard() {
                 onRefresh={row => {}}
                 onView={async row => {
                   setSelectedVehicle(row);
-                  setSidebarOpen(true);
                   setSelectedVehicleReport(null);
                   const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
                   const clientID = row.client_id || row.clientID || user?.user?.client_id || user?.user?.id;

@@ -14,7 +14,8 @@
 
 /* Ensure the inner table doesn't clip sticky headers */
 .vehicle-summary-table-container .latest-table {
-  table-layout: fixed;
+  /* Let the table grow wider than the viewport so horizontal scroll works */
+  min-width: 900px;
   width: 100%;
   overflow: visible !important;
   margin-bottom: 0 !important;

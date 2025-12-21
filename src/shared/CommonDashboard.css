@@ -1343,6 +1343,17 @@ main.main-content,
   }
 }
 
+/* On small screens, hide dashboard graphs inside stat cards so only stats are visible */
+@media (max-width: 900px) {
+  .stat-chart-container {
+    display: none !important;
+  }
+  .stat-card {
+    height: auto !important;
+    min-height: 140px;
+  }
+}
+
 /* Additional utility classes */
 .text-center { text-align: center; }
 .text-left { text-align: left; }
