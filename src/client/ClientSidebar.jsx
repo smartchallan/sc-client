@@ -35,8 +35,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
   const challanSettlementLive = import.meta.env.VITE_CHALLAN_SETTLEMENT_LIVE === "true";
 
   const challanChildren = [
-    { icon: "ri-file-list-3-line", label: "Pending Challans" },
-    { icon: "ri-check-double-line", label: "Disposed Challans" },
+    { icon: "ri-file-list-3-line", label: "Vehicle Challans" },
     { icon: "ri-wallet-3-line", label: "Pay Challans" },
   ];
 

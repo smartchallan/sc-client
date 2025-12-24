@@ -49,7 +49,7 @@ const handleDownload = (rows) => {
     'Road Tax Upto': typeof (row.rc_tax_upto || row.road_tax_exp) === 'object' ? (row.rc_tax_upto || row.road_tax_exp).value : (row.rc_tax_upto || row.road_tax_exp),
     'Fitness Upto': typeof (row.rc_fit_upto || row.fitness_exp) === 'object' ? (row.rc_fit_upto || row.fitness_exp).value : (row.rc_fit_upto || row.fitness_exp),
     'Pollution Upto': typeof (row.rc_pucc_upto || row.pollution_exp) === 'object' ? (row.rc_pucc_upto || row.pollution_exp).value : (row.rc_pucc_upto || row.pollution_exp),
-    'Pending Challans': row.pending_challan_count,
+    'Vehicle Challans': row.pending_challan_count,
     'Settled Challans': row.disposed_challan_count
   }));
   const ws = XLSX.utils.json_to_sheet(exportData);
@@ -751,21 +751,51 @@ export default function MyFleetTable({
                     {row.vehicle_number || '-'}
                     {isAllFit(row) && <BlueTickIcon />}
                   </td>
-                  <td>{row.rc_regn_dt || row.registration_date || row.registered_at || '-'}</td>
+                  <td>{(row.rc_regn_dt || row.registration_date || row.registered_at) ?? 'N/A'}</td>
                   <td
                     style={expiredTypes.includes('insurance') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
-                  >{typeof (row.rc_insurance_upto || row.insurance_exp) === 'object' && (row.rc_insurance_upto || row.insurance_exp) !== null ? ((row.rc_insurance_upto || row.insurance_exp).value ?? JSON.stringify(row.rc_insurance_upto || row.insurance_exp)) : (row.rc_insurance_upto || row.insurance_exp || '-')}</td>
+                  >{(() => {
+                    const val = row.rc_insurance_upto || row.insurance_exp;
+                    if (val === null || val === undefined) return 'N/A';
+                    if (typeof val === 'object') {
+                      if (val.value === null || val.value === undefined) return 'N/A';
+                      return val.value;
+                    }
+                    return val || 'N/A';
+                  })()}</td>
                   <td
                     style={expiredTypes.includes('roadtax') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
-                  >{typeof (row.rc_tax_upto || row.road_tax_exp) === 'object' && (row.rc_tax_upto || row.road_tax_exp) !== null
-                    ? ((row.rc_tax_upto || row.road_tax_exp).value ?? JSON.stringify(row.rc_tax_upto || row.road_tax_exp))
-                    : (row.rc_tax_upto || row.road_tax_exp || '-')}</td>
+                  >{(() => {
+                    const val = row.rc_tax_upto || row.road_tax_exp;
+                    if (val === null || val === undefined) return 'N/A';
+                    if (typeof val === 'object') {
+                      if (val.value === null || val.value === undefined) return 'N/A';
+                      return val.value;
+                    }
+                    return val || 'N/A';
+                  })()}</td>
                   <td
                     style={expiredTypes.includes('fitness') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
-                  >{typeof (row.rc_fit_upto || row.fitness_exp) === 'object' && (row.rc_fit_upto || row.fitness_exp) !== null ? ((row.rc_fit_upto || row.fitness_exp).value ?? JSON.stringify(row.rc_fit_upto || row.fitness_exp)) : (row.rc_fit_upto || row.fitness_exp || '-')}</td>
+                  >{(() => {
+                    const val = row.rc_fit_upto || row.fitness_exp;
+                    if (val === null || val === undefined) return 'N/A';
+                    if (typeof val === 'object') {
+                      if (val.value === null || val.value === undefined) return 'N/A';
+                      return val.value;
+                    }
+                    return val || 'N/A';
+                  })()}</td>
                   <td
                     style={expiredTypes.includes('pollution') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
-                  >{typeof (row.rc_pucc_upto || row.pollution_exp) === 'object' && (row.rc_pucc_upto || row.pollution_exp) !== null ? ((row.rc_pucc_upto || row.pollution_exp).value ?? JSON.stringify(row.rc_pucc_upto || row.pollution_exp)) : (row.rc_pucc_upto || row.pollution_exp || '-')}</td>
+                  >{(() => {
+                    const val = row.rc_pucc_upto || row.pollution_exp;
+                    if (val === null || val === undefined) return 'N/A';
+                    if (typeof val === 'object') {
+                      if (val.value === null || val.value === undefined) return 'N/A';
+                      return val.value;
+                    }
+                    return val || 'N/A';
+                  })()}</td>
                   <td className={row.pending_challan_count > 0
                     ? 'pending-challan-count'
                     : 'zero-challan-count'} style={{ textAlign: 'center', fontWeight: 600 }}>{row.pending_challan_count ?? 0}</td>

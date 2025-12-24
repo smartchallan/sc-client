@@ -1,4 +1,4 @@
-import DisposedChallansPage from "./DisposedChallansPage";
+
 import PayChallans from "./PayChallans";
 import ChallanRequests from "./ChallanRequests";
 import { FaFilePdf } from "react-icons/fa";
@@ -131,7 +131,6 @@ function prettifyKey(key) {
 function SidebarVehicleReport({ vehicleChallanData }) {
   const [rtoOpen, setRtoOpen] = useState(false);
   const [pendingOpen, setPendingOpen] = useState(false);
-  const [disposedOpen, setDisposedOpen] = useState(false);
   const [downloadDialog, setDownloadDialog] = useState({ open: false, section: null, data: null });
   // errorModal declared only once
   const [errorModal, setErrorModal] = useState({ open: false, message: '' });
@@ -201,7 +200,7 @@ function SidebarVehicleReport({ vehicleChallanData }) {
         <div style="width:4px;height:28px;background:linear-gradient(135deg,#2196f3 0%,#21cbf3 100%);border-radius:3px;"></div>
         <div style="display:flex;flex-direction:column;">
           <div style="font-size:18px;font-weight:700;color:#1565c0;">Smart Challan</div>
-          <div style="font-size:11px;color:#555;">${section === 'rto' ? 'RTO Details' : (section === 'pending' ? 'Pending Challans' : 'Disposed Challans')} Summary</div>
+          <div style="font-size:11px;color:#555;">${section === 'rto' ? 'RTO Details' : (section === 'pending' ? 'Vehicle Challans' : '')} Summary</div>
         </div>
       </div>
     `;
@@ -282,8 +281,8 @@ function SidebarVehicleReport({ vehicleChallanData }) {
       const subtitle = section === 'rto'
         ? 'RTO Details'
         : section === 'pending'
-          ? 'Pending Challans'
-          : 'Disposed Challans';
+          ? 'Vehicle Challans'
+          : '';
       doc.text(subtitle, 42, 15);
 
       // Start content a bit below the header
@@ -432,7 +431,7 @@ function SidebarVehicleReport({ vehicleChallanData }) {
           </div>
         </div>
       )}
-      {/* Pending Challans Section */}
+      {/* Vehicle Challans Section (includes disposed) */}
       <div
         style={{
           marginBottom:14,
@@ -450,7 +449,7 @@ function SidebarVehicleReport({ vehicleChallanData }) {
       >
         <span style={{marginRight:10}}><RiFileList2Line size={22} color="#e74c3c" /></span>
         <span style={{fontWeight:700, color:'#e74c3c', fontSize:15, flex:1, cursor:'pointer', display:'flex', alignItems:'center'}} onClick={()=>setPendingOpen(o=>!o)}>
-          Pending Challans ({Array.isArray(pending_data) ? pending_data.length : 0})
+          Vehicle Challans ({Array.isArray(pending_data) ? pending_data.length : 0}{Array.isArray(disposed_data) && disposed_data.length > 0 ? ` + ${disposed_data.length}` : ''})
           <span style={{marginLeft:8}}>{pendingOpen ? <RiArrowDownSLine size={22} /> : <RiArrowRightSLine size={22} />}</span>
         </span>
         <span style={{marginLeft:8, display:'flex', gap:8}}>
@@ -458,44 +457,24 @@ function SidebarVehicleReport({ vehicleChallanData }) {
           <RiPrinterLine style={{cursor:'pointer'}} size={22} title="Print" onClick={()=>handlePrint('pending', pending_data)} />
         </span>
       </div>
-      {pendingOpen && Array.isArray(pending_data) && pending_data.length > 0 && (
+      {pendingOpen && (
         <div style={{marginBottom:18, background:'#fff', borderRadius:8, boxShadow:'0 1px 6px #e74c3c10', padding:'8px 0'}}>
-          {pending_data.map((challan, idx) => (
-            <ChallanCard key={challan.challan_no || idx} challan={challan} color="#e74c3c" />
-          ))}
-        </div>
-      )}
-      {/* Disposed Challans Section */}
-      <div
-        style={{
-          marginBottom:14,
-          borderBottom:'1px solid #e3eaf1',
-          padding:'16px 18px',
-          display:'flex',
-          alignItems:'center',
-          background:'#f5fff5',
-          borderRadius:10,
-          boxShadow:'0 2px 8px #43a04710',
-          transition:'background 0.2s',
-        }}
-        onMouseOver={e=>e.currentTarget.style.background='#eafbe7'}
-        onMouseOut={e=>e.currentTarget.style.background='#f5fff5'}
-      >
-        <span style={{marginRight:10}}><RiCheckDoubleLine size={22} color="#43a047" /></span>
-        <span style={{fontWeight:700, color:'#43a047', fontSize:15, flex:1, cursor:'pointer', display:'flex', alignItems:'center'}} onClick={()=>setDisposedOpen(o=>!o)}>
-          Disposed Challans ({Array.isArray(disposed_data) ? disposed_data.length : 0})
-          <span style={{marginLeft:8}}>{disposedOpen ? <RiArrowDownSLine size={22} /> : <RiArrowRightSLine size={22} />}</span>
-        </span>
-        <span style={{marginLeft:8, display:'flex', gap:8}}>
-          <RiDownload2Line style={{cursor:'pointer'}} size={22} title="Download" onClick={()=>handleDownload('disposed', disposed_data)} />
-          <RiPrinterLine style={{cursor:'pointer'}} size={22} title="Print" onClick={()=>handlePrint('disposed', disposed_data)} />
-        </span>
-      </div>
-      {disposedOpen && Array.isArray(disposed_data) && disposed_data.length > 0 && (
-        <div style={{marginBottom:18, background:'#fff', borderRadius:8, boxShadow:'0 1px 6px #43a04710', padding:'8px 0'}}>
-          {disposed_data.map((challan, idx) => (
-            <ChallanCard key={challan.challan_no || idx} challan={challan} color="#43a047" />
-          ))}
+          {Array.isArray(pending_data) && pending_data.length > 0 && (
+            <>
+              <div style={{fontWeight:600, color:'#e74c3c', margin:'8px 0 4px 12px'}}>Pending Challans</div>
+              {pending_data.map((challan, idx) => (
+                <ChallanCard key={challan.challan_no || idx} challan={challan} color="#e74c3c" />
+              ))}
+            </>
+          )}
+          {Array.isArray(disposed_data) && disposed_data.length > 0 && (
+            <>
+              <div style={{fontWeight:600, color:'#43a047', margin:'16px 0 4px 12px'}}>Disposed Challans</div>
+              {disposed_data.map((challan, idx) => (
+                <ChallanCard key={challan.challan_no || idx} challan={challan} color="#43a047" />
+              ))}
+            </>
+          )}
         </div>
       )}
 
@@ -812,7 +791,7 @@ function ClientDashboard() {
   }, [user, fleetLimit, fleetOffset, fleetAll]);
   // Handler for 'View All' in Latest Challans Table
   React.useEffect(() => {
-    window.handleViewAllChallans = () => setActiveMenu('Pending Challans');
+    window.handleViewAllChallans = () => setActiveMenu('Vehicle Challans');
     // Also provide a handler for Vehicle RTO Data view all from VehicleDataTable
     window.handleViewAllRtoData = () => setActiveMenu('Vehicle RTO Data');
     // Handler for Vehicle Summary Table (My Fleet)
@@ -854,6 +833,10 @@ function ClientDashboard() {
   const [retryTrigger, setRetryTrigger] = useState(0);
   // Client data
   const [clientData, setClientData] = useState(null);
+  // Banner state for expiring subscription (fix path)
+  const showExpiryBanner = !!(user && user.user && user.user.user_options && user.user.user_options.show_expiry_banner);
+  // Dismissible expiry banner
+  const [expiryBannerDismissed, setExpiryBannerDismissed] = useState(false);
   const [selectedVehicleStatus, setSelectedVehicleStatus] = useState(null);
   const [loadingClient, setLoadingClient] = useState(true);
   // Vehicle Challans
@@ -1778,6 +1761,73 @@ function ClientDashboard() {
         <ClientSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
       )}
       <main className="main-content admin-home-content" style={{flex: 1, minHeight: '100vh', transition: 'all 0.35s cubic-bezier(.4,1.3,.5,1)', WebkitTransition: 'all 0.35s cubic-bezier(.4,1.3,.5,1)'}}>
+          {/* DEBUG: Show showExpiryBanner and user?.user_options?.show_expiry_banner */}
+          {/* ...existing code... */}
+          {/* Expiry Banner - fixed, dismissible, modern style */}
+          {showExpiryBanner && !expiryBannerDismissed && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              display: 'flex',
+              justifyContent: 'center',
+              zIndex: 1200,
+              pointerEvents: 'none',
+            }}>
+              <div style={{
+                background: '#fffbe6',
+                color: '#ad6800',
+                border: '1.5px solid #ffe58f',
+                borderRadius: 12,
+                padding: '14px 32px 14px 20px',
+                margin: '14px 0',
+                fontWeight: 600,
+                fontSize: 16,
+                boxShadow: '0 4px 18px 0 rgba(251, 191, 36, 0.13)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                maxWidth: 540,
+                width: 'calc(100vw - 32px)',
+                pointerEvents: 'auto',
+                position: 'relative',
+              }}>
+                <i className="ri-error-warning-line" style={{ fontSize: 24, color: '#faad14', flexShrink: 0 }}></i>
+                <span style={{ flex: 1 }}>{import.meta.env.VITE_EXPIRY_BANNER_MSG || 'Your subscription is expiring soon. Please contact sales team to continue with our Smart services.'}</span>
+                <button
+                  onClick={() => setExpiryBannerDismissed(true)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#ad6800',
+                    fontSize: 22,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    marginLeft: 8,
+                    lineHeight: 1,
+                    borderRadius: 4,
+                    padding: '2px 8px',
+                    transition: 'background 0.15s',
+                  }}
+                  aria-label="Dismiss banner"
+                  title="Dismiss"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
+          {/* Add margin to main content if banner is visible */}
+          <style>{`
+            body { overscroll-behavior-y: none; }
+            @media (max-width: 600px) {
+              .main-content.admin-home-content { margin-top: ${showExpiryBanner && !expiryBannerDismissed ? '70px' : '0'} !important; }
+            }
+            @media (min-width: 601px) {
+              .main-content.admin-home-content { margin-top: ${showExpiryBanner && !expiryBannerDismissed ? '60px' : '0'} !important; }
+            }
+          `}</style>
   <style>{`
     .sidebar,
     .main-content,
@@ -1794,7 +1844,7 @@ function ClientDashboard() {
               {activeMenu === 'Dashboard' ? 'Dashboard'
                 : activeMenu === 'Profile' ? 'Profile'
                 : activeMenu === 'Registered Vehicles' ? 'Registered Vehicles'
-                : activeMenu === 'Challans' ? 'Pending Challans'
+                : activeMenu === 'Challans' ? 'Vehicle Challans'
                 : activeMenu === 'Billing' ? 'My Billing'
                 : activeMenu === 'Settings' ? 'Settings'
                 : activeMenu}
@@ -1970,22 +2020,15 @@ function ClientDashboard() {
                   </div>
                   <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8 }}>
                     <div key="pending" className={`status-badge`} style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                      title="View pending challans"
+                      title="View vehicle challans"
                       onClick={() => {
-                        setActiveMenu('Pending Challans');
+                        setActiveMenu('Vehicle Challans');
                         // Optionally, set a global filter flag if MyChallans supports it later
                       }}>
                       <div style={{ color: '#e74c3c', fontWeight: 700 }}>{loadingVehicleChallan ? '...' : dashboardPendingCount}</div>
                       <div style={{ fontSize: 12, color: '#666' }}>Pending</div>
                     </div>
-                    <div key="disposed" className={`status-badge`} style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                      title="View disposed challans"
-                      onClick={() => {
-                        setActiveMenu('Disposed Challans');
-                      }}>
-                      <div style={{ color: '#66bb6a', fontWeight: 700 }}>{loadingVehicleChallan ? '...' : dashboardDisposedCount}</div>
-                      <div style={{ fontSize: 12, color: '#666' }}>Disposed</div>
-                    </div>
+                    {/* Disposed Challans removed */}
                   </div>
                 </div>
                 <div className="stat-chart-container">
@@ -2091,20 +2134,19 @@ function ClientDashboard() {
                       {loadingVehicleChallan ? '...' : `₹${formatBriefAmount(totalFineAmount)}`}
                     </div>
                   </div>
-                  <div className="stat-value" style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <div className="stat-value" style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
                     {loadingVehicleChallan
                       ? '...'
                       : <>
-                          <span style={{color: 'red', fontWeight: 600, fontSize: '0.80em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                          <span style={{color: '#e74c3c', fontWeight: 600, fontSize: '0.85em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}
                             title="Show pending challans"
-                            onClick={() => { setActiveMenu('Pending Challans'); }}>
-                            Pending: ₹{formatBriefAmount(pendingFineTotal)}
+                            onClick={() => { setActiveMenu('Vehicle Challans'); }}>
+                            Pending Challans: ₹{formatBriefAmount(pendingFineTotal)}
                           </span>
-                          <span style={{margin: '0 6px', color: '#999', fontSize: '0.55em'}}>|</span>
-                          <span style={{fontSize: '0.55em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                            title="Show vehicles with paid challans"
-                            onClick={() => { setActiveMenu('Disposed Challans'); }}>
-                            Paid: ₹{formatBriefAmount(disposedFineTotal)}
+                          <span style={{color: '#4caf50', fontWeight: 600, fontSize: '0.75em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}
+                            title="Show paid challans"
+                            onClick={() => { setActiveMenu('Vehicle Challans'); }}>
+                            Paid Challans: ₹{formatBriefAmount(disposedFineTotal)}
                           </span>
                         </>
                     }
@@ -2289,8 +2331,7 @@ function ClientDashboard() {
             initialTab={vehicleRtoInitialFilter?.tab}
           />
         )}
-    {activeMenu === "Pending Challans" && <MyChallans />}
-    {activeMenu === "Disposed Challans" && <DisposedChallansPage />}
+    {activeMenu === "Vehicle Challans" && <MyChallans />}
       {activeMenu === "Pay Challans" && challanSettlementLive && <PayChallans />}
       {activeMenu === "Challan Requests" && <ChallanRequests />}
         {activeMenu === "Challans" && <UserChallan />}
@@ -2306,8 +2347,8 @@ function ClientDashboard() {
             <LazyVehicleFastag />
           </Suspense>
         )}
-      {/* Shared quick actions bar available on every page except Pending Challans */}
-      {!(selectedChallan || selectedRtoData) && activeMenu !== "Pending Challans" && (
+      {/* Shared quick actions bar available on every page except Vehicle Challans */}
+      {!(selectedChallan || selectedRtoData) && activeMenu !== "Vehicle Challans" && (
         <div className="main-quick-actions-wrapper" style={{ padding: '0 30px 30px 30px' }}>
           <QuickActions
             title="Quick Actions"

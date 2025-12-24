@@ -1,4 +1,10 @@
 import React, { useEffect, useState } from "react";
+import tsplQr from '../assets/tspl-qr.png';
+// Robust QR image logic for Vite/React
+let qrImageUrl = import.meta.env.VITE_CHALLAN_QR_IMAGE_URL;
+if (qrImageUrl && !/^https?:\/\//.test(qrImageUrl)) {
+  qrImageUrl = tsplQr;
+}
 import { toast } from "react-toastify";
 
 export default function ChallanCartModal({ open, cart, onClose, onRemove, onSubmittingChange, onCartSubmitted }) {
@@ -384,11 +390,12 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove, onSubm
                       }}
                     >
                       <img
-                        src="https://api.qrserver.com/v1/create-qr-code/?size=190x190&data=upi://pay?pa=demo@upi&pn=Smart%20Challan&am=1.00&cu=INR"
-                        alt="Sample UPI QR code"
+                        src={qrImageUrl}
+                        alt="Smart Challan UPI QR code"
                         width={190}
                         height={190}
                         style={{ display: 'block' }}
+                        onError={e => { e.target.onerror = null; e.target.src = 'https://api.qrserver.com/v1/create-qr-code/?size=190x190&data=upi://pay?pa=demo@upi&pn=Smart%20Challan&am=1.00&cu=INR'; }}
                       />
                     </div>
                     <div style={{ flex: 1, minWidth: 260, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>

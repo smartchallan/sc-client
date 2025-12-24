@@ -93,7 +93,7 @@ body .latest-table .cell-ellipsis {
   font-size: 13px;
   font-weight: 600;
   color: #546e7a;
-  white-space: nowrap;
+  display: inline-block; /* Changed to show the checkbox */
 }
 
 .fine-filter-range {
@@ -248,6 +248,94 @@ body .latest-table .cell-ellipsis {
 
 .challan-type-reset-btn:hover {
   background: #e0e4e8;
+}
+
+/* Challan status (Pending / Disposed) pill filters */
+.challan-status-filter-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.challan-status-filter-wrapper label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #d0e2ff;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1565c0;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.challan-status-filter-wrapper label:hover {
+  background: #e3f2fd;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.16);
+  transform: translateY(-1px);
+}
+
+.challan-status-filter-wrapper input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #1565c0;
+}
+
+.challan-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #d0e2ff;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  color: #455a64;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.challan-status-pill input[type="checkbox"] {
+  display: none;
+}
+
+.challan-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.challan-status-dot.pending-dot {
+  background: #f59e0b;
+}
+
+.challan-status-dot.disposed-dot {
+  background: #22c55e;
+}
+
+.challan-status-pill.pending.active {
+  background: #fff7e6;
+  border-color: #ffcc80;
+  color: #b26a00;
+}
+
+.challan-status-pill.disposed.active {
+  background: #e8f5e9;
+  border-color: #a5d6a7;
+  color: #1b5e20;
+}
+
+.challan-status-pill.active {
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+  transform: translateY(-1px);
 }
 
 /* Empty-state styling for Challan Requests */

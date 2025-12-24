@@ -140,7 +140,7 @@ export default function PayChallans() {
 
   return (
     <div className="my-challans-content">
-      <p className="page-subtitle">Select pending challans for challan settlement and add them to your cart.</p>
+      <p className="page-subtitle">Select vehicle challans for challan settlement and add them to your cart.</p>
 
       {isLoading ? (
         <div style={{ marginTop: 32, textAlign: "center", color: "#555", fontSize: 14 }}>
@@ -166,7 +166,7 @@ export default function PayChallans() {
                 animation: "spin 0.8s linear infinite",
               }}
             />
-            <span>Loading pending challansplease wait...</span>
+            <span>Loading vehicle challans - please wait...</span>
           </div>
         </div>
       ) : (
@@ -221,8 +221,22 @@ export default function PayChallans() {
               <tr><td><b>DL No</b></td><td>{selectedChallan.dl_no}</td></tr>
               <tr><td><b>Fine Imposed</b></td><td>{selectedChallan.fine_imposed}</td></tr>
               <tr><td><b>Amount of Fine Imposed</b></td><td>{selectedChallan.amount_of_fine_imposed}</td></tr>
-              <tr><td><b>Act</b></td><td>{Array.isArray(selectedChallan.offence_details) && selectedChallan.offence_details.length > 0 ? selectedChallan.offence_details[0].act : ""}</td></tr>
-              <tr><td><b>Offence Details</b></td><td><ul style={{ margin: 0, paddingLeft: 18 }}>{Array.isArray(selectedChallan.offence_details) && selectedChallan.offence_details.map((o, j) => (<li key={j} className="cell-ellipsis" title={o.name}>{o.name}</li>))}</ul></td></tr>
+              {Array.isArray(selectedChallan.offence_details) && selectedChallan.offence_details.length > 0 && (
+                <tr>
+                  <td><b>Offence Details</b></td>
+                  <td>
+                    <ul style={{ margin: 0, paddingLeft: 18 }}>
+                      {selectedChallan.offence_details.map((o, j) => (
+                        <li key={j} className="cell-ellipsis" title={o.name}>
+                          <div><b>Name:</b> {o.name}</div>
+                          {o.act && <div><b>Act:</b> {o.act}</div>}
+                          {o.section && <div><b>Section:</b> {o.section}</div>}
+                        </li>
+                      ))}
+                    </ul>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </RightSidebar>

@@ -460,7 +460,7 @@ export default function DealerRegisterVehicle({ clients: propClients }) {
                   ) : sidebarVehicle.challan_data && typeof sidebarVehicle.challan_data === 'object' ? (
                     <>
                       <div style={{marginBottom:8}}>
-                        <b>Pending Challans:</b>
+                        <b>Vehicle Challans:</b>
                         {Array.isArray(sidebarVehicle.challan_data.pending_data) && sidebarVehicle.challan_data.pending_data.length > 0 ? (
                           sidebarVehicle.challan_data.pending_data.map((challan, idx) => (
                             <div key={idx} style={{border:'1px solid #ffe082',borderRadius:4,padding:6,margin:'6px 0',background:'#fffde7'}}>
@@ -472,11 +472,11 @@ export default function DealerRegisterVehicle({ clients: propClients }) {
                             </div>
                           ))
                         ) : (
-                          <div style={{color:'#888'}}>No pending challans.</div>
+                          <div style={{color:'#888'}}>No vehicle challans.</div>
                         )}
                       </div>
                       <div>
-                        <b>Disposed Challans:</b>
+                        {/* Disposed Challans removed */}
                         {Array.isArray(sidebarVehicle.challan_data.disposed_data) && sidebarVehicle.challan_data.disposed_data.length > 0 ? (
                           sidebarVehicle.challan_data.disposed_data.map((challan, idx) => (
                             <div key={idx} style={{border:'1px solid #ffe082',borderRadius:4,padding:6,margin:'6px 0',background:'#f9fbe7'}}>
@@ -488,7 +488,7 @@ export default function DealerRegisterVehicle({ clients: propClients }) {
                             </div>
                           ))
                         ) : (
-                          <div style={{color:'#888'}}>No disposed challans.</div>
+                          {/* No disposed challans. */}
                         )}
                       </div>
                     </>

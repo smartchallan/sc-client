@@ -62,18 +62,25 @@ export function LoginPage() {
       loginMessage = "Login successful!";
       toast.success(loginMessage);
       if (data.user && data.user.role === 'superuser') {
-        localStorage.setItem('sc_user', JSON.stringify(data.user));
+        // Always include user_options if present
+        const userObj = { ...data.user };
+        if (data.user_options) userObj.user_options = data.user_options;
+        localStorage.setItem('sc_user', JSON.stringify(userObj));
         console.log('Redirecting to /superkidboard');
         await delay(2000);
         navigate('/superkidboard', { replace: true });
       } else if (data.user && data.user.role === 'dealer') {
-        localStorage.setItem('sc_user', JSON.stringify(data.user));
+        const userObj = { ...data.user };
+        if (data.user_options) userObj.user_options = data.user_options;
+        localStorage.setItem('sc_user', JSON.stringify(userObj));
         console.log('Redirecting to /dealersmartboard');
         await delay(2000);
         navigate('/dealersmartboard', { replace: true });
       } else if (data.user && data.user.role === 'admin') {
+        const userObj = { ...data.user };
+        if (data.user_options) userObj.user_options = data.user_options;
         localStorage.setItem('sc_user', JSON.stringify({
-          user: data.user,
+          user: userObj,
           userMeta: data.userMeta || {},
           token: data.token
         }));
@@ -81,8 +88,10 @@ export function LoginPage() {
         await delay(2000);
         navigate('/adminsmartboard', { replace: true });
       } else if (data.user && data.user.role === 'client') {
+        const userObj = { ...data.user };
+        if (data.user_options) userObj.user_options = data.user_options;
         localStorage.setItem('sc_user', JSON.stringify({
-          user: data.user,
+          user: userObj,
           userMeta: data.userMeta || {},
           token: data.token
         }));

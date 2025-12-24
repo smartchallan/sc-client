@@ -44,10 +44,10 @@ export default function UserChallan() {
         <button className="action-btn" style={{ marginLeft: '16px' }}><i className="ri-search-line"></i> Filter</button>
       </div>
 
-      {/* Pending Challans Table */}
+          <h2>Vehicle Challans</h2>
       <div className="dashboard-latest">
         <div className="latest-header">
-          <h2>Pending Challans</h2>
+          <h2>Vehicle Challans</h2>
         </div>
         <div style={{ textAlign: 'left', marginTop: 8, marginBottom: 8 }}>
           <span style={{ fontWeight: 600, marginRight: 12, color: '#1976d2', fontSize: 15 }}>Show more records:</span>
@@ -86,11 +86,12 @@ export default function UserChallan() {
               <th>Description</th>
               <th>Status</th>
               <th>Actions</th>
-            </tr>
-          </thead>
+            {/* ...existing code... */}
+          </tr>
+        </thead>
           <tbody>
             {pendingChallans.length === 0 ? (
-              <tr><td colSpan={6}>No pending challans found.</td></tr>
+              <tr><td colSpan={6}>No vehicle challans found.</td></tr>
             ) : (
               pendingChallans.slice(0, pendingToShow).map((c, idx) => (
                 <tr key={c.no}>

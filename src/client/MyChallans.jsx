@@ -51,6 +51,8 @@ export function ChallanTableV2({
   const [searchTerm, setSearchTerm] = React.useState("");
   const [maxFineFilter, setMaxFineFilter] = React.useState(null);
   const [challanTypeFilter, setChallanTypeFilter] = React.useState({ regCourt: false, virtualCourt: false });
+  // Status filter: Pending / Disposed checkboxes (both unchecked = show all)
+  const [statusFilter, setStatusFilter] = React.useState({ pending: false, disposed: false });
   const [showChallanTypeDropdown, setShowChallanTypeDropdown] = React.useState(false);
   const challanTypeDropdownRef = React.useRef(null);
   const [sortConfig, setSortConfig] = React.useState({ key: null, direction: "desc" });
@@ -97,8 +99,19 @@ export function ChallanTableV2({
     };
 
     const { regCourt, virtualCourt } = challanTypeFilter;
+    const { pending, disposed } = statusFilter;
 
     let result = data.filter((c) => {
+      // Filter by challan_status based on Pending / Disposed checkboxes.
+      // When both are unchecked, do not filter by status (show all).
+      const status = String(c.challan_status || "").toLowerCase();
+      if (pending || disposed) {
+        const isPending = status === "pending";
+        const isDisposed = status === "disposed";
+        const matchesSelected = (pending && isPending) || (disposed && isDisposed);
+        if (!matchesSelected) return false;
+      }
+
       if (hasSearch) {
         const v = String(c.vehicle_number || "").toLowerCase();
         const n = String(c.challan_no || "").toLowerCase();
@@ -153,7 +166,7 @@ export function ChallanTableV2({
     }
 
     return result;
-  }, [data, searchTerm, maxFineFilter, challanTypeFilter, sortConfig]);
+  }, [data, searchTerm, maxFineFilter, challanTypeFilter, sortConfig, statusFilter]);
 
   const limitedData = React.useMemo(
     () => filteredData.slice(0, visibleCount),
@@ -164,6 +177,16 @@ export function ChallanTableV2({
     if (!Array.isArray(filteredData)) return 0;
     return filteredData.reduce((sum, c) => {
       const val = c.fine_imposed;
+      if (val === null || val === undefined || val === "") return sum;
+      const num = parseFloat(String(val).replace(/[,₹\s]/g, ""));
+      return Number.isNaN(num) ? sum : sum + num;
+    }, 0);
+  }, [filteredData]);
+
+  const totalPaid = React.useMemo(() => {
+    if (!Array.isArray(filteredData)) return 0;
+    return filteredData.reduce((sum, c) => {
+      const val = c.received_amount;
       if (val === null || val === undefined || val === "") return sum;
       const num = parseFloat(String(val).replace(/[,₹\s]/g, ""));
       return Number.isNaN(num) ? sum : sum + num;
@@ -221,7 +244,7 @@ export function ChallanTableV2({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          marginBottom: 0,
+    // together in the Vehicle Challans table with status filters.
           padding: "0 24px 0 0",
           minHeight: 54,
         }}
@@ -612,6 +635,30 @@ export function ChallanTableV2({
                 )}
               </div>
             )}
+          </div>
+
+          {/* Status filter: Pending / Disposed toggles */}
+          <div className="challan-status-filter-wrapper">
+            <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <input
+                type="checkbox"
+                checked={statusFilter.pending}
+                onChange={() =>
+                  setStatusFilter((prev) => ({ ...prev, pending: !prev.pending }))
+                }
+              />
+              <span>Pending</span>
+            </label>
+            <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <input
+                type="checkbox"
+                checked={statusFilter.disposed}
+                onChange={() =>
+                  setStatusFilter((prev) => ({ ...prev, disposed: !prev.disposed }))
+                }
+              />
+              <span>Disposed</span>
+            </label>
           </div>
         </div>
         <div
@@ -1340,31 +1387,34 @@ export default function MyChallans() {
         const url = `${API_ROOT}/getvehicleechallandata?clientId=${clientId}`;
         const res = await fetch(url);
         const data = await res.json();
-        // Flatten all pending and disposed challans from all vehicles, and add vehicle_number to each challan
-        const allPending = [];
-        const allDisposed = [];
+        // Flatten all challans (pending + disposed) from all vehicles,
+        // and add vehicle_number to each challan so they can be shown
+        // together in the Vehicle Challans table with status filters.
+        const allChallans = [];
         if (Array.isArray(data)) {
           data.forEach(vehicle => {
             if (Array.isArray(vehicle.pending_data)) {
               vehicle.pending_data.forEach(c => {
-                allPending.push({ ...c, vehicle_number: vehicle.vehicle_number });
+                allChallans.push({ ...c, vehicle_number: vehicle.vehicle_number });
               });
             }
-            // Intentionally ignore disposed_data here so Vehicle Challans page
-            // only shows active/pending challans. Disposed challans are handled
-            // on the dedicated Disposed Challans page.
+            if (Array.isArray(vehicle.disposed_data)) {
+              vehicle.disposed_data.forEach(c => {
+                allChallans.push({ ...c, vehicle_number: vehicle.vehicle_number });
+              });
+            }
           });
         }
-        // Sort pending and disposed challans by newest first (based on created_at / createdAt / challan_date_time)
+        // Sort all challans by newest first (based on created_at / createdAt / challan_date_time)
         const parseDate = s => s ? new Date(String(s).replace(/(\d{2})-(\d{2})-(\d{4})/, '$2/$1/$3')).getTime() : 0;
-        allPending.sort((a, b) => {
+        allChallans.sort((a, b) => {
           const aTime = parseDate(a.created_at || a.createdAt || a.challan_date_time);
           const bTime = parseDate(b.created_at || b.createdAt || b.challan_date_time);
           return (bTime || 0) - (aTime || 0);
         });
         setChallanData({
           Disposed_data: [],
-          Pending_data: allPending
+          Pending_data: allChallans
         });
       } catch (err) {
         setChallanData({ Disposed_data: [], Pending_data: [] });
@@ -1429,12 +1479,12 @@ export default function MyChallans() {
                   animation: 'sc-spin 0.8s linear infinite',
                 }}
               />
-              <span>Loading pending challans - please wait...</span>
+              <span>Loading vehicle challans - please wait...</span>
             </div>
           </div>
         ) : (
           <ChallanTableV2
-            title="Pending Challans"
+            title="Vehicle Challans"
             data={challanData.Pending_data}
             onView={c => {
               setSelectedChallan(c);

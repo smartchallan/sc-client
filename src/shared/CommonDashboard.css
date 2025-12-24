@@ -880,6 +880,29 @@ main.main-content,
   border-bottom: 1px solid #f0f2f5;
 }
 
+/* Two-column row on dashboard for challan + RTO tables (client dashboard) */
+.dashboard-two-column-row {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.dashboard-two-column-card {
+  flex: 1 1 calc(50% - 12px);
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .dashboard-two-column-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .dashboard-two-column-card {
+    flex-basis: 100%;
+  }
+}
+
 .latest-table th {
   font-weight: 700;
   color: #42a5f5;
@@ -1474,6 +1497,11 @@ main.main-content,
 
 /* Mobile responsive adjustments for quick actions */
 @media (max-width: 900px) {
+  /* Hide quick actions bar completely on mobile (both orientations) */
+  .main-quick-actions-wrapper {
+    display: none !important;
+  }
+
   .main-quick-actions-wrapper.quick-actions-sticky .quick-actions-bar {
     left: 16px !important;
     right: 16px !important;
