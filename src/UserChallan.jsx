@@ -1,16 +1,42 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./UserChallan.css";
 import CustomModal from "./client/CustomModal";
 
 export default function UserChallan() {
   const [supportModal, setSupportModal] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('All');
+  const didSetFromStorage = useRef(false);
+  useEffect(() => {
+    // Read filter from localStorage and clear it after use
+    if (didSetFromStorage.current) return;
+    const filter = localStorage.getItem('sc_challan_filter');
+    if (filter === 'pending') {
+      setStatusFilter('Active');
+      localStorage.removeItem('sc_challan_filter');
+      didSetFromStorage.current = true;
+    } else if (filter === 'disposed') {
+      setStatusFilter('Paid');
+      localStorage.removeItem('sc_challan_filter');
+      didSetFromStorage.current = true;
+    }
+  }, []);
+
+  // No need for extra sync effect, statusFilter is now the single source of truth
+  useEffect(() => {
+    // Read filter from localStorage and clear it after use
+    const filter = localStorage.getItem('sc_challan_filter');
+    if (filter === 'pending' || filter === 'disposed') {
+      setInitialFilter(filter);
+      localStorage.removeItem('sc_challan_filter');
+    }
+  }, []);
   return (
     <div className="user-challan-content">
       {/* Filters */}
       <div className="filters-row">
         <div className="filter-group">
           <span className="filter-label">Status</span>
-          <select className="filter-select">
+          <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
             <option>All</option>
             <option>Active</option>
             <option>Paid</option>
@@ -90,10 +116,16 @@ export default function UserChallan() {
           </tr>
         </thead>
           <tbody>
-            {pendingChallans.length === 0 ? (
-              <tr><td colSpan={6}>No vehicle challans found.</td></tr>
-            ) : (
-              pendingChallans.slice(0, pendingToShow).map((c, idx) => (
+            {(() => {
+              let filtered = pendingChallans;
+              if (statusFilter === 'Active') filtered = pendingChallans.filter(c => c.status === 'Active');
+              else if (statusFilter === 'Paid') filtered = pendingChallans.filter(c => c.status === 'Paid');
+              else if (statusFilter === 'Overdue') filtered = pendingChallans.filter(c => c.status === 'Overdue');
+              // 'All' shows all
+              if (filtered.length === 0) {
+                return <tr><td colSpan={6}>No vehicle challans found.</td></tr>;
+              }
+              return filtered.slice(0, pendingToShow).map((c, idx) => (
                 <tr key={c.no}>
                   <td>{c.no}</td>
                   <td>{c.date}</td>
@@ -105,8 +137,8 @@ export default function UserChallan() {
                     {c.status === 'Active' || c.status === 'Overdue' ? <button className="action-btn"><i className="ri-wallet-3-line"></i> Pay</button> : null}
                   </td>
                 </tr>
-              ))
-            )}
+              ));
+            })()}
           </tbody>
         </table>
       </div>

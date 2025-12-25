@@ -58,6 +58,19 @@ export function ChallanTableV2({
   const [sortConfig, setSortConfig] = React.useState({ key: null, direction: "desc" });
   const [mapModal, setMapModal] = React.useState({ open: false, location: null });
 
+  // Auto-check Pending checkbox if sc_challan_filter is set
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const filter = localStorage.getItem('sc_challan_filter');
+    if (filter === 'pending') {
+      setStatusFilter({ pending: true, disposed: false });
+      localStorage.removeItem('sc_challan_filter');
+    } else if (filter === 'disposed') {
+      setStatusFilter({ pending: false, disposed: true });
+      localStorage.removeItem('sc_challan_filter');
+    }
+  }, []);
+
   const filteredData = React.useMemo(() => {
     if (!Array.isArray(data)) return [];
 

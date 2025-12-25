@@ -2020,15 +2020,23 @@ function ClientDashboard() {
                   </div>
                   <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8 }}>
                     <div key="pending" className={`status-badge`} style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                      title="View vehicle challans"
+                      title="View pending challans"
                       onClick={() => {
+                        localStorage.setItem('sc_challan_filter', 'pending');
                         setActiveMenu('Vehicle Challans');
-                        // Optionally, set a global filter flag if MyChallans supports it later
                       }}>
                       <div style={{ color: '#e74c3c', fontWeight: 700 }}>{loadingVehicleChallan ? '...' : dashboardPendingCount}</div>
                       <div style={{ fontSize: 12, color: '#666' }}>Pending</div>
                     </div>
-                    {/* Disposed Challans removed */}
+                    <div key="disposed" className={`status-badge`} style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                      title="View disposed challans"
+                      onClick={() => {
+                        localStorage.setItem('sc_challan_filter', 'disposed');
+                        setActiveMenu('Vehicle Challans');
+                      }}>
+                      <div style={{ color: '#66bb6a', fontWeight: 700 }}>{loadingVehicleChallan ? '...' : dashboardDisposedCount}</div>
+                      <div style={{ fontSize: 12, color: '#666' }}>Disposed</div>
+                    </div>
                   </div>
                 </div>
                 <div className="stat-chart-container">
@@ -2140,12 +2148,18 @@ function ClientDashboard() {
                       : <>
                           <span style={{color: '#e74c3c', fontWeight: 600, fontSize: '0.85em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}
                             title="Show pending challans"
-                            onClick={() => { setActiveMenu('Vehicle Challans'); }}>
+                            onClick={() => {
+                              localStorage.setItem('sc_challan_filter', 'pending');
+                              setActiveMenu('Vehicle Challans');
+                            }}>
                             Pending Challans: ₹{formatBriefAmount(pendingFineTotal)}
                           </span>
                           <span style={{color: '#4caf50', fontWeight: 600, fontSize: '0.75em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}
                             title="Show paid challans"
-                            onClick={() => { setActiveMenu('Vehicle Challans'); }}>
+                            onClick={() => {
+                              localStorage.setItem('sc_challan_filter', 'disposed');
+                              setActiveMenu('Vehicle Challans');
+                            }}>
                             Paid Challans: ₹{formatBriefAmount(disposedFineTotal)}
                           </span>
                         </>
