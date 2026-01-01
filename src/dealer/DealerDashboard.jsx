@@ -24,6 +24,26 @@ import QuickActions from "../client/QuickActions";
 import AddClientPage from "./AddClientPage";
 
 function DealerDashboard() {
+
+		// Auto-logout on inactivity
+		const logoutTimeoutRef = useRef();
+		const AUTO_LOGOUT_SECONDS = Number(import.meta.env.VITE_AUTO_LOGOUT_SECONDS) || 300;
+		const resetLogoutTimer = () => {
+			if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
+			logoutTimeoutRef.current = setTimeout(() => {
+				localStorage.removeItem('sc_user');
+				window.location.href = '/login';
+			}, AUTO_LOGOUT_SECONDS * 1000);
+		};
+		useEffect(() => {
+			const events = ['mousemove', 'keydown', 'mousedown', 'touchstart'];
+			events.forEach(ev => window.addEventListener(ev, resetLogoutTimer));
+			resetLogoutTimer();
+			return () => {
+				events.forEach(ev => window.removeEventListener(ev, resetLogoutTimer));
+				if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
+			};
+		}, []);
 	const [selectedClient, setSelectedClient] = useState(null);
 	const [clientVehiclesPageClient, setClientVehiclesPageClient] = useState(null);
 	const userRole = "dealer";

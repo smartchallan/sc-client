@@ -16,6 +16,29 @@ import { jsPDF } from "jspdf";
 import scLogo from "../assets/sc-logo.png";
 // ...existing code...
 import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
+// Auto-logout on inactivity
+function useAutoLogout() {
+  const logoutTimeoutRef = useRef();
+  const AUTO_LOGOUT_SECONDS = Number(import.meta.env.VITE_AUTO_LOGOUT_SECONDS) || 300;
+  useEffect(() => {
+    function resetLogoutTimer() {
+      if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
+      logoutTimeoutRef.current = setTimeout(() => {
+        localStorage.removeItem('sc_user');
+        window.location.href = '/login';
+      }, AUTO_LOGOUT_SECONDS * 1000);
+    }
+    const events = ['mousemove', 'keydown', 'mousedown', 'touchstart'];
+    events.forEach(ev => window.addEventListener(ev, resetLogoutTimer));
+    resetLogoutTimer();
+    return () => {
+      events.forEach(ev => window.removeEventListener(ev, resetLogoutTimer));
+      if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
+    };
+  }, []);
+}
+
+
 import { FaDownload } from "react-icons/fa";
 // ...existing code...
 import "react-toastify/dist/ReactToastify.css";
@@ -604,6 +627,7 @@ const DriverVerification = lazy(() => import("./DriverVerification"));
 const LazyVehicleFastag = lazy(() => import("./VehicleFastag"));
 
 function ClientDashboard() {
+    useAutoLogout();
   // Feature flag for Pay Challans / Challan Settlement
   const challanSettlementLive = import.meta.env.VITE_CHALLAN_SETTLEMENT_LIVE === 'true';
 
@@ -2148,18 +2172,12 @@ function ClientDashboard() {
                       : <>
                           <span style={{color: '#e74c3c', fontWeight: 600, fontSize: '0.85em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}
                             title="Show pending challans"
-                            onClick={() => {
-                              localStorage.setItem('sc_challan_filter', 'pending');
-                              setActiveMenu('Vehicle Challans');
-                            }}>
+                            onClick={() => { setActiveMenu('Vehicle Challans'); }}>
                             Pending Challans: ₹{formatBriefAmount(pendingFineTotal)}
                           </span>
                           <span style={{color: '#4caf50', fontWeight: 600, fontSize: '0.75em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}
                             title="Show paid challans"
-                            onClick={() => {
-                              localStorage.setItem('sc_challan_filter', 'disposed');
-                              setActiveMenu('Vehicle Challans');
-                            }}>
+                            onClick={() => { setActiveMenu('Vehicle Challans'); }}>
                             Paid Challans: ₹{formatBriefAmount(disposedFineTotal)}
                           </span>
                         </>

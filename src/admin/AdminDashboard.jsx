@@ -24,6 +24,27 @@ import AdminQuickActions from "./AdminQuickActions";
 
 function AdminDashboard() {
 
+  // Auto-logout on inactivity
+  const logoutTimeoutRef = useRef();
+  const AUTO_LOGOUT_SECONDS = Number(import.meta.env.VITE_AUTO_LOGOUT_SECONDS) || 300;
+  const resetLogoutTimer = () => {
+    if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
+    logoutTimeoutRef.current = setTimeout(() => {
+      // Clear user session and redirect to login
+      localStorage.removeItem('sc_user');
+      window.location.href = '/login';
+    }, AUTO_LOGOUT_SECONDS * 1000);
+  };
+  useEffect(() => {
+    const events = ['mousemove', 'keydown', 'mousedown', 'touchstart'];
+    events.forEach(ev => window.addEventListener(ev, resetLogoutTimer));
+    resetLogoutTimer();
+    return () => {
+      events.forEach(ev => window.removeEventListener(ev, resetLogoutTimer));
+      if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
+    };
+  }, []);
+
   // Handler to close the custom confirm modal
   const handleCancelConfirmModal = () => setConfirmModal(m => ({ ...m, open: false }));
 

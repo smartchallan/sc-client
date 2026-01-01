@@ -149,7 +149,8 @@ export function ChallanTableV2({
         } else if (!regCourt && virtualCourt) {
           pass = virtFlag === true;
         } else if (regCourt && virtualCourt) {
-          pass = regFlag === true || virtFlag === true;
+          // Show only records where BOTH are yes
+          pass = regFlag === true && virtFlag === true;
         }
 
         if (!pass) return false;
@@ -743,12 +744,8 @@ export function ChallanTableV2({
                 </span>
               </th>
               <th>Location</th>
-              {title.toLowerCase().includes("pending") && (
-                <th>Reg Court</th>
-              )}
-              {title.toLowerCase().includes("pending") && (
-                <th>Virtual Court</th>
-              )}
+              <th>Reg Court</th>
+              <th>Virtual Court</th>
               <th
                 style={{ cursor: "pointer", userSelect: "none" }}
                 onClick={() => handleSort("fine")}
@@ -839,21 +836,8 @@ export function ChallanTableV2({
                       return "Not Available";
                     })()}
                   </td>
-                  {title.toLowerCase().includes("pending") && (
-                    <td>
-                      {c.sent_to_reg_court ??
-                        c.sent_to_court_on ??
-                        c.sent_to_court ??
-                        "-"}
-                    </td>
-                  )}
-                  {title.toLowerCase().includes("pending") && (
-                    <td>
-                      {c.sent_to_virtual_court ??
-                        c.sent_to_virtual ??
-                        "-"}
-                    </td>
-                  )}
+                  <td>{c.sent_to_reg_court ?? '-'}</td>
+                  <td>{c.sent_to_virtual_court ?? '-'}</td>
                   <td>{c.fine_imposed ?? "-"}</td>
                   {title.toLowerCase().includes("disposed") && (
                     <td>{c.received_amount ?? "-"}</td>
