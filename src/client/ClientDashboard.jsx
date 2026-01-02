@@ -24,8 +24,8 @@ function useAutoLogout() {
     function resetLogoutTimer() {
       if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
       logoutTimeoutRef.current = setTimeout(() => {
-        localStorage.removeItem('sc_user');
-        window.location.href = '/login';
+        localStorage.clear();
+        window.location.href = '/';
       }, AUTO_LOGOUT_SECONDS * 1000);
     }
     const events = ['mousemove', 'keydown', 'mousedown', 'touchstart'];
@@ -2166,19 +2166,19 @@ function ClientDashboard() {
                       {loadingVehicleChallan ? '...' : `₹${formatBriefAmount(totalFineAmount)}`}
                     </div>
                   </div>
-                  <div className="stat-value" style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+                  <div className="stat-value" style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 16 }}>
                     {loadingVehicleChallan
                       ? '...'
                       : <>
-                          <span style={{color: '#e74c3c', fontWeight: 600, fontSize: '0.85em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}
+                          <span style={{color: '#e74c3c', fontWeight: 600, fontSize: '0.80em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}
                             title="Show pending challans"
                             onClick={() => { setActiveMenu('Vehicle Challans'); }}>
-                            Pending Challans: ₹{formatBriefAmount(pendingFineTotal)}
+                            Pending: ₹{formatBriefAmount(pendingFineTotal)}
                           </span>
-                          <span style={{color: '#4caf50', fontWeight: 600, fontSize: '0.75em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}
+                          <span style={{color: '#4caf50', fontWeight: 600, fontSize: '0.65em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}
                             title="Show paid challans"
                             onClick={() => { setActiveMenu('Vehicle Challans'); }}>
-                            Paid Challans: ₹{formatBriefAmount(disposedFineTotal)}
+                            Paid: ₹{formatBriefAmount(disposedFineTotal)}
                           </span>
                         </>
                     }

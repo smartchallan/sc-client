@@ -30,9 +30,9 @@ function AdminDashboard() {
   const resetLogoutTimer = () => {
     if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
     logoutTimeoutRef.current = setTimeout(() => {
-      // Clear user session and redirect to login
-      localStorage.removeItem('sc_user');
-      window.location.href = '/login';
+      // Clear all localStorage and redirect to root
+      localStorage.clear();
+      window.location.href = '/';
     }, AUTO_LOGOUT_SECONDS * 1000);
   };
   useEffect(() => {

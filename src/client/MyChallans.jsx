@@ -744,8 +744,7 @@ export function ChallanTableV2({
                 </span>
               </th>
               <th>Location</th>
-              <th>Reg Court</th>
-              <th>Virtual Court</th>
+              <th>Challan Type</th>
               <th
                 style={{ cursor: "pointer", userSelect: "none" }}
                 onClick={() => handleSort("fine")}
@@ -836,8 +835,21 @@ export function ChallanTableV2({
                       return "Not Available";
                     })()}
                   </td>
-                  <td>{c.sent_to_reg_court ?? '-'}</td>
-                  <td>{c.sent_to_virtual_court ?? '-'}</td>
+                  <td>{(() => {
+                    const reg = c.sent_to_reg_court ?? c.sent_to_court_on ?? c.sent_to_court;
+                    const virt = c.sent_to_virtual_court ?? c.sent_to_virtual;
+                    const isYes = v => {
+                      if (typeof v === 'boolean') return v;
+                      if (typeof v === 'string') {
+                        const s = v.trim().toLowerCase();
+                        return s === 'yes' || s === 'y' || s === 'true' || s === '1';
+                      }
+                      return !!v;
+                    };
+                    if (isYes(reg)) return 'Registered Court';
+                    if (isYes(virt)) return 'Virtual court';
+                    return 'Online';
+                  })()}</td>
                   <td>{c.fine_imposed ?? "-"}</td>
                   {title.toLowerCase().includes("disposed") && (
                     <td>{c.received_amount ?? "-"}</td>

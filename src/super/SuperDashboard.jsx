@@ -11,8 +11,8 @@ function useAutoLogout() {
 		function resetLogoutTimer() {
 			if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
 			logoutTimeoutRef.current = setTimeout(() => {
-				localStorage.removeItem('sc_user');
-				window.location.href = '/login';
+				localStorage.clear();
+				window.location.href = '/';
 			}, AUTO_LOGOUT_SECONDS * 1000);
 		}
 		const events = ['mousemove', 'keydown', 'mousedown', 'touchstart'];
