@@ -744,6 +744,7 @@ export function ChallanTableV2({
                 </span>
               </th>
               <th>Location</th>
+              <th>RTO District</th>
               <th>Challan Type</th>
               <th
                 style={{ cursor: "pointer", userSelect: "none" }}
@@ -835,6 +836,7 @@ export function ChallanTableV2({
                       return "Not Available";
                     })()}
                   </td>
+                  <td>{c.rto_distric_name || c.rto_district_name || '-'}</td>
                   <td>{(() => {
                     const reg = c.sent_to_reg_court ?? c.sent_to_court_on ?? c.sent_to_court;
                     const virt = c.sent_to_virtual_court ?? c.sent_to_virtual;

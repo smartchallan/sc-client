@@ -326,6 +326,8 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
         else if (type === 'roadtax') exp = v.road_tax_exp || v.rc_tax_upto;
         else if (type === 'fitness') exp = v.fitness_exp || v.rc_fit_upto;
         else if (type === 'pollution') exp = v.pollution_exp || v.rc_pucc_upto;
+        else if (type === 'national_permit') exp = v.rc_np_upto;
+        else if (type === 'permit_valid') exp = v.rc_permit_valid_upto || (v.temp_permit && v.temp_permit.rc_permit_valid_upto);
         if (!exp || exp === '-') return false;
         let d = null;
         if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(exp)) d = new Date(exp.replace(/-/g, ' '));
@@ -347,6 +349,8 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
         else if (type === 'roadtax') exp = v.road_tax_exp || v.rc_tax_upto;
         else if (type === 'fitness') exp = v.fitness_exp || v.rc_fit_upto;
         else if (type === 'pollution') exp = v.pollution_exp || v.rc_pucc_upto;
+        else if (type === 'national_permit') exp = v.rc_np_upto;
+        else if (type === 'permit_valid') exp = v.rc_permit_valid_upto || (v.temp_permit && v.temp_permit.rc_permit_valid_upto);
         if (!exp || exp === '-') return false;
         let d = null;
         if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(exp)) d = new Date(exp.replace(/-/g, ' '));
@@ -500,7 +504,7 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
               </button>
               {showExpiredDropdown && (
                 <div style={{ position: 'absolute', top: 38, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #bcd', borderRadius: 8, boxShadow: '0 2px 8px #0001', minWidth: 180, padding: 8 }}>
-                  {['insurance', 'roadtax', 'fitness', 'pollution'].map(type => (
+                  {['insurance', 'roadtax', 'fitness', 'pollution', 'national_permit', 'permit_valid'].map(type => (
                     <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
                       <input
                         type="checkbox"
@@ -512,7 +516,11 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
                           else setExpiredTypes(prev => prev.filter(t => t !== type));
                         }}
                       />
-                      {type === 'insurance' ? 'Insurance' : type === 'roadtax' ? 'Road Tax' : type.charAt(0).toUpperCase() + type.slice(1)}
+                      {type === 'insurance' ? 'Insurance'
+                        : type === 'roadtax' ? 'Road Tax'
+                        : type === 'national_permit' ? 'National Permit'
+                        : type === 'permit_valid' ? 'Permit Valid'
+                        : type.charAt(0).toUpperCase() + type.slice(1)}
                     </label>
                   ))}
                   <div style={{ textAlign: 'right', marginTop: 6, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
@@ -567,7 +575,7 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
               </button>
               {showUrgentDropdown && (
                 <div style={{ position: 'absolute', top: 38, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #bcd', borderRadius: 8, boxShadow: '0 2px 8px #0001', minWidth: 220, padding: 8 }}>
-                  {['insurance', 'roadtax', 'fitness', 'pollution'].map(type => (
+                  {['insurance', 'roadtax', 'fitness', 'pollution', 'national_permit', 'permit_valid'].map(type => (
                     <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
                       <input
                         type="checkbox"
@@ -579,7 +587,11 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
                           else setUrgentTypes(prev => prev.filter(t => t !== type));
                         }}
                       />
-                      {type === 'insurance' ? 'Insurance' : type === 'roadtax' ? 'Road Tax' : type.charAt(0).toUpperCase() + type.slice(1)}
+                      {type === 'insurance' ? 'Insurance'
+                        : type === 'roadtax' ? 'Road Tax'
+                        : type === 'national_permit' ? 'National Permit'
+                        : type === 'permit_valid' ? 'Permit Valid'
+                        : type.charAt(0).toUpperCase() + type.slice(1)}
                     </label>
                   ))}
                   <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -669,6 +681,8 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
                 Road Tax Exp
                 <span style={{fontSize:13,marginLeft:2}}>{sortConfig.key === 'road_tax_exp' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
               </th>
+              <th>National Permit</th>
+              <th>RC Permit Valid</th>
               <th
                 style={{
                   ...(expiredTypes.includes('fitness') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}),
@@ -707,6 +721,14 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
                   <td
                     style={expiredTypes.includes('roadtax') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
                   >{formatExpiry(v.road_tax_exp || v.rc_tax_upto, true)}</td>
+                  <td>{v.rc_np_upto ? formatExpiry(v.rc_np_upto, true) : 'NA'}</td>
+                  <td>{
+                    v.rc_permit_valid_upto
+                      ? formatExpiry(v.rc_permit_valid_upto, true)
+                      : (v.temp_permit && v.temp_permit.rc_permit_valid_upto
+                          ? formatExpiry(v.temp_permit.rc_permit_valid_upto, true)
+                          : 'NA')
+                  }</td>
                   <td
                     style={expiredTypes.includes('fitness') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
                   >{formatExpiry(v.fitness_exp || v.rc_fit_upto, true)}</td>
