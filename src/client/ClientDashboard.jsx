@@ -2166,7 +2166,7 @@ function ClientDashboard() {
                       {loadingVehicleChallan ? '...' : `₹${formatBriefAmount(totalFineAmount)}`}
                     </div>
                   </div>
-                  <div className="stat-value" style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center' }}>
+                  <div className="stat-value" style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 12 }}>
                     {loadingVehicleChallan
                       ? '...'
                       : <>

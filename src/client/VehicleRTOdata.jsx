@@ -284,6 +284,10 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
       val = v.fitness_exp || v.rc_fit_upto;
     } else if (key === 'pollution_exp') {
       val = v.pollution_exp || v.rc_pucc_upto;
+    } else if (key === 'rc_np_upto') {
+      val = v.rc_np_upto;
+    } else if (key === 'rc_permit_valid_upto') {
+      val = v.rc_permit_valid_upto || (v.temp_permit && v.temp_permit.rc_permit_valid_upto);
     } else {
       val = v[key];
     }
@@ -681,8 +685,20 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
                 Road Tax Exp
                 <span style={{fontSize:13,marginLeft:2}}>{sortConfig.key === 'road_tax_exp' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
               </th>
-              <th>National Permit</th>
-              <th>RC Permit Valid</th>
+              <th
+                style={{ cursor: 'pointer', userSelect: 'none' }}
+                onClick={() => handleSort('rc_np_upto')}
+              >
+                National Permit
+                <span style={{fontSize:13,marginLeft:2}}>{sortConfig.key === 'rc_np_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+              </th>
+              <th
+                style={{ cursor: 'pointer', userSelect: 'none' }}
+                onClick={() => handleSort('rc_permit_valid_upto')}
+              >
+                Permit Valid
+                <span style={{fontSize:13,marginLeft:2}}>{sortConfig.key === 'rc_permit_valid_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+              </th>
               <th
                 style={{
                   ...(expiredTypes.includes('fitness') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}),
