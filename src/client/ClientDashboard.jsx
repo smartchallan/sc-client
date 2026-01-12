@@ -1547,7 +1547,7 @@ function ClientDashboard() {
   // Vehicle RTO expiry counts (expiring soon) - compute from vehicleRtoData
   const expiryThresholdDays = parseInt(import.meta.env.VITE_EXPIRY_PERIOD_DAYS || '30', 10) || 60;
   console.log(`Expiry threshold set to ${expiryThresholdDays} days`);
-  const expiryCounts = { insurance: 0, roadTax: 0, fitness: 0, pollution: 0 };
+  const expiryCounts = { insurance: 0, roadTax: 0, fitness: 0, pollution: 0, nationalPermit: 0, permitValid: 0 };
   if (Array.isArray(vehicleRtoData)) {
     const now = new Date();
     const parseDateStr = (dateStr) => {
@@ -1572,11 +1572,13 @@ function ClientDashboard() {
       if (isExpired(v.road_tax_exp || v.roadTaxExp || v.rc_tax_upto)) expiryCounts.roadTax++;
       if (isExpired(v.fitness_exp || v.fitnessUpto || v.rc_fit_upto)) expiryCounts.fitness++;
       if (isExpired(v.pollution_exp || v.pollutionUpto || v.rc_pucc_upto)) expiryCounts.pollution++;
+      if (isExpired(v.rc_np_upto)) expiryCounts.nationalPermit++;
+      if (isExpired(v.rc_permit_valid_upto || (v.temp_permit && v.temp_permit.rc_permit_valid_upto))) expiryCounts.permitValid++;
     });
   }
 
   // Total renewals count (sum of categories) for display in stat card
-  const vehicleRenewalsTotal = (expiryCounts.insurance || 0) + (expiryCounts.roadTax || 0) + (expiryCounts.fitness || 0) + (expiryCounts.pollution || 0);
+  const vehicleRenewalsTotal = (expiryCounts.insurance || 0) + (expiryCounts.roadTax || 0) + (expiryCounts.fitness || 0) + (expiryCounts.pollution || 0) + (expiryCounts.nationalPermit || 0) + (expiryCounts.permitValid || 0);
 
   // Compute challan amount totals (pending and disposed) so we can show total at card title
   let pendingFineTotal = 0, disposedFineTotal = 0;
@@ -2361,6 +2363,7 @@ function ClientDashboard() {
             searchText={vehicleSearchText}
             initialExpiryFilter={vehicleRtoInitialFilter?.expiryFilter}
             initialTab={vehicleRtoInitialFilter?.tab}
+            onViewAll={() => setActiveMenu('RTO Details')}
           />
         )}
     {activeMenu === "Vehicle Challans" && <MyChallans />}

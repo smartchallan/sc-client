@@ -144,6 +144,12 @@ const handleRtoDownloadPdf = () => {
 };
 
 export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoData, setSelectedRtoData, hideSearchSortFilter }) {
+        // Handler for 'View All' button
+        const handleViewAllClick = () => {
+          if (typeof onViewAll === 'function') {
+            onViewAll();
+          }
+        };
       // Urgent renewals filter: multiple types and day range
       const [urgentTypes, setUrgentTypes] = useState([]); // e.g. ['insurance', 'roadtax']
       const [showUrgentDropdown, setShowUrgentDropdown] = useState(false);
@@ -856,6 +862,9 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
         </div>
       </CustomModal>
 
+    <div style={{marginTop:16, textAlign:'right'}}>
+      <button onClick={handleViewAllClick} style={{padding:'8px 18px', borderRadius:8, background:'#1976d2', color:'#fff', fontWeight:700, border:'none', cursor:'pointer'}}>View All</button>
+    </div>
     </div>
   );
 }
