@@ -663,9 +663,9 @@ export default function RegisterVehicle() {
                 <CustomModal
                   open={modal.open}
                   title={
-                    modal.action === 'inactivate' ? 'Are you sure you want to inactivate this vehicle?'
-                    : modal.action === 'activate' ? 'Are you sure you want to activate this vehicle?'
-                    : modal.action === 'delete' ? 'Are you sure you want to delete this vehicle?'
+                    modal.action === 'inactivate' && modal.vehicle ? `Inactivate Vehicle ${modal.vehicle.vehicle_number}?`
+                    : modal.action === 'activate' && modal.vehicle ? `Activate Vehicle ${modal.vehicle.vehicle_number}?`
+                    : modal.action === 'delete' && modal.vehicle ? `Delete Vehicle ${modal.vehicle.vehicle_number}?`
                     : ''
                   }
                   onConfirm={async () => {
@@ -698,8 +698,12 @@ export default function RegisterVehicle() {
                   confirmText={modal.action === 'delete' ? 'Delete' : modal.action === 'activate' ? 'Activate' : modal.action === 'inactivate' ? 'Inactivate' : 'Yes'}
                   cancelText={'Cancel'}
                 >
-                  {modal.action === 'delete' && (
-                    <span style={{color:'red', fontWeight:600}}>This action is non-reversible.<br/>Your vehicle and all related data will be deleted permanently.</span>
+                  {modal.action === 'delete' && modal.vehicle && (
+                    <span style={{color:'red', fontWeight:600}}>
+                      Are you sure you want to delete vehicle <b>{modal.vehicle.vehicle_number}</b>?<br/>
+                      This action is non-reversible.<br/>
+                      Your vehicle and all related data will be deleted permanently.
+                    </span>
                   )}
                 </CustomModal>
               </tbody>

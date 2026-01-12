@@ -1,3 +1,25 @@
+// Local formatExpiry function for date formatting (matches RTO details page)
+const formatExpiry = (dateStr, useColor = true) => {
+  if (!dateStr || dateStr === '-' || dateStr === 'NA' || dateStr === 'N/A') return '-';
+  let d = null;
+  if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(dateStr)) {
+    d = new Date(dateStr.replace(/-/g, ' '));
+  } else if (/\d{2}-\d{2}-\d{4}/.test(dateStr)) {
+    const [day, month, year] = dateStr.split('-');
+    d = new Date(`${year}-${month}-${day}`);
+  } else if (/\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+    d = new Date(dateStr);
+  } else {
+    d = new Date(dateStr);
+  }
+  if (isNaN(d.getTime())) return dateStr;
+  const formatted = d.toLocaleDateString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric'
+  }).replace(/ /g, '-');
+  if (!useColor) return formatted;
+  // Color logic can be added if needed
+  return formatted;
+};
 import React, { useState, useEffect, useRef } from "react";
 import SelectShowMore from "./SelectShowMore";
 import { FaSyncAlt, FaEye } from "react-icons/fa";
@@ -195,7 +217,7 @@ export default function MyFleetTable({
   onConsumeFleetRenewal,
 }) {
   // Sorting state for each date column
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
+  const [sortConfig, setSortConfig] = useState({ key: 'rc_regn_dt', direction: 'desc' });
 
   // Helper to handle sort
   const handleSort = (key) => {
@@ -224,6 +246,10 @@ export default function MyFleetTable({
         val = v.rc_fit_upto || v.fitness_exp;
       } else if (key === 'rc_pucc_upto') {
         val = v.rc_pucc_upto || v.pollution_exp;
+      } else if (key === 'rc_np_upto') {
+        val = v.rc_np_upto || v._raw?.rc_np_upto || v.temp_permit?.rc_np_upto || v._raw?.temp_permit?.rc_np_upto;
+      } else if (key === 'rc_permit_valid_upto') {
+        val = v.rc_permit_valid_upto || (v.temp_permit && v.temp_permit.rc_permit_valid_upto) || v._raw?.rc_permit_valid_upto || v._raw?.temp_permit?.rc_permit_valid_upto;
       }
     }
 
@@ -282,6 +308,8 @@ export default function MyFleetTable({
       if (key === 'roadTax') return 'roadtax';
       if (key === 'fitness') return 'fitness';
       if (key === 'pollution') return 'pollution';
+      if (key === 'nationalPermit' || key === 'np') return 'np';
+      if (key === 'permit' || key === 'permitValid') return 'permit';
       return null;
     };
 
@@ -331,6 +359,8 @@ export default function MyFleetTable({
         else if (type === 'roadtax') exp = v.rc_tax_upto || v.road_tax_exp;
         else if (type === 'fitness') exp = v.rc_fit_upto || v.fitness_exp;
         else if (type === 'pollution') exp = v.rc_pucc_upto || v.pollution_exp;
+        else if (type === 'np') exp = v.rc_np_upto || v._raw?.rc_np_upto || v.temp_permit?.rc_np_upto || v._raw?.temp_permit?.rc_np_upto;
+        else if (type === 'permit') exp = v.rc_permit_valid_upto || (v.temp_permit && v.temp_permit.rc_permit_valid_upto) || v._raw?.rc_permit_valid_upto || v._raw?.temp_permit?.rc_permit_valid_upto;
         const d = parseFlexibleDate(exp);
         if (!d) return false;
         const now = new Date();
@@ -347,6 +377,8 @@ export default function MyFleetTable({
         else if (type === 'roadtax') exp = v.rc_tax_upto || v.road_tax_exp;
         else if (type === 'fitness') exp = v.rc_fit_upto || v.fitness_exp;
         else if (type === 'pollution') exp = v.rc_pucc_upto || v.pollution_exp;
+        else if (type === 'np') exp = v.rc_np_upto || v._raw?.rc_np_upto || v.temp_permit?.rc_np_upto || v._raw?.temp_permit?.rc_np_upto;
+        else if (type === 'permit') exp = v.rc_permit_valid_upto || (v.temp_permit && v.temp_permit.rc_permit_valid_upto) || v._raw?.rc_permit_valid_upto || v._raw?.temp_permit?.rc_permit_valid_upto;
         const d = parseFlexibleDate(exp);
         if (!d) return false;
         const now = new Date();
@@ -471,6 +503,8 @@ export default function MyFleetTable({
                   if (t === 'roadtax') return 'Road Tax';
                   if (t === 'fitness') return 'Fitness';
                   if (t === 'pollution') return 'Pollution';
+                  if (t === 'np') return 'National Permit';
+                  if (t === 'permit') return 'Permit Valid';
                   return t;
                 }).join(', ')}
                 {expiredTypes.length > 0 && (
@@ -490,7 +524,7 @@ export default function MyFleetTable({
               </button>
               {showExpiredDropdown && (
                 <div style={{ position: 'absolute', top: 38, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #bcd', borderRadius: 8, boxShadow: '0 2px 8px #0001', minWidth: 180, padding: 8 }}>
-                  {['insurance', 'roadtax', 'fitness', 'pollution'].map(type => (
+                  {['insurance', 'roadtax', 'fitness', 'pollution', 'np', 'permit'].map(type => (
                     <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
                       <input
                         type="checkbox"
@@ -502,7 +536,7 @@ export default function MyFleetTable({
                           if (e.target.checked) setExpiredTypes(prev => [...prev, type]);
                           else setExpiredTypes(prev => prev.filter(t => t !== type));
                         } } />
-                      {type === 'insurance' ? 'Insurance' : type === 'roadtax' ? 'Road Tax' : type.charAt(0).toUpperCase() + type.slice(1)}
+                      {type === 'insurance' ? 'Insurance' : type === 'roadtax' ? 'Road Tax' : type === 'np' ? 'National Permit' : type === 'permit' ? 'Permit Valid' : type.charAt(0).toUpperCase() + type.slice(1)}
                     </label>
                   ))}
                   <div style={{ textAlign: 'right', marginTop: 6, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
@@ -534,6 +568,8 @@ export default function MyFleetTable({
                   if (t === 'roadtax') return 'Road Tax';
                   if (t === 'fitness') return 'Fitness';
                   if (t === 'pollution') return 'Pollution';
+                  if (t === 'np') return 'National Permit';
+                  if (t === 'permit') return 'Permit Valid';
                   return t;
                 }).join(', ')}
                 {urgentTypes.length > 0 && (
@@ -553,7 +589,7 @@ export default function MyFleetTable({
               </button>
               {showUrgentDropdown && (
                 <div style={{ position: 'absolute', top: 38, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #bcd', borderRadius: 8, boxShadow: '0 2px 8px #0001', minWidth: 220, padding: 8 }}>
-                  {['insurance', 'roadtax', 'fitness', 'pollution'].map(type => (
+                  {['insurance', 'roadtax', 'fitness', 'pollution', 'np', 'permit'].map(type => (
                     <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
                       <input
                         type="checkbox"
@@ -565,7 +601,7 @@ export default function MyFleetTable({
                           if (e.target.checked) setUrgentTypes(prev => [...prev, type]);
                           else setUrgentTypes(prev => prev.filter(t => t !== type));
                         } } />
-                      {type === 'insurance' ? 'Insurance' : type === 'roadtax' ? 'Road Tax' : type.charAt(0).toUpperCase() + type.slice(1)}
+                      {type === 'insurance' ? 'Insurance' : type === 'roadtax' ? 'Road Tax' : type === 'np' ? 'National Permit' : type === 'permit' ? 'Permit Valid' : type.charAt(0).toUpperCase() + type.slice(1)}
                     </label>
                   ))}
                   <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -710,6 +746,26 @@ export default function MyFleetTable({
               </th>
               <th
                 style={{
+                  ...((expiredTypes.includes('np') || urgentTypes.includes('np')) ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}),
+                  cursor: 'pointer', userSelect: 'none'
+                }}
+                onClick={() => handleSort('rc_np_upto')}
+              >
+                National Permit
+                <span style={{ fontSize: 13, marginLeft: 2 }}>{sortConfig.key === 'rc_np_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+              </th>
+              <th
+                style={{
+                  ...((expiredTypes.includes('permit') || urgentTypes.includes('permit')) ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}),
+                  cursor: 'pointer', userSelect: 'none'
+                }}
+                onClick={() => handleSort('rc_permit_valid_upto')}
+              >
+                Permit Valid
+                <span style={{ fontSize: 13, marginLeft: 2 }}>{sortConfig.key === 'rc_permit_valid_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+              </th>
+              <th
+                style={{
                   ...(expiredTypes.includes('fitness') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}),
                   cursor: 'pointer', userSelect: 'none'
                 }}
@@ -732,7 +788,7 @@ export default function MyFleetTable({
               <th>View</th>
             </tr>
             <tr>
-              <th colSpan={7}></th>
+              <th colSpan={9}></th>
               <th className="challan-sub-header" style={{ color: '#e74c3c' }}>Pending</th>
               <th className="challan-sub-header" style={{ color: '#43a047' }}>Settled</th>
               <th></th>
@@ -773,6 +829,38 @@ export default function MyFleetTable({
                       return val.value;
                     }
                     return val || 'N/A';
+                  })()}</td>
+                  <td style={(expiredTypes.includes('np') || urgentTypes.includes('np')) ? { background: '#e3f2fd', fontWeight: 600 } : {}}>{(() => {
+                    // Always extract .value if object or stringified object, else show '-'
+                    let val = row.rc_np_upto ?? row._raw?.rc_np_upto ?? row.temp_permit?.rc_np_upto ?? row._raw?.temp_permit?.rc_np_upto;
+                    if (!val) return '-';
+                    if (typeof val === 'string' && val.trim().startsWith('{') && val.trim().endsWith('}')) {
+                      try {
+                        val = JSON.parse(val);
+                      } catch (e) { return '-'; }
+                    }
+                    if (typeof val === 'object') {
+                      if ('value' in val && val.value) val = val.value;
+                      else return '-';
+                    }
+                    if (!val || typeof val !== 'string') return '-';
+                    return formatExpiry(val, true);
+                  })()}</td>
+                  <td style={(expiredTypes.includes('permit') || urgentTypes.includes('permit')) ? { background: '#e3f2fd', fontWeight: 600 } : {}}>{(() => {
+                    // Always extract .value if object or stringified object, else show '-'
+                    let val = row.rc_permit_valid_upto ?? row._raw?.rc_permit_valid_upto ?? row.temp_permit?.rc_permit_valid_upto ?? row._raw?.temp_permit?.rc_permit_valid_upto;
+                    if (!val) return '-';
+                    if (typeof val === 'string' && val.trim().startsWith('{') && val.trim().endsWith('}')) {
+                      try {
+                        val = JSON.parse(val);
+                      } catch (e) { return '-'; }
+                    }
+                    if (typeof val === 'object') {
+                      if ('value' in val && val.value) val = val.value;
+                      else return '-';
+                    }
+                    if (!val || typeof val !== 'string') return '-';
+                    return formatExpiry(val, true);
                   })()}</td>
                   <td
                     style={expiredTypes.includes('fitness') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
