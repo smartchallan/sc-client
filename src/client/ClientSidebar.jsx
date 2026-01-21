@@ -2,6 +2,10 @@ import React, { useState } from "react";
 import scLogo from "../assets/sc-logo.png";
 const IS_DEFAULT_DOMAIN = window.location.hostname === 'app.smartchallan.com';
 const CUSTOM_LOGO_URL = import.meta.env.VITE_CUSTOM_LOGO_URL;
+// Resolve custom logo: allow absolute URLs or root-relative paths (e.g. /tspl-logo.png).
+// If env contains a module path like `src/assets/...` it won't resolve after build,
+// so fall back to the bundled `scLogo` import.
+const resolvedCustomLogo = (!IS_DEFAULT_DOMAIN && CUSTOM_LOGO_URL && (CUSTOM_LOGO_URL.startsWith('/') || CUSTOM_LOGO_URL.startsWith('http'))) ? CUSTOM_LOGO_URL : null;
 import { getInitials } from "../utils/getInitials";
 import CustomModal from "./CustomModal";
 import "../shared/CommonDashboard.css";
@@ -82,7 +86,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
     <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`} style={{minWidth: '270px', left: 0}}>
       <div className="logo-container">
         <div className="logo">
-          <img src={(!IS_DEFAULT_DOMAIN && CUSTOM_LOGO_URL) ? CUSTOM_LOGO_URL : scLogo} alt="Smart Challan" className="logo-img" />
+          <img src={resolvedCustomLogo || scLogo} alt="Smart Challan" className="logo-img" />
           {/* <span className="logo-text">Smart Challan</span> */}
         </div>
         <button className="sidebar-collapse-btn" onClick={onToggleSidebar} aria-label="Toggle sidebar" style={{marginLeft: 'auto', background:'transparent', border:'none', color:'#0f5a7a', cursor:'pointer'}}>

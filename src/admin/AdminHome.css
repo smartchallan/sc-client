@@ -28,14 +28,14 @@ html, body {
 .dashboard-stats {
   display: flex;
   gap: 24px;
-  margin-bottom: 32px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
 }
 .stat-card {
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-  padding: 24px 10px;
+  padding: 24px 25px;
   flex: 1 1 200px;
   display: flex;
   flex-direction: column;
@@ -43,7 +43,7 @@ html, body {
   min-width: 180px;
 }
 .stat-card i {
-  font-size: 28px;
+  font-size: 34px;
   color: #0072ff;
   margin-bottom: 8px;
 }

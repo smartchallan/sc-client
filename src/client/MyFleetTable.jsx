@@ -71,6 +71,29 @@ const handleDownload = (rows) => {
     'Road Tax Upto': typeof (row.rc_tax_upto || row.road_tax_exp) === 'object' ? (row.rc_tax_upto || row.road_tax_exp).value : (row.rc_tax_upto || row.road_tax_exp),
     'Fitness Upto': typeof (row.rc_fit_upto || row.fitness_exp) === 'object' ? (row.rc_fit_upto || row.fitness_exp).value : (row.rc_fit_upto || row.fitness_exp),
     'Pollution Upto': typeof (row.rc_pucc_upto || row.pollution_exp) === 'object' ? (row.rc_pucc_upto || row.pollution_exp).value : (row.rc_pucc_upto || row.pollution_exp),
+    // National Permit and Permit Valid: try multiple sources and extract .value when present
+    'National Permit': (() => {
+      let val = row.rc_np_upto ?? row._raw?.rc_np_upto ?? row.temp_permit?.rc_np_upto ?? row._raw?.temp_permit?.rc_np_upto;
+      if (!val) return '-';
+      if (typeof val === 'string' && val.trim().startsWith('{') && val.trim().endsWith('}')) {
+        try { val = JSON.parse(val); } catch (e) { return '-'; }
+      }
+      if (typeof val === 'object') {
+        if ('value' in val && val.value) val = val.value; else return '-';
+      }
+      return formatExpiry(val, false);
+    })(),
+    'Permit Valid': (() => {
+      let val = row.rc_permit_valid_upto ?? row._raw?.rc_permit_valid_upto ?? row.temp_permit?.rc_permit_valid_upto ?? row._raw?.temp_permit?.rc_permit_valid_upto;
+      if (!val) return '-';
+      if (typeof val === 'string' && val.trim().startsWith('{') && val.trim().endsWith('}')) {
+        try { val = JSON.parse(val); } catch (e) { return '-'; }
+      }
+      if (typeof val === 'object') {
+        if ('value' in val && val.value) val = val.value; else return '-';
+      }
+      return formatExpiry(val, false);
+    })(),
     'Vehicle Challans': row.pending_challan_count,
     'Settled Challans': row.disposed_challan_count
   }));
@@ -251,6 +274,12 @@ export default function MyFleetTable({
       } else if (key === 'rc_permit_valid_upto') {
         val = v.rc_permit_valid_upto || (v.temp_permit && v.temp_permit.rc_permit_valid_upto) || v._raw?.rc_permit_valid_upto || v._raw?.temp_permit?.rc_permit_valid_upto;
       }
+    }
+
+    // If sorting numeric challan counts
+    if (key === 'pending_challan_count' || key === 'disposed_challan_count') {
+      const num = Number(v[key] ?? 0);
+      return isNaN(num) ? 0 : num;
     }
 
     const d = parseFlexibleDate(val);
@@ -789,8 +818,22 @@ export default function MyFleetTable({
             </tr>
             <tr>
               <th colSpan={9}></th>
-              <th className="challan-sub-header" style={{ color: '#e74c3c' }}>Pending</th>
-              <th className="challan-sub-header" style={{ color: '#43a047' }}>Settled</th>
+              <th
+                className="challan-sub-header"
+                style={{ color: '#e74c3c', cursor: 'pointer', userSelect: 'none' }}
+                onClick={() => handleSort('pending_challan_count')}
+              >
+                Pending
+                <span style={{ fontSize: 13, marginLeft: 6 }}>{sortConfig.key === 'pending_challan_count' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+              </th>
+              <th
+                className="challan-sub-header"
+                style={{ color: '#43a047', cursor: 'pointer', userSelect: 'none' }}
+                onClick={() => handleSort('disposed_challan_count')}
+              >
+                Settled
+                <span style={{ fontSize: 13, marginLeft: 6 }}>{sortConfig.key === 'disposed_challan_count' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+              </th>
               <th></th>
             </tr>
           </thead>
@@ -804,6 +847,16 @@ export default function MyFleetTable({
                 <tr key={row.vehicle_id || idx}>
                   <td>{idx + 1}</td>
                   <td>
+                    {( (
+                      row._isFallback || !row.rc_owner_name || row.rc_owner_name === '-' || !row.rc_chasi_no || row.rc_chasi_no === '-'
+                    ) && (
+                      (row._statusMessage || row.stautsMessage || row.statusMessage || row.status_message) ||
+                      (row._raw && row._raw.rto_data && row._raw.rto_data.VehicleDetails && (row._raw.rto_data.VehicleDetails.stautsMessage || row._raw.rto_data.VehicleDetails.statusMessage || row._raw.rto_data.VehicleDetails.status_message))
+                    ) && typeof ((row._statusMessage || row.stautsMessage || row.statusMessage || row.status_message) || (row._raw && row._raw.rto_data && row._raw.rto_data.VehicleDetails && (row._raw.rto_data.VehicleDetails.stautsMessage || row._raw.rto_data.VehicleDetails.statusMessage || row._raw.rto_data.VehicleDetails.status_message))) === 'string' && ((row._statusMessage || row.stautsMessage || row.statusMessage || row.status_message) || (row._raw && row._raw.rto_data && row._raw.rto_data.VehicleDetails && (row._raw.rto_data.VehicleDetails.stautsMessage || row._raw.rto_data.VehicleDetails.statusMessage || row._raw.rto_data.VehicleDetails.status_message))).includes('Vehicle Record found in more than one office')) && (
+                      <span title="Vehicle record found in more than one office" style={{ marginRight: 8, color: '#ff9800' }}>
+                        <i className="ri-error-warning-line"></i>
+                      </span>
+                    )}
                     {row.vehicle_number || '-'}
                     {isAllFit(row) && <BlueTickIcon />}
                   </td>

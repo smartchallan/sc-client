@@ -40,27 +40,9 @@ function useAutoLogout() {
 
 
 import { FaDownload } from "react-icons/fa";
-// ...existing code...
 import "react-toastify/dist/ReactToastify.css";
 import "./LatestTable.css";
-// ...existing code...
-// ...existing code...
-// ...existing code...
-// ...existing code...
-// ...existing code...
-// ...existing code...
-// ...existing code...
-// ...existing code...
-// ...existing code...
 import "./RightSidebar.css";
-// ...existing code...
-// ...existing code...
-// ...existing code...
-// ...existing code...
-// ...existing code...
-// ...existing code...
-
-// ...existing code...
 
 // Helper to prettify keys for display
 function prettifyKey(key) {
@@ -147,8 +129,6 @@ function prettifyKey(key) {
   // Fallback: prettify snake_case or camelCase
   return key.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, l => l.toUpperCase());
 }
-// ...existing code...
-
 
 // --- SidebarVehicleReport component ---
 function SidebarVehicleReport({ vehicleChallanData }) {
@@ -596,8 +576,6 @@ function ChallanCard({ challan, color }) {
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./LatestTable.css";
-// ...existing imports...
-// ...other imports...
 import LatestChallansTable from "./LatestChallansTable";
 import TrafficLightLoader from "../assets/TrafficLightLoader";
 import QuickActions from "./QuickActions";
@@ -2081,7 +2059,11 @@ function ClientDashboard() {
                   ) : null}
                 </div>
               </div>
-              <div className="stat-card" style={{background: 'linear-gradient(120deg, #f9a8d4 60%, #fce7f3 100%)', borderRadius: 18, boxShadow: '0 6px 24px rgba(236, 72, 153, 0.10)', border: '1.5px solid #fce7f3'}}>
+             
+            </div>
+
+            <div className="dashboard-stats">
+                   <div className="stat-card" style={{background: 'linear-gradient(120deg, #f9a8d4 60%, #fce7f3 100%)', borderRadius: 18, boxShadow: '0 6px 24px rgba(236, 72, 153, 0.10)', border: '1.5px solid #fce7f3'}}>
                 <div className="stat-card-content">
                   <i className="ri-alarm-warning-line"></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
@@ -2091,54 +2073,82 @@ function ClientDashboard() {
                       {loadingVehicleRto ? '...' : vehicleRenewalsTotal}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 9, justifyContent: 'flex-start', marginTop: 10 }}>
-                    <div
-                      className={`status-badge`}
-                      style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                      title="Show vehicles with expired insurance"
-                      onClick={() => {
-                        setGoToFleetRenewal('insurance');
-                        setActiveMenu('My Fleet');
-                      }}
-                    >
-                      <div style={{ color: '#ff5252', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.insurance}</div>
-                      <div style={{ fontSize: 12, color: '#666' }}>Insurance</div>
+                  <div style={{ display: 'flex', gap: 9, justifyContent: 'flex-start', marginTop: 10, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: 9, width: '100%' }}>
+                      <div
+                        className={`status-badge`}
+                        style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                        title="Show vehicles with expired insurance"
+                        onClick={() => {
+                          setGoToFleetRenewal('insurance');
+                          setActiveMenu('My Fleet');
+                        }}
+                      >
+                        <div style={{ color: '#ff5252', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.insurance}</div>
+                        <div style={{ fontSize: 12, color: '#666' }}>Insurance</div>
+                      </div>
+                      <div
+                        className={`status-badge`}
+                        style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                        title="Show vehicles with expired road tax"
+                        onClick={() => {
+                          setGoToFleetRenewal('roadTax');
+                          setActiveMenu('My Fleet');
+                        }}
+                      >
+                        <div style={{ color: '#ff8a65', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.roadTax}</div>
+                        <div style={{ fontSize: 12, color: '#666' }}>Road Tax</div>
+                      </div>
+                      <div
+                        className={`status-badge`}
+                        style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                        title="Show vehicles with expired fitness certificate"
+                        onClick={() => {
+                          setGoToFleetRenewal('fitness');
+                          setActiveMenu('My Fleet');
+                        }}
+                      >
+                        <div style={{ color: '#f4b400', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.fitness}</div>
+                        <div style={{ fontSize: 12, color: '#666' }}>Fitness</div>
+                      </div>
+                      <div
+                        className={`status-badge`}
+                        style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                        title="Show vehicles with expired pollution certificate"
+                        onClick={() => {
+                          setGoToFleetRenewal('pollution');
+                          setActiveMenu('My Fleet');
+                        }}
+                      >
+                        <div style={{ color: '#42a5f5', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.pollution}</div>
+                        <div style={{ fontSize: 12, color: '#666' }}>Pollution</div>
+                      </div>
                     </div>
-                    <div
-                      className={`status-badge`}
-                      style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                      title="Show vehicles with expired road tax"
-                      onClick={() => {
-                        setGoToFleetRenewal('roadTax');
-                        setActiveMenu('My Fleet');
-                      }}
-                    >
-                      <div style={{ color: '#ff8a65', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.roadTax}</div>
-                      <div style={{ fontSize: 12, color: '#666' }}>Road Tax</div>
-                    </div>
-                    <div
-                      className={`status-badge`}
-                      style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                      title="Show vehicles with expired fitness certificate"
-                      onClick={() => {
-                        setGoToFleetRenewal('fitness');
-                        setActiveMenu('My Fleet');
-                      }}
-                    >
-                      <div style={{ color: '#f4b400', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.fitness}</div>
-                      <div style={{ fontSize: 12, color: '#666' }}>Fitness</div>
-                    </div>
-                    <div
-                      className={`status-badge`}
-                      style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                      title="Show vehicles with expired pollution certificate"
-                      onClick={() => {
-                        setGoToFleetRenewal('pollution');
-                        setActiveMenu('My Fleet');
-                      }}
-                    >
-                      <div style={{ color: '#42a5f5', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.pollution}</div>
-                      <div style={{ fontSize: 12, color: '#666' }}>Pollution</div>
+                    <div style={{ display: 'flex', gap: 9, marginTop: 8, width: '100%' }}>
+                      <div
+                        className={`status-badge`}
+                        style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                        title="Show vehicles with expired national permit"
+                        onClick={() => {
+                          setGoToFleetRenewal('nationalPermit');
+                          setActiveMenu('My Fleet');
+                        }}
+                      >
+                        <div style={{ color: '#7e57c2', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.nationalPermit}</div>
+                        <div style={{ fontSize: 12, color: '#666' }}>National Permit</div>
+                      </div>
+                      <div
+                        className={`status-badge`}
+                        style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                        title="Show vehicles with expired permit validity"
+                        onClick={() => {
+                          setGoToFleetRenewal('permitValid');
+                          setActiveMenu('My Fleet');
+                        }}
+                      >
+                        <div style={{ color: '#26a69a', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.permitValid}</div>
+                        <div style={{ fontSize: 12, color: '#666' }}>Permit Valid</div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2203,6 +2213,7 @@ function ClientDashboard() {
                   ) : null}
                 </div>
               </div>
+
             </div>
             <div style={{marginBottom:24}}>
               <VehicleSummaryTable

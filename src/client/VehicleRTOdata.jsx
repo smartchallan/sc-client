@@ -208,7 +208,15 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
         if (Array.isArray(data)) {
           arr = data.map(item => {
             if (item.rto_data && item.rto_data.VehicleDetails) {
-              return item.rto_data.VehicleDetails;
+              // preserve any statusMessage if present either on the wrapper or inside VehicleDetails
+              const vd = item.rto_data.VehicleDetails;
+              vd._statusMessage = item.stautsMessage || item.statusMessage || item.status_message || vd.stautsMessage || vd.statusMessage || vd.status_message || null;
+              vd._isFallback = false;
+              // ensure rc_regn_no is present by preferring the VehicleDetails value, else fall back to wrapper's vehicle_number or other fields
+              vd.rc_regn_no = vd.rc_regn_no || item.vehicle_number || item.rc_regn_no || item.registration_no || item.regn_no || item.reg_no || null;
+              // keep original raw item for deeper checks
+              vd._raw = item;
+              return vd;
             } else if (item.vehicle_number) {
               return {
                 rc_regn_no: item.vehicle_number,
@@ -227,7 +235,10 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
                 rc_off_cd: '-',
                 rc_state_cd: '-',
                 rc_mobile_no: '-',
-                rc_present_address: '-'
+                rc_present_address: '-',
+                _statusMessage: item.stautsMessage || item.statusMessage || item.status_message || null,
+                _isFallback: true,
+                _raw: item
               };
             }
             return null;
@@ -735,7 +746,18 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
               displayed.map((v, idx) => (
                 <tr key={v.rc_regn_no || idx}>
                   <td>{idx + 1}</td>
-                  <td>{v.rc_regn_no || '-'}</td>
+                  <td>
+                    {(
+                      (v._isFallback || !v.rc_owner_name || v.rc_owner_name === '-') &&
+                      v._statusMessage && typeof v._statusMessage === 'string' &&
+                      v._statusMessage.includes('Vehicle Record found in more than one office')
+                    ) && (
+                      <span title="Vehicle record found in more than one office" style={{ marginRight: 8, color: '#ff9800' }}>
+                        <i className="ri-error-warning-line"></i>
+                      </span>
+                    )}
+                    {v.rc_regn_no || '-'}
+                  </td>
                   {!hideSearchSortFilter && <td>{formatExpiry(v.rc_regn_dt, false)}</td>}
                   <td
                     style={expiredTypes.includes('insurance') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
@@ -797,7 +819,17 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
         {selectedRtoData && selectedRtoData.rc_regn_no ? (
           <table className="latest-table" style={{ width: '100%', fontSize: 15 }}>
             <tbody>
-              <tr><td><b>Vehicle No</b></td><td>{selectedRtoData.rc_regn_no || '-'}</td></tr>
+              <tr>
+                <td><b>Vehicle No</b></td>
+                <td>
+                  {((selectedRtoData._isFallback || !selectedRtoData.rc_owner_name || selectedRtoData.rc_owner_name === '-') && selectedRtoData._statusMessage && typeof selectedRtoData._statusMessage === 'string' && selectedRtoData._statusMessage.includes('Vehicle Record found in more than one office')) && (
+                    <span title="Vehicle record found in more than one office" style={{ marginRight: 8, color: '#ff9800' }}>
+                      <i className="ri-error-warning-line"></i>
+                    </span>
+                  )}
+                  {selectedRtoData.rc_regn_no || '-'}
+                </td>
+              </tr>
               <tr><td><b>Owner Name</b></td><td>{selectedRtoData.rc_owner_name || '-'}</td></tr>
               <tr><td><b>Registration Date</b></td><td>{formatExpiry(selectedRtoData.rc_regn_dt, false)}</td></tr>
               <tr><td><b>Insurance Expiry</b></td><td>{formatExpiry(selectedRtoData.insurance_exp || selectedRtoData.rc_insurance_upto, false)}</td></tr>
