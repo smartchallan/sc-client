@@ -795,7 +795,8 @@ function ClientDashboard() {
   React.useEffect(() => {
     window.handleViewAllChallans = () => setActiveMenu('Vehicle Challans');
     // Also provide a handler for Vehicle RTO Data view all from VehicleDataTable
-    window.handleViewAllRtoData = () => setActiveMenu('Vehicle RTO Data');
+    // Use the main menu key 'RTO Details' so the correct page is shown
+    window.handleViewAllRtoData = () => setActiveMenu('RTO Details');
     // Handler for Vehicle Summary Table (My Fleet)
     window.handleViewAllMyFleet = () => setActiveMenu('My Fleet');
     return () => {
