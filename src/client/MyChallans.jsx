@@ -306,6 +306,22 @@ export function ChallanTableV2({
               marginLeft: 16,
             }}
           >
+            <div style={{ display: 'flex', alignItems: 'center', marginRight: 8 }}>
+              <div style={{
+                fontSize: 16,
+                fontWeight: 800,
+                padding: '6px 10px',
+                borderRadius: 8,
+                color: (statusFilter.disposed && !statusFilter.pending) ? '#1b5e20' : '#b71c1c',
+                background: (statusFilter.disposed && !statusFilter.pending) ? '#e8f5e9' : '#ffebee',
+                border: (statusFilter.disposed && !statusFilter.pending) ? '1.5px solid #a5d6a7' : '1.5px solid #ef9a9a'
+              }}>
+                {(statusFilter.disposed && !statusFilter.pending) ? 'Total Fine Paid:' : 'Total Challan Value:'}
+                <span style={{ marginLeft: 6 }}>
+                  {'₹'}{((statusFilter.disposed && !statusFilter.pending) ? totalPaid : totalFine).toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
             <div
               style={{
                 color: "#1565c0",
