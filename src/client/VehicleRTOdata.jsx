@@ -22,26 +22,59 @@ const buildPrintableRtoTableHtml = () => {
   return printTable.outerHTML;
 };
 
-// Download RTO data as Excel
+// Helper to parse various date formats and object wrappers like { value }
+const parseFlexibleDateValue = (raw) => {
+  if (!raw || raw === '-' || raw === 'NA' || raw === 'N/A') return null;
+  let val = raw;
+  if (typeof val === 'object') {
+    if (val.value) val = val.value;
+    else if (val.date) val = val.date;
+    else return null;
+  }
+  if (typeof val !== 'string') val = String(val);
+  // If it's a JSON string with an object, try to parse
+  if (val.trim().startsWith('{') && val.trim().endsWith('}')) {
+    try { const parsed = JSON.parse(val); if (parsed && (parsed.value || parsed.date)) return parsed.value || parsed.date; } catch (e) { /* ignore */ }
+  }
+  return val;
+};
+
+// Simple expiry formatter (returns 'DD-MMM-YYYY' or '-') without color
+const formatExpirySimple = (dateStr) => {
+  if (!dateStr) return '-';
+  const v = parseFlexibleDateValue(dateStr) || dateStr;
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return v || '-';
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
+};
+// Download RTO data as Excel (includes National Permit and Permit Valid)
 const handleRtoDownloadExcel = (rows) => {
-  const exportData = rows.map((row, index) => ({
-    "#": index + 1,
-    "Vehicle Number": row.rc_regn_no || "-",
-    "Registration Date": row.rc_regn_dt || "-",
-    "Insurance Exp": row.insurance_exp || row.rc_insurance_upto || "-",
-    "Road Tax Exp": row.road_tax_exp || row.rc_tax_upto || "-",
-    "Fitness Exp": row.fitness_exp || row.rc_fit_upto || "-",
-    "Pollution Exp": row.pollution_exp || row.rc_pucc_upto || "-",
-    "Owner Name": row.rc_owner_name || "-",
-    "Chassis No": row.rc_chasi_no || "-",
-    "Engine No": row.rc_engine_no || "-",
-    "Vehicle Class": row.rc_vh_class_desc || "-",
-    "Fuel Type": row.rc_fuel_desc || "-",
-    "Maker": row.rc_maker_desc || "-",
-    "Model": row.rc_maker_model || "-",
-    "RTO": row.rc_off_cd || "-",
-    "State": row.rc_state_cd || "-",
-  }));
+  const exportData = rows.map((row, index) => {
+    // Extract national permit and permit valid from multiple possible sources
+    const npRaw = row.rc_np_upto ?? row._raw?.rc_np_upto ?? row.temp_permit?.rc_np_upto ?? row._raw?.temp_permit?.rc_np_upto;
+    const permitRaw = row.rc_permit_valid_upto ?? row._raw?.rc_permit_valid_upto ?? row.temp_permit?.rc_permit_valid_upto ?? row._raw?.temp_permit?.rc_permit_valid_upto;
+
+    return {
+      "#": index + 1,
+      "Vehicle Number": row.rc_regn_no || "-",
+      "Registration Date": row.rc_regn_dt || "-",
+      "Insurance Exp": row.insurance_exp || row.rc_insurance_upto || "-",
+      "Road Tax Exp": row.road_tax_exp || row.rc_tax_upto || "-",
+      "Fitness Exp": row.fitness_exp || row.rc_fit_upto || "-",
+      "Pollution Exp": row.pollution_exp || row.rc_pucc_upto || "-",
+      "Owner Name": row.rc_owner_name || "-",
+      "Chassis No": row.rc_chasi_no || "-",
+      "Engine No": row.rc_engine_no || "-",
+      "Vehicle Class": row.rc_vh_class_desc || "-",
+      "Fuel Type": row.rc_fuel_desc || "-",
+      "Maker": row.rc_maker_desc || "-",
+      "Model": row.rc_maker_model || "-",
+      "RTO": row.rc_off_cd || "-",
+      "State": row.rc_state_cd || "-",
+      "National Permit": formatExpirySimple(npRaw),
+      "Permit Valid": formatExpirySimple(permitRaw),
+    };
+  });
 
   const ws = XLSX.utils.json_to_sheet(exportData);
   const wb = XLSX.utils.book_new();
