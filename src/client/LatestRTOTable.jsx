@@ -5,6 +5,19 @@ import * as XLSX from "xlsx";
 
 export default function LatestRTOTable({ vehicleData = [], loading, error, setSelectedRtoData, totalCount }) {
   const navigate = useNavigate();
+  const formatExpiry = (dateStr) => {
+    if (!dateStr || dateStr === '-' || dateStr === 'NA' || dateStr === 'N/A') return '-';
+    let val = dateStr;
+    if (typeof val === 'object' && val !== null) {
+      if ('value' in val && val.value) val = val.value; else return '-';
+    }
+    if (typeof val === 'string' && val.trim().startsWith('{') && val.trim().endsWith('}')) {
+      try { const parsed = JSON.parse(val); if (parsed && parsed.value) val = parsed.value; else if (parsed) val = parsed; } catch (e) { }
+    }
+    let d = new Date(val);
+    if (isNaN(d.getTime())) return val;
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
+  };
   return (
     <div className="dashboard-latest" style={{
       background: '#fff',
@@ -56,15 +69,17 @@ export default function LatestRTOTable({ vehicleData = [], loading, error, setSe
         <div className="table-container" id="latest-rto-table-print-area">
           <table className="latest-table" style={{ width: '100%' }}>
             <thead>
-              <tr>
-                <th>#</th>
-                <th>Vehicle No.</th>
-                <th>Insurance</th>
-                <th>RoadTax</th>
-                <th>Fitness</th>
-                <th>Pollution</th>
-                <th className="print-hide">Action</th>
-              </tr>
+                <tr>
+                  <th>#</th>
+                  <th>Vehicle No.</th>
+                  <th>Insurance</th>
+                  <th>RoadTax</th>
+                  <th>National Permit</th>
+                  <th>Permit Valid</th>
+                  <th>Fitness</th>
+                  <th>Pollution</th>
+                  <th className="print-hide">Action</th>
+                </tr>
             </thead>
             <tbody>
               <tr><td colSpan={7}>No vehicle data found.</td></tr>
@@ -81,6 +96,8 @@ export default function LatestRTOTable({ vehicleData = [], loading, error, setSe
                   <th>Vehicle No.</th>
                   <th>Insurance</th>
                   <th>RoadTax</th>
+                  <th>National Permit</th>
+                  <th>Permit Valid</th>
                   <th>Fitness</th>
                   <th>Pollution</th>
                   <th className="print-hide">Action</th>
@@ -93,6 +110,16 @@ export default function LatestRTOTable({ vehicleData = [], loading, error, setSe
                     <td>{v.rc_regn_no || '-'}</td>
                     <td>{v.insurance_exp || v.rc_insurance_upto || '-'}</td>
                     <td>{v.road_tax_exp || v.rc_tax_upto || '-'}</td>
+                    <td>{(() => {
+                      let val = v.rc_np_upto ?? v._raw?.rc_np_upto ?? v.temp_permit?.rc_np_upto ?? v._raw?.temp_permit?.rc_np_upto;
+                      if (!val) return '-';
+                      return formatExpiry(val);
+                    })()}</td>
+                    <td>{(() => {
+                      let val = v.rc_permit_valid_upto ?? v._raw?.rc_permit_valid_upto ?? v.temp_permit?.rc_permit_valid_upto ?? v._raw?.temp_permit?.rc_permit_valid_upto;
+                      if (!val) return '-';
+                      return formatExpiry(val);
+                    })()}</td>
                     <td>{v.fitness_exp || v.rc_fit_upto || '-'}</td>
                     <td>{v.pollution_exp || v.rc_pucc_upto || '-'}</td>
                     <td className="print-hide" style={{textAlign:'center'}}>

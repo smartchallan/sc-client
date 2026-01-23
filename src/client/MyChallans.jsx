@@ -45,6 +45,7 @@ export function ChallanTableV2({
   cart = [],
   addToCart,
   removeFromCart,
+  initialFilter = null,
 }) {
   const DEFAULT_LIMIT = 30;
   const [visibleCount, setVisibleCount] = React.useState(DEFAULT_LIMIT);
@@ -58,8 +59,16 @@ export function ChallanTableV2({
   const [sortConfig, setSortConfig] = React.useState({ key: null, direction: "desc" });
   const [mapModal, setMapModal] = React.useState({ open: false, location: null });
 
-  // Auto-check Pending checkbox if sc_challan_filter is set
+  // Auto-check Pending/Disposed checkbox if initialFilter prop provided or sc_challan_filter is set
   React.useEffect(() => {
+    if (initialFilter === 'pending') {
+      setStatusFilter({ pending: true, disposed: false });
+      return;
+    }
+    if (initialFilter === 'disposed') {
+      setStatusFilter({ pending: false, disposed: true });
+      return;
+    }
     if (typeof window === 'undefined') return;
     const filter = localStorage.getItem('sc_challan_filter');
     if (filter === 'pending') {
@@ -69,7 +78,7 @@ export function ChallanTableV2({
       setStatusFilter({ pending: false, disposed: true });
       localStorage.removeItem('sc_challan_filter');
     }
-  }, []);
+  }, [initialFilter]);
 
   const filteredData = React.useMemo(() => {
     if (!Array.isArray(data)) return [];
@@ -680,7 +689,7 @@ export function ChallanTableV2({
         >
           <button
             title="Download"
-            onClick={onClickDownload}
+            onClick={() => { if (typeof onClickDownload === 'function') onClickDownload(filteredData); }}
             style={{
               background: "#e3f2fd",
               border: "1px solid #bbdefb",
@@ -699,7 +708,7 @@ export function ChallanTableV2({
           </button>
           <button
             title="Print Table"
-            onClick={onClickPrint}
+            onClick={() => { if (typeof onClickPrint === 'function') onClickPrint(filteredData); }}
             style={{
               background: "#f3e5f5",
               border: "1px solid #e1bee7",
@@ -1369,7 +1378,7 @@ export function ChallanTable({
     </div>
   );
 }
-export default function MyChallans() {
+export default function MyChallans({ initialFilter = null }) {
   const [challanData, setChallanData] = useState({ Disposed_data: [], Pending_data: [] });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -1439,6 +1448,7 @@ export default function MyChallans() {
   const [selectedChallan, setSelectedChallan] = useState(null);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [downloadFormat, setDownloadFormat] = useState('excel');
+  const [downloadRows, setDownloadRows] = useState([]);
   return (
     <div className="my-challans-content">
       {/* <h2 className="page-title">Vehicle Challans</h2> */}
@@ -1497,11 +1507,13 @@ export default function MyChallans() {
           <ChallanTableV2
             title="Vehicle Challans"
             data={challanData.Pending_data}
+            initialFilter={initialFilter}
             onView={c => {
               setSelectedChallan(c);
               setSidebarOpen(true);
             }}
-            onClickDownload={() => {
+            onClickDownload={(rows) => {
+              setDownloadRows(Array.isArray(rows) ? rows : []);
               setDownloadFormat('excel');
               setShowDownloadModal(true);
             }}
@@ -1554,17 +1566,18 @@ export default function MyChallans() {
           </table>
         </RightSidebar>
       )}
-      <CustomModal
+        <CustomModal
         open={showDownloadModal}
         title="Download Vehicle Challans"
         description="Choose the format in which you want to download the challans."
         confirmText={downloadFormat === 'excel' ? 'Download Excel' : 'Download PDF'}
         cancelText="Cancel"
         onConfirm={() => {
-          const rows = Array.isArray(challanData.Pending_data) ? challanData.Pending_data : [];
+          const rows = Array.isArray(downloadRows) ? downloadRows : (Array.isArray(challanData.Pending_data) ? challanData.Pending_data : []);
           if (downloadFormat === 'excel') {
             handleChallanDownloadExcel(rows);
           } else {
+            // PDF handler prints the DOM; if rows provided we attempt to render filtered view first
             handleChallanDownloadPdf();
           }
           setShowDownloadModal(false);

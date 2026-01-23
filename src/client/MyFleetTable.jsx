@@ -295,7 +295,8 @@ export default function MyFleetTable({
   const [showUrgentDropdown, setShowUrgentDropdown] = useState(false);
   const [urgentRange, setUrgentRange] = useState(15); // days, default 15
   // Challan filter: pending/disposed
-  const [challanTypes, setChallanTypes] = useState([]); // e.g. ['pending', 'disposed']
+  const [challanTypes, setChallanTypes] = useState([]); // e.g. ['pending', 'disposed'] (checkboxes)
+  const [challanSources, setChallanSources] = useState([]); // e.g. ['online','registered','virtual'] (dropdown)
   const [showChallanDropdown, setShowChallanDropdown] = useState(false);
 
   // Download format modal state
@@ -417,12 +418,64 @@ export default function MyFleetTable({
     });
   }
   // Apply challan filter (pending/disposed)
-  if (challanTypes.length > 0) {
+  if (challanTypes.length > 0 || challanSources.length > 0) {
     sortedAll = sortedAll.filter(v => {
-      let match = false;
-      if (challanTypes.includes('pending') && v.pending_challan_count > 0) match = true;
-      if (challanTypes.includes('disposed') && v.disposed_challan_count > 0) match = true;
-      return match;
+      // If there are detailed challan arrays on the vehicle raw data, prefer them
+      const pendingArr = v._raw?.pending_data ?? v._raw?.challan_data?.pending_data ?? v._raw?.pending_challans ?? null;
+      const disposedArr = v._raw?.disposed_data ?? v._raw?.challan_data?.disposed_data ?? v._raw?.disposed_challans ?? null;
+
+      // Helper to normalize flags like sent_to_reg_court / sent_to_virtual_court
+      const normalizeCourtFlag = (val) => {
+        if (val === null || val === undefined) return null;
+        const s = String(val).trim().toLowerCase();
+        if (!s || s === '-' || s === 'na' || s === 'n/a') return null;
+        if (s === 'no' || s === '0' || s === 'false') return false;
+        return true;
+      };
+
+      const getChallanType = (c) => {
+        const regRaw = c.sent_to_reg_court ?? c.sent_to_court_on ?? c.sent_to_court;
+        const virtRaw = c.sent_to_virtual_court ?? c.sent_to_virtual;
+        const regFlag = normalizeCourtFlag(regRaw);
+        const virtFlag = normalizeCourtFlag(virtRaw);
+        if (virtFlag === true) return 'virtual';
+        if (regFlag === true) return 'registered';
+        return 'online';
+      };
+
+      // Build candidate challan list based on selected statuses
+      let candidates = [];
+      if (challanTypes.length === 0) {
+        // if no explicit status chosen, include both pending and disposed arrays if available
+        if (Array.isArray(pendingArr)) candidates = candidates.concat(pendingArr);
+        if (Array.isArray(disposedArr)) candidates = candidates.concat(disposedArr);
+      } else {
+        if (challanTypes.includes('pending') && Array.isArray(pendingArr)) candidates = candidates.concat(pendingArr);
+        if (challanTypes.includes('disposed') && Array.isArray(disposedArr)) candidates = candidates.concat(disposedArr);
+      }
+
+      // If we have candidate challans and source filters, check types
+      if (candidates.length > 0 && challanSources.length > 0) {
+        return candidates.some(c => challanSources.includes(getChallanType(c)));
+      }
+
+      // If we have candidate challans but no source filter, then presence is enough
+      if (candidates.length > 0 && challanSources.length === 0) {
+        return candidates.length > 0;
+      }
+
+      // Fallback: if no detailed arrays, use counts and statuses
+      if (challanSources.length === 0) {
+        // Only status filtering requested
+        let match = false;
+        if (challanTypes.includes('pending') && (v.pending_challan_count ?? 0) > 0) match = true;
+        if (challanTypes.includes('disposed') && (v.disposed_challan_count ?? 0) > 0) match = true;
+        return match;
+      }
+
+      // If source filters selected but no detailed challans: include vehicle if it has any challan counts (best-effort)
+      const totalCh = (v.pending_challan_count ?? 0) + (v.disposed_challan_count ?? 0);
+      return totalCh > 0;
     });
   }
   // Default visible count is 30
@@ -661,50 +714,79 @@ export default function MyFleetTable({
                 </div>
               )}
             </div>
-            {/* Challan filter */}
+            {/* Challan status checkboxes (Pending / Disposed) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={challanTypes.includes('pending')}
+                  onChange={e => {
+                    // clicking a status clears other renewal filters
+                    setExpiredTypes([]);
+                    setUrgentTypes([]);
+                    if (e.target.checked) setChallanTypes(prev => Array.from(new Set([...prev, 'pending'])));
+                    else setChallanTypes(prev => prev.filter(t => t !== 'pending'));
+                  }}
+                />
+                Pending Challan
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={challanTypes.includes('disposed')}
+                  onChange={e => {
+                    setExpiredTypes([]);
+                    setUrgentTypes([]);
+                    if (e.target.checked) setChallanTypes(prev => Array.from(new Set([...prev, 'disposed'])));
+                    else setChallanTypes(prev => prev.filter(t => t !== 'disposed'));
+                  }}
+                />
+                Disposed Challan
+              </label>
+            </div>
+
+            {/* Challan source dropdown (Online / Registered Court / Virtual Court) */}
             <div style={{ position: 'relative' }} ref={challanDropdownRef}>
               <button
                 className="filter-select"
-                style={{ minWidth: 180, textAlign: 'left', padding: '16px 15px', border: '1px solid #bcd', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
+                style={{ minWidth: 220, textAlign: 'left', padding: '16px 15px', border: '1px solid #bcd', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
                 onClick={() => setShowChallanDropdown(v => !v)}
               >
-                {challanTypes.length === 0 ? 'Select challan type' : challanTypes.map(t => t === 'pending' ? 'Pending Challan' : t === 'disposed' ? 'Disposed Challan' : t).join(', ')}
-                {challanTypes.length > 0 && (
+                {challanSources.length === 0 ? 'Filter by challan source' : challanSources.map(t => t === 'online' ? 'Online' : t === 'registered' ? 'Registered Court' : t === 'virtual' ? 'Virtual Court' : t).join(', ')}
+                {challanSources.length > 0 && (
                   <span style={{
                     marginLeft: 8,
                     padding: '0 6px',
                     borderRadius: 999,
-                    background: '#fff3e0',
-                    color: '#ef6c00',
+                    background: '#e8f5e9',
+                    color: '#2e7d32',
                     fontSize: 11,
                     fontWeight: 600
                   }}>
-                    {challanTypes.length}
+                    {challanSources.length}
                   </span>
                 )}
                 <span style={{ float: 'right', fontWeight: 700, fontSize: 16, marginLeft: 8 }}>▼</span>
               </button>
               {showChallanDropdown && (
-                <div style={{ position: 'absolute', top: 38, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #bcd', borderRadius: 8, boxShadow: '0 2px 8px #0001', minWidth: 180, padding: 8 }}>
-                  {['pending', 'disposed'].map(type => (
+                <div style={{ position: 'absolute', top: 38, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #bcd', borderRadius: 8, boxShadow: '0 2px 8px #0001', minWidth: 220, padding: 8 }}>
+                  {['online', 'registered', 'virtual'].map(type => (
                     <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
                       <input
                         type="checkbox"
-                        checked={challanTypes.includes(type)}
+                        checked={challanSources.includes(type)}
                         onChange={e => {
-                          // When using challan filter, reset other filters
-                          setExpiredTypes([]);
-                          setUrgentTypes([]);
-                          if (e.target.checked) setChallanTypes(prev => [...prev, type]);
-                          else setChallanTypes(prev => prev.filter(t => t !== type));
-                        } } />
-                      {type === 'pending' ? 'Pending Challan' : 'Disposed Challan'}
+                          // When selecting challan source, clear other filters that would conflict
+                          if (e.target.checked) setChallanSources(prev => [...prev, type]);
+                          else setChallanSources(prev => prev.filter(t => t !== type));
+                        }} />
+                      {type === 'online' ? 'Online' : type === 'registered' ? 'Registered Court' : 'Virtual Court'}
                     </label>
                   ))}
                   <div style={{ textAlign: 'right', marginTop: 6, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                     <button
                       style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#fff', cursor: 'pointer' }}
-                      onClick={() => setChallanTypes([])}
+                      onClick={() => setChallanSources([])}
                     >
                       Reset
                     </button>

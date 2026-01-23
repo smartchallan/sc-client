@@ -182,8 +182,8 @@ export default function PayChallans() {
               setSelectedChallan(c);
               setSidebarOpen(true);
             }}
-            onClickDownload={() => handleChallanDownloadExcel(pendingChallans)}
-            onClickPrint={handleChallanPrint}
+            onClickDownload={(rows) => handleChallanDownloadExcel(Array.isArray(rows) ? rows : pendingChallans)}
+            onClickPrint={(rows) => { if (typeof handleChallanPrint === 'function') handleChallanPrint(rows); }}
           />
         </div>
       )}

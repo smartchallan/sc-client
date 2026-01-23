@@ -791,9 +791,15 @@ function ClientDashboard() {
         setLoadingVehicleSummary(false);
       });
   }, [user, fleetLimit, fleetOffset, fleetAll]);
+  // initial filter to pass into MyChallans when opened via dashboard quick links
+  const [initialChallanFilter, setInitialChallanFilter] = useState(null);
+
   // Handler for 'View All' in Latest Challans Table
   React.useEffect(() => {
-    window.handleViewAllChallans = () => setActiveMenu('Vehicle Challans');
+    window.handleViewAllChallans = (filter) => {
+      try { setInitialChallanFilter(filter || null); } catch (e) {}
+      setActiveMenu('Vehicle Challans');
+    };
     // Also provide a handler for Vehicle RTO Data view all from VehicleDataTable
     // Use the main menu key 'RTO Details' so the correct page is shown
     window.handleViewAllRtoData = () => setActiveMenu('RTO Details');
@@ -805,6 +811,7 @@ function ClientDashboard() {
       delete window.handleViewAllMyFleet;
     };
   }, []);
+
   // User role for sidebar
   const userRole = 'client';
   // Per-row loader state for RTO/Challan API calls
@@ -1192,15 +1199,17 @@ function ClientDashboard() {
         (expiryCounts.insurance || 0),
         (expiryCounts.roadTax || 0),
         (expiryCounts.fitness || 0),
-        (expiryCounts.pollution || 0)
+        (expiryCounts.pollution || 0),
+        (expiryCounts.nationalPermit || 0),
+        (expiryCounts.permitValid || 0)
       ];
       window._clientPaidChart = new Chart(ctxPaid, {
         type: 'pie',
         data: {
-          labels: ['Insurance', 'Road Tax', 'Fitness', 'Pollution'],
+          labels: ['Insurance', 'Road Tax', 'Fitness', 'Pollution', 'National Permit', 'Permit Valid'],
           datasets: [{
             data: paidData,
-            backgroundColor: ['#ff5252', '#ff8a65', '#f4b400', '#42a5f5'],
+            backgroundColor: ['#ff5252', '#ff8a65', '#f4b400', '#42a5f5', '#7e57c2', '#26a69a'],
             borderColor: '#ffffff',
             borderWidth: 1
           }]
@@ -2027,8 +2036,12 @@ function ClientDashboard() {
                     <div key="pending" className={`status-badge`} style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
                       title="View pending challans"
                       onClick={() => {
-                        localStorage.setItem('sc_challan_filter', 'pending');
-                        setActiveMenu('Vehicle Challans');
+                        if (typeof window !== 'undefined' && window.handleViewAllChallans) {
+                          window.handleViewAllChallans('pending');
+                        } else {
+                          localStorage.setItem('sc_challan_filter', 'pending');
+                          setActiveMenu('Vehicle Challans');
+                        }
                       }}>
                       <div style={{ color: '#e74c3c', fontWeight: 700 }}>{loadingVehicleChallan ? '...' : dashboardPendingCount}</div>
                       <div style={{ fontSize: 12, color: '#666' }}>Pending</div>
@@ -2036,8 +2049,12 @@ function ClientDashboard() {
                     <div key="disposed" className={`status-badge`} style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
                       title="View disposed challans"
                       onClick={() => {
-                        localStorage.setItem('sc_challan_filter', 'disposed');
-                        setActiveMenu('Vehicle Challans');
+                        if (typeof window !== 'undefined' && window.handleViewAllChallans) {
+                          window.handleViewAllChallans('disposed');
+                        } else {
+                          localStorage.setItem('sc_challan_filter', 'disposed');
+                          setActiveMenu('Vehicle Challans');
+                        }
                       }}>
                       <div style={{ color: '#66bb6a', fontWeight: 700 }}>{loadingVehicleChallan ? '...' : dashboardDisposedCount}</div>
                       <div style={{ fontSize: 12, color: '#666' }}>Disposed</div>
@@ -2185,12 +2202,12 @@ function ClientDashboard() {
                       : <>
                           <span style={{color: '#e74c3c', fontWeight: 600, fontSize: '0.75em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}
                             title="Show pending challans"
-                            onClick={() => { setActiveMenu('Vehicle Challans'); }}>
+                            onClick={() => { if (typeof window !== 'undefined' && window.handleViewAllChallans) { window.handleViewAllChallans('pending'); } else { localStorage.setItem('sc_challan_filter','pending'); setActiveMenu('Vehicle Challans'); } }}>
                             Pending: ₹{formatBriefAmount(pendingFineTotal)}
                           </span>
                           <span style={{color: '#4caf50', fontWeight: 600, fontSize: '0.65em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}
                             title="Show paid challans"
-                            onClick={() => { setActiveMenu('Vehicle Challans'); }}>
+                            onClick={() => { if (typeof window !== 'undefined' && window.handleViewAllChallans) { window.handleViewAllChallans('disposed'); } else { localStorage.setItem('sc_challan_filter','disposed'); setActiveMenu('Vehicle Challans'); } }}>
                             Paid: ₹{formatBriefAmount(disposedFineTotal)}
                           </span>
                         </>
@@ -2378,7 +2395,7 @@ function ClientDashboard() {
             onViewAll={() => setActiveMenu('RTO Details')}
           />
         )}
-    {activeMenu === "Vehicle Challans" && <MyChallans />}
+    {activeMenu === "Vehicle Challans" && <MyChallans initialFilter={initialChallanFilter} />}
       {activeMenu === "Pay Challans" && challanSettlementLive && <PayChallans />}
       {activeMenu === "Challan Requests" && <ChallanRequests />}
         {activeMenu === "Challans" && <UserChallan />}

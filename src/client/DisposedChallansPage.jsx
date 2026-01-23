@@ -181,7 +181,7 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button
             title="Download"
-            onClick={onClickDownload}
+            onClick={() => { if (typeof onClickDownload === 'function') onClickDownload(filteredData); }}
             style={{ background: '#e3f2fd', border: '1px solid #bbdefb', borderRadius: 999, cursor: 'pointer', color: '#0d47a1', fontSize: 18, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}
           >
             <FiDownloadCloud />
@@ -189,7 +189,7 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
           </button>
           <button
             title="Print Table"
-            onClick={onClickPrint}
+            onClick={() => { if (typeof onClickPrint === 'function') onClickPrint(filteredData); }}
             style={{ background: '#f3e5f5', border: '1px solid #e1bee7', borderRadius: 999, cursor: 'pointer', color: '#4a148c', fontSize: 18, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}
           >
             <FiPrinter />
@@ -493,6 +493,7 @@ export default function DisposedChallansPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [downloadFormat, setDownloadFormat] = useState("excel");
+  const [downloadRows, setDownloadRows] = useState([]);
   useEffect(() => {
     async function fetchChallans() {
       try {
@@ -604,11 +605,12 @@ export default function DisposedChallansPage() {
             onReset={() => setVisibleCount(DEFAULT_LIMIT)}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
-            onClickDownload={() => {
+            onClickDownload={(rows) => {
+              setDownloadRows(Array.isArray(rows) ? rows : []);
               setDownloadFormat('excel');
               setShowDownloadModal(true);
             }}
-            onClickPrint={handleDisposedPrint}
+            onClickPrint={(rows) => { if (typeof handleDisposedPrint === 'function') handleDisposedPrint(rows); }}
           />
         )}
       </div>
@@ -660,7 +662,7 @@ export default function DisposedChallansPage() {
         confirmText={downloadFormat === 'excel' ? 'Download Excel' : 'Download PDF'}
         cancelText="Cancel"
         onConfirm={() => {
-          const rows = Array.isArray(challanData) ? challanData : [];
+          const rows = Array.isArray(downloadRows) ? downloadRows : (Array.isArray(challanData) ? challanData : []);
           if (downloadFormat === 'excel') {
             handleDisposedDownloadExcel(rows);
           } else {

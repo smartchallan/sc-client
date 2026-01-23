@@ -5,6 +5,28 @@ import { FaSyncAlt } from "react-icons/fa";
 import * as XLSX from "xlsx";
 
 export default function VehicleSummaryTable({ data, loading, onRefresh, onView }) {
+  // Local formatExpiry function for date formatting (matches MyFleetTable)
+  const formatExpiry = (dateStr, useColor = false) => {
+    if (!dateStr || dateStr === '-' || dateStr === 'NA' || dateStr === 'N/A') return '-';
+    let d = null;
+    if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(dateStr)) {
+      d = new Date(dateStr.replace(/-/g, ' '));
+    } else if (/\d{2}-\d{2}-\d{4}/.test(dateStr)) {
+      const [day, month, year] = dateStr.split('-');
+      d = new Date(`${year}-${month}-${day}`);
+    } else if (/\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+      d = new Date(dateStr);
+    } else {
+      d = new Date(dateStr);
+    }
+    if (isNaN(d.getTime())) return dateStr;
+    const formatted = d.toLocaleDateString('en-GB', {
+      day: '2-digit', month: 'short', year: 'numeric'
+    }).replace(/ /g, '-');
+    if (!useColor) return formatted;
+    // color logic not used here; return formatted
+    return formatted;
+  };
   // If API response is { total, vehicles: [...] }, use vehicles array
   const vehicles = Array.isArray(data?.vehicles) ? data.vehicles : (Array.isArray(data) ? data : []);
   // Sort by registered_at DESC
@@ -67,13 +89,15 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView }
               <th>Registration Date</th>
               <th>Insurance Upto</th>
               <th>Road Tax Upto</th>
+              <th>National Permit</th>
+              <th>Permit Valid</th>
               <th>Fitness Upto</th>
               <th>Pollution Upto</th>
               <th colSpan={2} className="challans-header">Vehicle Challans</th>
               <th>View</th>
             </tr>
             <tr>
-              <th colSpan={7}></th>
+              <th colSpan={9}></th>
               <th className="challan-sub-header" style={{color:'#e74c3c'}}>Pending</th>
               <th className="challan-sub-header" style={{color:'#43a047'}}>Settled</th>
               <th></th>
@@ -81,9 +105,9 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView }
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={10}>Loading...</td></tr>
+              <tr><td colSpan={12}>Loading...</td></tr>
             ) : sorted.length === 0 ? (
-              <tr><td colSpan={10}>No data found.</td></tr>
+              <tr><td colSpan={12}>No data found.</td></tr>
             ) : (
               sorted.map((row, idx) => (
                 <tr key={row.vehicle_id || idx}>
@@ -92,6 +116,30 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView }
                   <td>{row.rc_regn_dt || row.registration_date || row.registered_at || '-'}</td>
                   <td>{typeof row.insurance_exp === 'object' && row.insurance_exp !== null ? (row.insurance_exp.value ?? JSON.stringify(row.insurance_exp)) : (row.insurance_exp || '-')}</td>
                   <td>{typeof row.road_tax_exp === 'object' && row.road_tax_exp !== null ? (row.road_tax_exp.value ?? JSON.stringify(row.road_tax_exp)) : (row.road_tax_exp || '-')}</td>
+                  <td>{(() => {
+                    let val = row.rc_np_upto ?? row._raw?.rc_np_upto ?? row.temp_permit?.rc_np_upto ?? row._raw?.temp_permit?.rc_np_upto;
+                    if (!val) return '-';
+                    if (typeof val === 'string' && val.trim().startsWith('{') && val.trim().endsWith('}')) {
+                      try { val = JSON.parse(val); } catch (e) { return '-'; }
+                    }
+                    if (typeof val === 'object') {
+                      if ('value' in val && val.value) val = val.value; else return '-';
+                    }
+                    if (!val) return '-';
+                    return formatExpiry(val, false);
+                  })()}</td>
+                  <td>{(() => {
+                    let val = row.rc_permit_valid_upto ?? row._raw?.rc_permit_valid_upto ?? row.temp_permit?.rc_permit_valid_upto ?? row._raw?.temp_permit?.rc_permit_valid_upto;
+                    if (!val) return '-';
+                    if (typeof val === 'string' && val.trim().startsWith('{') && val.trim().endsWith('}')) {
+                      try { val = JSON.parse(val); } catch (e) { return '-'; }
+                    }
+                    if (typeof val === 'object') {
+                      if ('value' in val && val.value) val = val.value; else return '-';
+                    }
+                    if (!val) return '-';
+                    return formatExpiry(val, false);
+                  })()}</td>
                   <td>{typeof row.fitness_exp === 'object' && row.fitness_exp !== null ? (row.fitness_exp.value ?? JSON.stringify(row.fitness_exp)) : (row.fitness_exp || '-')}</td>
                   <td>{typeof row.pollution_exp === 'object' && row.pollution_exp !== null ? (row.pollution_exp.value ?? JSON.stringify(row.pollution_exp)) : (row.pollution_exp || '-')}</td>
                   <td className={
