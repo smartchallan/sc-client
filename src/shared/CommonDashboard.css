@@ -747,6 +747,45 @@ main.main-content,
   height: auto !important;
 }
 
+/* Responsive: force stat cards into single-column on smaller screens (tablets/phones) */
+@media (max-width: 900px) {
+  .dashboard-stats {
+    flex-direction: column;
+    gap: 14px;
+    align-items: stretch;
+  }
+  .stat-card {
+    max-width: 100% !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 16px;
+  }
+  .stat-card .stat-card-content {
+    flex: 1 1 auto;
+    margin-bottom: 0;
+    padding-right: 12px;
+  }
+  .stat-chart-container {
+    position: static !important;
+    right: auto !important;
+    top: auto !important;
+    transform: none !important;
+    width: 110px !important;
+    height: 110px !important;
+    margin-left: 8px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 10px;
+  }
+  .stat-chart-container canvas {
+    max-width: 100%;
+    max-height: 100%;
+  }
+}
+
 /* Status Badges */
 .status-badge {
   background: #f8f9fa;

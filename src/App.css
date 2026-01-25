@@ -799,6 +799,17 @@ footer {
   font-size: 15px;
   margin-bottom: 4px;
 }
+
+/* Fix: ensure app allows vertical scrolling from mouse/touchpad
+   This override forces the root scrolling behavior to be automatic
+   in case other components or overlays accidentally disable it. */
+html, body, #root, .app-container {
+  height: auto !important;
+  min-height: 100%;
+  overflow-y: auto !important;
+  overscroll-behavior: auto !important;
+  touch-action: auto !important;
+}
 .vehicle-format-info p {
   font-size: 15px;
   color: #0072ff;

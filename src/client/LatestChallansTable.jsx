@@ -55,7 +55,7 @@ const LatestChallansTable = ({ latestChallanRows, loadingVehicleChallan, vehicle
       <div>
         
         <div className="table-container" id="latest-challans-table-print-area">
-          <table className="latest-table hkjhh">
+          <table className="latest-table">
             <colgroup>
               <col style={{ width: '4%' }} />
               <col style={{ width: '10%' }} />
