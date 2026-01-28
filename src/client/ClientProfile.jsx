@@ -643,29 +643,7 @@ export default function ClientProfile() {
           {emailError && <div style={{color:'#d33', marginTop:8}}>{emailError}</div>}
         </div>
       </div>
-      <div className="profile-section">
-        <h3>Help & Support</h3>
-        <div className="help-list">
-          <div className="help-item" style={{cursor:'pointer'}} onClick={() => setSupportModal(true)}><i className="ri-customer-service-2-line"></i> Contact Support</div>
-      <CustomModal
-        open={supportModal}
-        title="Contact Support"
-        onConfirm={() => setSupportModal(false)}
-        onCancel={() => setSupportModal(false)}
-        confirmText="OK"
-        cancelText={null}
-      >
-        <div style={{lineHeight: 1.7, fontSize: 15}}>
-          <div><b>Email:</b> <a href="mailto:support@smartchallan.com">support@smartchallan.com</a></div>
-          <div><b>Phone:</b> <a href="tel:+911234567890">+91-1234-567-890</a></div>
-          <div style={{marginTop: 10}}><b>Support Hours:</b> Mon - Sat, 9 AM to 6 PM</div>
-          <div style={{color: '#b77', marginTop: 4}}>Public holidays: Team is not available. Next working day we will contact you.</div>
-        </div>
-      </CustomModal>
-          <div className="help-item"><i className="ri-question-line"></i> FAQ</div>
-          <div className="help-item"><i className="ri-feedback-line"></i> Feedback</div>
-        </div>
-      </div>
+      
       </div>
       
     </div>

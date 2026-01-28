@@ -108,56 +108,7 @@ export default function DealerProfile() {
 								</form>
 							</div>
 							{/* You can add more sections here as needed, using modern-form-card or similar classes for consistency */}
-							<div className="profile-section" style={{marginTop:32}}>
-								<h3>Help & Support</h3>
-								<div className="help-list">
-									<div className="help-item" style={{cursor:'pointer'}} onClick={() => setSupportModal(true)}><i className="ri-customer-service-2-line"></i> Contact Support</div>
-									<CustomModal
-										open={supportModal}
-										title="Contact Support"
-										onConfirm={() => setSupportModal(false)}
-										onCancel={() => setSupportModal(false)}
-										confirmText="OK"
-										cancelText={null}
-										>
-											<div style={{lineHeight: 1.7, fontSize: 15}}>
-												<div style={{display: 'flex', flexDirection: 'row', gap: 18, justifyContent: 'space-between', marginBottom: 12}}>
-													<div style={{flex:1, minWidth: 0, display:'flex', alignItems:'center', gap:10, borderRight:'1px solid #eee', paddingRight:12}}>
-														<span style={{background:'#e3f0ff', color:'#1976d2', borderRadius:'50%', width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20}}>
-															<i className="ri-mail-line"></i>
-														</span>
-														<div style={{overflow:'hidden'}}>
-															<div style={{fontWeight:600, fontSize:16, whiteSpace:'nowrap'}}>Email</div>
-															<a href="mailto:support@smartchallan.com" style={{color:'#1976d2', textDecoration:'underline', fontSize:15, wordBreak:'break-all'}}>support@smartchallan.com</a>
-														</div>
-													</div>
-													<div style={{flex:1, minWidth: 0, display:'flex', alignItems:'center', gap:10, borderRight:'1px solid #eee', paddingRight:12, paddingLeft:12}}>
-														<span style={{background:'#fff3e0', color:'#ffa726', borderRadius:'50%', width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20}}>
-															<i className="ri-phone-line"></i>
-														</span>
-														<div style={{overflow:'hidden'}}>
-															<div style={{fontWeight:600, fontSize:16, whiteSpace:'nowrap'}}>Phone</div>
-															<a href="tel:+919315489988" style={{color:'#ffa726', textDecoration:'underline', fontSize:15, wordBreak:'break-all'}}>+91-9315-489-988</a>
-														</div>
-													</div>
-													<div style={{flex:1, minWidth: 0, display:'flex', alignItems:'center', gap:10, paddingLeft:12}}>
-														<span style={{background:'#e8f5e9', color:'#43e97b', borderRadius:'50%', width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20}}>
-															<i className="ri-time-line"></i>
-														</span>
-														<div style={{overflow:'hidden'}}>
-															<div style={{fontWeight:600, fontSize:16, whiteSpace:'nowrap'}}>Support Hours</div>
-															<div style={{fontSize:15}}>Mon - Sat, 9 AM to 6 PM</div>
-														</div>
-													</div>
-												</div>
-												<div style={{marginTop: 4, color: '#b77', display:'flex', alignItems:'center', gap:8}}>
-													<i className="ri-error-warning-line" style={{fontSize:18}}></i>
-													Public holidays: Team is not available. Next working day we will contact you.
-												</div>
-											</div>
-									</CustomModal>
-								</div>
-							</div>
+
 						</div>
 					</div>
 	);

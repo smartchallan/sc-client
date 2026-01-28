@@ -109,14 +109,14 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
             const isChildActive = item.children.some((child) => activeMenu === child.label);
             const isOpen = challanMenuOpen || isChildActive;
             return (
-              <div
-                key={item.label}
-                onMouseEnter={() => setChallanMenuOpen(true)}
-                onMouseLeave={() => setChallanMenuOpen(false)}
-              >
+              <div key={item.label}>
                 <div
                   className={`nav-item${isChildActive ? " active" : ""}`}
                   style={{ cursor: 'pointer' }}
+                  onClick={() => setChallanMenuOpen(prev => !prev)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setChallanMenuOpen(prev => !prev); }}
                 >
                   <i className={item.icon} style={{ color: '#006400' }}></i>
                   <span style={{ flex: 1 }}>{item.label}</span>
