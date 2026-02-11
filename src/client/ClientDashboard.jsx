@@ -16,6 +16,9 @@ import { jsPDF } from "jspdf";
 import scLogo from "../assets/sc-logo.png";
 // ...existing code...
 import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
+import AddClient from './AddClient';
+import MyClients from './MyClients';
+import ClientSettings from './ClientSettings';
 // Auto-logout on inactivity
 function useAutoLogout() {
   const logoutTimeoutRef = useRef();
@@ -483,7 +486,8 @@ function SidebarVehicleReport({ vehicleChallanData }) {
 
       {/* Enhanced Download dialog for format selection */}
       {downloadDialog.open && (
-        <div style={{position:'fixed',top:0,left:0,width:'100vw',height:'100vh',background:'#0006',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}>
+        // render modal without fullscreen backdrop so it doesn't block the app
+        <div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}>
           <div style={{background:'#fff',padding:32,borderRadius:16,minWidth:320,boxShadow:'0 4px 32px #0003',textAlign:'center',maxWidth:400}}>
             <div style={{fontWeight:700,fontSize:20,marginBottom:8,color:'#1976d2',letterSpacing:0.5}}>Export Vehicle Data</div>
             <div style={{fontSize:15,color:'#555',marginBottom:18}}>
@@ -517,7 +521,8 @@ function SidebarVehicleReport({ vehicleChallanData }) {
 
       {/* Custom error modal */}
       {errorModal.open && (
-        <div style={{position:'fixed',top:0,left:0,width:'100vw',height:'100vh',background:'#0007',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}>
+        // show centered error box without a fullscreen backdrop so it doesn't block clicks
+        <div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}>
           <div style={{background:'#fff',padding:28,borderRadius:14,minWidth:260,boxShadow:'0 2px 16px #0002',textAlign:'center',maxWidth:340}}>
             <div style={{fontWeight:700,fontSize:18,marginBottom:12,color:'#c62828'}}>Error</div>
             <div style={{fontSize:15,color:'#555',marginBottom:18}}>{errorModal.message}</div>
@@ -2313,7 +2318,12 @@ function ClientDashboard() {
             <ClientProfile />
           </div>
         )}
-            {activeMenu === "Register Vehicle" && <RegisterVehicle />}
+
+        {activeMenu === "Add Client" && <AddClient />}
+        {activeMenu === "My Clients" && <MyClients />}
+        {activeMenu === "Client Settings" && <ClientSettings />}
+
+        {activeMenu === "Register Vehicle" && <RegisterVehicle />}
         {activeMenu === "My Fleet" && (
           <div style={{marginBottom:24}}>
 

@@ -1,10 +1,13 @@
 import React, { useState } from "react";
 import scLogo from "../assets/sc-logo.png";
-const IS_DEFAULT_DOMAIN = window.location.hostname === 'app.smartchallan.com';
-const CUSTOM_LOGO_URL = import.meta.env.VITE_CUSTOM_LOGO_URL;
-// Resolve custom logo: allow absolute URLs or root-relative paths (e.g. /tspl-logo.png).
-// If env contains a module path like `src/assets/...` it won't resolve after build,
-// so fall back to the bundled `scLogo` import.
+import { resolvePerHostEnv, getWhitelabelHosts } from "../utils/whitelabel";
+
+const WHITELABEL_HOSTS = getWhitelabelHosts();
+const CURRENT_HOSTNAME = (typeof window !== 'undefined' && window.location && window.location.hostname) ? window.location.hostname : '';
+const IS_DEFAULT_DOMAIN = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME);
+
+// Resolve per-host logo (supports VITE_<HOST>_LOGO_URL, VITE_<DOMAIN>_LOGO_URL, VITE_<SECOND>_LOGO_URL, or VITE_CUSTOM_LOGO_URL)
+const CUSTOM_LOGO_URL = resolvePerHostEnv(CURRENT_HOSTNAME, 'LOGO_URL') || import.meta.env.VITE_CUSTOM_LOGO_URL;
 const resolvedCustomLogo = (!IS_DEFAULT_DOMAIN && CUSTOM_LOGO_URL && (CUSTOM_LOGO_URL.startsWith('/') || CUSTOM_LOGO_URL.startsWith('http'))) ? CUSTOM_LOGO_URL : null;
 import { getInitials } from "../utils/getInitials";
 import CustomModal from "./CustomModal";
@@ -12,13 +15,15 @@ import "../shared/CommonDashboard.css";
 
 function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }) {
   const [logoutOpen, setLogoutOpen] = useState(false);
-  const [challanMenuOpen, setChallanMenuOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState({});
   // Get logged in user from localStorage
   let userName = "John Smith";
   let initials = "JS";
   let userRole = "client";
+  let showClientPages = false;
+  let userObj = null;
   try {
-    const userObj = JSON.parse(localStorage.getItem("sc_user"));
+    userObj = JSON.parse(localStorage.getItem("sc_user"));
     if (userObj && userObj.user) {
       if (userObj.user.name) {
         userName = userObj.user.name;
@@ -33,6 +38,10 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
       if (userObj.user.role) {
         userRole = userObj.user.role;
       }
+      // Show client management pages only for parent accounts (parent_id === 0 OR null/absent)
+      const parentVal = userObj.user.parent_id;
+      // loose equality handles '0' (string) and numeric 0; null/undefined also match with == null
+      showClientPages = (parentVal == null) || (parentVal == 0);
     }
   } catch {}
 
@@ -47,8 +56,8 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
     challanChildren.push({ icon: "ri-list-check-2", label: "Challan Requests" });
   }
 
-  // Always show client menu for client sidebar
-  const menu = [
+  // Base menu; we'll insert Client Management below Dashboard when appropriate
+  const baseMenu = [
     { icon: "ri-home-4-line", label: "Dashboard" },
     { icon: "ri-truck-line", label: "My Fleet" },
     {
@@ -63,8 +72,20 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
     { icon: "ri-car-line", label: "Register Vehicle" },
     { icon: "ri-money-rupee-circle-line", label: "My Billing" },
     { icon: "ri-user-3-line", label: "Profile" },
-    { icon: "ri-logout-box-r-line", label: "Logout", logout: true },
   ];
+
+  // Build final menu and insert Client Management after Dashboard (index 0)
+  const menu = [...baseMenu];
+  if (showClientPages) {
+    const clientChildren = [
+      { icon: "ri-user-add-line", label: "Add Client" },
+      { icon: "ri-group-line", label: "My Clients" },
+      { icon: "ri-settings-3-line", label: "Client Settings" },
+    ];
+    const clientManagement = { icon: "ri-briefcase-line", label: "Client Management", group: true, children: clientChildren };
+    // insert at position 1 (after Dashboard)
+    menu.splice(1, 0, clientManagement);
+  }
 
   const handleLogout = () => {
     // open confirmation modal
@@ -107,16 +128,16 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
             );
           } else if (item.group && item.children) {
             const isChildActive = item.children.some((child) => activeMenu === child.label);
-            const isOpen = challanMenuOpen || isChildActive;
+            const isOpen = openGroups[item.label] || isChildActive;
             return (
               <div key={item.label}>
                 <div
                   className={`nav-item${isChildActive ? " active" : ""}`}
                   style={{ cursor: 'pointer' }}
-                  onClick={() => setChallanMenuOpen(prev => !prev)}
+                  onClick={() => setOpenGroups(prev => ({ ...prev, [item.label]: !prev[item.label] }))}
                   role="button"
                   tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setChallanMenuOpen(prev => !prev); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setOpenGroups(prev => ({ ...prev, [item.label]: !prev[item.label] })); }}
                 >
                   <i className={item.icon} style={{ color: '#006400' }}></i>
                   <span style={{ flex: 1 }}>{item.label}</span>
@@ -155,6 +176,14 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
             );
           }
         })}
+
+        {/* Client management is now a submenu inserted into the main menu when applicable */}
+
+        {/* Logout stays last */}
+        <div className="nav-item" onClick={handleLogout} style={{color: '#ff5252', cursor: 'pointer'}}>
+          <i className="ri-logout-box-r-line" style={{ color: '#ff5252' }}></i>
+          <span>Logout</span>
+        </div>
       </div>
       
       <CustomModal open={logoutOpen} title="Confirm logout" description="You will be signed out of Smart Challan and returned to the login page." icon="ri-logout-box-r-line" onConfirm={confirmLogout} onCancel={cancelLogout} confirmText="Logout" cancelText="Stay">

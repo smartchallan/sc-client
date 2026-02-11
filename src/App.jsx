@@ -1,9 +1,15 @@
 import scLogo from './assets/sc-logo.png';
+import { resolvePerHostEnv, getWhitelabelHosts } from './utils/whitelabel';
+
 // Whitelabel config
-const IS_DEFAULT_DOMAIN = window.location.hostname === 'app.smartchallan.com';
-const CUSTOM_LOGO_URL = import.meta.env.VITE_CUSTOM_LOGO_URL;
-const CUSTOM_FAVICON_URL = import.meta.env.VITE_CUSTOM_FAVICON_URL;
-const CUSTOM_COPYRIGHT = import.meta.env.VITE_CUSTOM_COPYRIGHT;
+const WHITELABEL_HOSTS = getWhitelabelHosts();
+const CURRENT_HOSTNAME = (typeof window !== 'undefined' && window.location && window.location.hostname) ? window.location.hostname : '';
+const IS_DEFAULT_DOMAIN = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME);
+
+// Resolve per-host values (order: full-hostname, domain_tld, second-level, CUSTOM)
+const CUSTOM_LOGO_URL = resolvePerHostEnv(CURRENT_HOSTNAME, 'LOGO_URL') || import.meta.env.VITE_CUSTOM_LOGO_URL || null;
+const CUSTOM_FAVICON_URL = resolvePerHostEnv(CURRENT_HOSTNAME, 'FAVICON_URL') || import.meta.env.VITE_CUSTOM_FAVICON_URL || null;
+const CUSTOM_COPYRIGHT = resolvePerHostEnv(CURRENT_HOSTNAME, 'COPYRIGHT') || import.meta.env.VITE_CUSTOM_COPYRIGHT || null;
 
 // Set favicon dynamically if whitelabel
 if (!IS_DEFAULT_DOMAIN && CUSTOM_FAVICON_URL) {
@@ -17,9 +23,9 @@ import { HashRouter as Router, Routes, Route, useNavigate } from 'react-router-d
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ClientDashboard from './client/ClientDashboard';
-import AdminDashboard from './admin/AdminDashboard';
-import SuperDashboard from './super/SuperDashboard';
-import DealerDashboard from './dealer/DealerDashboard';
+// import AdminDashboard from './admin/AdminDashboard';
+// import SuperDashboard from './super/SuperDashboard';
+// import DealerDashboard from './dealer/DealerDashboard';
 import './App.css';
 import './LoginPage.css';
 
@@ -61,50 +67,22 @@ export function LoginPage() {
       loginSuccess = true;
       loginMessage = "Login successful!";
       toast.success(loginMessage);
-      if (data.user && data.user.role === 'superuser') {
-        // Always include user_options if present
-        const userObj = { ...data.user };
-        if (data.user_options) userObj.user_options = data.user_options;
-        localStorage.setItem('sc_user', JSON.stringify(userObj));
-        console.log('Redirecting to /superkidboard');
-        await delay(2000);
-        navigate('/superkidboard', { replace: true });
-      } else if (data.user && data.user.role === 'dealer') {
-        const userObj = { ...data.user };
-        if (data.user_options) userObj.user_options = data.user_options;
-        localStorage.setItem('sc_user', JSON.stringify(userObj));
-        console.log('Redirecting to /dealersmartboard');
-        await delay(2000);
-        navigate('/dealersmartboard', { replace: true });
-      } else if (data.user && data.user.role === 'admin') {
-        const userObj = { ...data.user };
-        if (data.user_options) userObj.user_options = data.user_options;
-        localStorage.setItem('sc_user', JSON.stringify({
-          user: userObj,
+      // Normalize and store user info in localStorage for client dashboard
+      try {
+        const stored = {
+          user: data.user || {},
           userMeta: data.userMeta || {},
-          token: data.token
-        }));
-        console.log('Redirecting to /adminsmartboard');
-        await delay(2000);
-        navigate('/adminsmartboard', { replace: true });
-      } else if (data.user && data.user.role === 'client') {
-        const userObj = { ...data.user };
-        if (data.user_options) userObj.user_options = data.user_options;
-        localStorage.setItem('sc_user', JSON.stringify({
-          user: userObj,
-          userMeta: data.userMeta || {},
-          token: data.token
-        }));
-        console.log('Redirecting to /smartboard');
-        await delay(2000);
-        try {
-          navigate('/smartboard', { replace: true });
-        } catch (e) {
-          // HashRouter expects hash based navigation
-          try { window.location.hash = '/smartboard'; } catch (_) { window.location.replace('/#/smartboard'); }
-        }
-      } else {
-        console.log('User role is not recognized or user object missing:', data.user);
+          token: data.token || null,
+          user_options: data.user_options || (data.user && data.user.user_options) || {}
+        };
+        localStorage.setItem('sc_user', JSON.stringify(stored));
+      } catch (e) {}
+      // Always redirect to client dashboard regardless of role
+      await delay(2000);
+      try {
+        navigate('/smartboard', { replace: true });
+      } catch (e) {
+        try { window.location.hash = '/smartboard'; } catch (_) { window.location.replace('/#/smartboard'); }
       }
     } catch (err) {
       if (!loginSuccess) {
@@ -239,9 +217,9 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LoginPage />} />
   <Route path="/smartboard" element={<ClientDashboard />} />
-  <Route path="/adminsmartboard" element={<AdminDashboard />} />
-  <Route path="/superkidboard" element={<SuperDashboard />} />
-  <Route path="/dealersmartboard" element={<DealerDashboard />} />
+  {/* <Route path="/adminsmartboard" element={<AdminDashboard />} /> */}
+  {/* <Route path="/superkidboard" element={<SuperDashboard />} /> */}
+  {/* <Route path="/dealersmartboard" element={<DealerDashboard />} /> */}
       </Routes>
     </Router>
   );

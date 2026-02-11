@@ -7,6 +7,11 @@
   align-items: center;
   justify-content: center;
 }
+.custom-modal-overlay {
+  /* Allow clicks to pass through the overlay background so the rest of the app remains interactive.
+     The modal itself remains interactive due to pointer-events:auto on .custom-modal. */
+  pointer-events: none;
+}
 .custom-modal {
   background: #fff;
   border-radius: 10px;
@@ -25,6 +30,10 @@
 /* Close button in top-right of modal */
 .custom-modal {
   position: relative;
+}
+.custom-modal {
+  /* Make sure modal content receives pointer events even when overlay ignores them */
+  pointer-events: auto;
 }
 .custom-modal-close {
   position: absolute;
