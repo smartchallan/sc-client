@@ -2470,8 +2470,10 @@ function ClientDashboard() {
         cancelText={null}
       >
         {(() => {
-          const email = import.meta.env.VITE_SUPPORT_EMAIL || 'support@smartchallan.com';
-          const phone = import.meta.env.VITE_SUPPORT_PHONE || '+91-1234-567-890';
+          const perEmail = resolvePerHostEnv(CURRENT_HOSTNAME, 'SUPPORT_EMAIL');
+          const perPhone = resolvePerHostEnv(CURRENT_HOSTNAME, 'SUPPORT_PHONE');
+          const email = (IS_WHITELABEL && perEmail) ? perEmail : (import.meta.env.VITE_SUPPORT_EMAIL || 'support@smartchallan.com');
+          const phone = (IS_WHITELABEL && perPhone) ? perPhone : (import.meta.env.VITE_SUPPORT_PHONE || '+91-1234-567-890');
           return (
             <div style={{ lineHeight: 1.7, fontSize: 15, marginTop: 4 }}>
               <div
