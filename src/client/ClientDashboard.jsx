@@ -16,6 +16,7 @@ import { jsPDF } from "jspdf";
 import scLogo from "../assets/sc-logo.png";
 // ...existing code...
 import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { resolvePerHostEnv, getWhitelabelHosts } from "../utils/whitelabel";
 import AddClient from './AddClient';
 import MyClients from './MyClients';
 import ClientSettings from './ClientSettings';
@@ -40,6 +41,12 @@ function useAutoLogout() {
     };
   }, []);
 }
+
+const WHITELABEL_HOSTS = getWhitelabelHosts();
+const CURRENT_HOSTNAME = (typeof window !== 'undefined' && window.location && window.location.hostname) ? window.location.hostname : '';
+const DEFAULT_HOST = 'app.smartchallan.com';
+const IS_DEFAULT_DOMAIN = CURRENT_HOSTNAME === DEFAULT_HOST;
+const IS_WHITELABEL = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME) && !IS_DEFAULT_DOMAIN;
 
 
 import { FaDownload } from "react-icons/fa";
@@ -2550,8 +2557,10 @@ function ClientDashboard() {
         cancelText={null}
       >
         {(() => {
-          const email = import.meta.env.VITE_SUPPORT_EMAIL || 'support@smartchallan.com';
-          const phone = import.meta.env.VITE_SUPPORT_PHONE || '+91-1234-567-890';
+          const perEmail = resolvePerHostEnv(CURRENT_HOSTNAME, 'SUPPORT_EMAIL');
+          const perPhone = resolvePerHostEnv(CURRENT_HOSTNAME, 'SUPPORT_PHONE');
+          const email = (IS_WHITELABEL && perEmail) ? perEmail : (import.meta.env.VITE_SUPPORT_EMAIL || 'support@smartchallan.com');
+          const phone = (IS_WHITELABEL && perPhone) ? perPhone : (import.meta.env.VITE_SUPPORT_PHONE || '+91-1234-567-890');
           return (
             <div style={{lineHeight: 1.7, fontSize: 15}}>
               <div><b>Email:</b> <a href={`mailto:${email}`}>{email}</a></div>

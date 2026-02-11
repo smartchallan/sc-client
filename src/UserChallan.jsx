@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./UserChallan.css";
 import CustomModal from "./client/CustomModal";
+import { resolvePerHostEnv, getWhitelabelHosts } from "./utils/whitelabel";
+
+const WHITELABEL_HOSTS = getWhitelabelHosts();
+const CURRENT_HOSTNAME = (typeof window !== 'undefined' && window.location && window.location.hostname) ? window.location.hostname : '';
+const DEFAULT_HOST = 'app.smartchallan.com';
+const IS_DEFAULT_DOMAIN = CURRENT_HOSTNAME === DEFAULT_HOST;
+const IS_WHITELABEL = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME) && !IS_DEFAULT_DOMAIN;
 
 export default function UserChallan() {
   const [supportModal, setSupportModal] = useState(false);
@@ -224,12 +231,20 @@ export default function UserChallan() {
             confirmText="OK"
             cancelText={null}
           >
-            <div style={{ lineHeight: 1.7, fontSize: 15 }}>
-              <div><b>Email:</b> <a href="mailto:support@smartchallan.com">support@smartchallan.com</a></div>
-              <div><b>Phone:</b> <a href="tel:+911234567890">+91-1234-567-890</a></div>
-              <div style={{ marginTop: 10 }}><b>Support Hours:</b> Mon - Sat, 9 AM to 6 PM</div>
-              <div style={{ color: '#b77', marginTop: 4 }}>Public holidays: Team is not available. Next working day we will contact you.</div>
-            </div>
+              {(() => {
+                const perEmail = resolvePerHostEnv(CURRENT_HOSTNAME, 'SUPPORT_EMAIL');
+                const perPhone = resolvePerHostEnv(CURRENT_HOSTNAME, 'SUPPORT_PHONE');
+                const email = (IS_WHITELABEL && perEmail) ? perEmail : (import.meta.env.VITE_SUPPORT_EMAIL || 'support@smartchallan.com');
+                const phone = (IS_WHITELABEL && perPhone) ? perPhone : (import.meta.env.VITE_SUPPORT_PHONE || '+91-1234-567-890');
+                return (
+                  <div style={{ lineHeight: 1.7, fontSize: 15 }}>
+                    <div><b>Email:</b> <a href={`mailto:${email}`}>{email}</a></div>
+                    <div><b>Phone:</b> <a href={`tel:${phone}`}>{phone}</a></div>
+                    <div style={{ marginTop: 10 }}><b>Support Hours:</b> Mon - Sat, 9 AM to 6 PM</div>
+                    <div style={{ color: '#b77', marginTop: 4 }}>Public holidays: Team is not available. Next working day we will contact you.</div>
+                  </div>
+                );
+              })()}
           </CustomModal>
         </div>
       </div>
