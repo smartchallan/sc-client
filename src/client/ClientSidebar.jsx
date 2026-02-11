@@ -4,11 +4,13 @@ import { resolvePerHostEnv, getWhitelabelHosts } from "../utils/whitelabel";
 
 const WHITELABEL_HOSTS = getWhitelabelHosts();
 const CURRENT_HOSTNAME = (typeof window !== 'undefined' && window.location && window.location.hostname) ? window.location.hostname : '';
-const IS_DEFAULT_DOMAIN = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME);
+const DEFAULT_HOST = 'app.smartchallan.com';
+const IS_DEFAULT_DOMAIN = CURRENT_HOSTNAME === DEFAULT_HOST;
+const IS_WHITELABEL = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME) && !IS_DEFAULT_DOMAIN;
 
 // Resolve per-host logo (supports VITE_<HOST>_LOGO_URL, VITE_<DOMAIN>_LOGO_URL, VITE_<SECOND>_LOGO_URL, or VITE_CUSTOM_LOGO_URL)
 const CUSTOM_LOGO_URL = resolvePerHostEnv(CURRENT_HOSTNAME, 'LOGO_URL') || import.meta.env.VITE_CUSTOM_LOGO_URL;
-const resolvedCustomLogo = (!IS_DEFAULT_DOMAIN && CUSTOM_LOGO_URL && (CUSTOM_LOGO_URL.startsWith('/') || CUSTOM_LOGO_URL.startsWith('http'))) ? CUSTOM_LOGO_URL : null;
+const resolvedCustomLogo = (IS_WHITELABEL && CUSTOM_LOGO_URL && (CUSTOM_LOGO_URL.startsWith('/') || CUSTOM_LOGO_URL.startsWith('http'))) ? CUSTOM_LOGO_URL : null;
 import { getInitials } from "../utils/getInitials";
 import CustomModal from "./CustomModal";
 import "../shared/CommonDashboard.css";

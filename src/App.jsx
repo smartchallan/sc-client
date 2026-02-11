@@ -4,7 +4,9 @@ import { resolvePerHostEnv, getWhitelabelHosts } from './utils/whitelabel';
 // Whitelabel config
 const WHITELABEL_HOSTS = getWhitelabelHosts();
 const CURRENT_HOSTNAME = (typeof window !== 'undefined' && window.location && window.location.hostname) ? window.location.hostname : '';
-const IS_DEFAULT_DOMAIN = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME);
+const DEFAULT_HOST = 'app.smartchallan.com';
+const IS_DEFAULT_DOMAIN = CURRENT_HOSTNAME === DEFAULT_HOST;
+const IS_WHITELABEL = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME) && !IS_DEFAULT_DOMAIN;
 
 // Resolve per-host values (order: full-hostname, domain_tld, second-level, CUSTOM)
 const CUSTOM_LOGO_URL = resolvePerHostEnv(CURRENT_HOSTNAME, 'LOGO_URL') || import.meta.env.VITE_CUSTOM_LOGO_URL || null;
@@ -12,7 +14,7 @@ const CUSTOM_FAVICON_URL = resolvePerHostEnv(CURRENT_HOSTNAME, 'FAVICON_URL') ||
 const CUSTOM_COPYRIGHT = resolvePerHostEnv(CURRENT_HOSTNAME, 'COPYRIGHT') || import.meta.env.VITE_CUSTOM_COPYRIGHT || null;
 
 // Set favicon dynamically if whitelabel
-if (!IS_DEFAULT_DOMAIN && CUSTOM_FAVICON_URL) {
+if (IS_WHITELABEL && CUSTOM_FAVICON_URL) {
   const link = document.querySelector("link[rel~='icon']") || document.createElement('link');
   link.rel = 'icon';
   link.href = CUSTOM_FAVICON_URL;
@@ -101,7 +103,7 @@ export function LoginPage() {
         <div className="container">
           <div className="header-content">
             <div className="logo">
-              <img src={(!IS_DEFAULT_DOMAIN && CUSTOM_LOGO_URL) ? CUSTOM_LOGO_URL : scLogo} alt="App Logo" />
+              <img src={(IS_WHITELABEL && CUSTOM_LOGO_URL) ? CUSTOM_LOGO_URL : scLogo} alt="App Logo" />
             </div>
             
             {/* Desktop Navigation */}
@@ -204,7 +206,7 @@ export function LoginPage() {
       </main>
       <footer>
         <div className="container">
-          <p>{(!IS_DEFAULT_DOMAIN && CUSTOM_COPYRIGHT) ? CUSTOM_COPYRIGHT : '© 2025 SmartChallan. All rights reserved.'}</p>
+          <p>{(IS_WHITELABEL && CUSTOM_COPYRIGHT) ? CUSTOM_COPYRIGHT : '© 2025 SmartChallan. All rights reserved.'}</p>
         </div>
       </footer>
     </div>
