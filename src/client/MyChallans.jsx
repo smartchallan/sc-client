@@ -986,6 +986,14 @@ import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import scLogo from "../assets/sc-logo.png";
+import { resolvePerHostEnv, getWhitelabelHosts } from "../utils/whitelabel";
+
+const WHITELABEL_HOSTS = getWhitelabelHosts();
+const CURRENT_HOSTNAME = (typeof window !== 'undefined' && window.location && window.location.hostname) ? window.location.hostname : '';
+const DEFAULT_HOST = 'app.smartchallan.com';
+const IS_DEFAULT_DOMAIN = CURRENT_HOSTNAME === DEFAULT_HOST;
+const IS_WHITELABEL = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME) && !IS_DEFAULT_DOMAIN;
+const BRAND_LOGO = (IS_WHITELABEL && resolvePerHostEnv(CURRENT_HOSTNAME, 'LOGO_URL')) || import.meta.env.VITE_CUSTOM_LOGO_URL || scLogo;
 import "./RightSidebar.css";
 import "../RegisterVehicle.css";
 
@@ -1046,7 +1054,7 @@ export const handleChallanPrint = () => {
   win.document.write("</head><body>");
   win.document.write('<div class="sc-branding">');
   win.document.write(
-    `<img class=\"sc-branding-logo\" src=\"${scLogo}\" alt=\"Smart Challan Logo\" />`
+    `<img class=\"sc-branding-logo\" src=\"${BRAND_LOGO}\" alt=\"Smart Challan Logo\" />`
   );
   win.document.write('<div class="sc-branding-text">');
   win.document.write('<p class="sc-branding-sub">Vehicle Challans Summary</p>');
@@ -1069,7 +1077,7 @@ const handleChallanDownloadPdf = () => {
   container.style.top = "0";
   container.innerHTML = `
     <div class="sc-branding">
-      <img class="sc-branding-logo" style="height:36px; max-width:180px; object-fit:contain;" src="${scLogo}" alt="Smart Challan Logo" />
+      <img class="sc-branding-logo" style="height:36px; max-width:180px; object-fit:contain;" src="${BRAND_LOGO}" alt="Smart Challan Logo" />
       <div class="sc-branding-text">
         <p class="sc-branding-sub">Vehicle Challans Summary</p>
       </div>

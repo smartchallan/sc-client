@@ -1,5 +1,13 @@
 import { jsPDF } from 'jspdf';
 import scLogo from '../assets/sc-logo.png';
+import { resolvePerHostEnv, getWhitelabelHosts } from './whitelabel';
+
+const WHITELABEL_HOSTS = getWhitelabelHosts();
+const CURRENT_HOSTNAME = (typeof window !== 'undefined' && window.location && window.location.hostname) ? window.location.hostname : '';
+const DEFAULT_HOST = 'app.smartchallan.com';
+const IS_DEFAULT_DOMAIN = CURRENT_HOSTNAME === DEFAULT_HOST;
+const IS_WHITELABEL = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME) && !IS_DEFAULT_DOMAIN;
+const BRAND_LOGO = (IS_WHITELABEL && resolvePerHostEnv(CURRENT_HOSTNAME, 'LOGO_URL')) || import.meta.env.VITE_CUSTOM_LOGO_URL || scLogo;
 
 function prettifyKey(key) {
   const map = {
@@ -39,7 +47,7 @@ export function exportToPdf(section, data, filename) {
 
     try {
       const img = new Image();
-      img.src = scLogo;
+      img.src = BRAND_LOGO;
       doc.addImage(img, 'PNG', 8, 4, 30, 14);
     } catch (_) {}
 

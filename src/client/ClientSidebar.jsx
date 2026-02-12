@@ -78,7 +78,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
 
   // Build final menu and insert Client Management after Dashboard (index 0)
   const menu = [...baseMenu];
-  if (showClientPages) {
+  if (!showClientPages) {
     const clientChildren = [
       { icon: "ri-user-add-line", label: "Add Client" },
       { icon: "ri-group-line", label: "My Clients" },

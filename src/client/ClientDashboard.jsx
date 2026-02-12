@@ -47,6 +47,7 @@ const CURRENT_HOSTNAME = (typeof window !== 'undefined' && window.location && wi
 const DEFAULT_HOST = 'app.smartchallan.com';
 const IS_DEFAULT_DOMAIN = CURRENT_HOSTNAME === DEFAULT_HOST;
 const IS_WHITELABEL = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME) && !IS_DEFAULT_DOMAIN;
+const BRAND_LOGO = (IS_WHITELABEL && resolvePerHostEnv(CURRENT_HOSTNAME, 'LOGO_URL')) || import.meta.env.VITE_CUSTOM_LOGO_URL || scLogo;
 
 
 import { FaDownload } from "react-icons/fa";
@@ -272,12 +273,9 @@ function SidebarVehicleReport({ vehicleChallanData }) {
 
       // Logo on the left
       try {
-        // jsPDF supports HTMLImageElement; use scLogo URL
+        // jsPDF supports HTMLImageElement; use BRAND_LOGO URL
         const img = new Image();
-        img.src = scLogo;
-        // Note: addImage is sync once the image is cached. To
-        // keep this simple and robust, we draw the image at a
-        // fixed size; if it fails, we silently skip it.
+        img.src = BRAND_LOGO;
         doc.addImage(img, 'PNG', 8, 4, 30, 14);
       } catch (_) {
         // ignore logo errors, keep text header

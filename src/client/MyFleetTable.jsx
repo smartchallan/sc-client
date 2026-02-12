@@ -29,6 +29,14 @@ import { jsPDF } from "jspdf";
 import BlueTickIcon from "./BlueTickIcon";
 import CustomModal from "./CustomModal";
 import scLogo from "../assets/sc-logo.png";
+import { resolvePerHostEnv, getWhitelabelHosts } from "../utils/whitelabel";
+
+const WHITELABEL_HOSTS = getWhitelabelHosts();
+const CURRENT_HOSTNAME = (typeof window !== 'undefined' && window.location && window.location.hostname) ? window.location.hostname : '';
+const DEFAULT_HOST = 'app.smartchallan.com';
+const IS_DEFAULT_DOMAIN = CURRENT_HOSTNAME === DEFAULT_HOST;
+const IS_WHITELABEL = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME) && !IS_DEFAULT_DOMAIN;
+const BRAND_LOGO = (IS_WHITELABEL && resolvePerHostEnv(CURRENT_HOSTNAME, 'LOGO_URL')) || import.meta.env.VITE_CUSTOM_LOGO_URL || scLogo;
 import html2canvas from "html2canvas";
 import "../RegisterVehicle.css";
 
@@ -149,7 +157,7 @@ const handlePrint = () => {
   win.document.write('<style>body { margin: 16px; font-family: Segoe UI, Arial, sans-serif; } .sc-branding { display:flex; align-items:center; gap:12px; margin-bottom:16px; } .sc-branding-logo { height:24px !important; max-width:120px !important; object-fit:contain !important; } .sc-branding-text { display:flex; flex-direction:column; } .sc-branding-title { font-size:18px; font-weight:700; color:#1565c0; margin:0; } .sc-branding-sub { font-size:11px; color:#555; margin:4px 0 0; } body .latest-table th, body .latest-table td { padding: 6px 8px !important; font-size: 80% !important; } table { width:100%; border-collapse:collapse; }</style>');
   win.document.write('</head><body>');
   win.document.write('<div class="sc-branding">');
-  win.document.write(`<img class="sc-branding-logo" src="${scLogo}" alt="Smart Challan Logo" />`);
+  win.document.write(`<img class="sc-branding-logo" src="${BRAND_LOGO}" alt="Smart Challan Logo" />`);
   win.document.write('<div class="sc-branding-text">');
   win.document.write('<p class="sc-branding-sub">My Fleet Summary</p>');
   win.document.write('</div>');
@@ -171,7 +179,7 @@ const handleDownloadPdf = () => {
   container.style.top = '0';
   container.innerHTML = `
     <div class="sc-branding">
-      <img class="sc-branding-logo" style="height:36px; max-width:180px; object-fit:contain;" src="${scLogo}" alt="Smart Challan Logo" />
+      <img class="sc-branding-logo" style="height:36px; max-width:180px; object-fit:contain;" src="${BRAND_LOGO}" alt="Smart Challan Logo" />
       <div class="sc-branding-text">
         <p class="sc-branding-sub">My Fleet Summary</p>
       </div>
