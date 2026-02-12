@@ -4,6 +4,7 @@ import { FaDownload, FaPrint, FaEye } from "react-icons/fa";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
+import { fetchImageAsDataUrl } from "../utils/whitelabel";
 import scLogo from "../assets/sc-logo.png";
 import { resolvePerHostEnv, getWhitelabelHosts } from "../utils/whitelabel";
 
@@ -140,7 +141,15 @@ const handleRtoDownloadPdf = () => {
   `;
   document.body.appendChild(container);
 
-  setTimeout(() => {
+  setTimeout(async () => {
+    // Attempt to inline external logo as data URL to avoid CORS tainting
+    try {
+      const imgEl = container.querySelector('.sc-branding-logo');
+      if (imgEl && imgEl.src) {
+        const dataUrl = await fetchImageAsDataUrl(imgEl.src);
+        if (dataUrl) imgEl.src = dataUrl;
+      }
+    } catch (e) {}
     html2canvas(container, {
       scale: 2,
       useCORS: true,

@@ -38,6 +38,7 @@ const IS_DEFAULT_DOMAIN = CURRENT_HOSTNAME === DEFAULT_HOST;
 const IS_WHITELABEL = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME) && !IS_DEFAULT_DOMAIN;
 const BRAND_LOGO = (IS_WHITELABEL && resolvePerHostEnv(CURRENT_HOSTNAME, 'LOGO_URL')) || import.meta.env.VITE_CUSTOM_LOGO_URL || scLogo;
 import html2canvas from "html2canvas";
+import { fetchImageAsDataUrl } from "../utils/whitelabel";
 import "../RegisterVehicle.css";
 
 // Helper to parse various date formats and handle object fields like { value, status }
@@ -188,7 +189,14 @@ const handleDownloadPdf = () => {
   `;
   document.body.appendChild(container);
   // Give images (logo, etc.) a short time to load before capture
-  setTimeout(() => {
+  setTimeout(async () => {
+    try {
+      const imgEl = container.querySelector('.sc-branding-logo');
+      if (imgEl && imgEl.src) {
+        const dataUrl = await fetchImageAsDataUrl(imgEl.src);
+        if (dataUrl) imgEl.src = dataUrl;
+      }
+    } catch (e) {}
     html2canvas(container, {
       scale: 2,
       useCORS: true,

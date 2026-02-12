@@ -42,3 +42,22 @@ export function getWhitelabelHosts() {
     }
   });
 }
+
+// Try to fetch an image URL and return a data URL (useful when external images
+// block html2canvas due to CORS). If fetching or conversion fails, returns null.
+export async function fetchImageAsDataUrl(url) {
+  if (!url) return null;
+  try {
+    const resp = await fetch(url, { mode: 'cors' });
+    if (!resp.ok) return null;
+    const blob = await resp.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (e) {
+    return null;
+  }
+}

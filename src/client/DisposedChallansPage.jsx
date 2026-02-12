@@ -7,6 +7,7 @@ import { FiDownloadCloud, FiPrinter } from "react-icons/fi";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
+import { fetchImageAsDataUrl } from "../utils/whitelabel";
 import scLogo from "../assets/sc-logo.png";
 import { resolvePerHostEnv, getWhitelabelHosts } from "../utils/whitelabel";
 
@@ -419,7 +420,14 @@ const handleDisposedDownloadPdf = () => {
   `;
   document.body.appendChild(container);
 
-  setTimeout(() => {
+  setTimeout(async () => {
+    try {
+      const imgEl = container.querySelector('.sc-branding-logo');
+      if (imgEl && imgEl.src) {
+        const dataUrl = await fetchImageAsDataUrl(imgEl.src);
+        if (dataUrl) imgEl.src = dataUrl;
+      }
+    } catch (e) {}
     html2canvas(container, {
       scale: 2,
       useCORS: true,
