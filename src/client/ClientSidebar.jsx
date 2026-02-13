@@ -40,10 +40,15 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
       if (userObj.user.role) {
         userRole = userObj.user.role;
       }
-      // Show client management pages only for parent accounts (parent_id === 0 OR null/absent)
+      // Show client management pages when login response or user options allow it.
+      // Keep legacy parent account detection in case it's still relevant.
       const parentVal = userObj.user.parent_id;
       // loose equality handles '0' (string) and numeric 0; null/undefined also match with == null
-      showClientPages = (parentVal == null) || (parentVal == 0);
+      const isParentAccount = (parentVal == null) || (parentVal == 0);
+      // Check flags coming from login response (`hasClients`) or user's options (`add_clients`)
+      const hasClientsFlag = !!(userObj.hasClients || (userObj.user_options && userObj.user_options.add_clients));
+      // Final decision to show client management menu
+      showClientPages = !!(hasClientsFlag || isParentAccount);
     }
   } catch {}
 
@@ -72,13 +77,13 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
     { icon: "ri-id-card-line", label: "DL Details" },
     { icon: "ri-bank-card-line", label: "Fastag Details" },
     { icon: "ri-car-line", label: "Register Vehicle" },
-    { icon: "ri-money-rupee-circle-line", label: "My Billing" },
+    // { icon: "ri-money-rupee-circle-line", label: "My Billing" },
     { icon: "ri-user-3-line", label: "Profile" },
   ];
 
-  // Build final menu and insert Client Management after Dashboard (index 0)
+  // Build final menu and insert Client Management after Dashboard (index 0) when allowed
   const menu = [...baseMenu];
-  if (!showClientPages) {
+  if (showClientPages) {
     const clientChildren = [
       { icon: "ri-user-add-line", label: "Add Client" },
       { icon: "ri-group-line", label: "My Clients" },

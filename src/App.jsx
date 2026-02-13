@@ -75,7 +75,10 @@ export function LoginPage() {
           user: data.user || {},
           userMeta: data.userMeta || {},
           token: data.token || null,
-          user_options: data.user_options || (data.user && data.user.user_options) || {}
+          // Preserve legacy user_options location or top-level user_options
+          user_options: data.user_options || (data.user && data.user.user_options) || {},
+          // New flag (from /login) indicating whether this account has clients
+          hasClients: data.hasClients || false,
         };
         localStorage.setItem('sc_user', JSON.stringify(stored));
       } catch (e) {}
