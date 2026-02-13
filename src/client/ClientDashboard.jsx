@@ -749,9 +749,8 @@ function ClientDashboard() {
   // Fetch vehicle summary whenever the user object changes (e.g., after login)
   // Fetch fleet data (pagination-aware)
   useEffect(() => {
-    const role = user?.user?.role;
     const clientId = user?.user?.client_id || user?.user?.id;
-    if (!clientId || !(role === 'client' || role === 'customer')) return;
+    if (!clientId) return;
     setVehicleSummary([]);
     setLoadingVehicleSummary(true);
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
@@ -1864,7 +1863,7 @@ function ClientDashboard() {
             <div className="menu-toggle" style={{fontSize:22,cursor:'pointer'}} onClick={handleHeaderMenuToggle}>
               <i className="ri-menu-line"></i>
             </div>
-            <div className="header-title" style={{fontWeight:600}}>
+            <div className="header-title">
               {activeMenu === 'Dashboard' ? 'Dashboard'
                 : activeMenu === 'Profile' ? 'Profile'
                 : activeMenu === 'Registered Vehicles' ? 'Registered Vehicles'
@@ -1909,7 +1908,7 @@ function ClientDashboard() {
               )}
             </div>
             <div className="dashboard-stats">
-              <div className="stat-card" style={{background: 'linear-gradient(120deg, #93c5fd 60%, #dbeafe 100%)', borderRadius: 18, boxShadow: '0 6px 24px rgba(59, 130, 246, 0.10)', border: '1.5px solid #dbeafe'}}>
+              <div className="stat-card" style={{background: 'linear-gradient(120deg, #93c5fd 60%, #dbeafe 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(59, 130, 246, 0.10)', border: '1.5px solid #dbeafe'}}>
                 <div className="stat-card-content">
                   <i className="ri-car-line"></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
@@ -2033,7 +2032,7 @@ function ClientDashboard() {
                     ) : null}
                   </div>
                 </div>
-              <div className="stat-card" style={{background: 'linear-gradient(120deg, #6ee7b7 60%, #d1fae5 100%)', borderRadius: 18, boxShadow: '0 6px 24px rgba(16, 185, 129, 0.10)', border: '1.5px solid #d1fae5'}}>
+              <div className="stat-card" style={{background: 'linear-gradient(120deg, #6ee7b7 60%, #d1fae5 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(16, 185, 129, 0.10)', border: '1.5px solid #d1fae5'}}>
                 <div className="stat-card-content">
                   <i className="ri-error-warning-line"></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
@@ -2091,7 +2090,7 @@ function ClientDashboard() {
             </div>
 
             <div className="dashboard-stats">
-                   <div className="stat-card" style={{background: 'linear-gradient(120deg, #f9a8d4 60%, #fce7f3 100%)', borderRadius: 18, boxShadow: '0 6px 24px rgba(236, 72, 153, 0.10)', border: '1.5px solid #fce7f3'}}>
+                   <div className="stat-card" style={{background: 'linear-gradient(120deg, #f9a8d4 60%, #fce7f3 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(236, 72, 153, 0.10)', border: '1.5px solid #fce7f3'}}>
                 <div className="stat-card-content">
                   <i className="ri-alarm-warning-line"></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
@@ -2197,7 +2196,7 @@ function ClientDashboard() {
                   ) : null}
                 </div>
               </div>
-              <div className="stat-card" style={{background: 'linear-gradient(120deg, #fdba74 60%, #fef3c7 100%)', borderRadius: 18, boxShadow: '0 6px 24px rgba(251, 191, 36, 0.10)', border: '1.5px solid #fef3c7'}}>
+              <div className="stat-card" style={{background: 'linear-gradient(120deg, #fdba74 60%, #fef3c7 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(251, 191, 36, 0.10)', border: '1.5px solid #fef3c7'}}>
                 <div className="stat-card-content">
                   <i className="ri-money-rupee-circle-line"></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>

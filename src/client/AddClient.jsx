@@ -47,6 +47,26 @@ const GEO = {
 };
 
 export default function AddClient() {
+    // Password visibility toggle
+    const [showPassword, setShowPassword] = useState(false);
+
+    // Ensure form is blank on mount
+    React.useEffect(() => {
+      setName('');
+      setEmail('');
+      setPhone('');
+      setPassword('');
+      setCompany('');
+      setGtin('');
+      setBusiness('');
+      setCountry('');
+      setStateVal('');
+      setCity('');
+      setAddress('');
+      setZip('');
+      setSendEmail(false);
+      setErrors({});
+    }, []);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -58,6 +78,7 @@ export default function AddClient() {
 
   const [country, setCountry] = useState('');
   const [stateVal, setStateVal] = useState('');
+  const [sendEmail, setSendEmail] = useState(false);
   const [city, setCity] = useState('');
   const [address, setAddress] = useState('');
   const [zip, setZip] = useState('');
@@ -87,14 +108,32 @@ export default function AddClient() {
       return;
     }
     setSaving(true);
-    const payload = { name, email, phone, password, company, gtin, business, country };
-    if (stateVal) payload.state = stateVal;
-    if (city) payload.city = city;
-    if (address) payload.address = address;
-    if (zip) payload.zip = zip;
+    // Get logged-in user id for parent_id
+    let parentId = 0;
+    try {
+      const scUser = JSON.parse(localStorage.getItem('sc_user')) || {};
+      parentId = scUser.user?.id || scUser.user?.client_id || scUser.user?._id || 0;
+    } catch {}
+    // Build payload as per sample
+    const payload = {
+      name,
+      email,
+      phone,
+      password,
+      gtin,
+      address,
+      country,
+      state: stateVal,
+      city,
+      company_name: company,
+      business_category: business,
+      pin: zip,
+      parent_id: parentId,
+      sendEmail
+    };
 
     try {
-      const res = await fetch(`${API_ROOT}/clients`, {
+      const res = await fetch(`${API_ROOT}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -105,6 +144,7 @@ export default function AddClient() {
         // reset form
         setName(''); setEmail(''); setPhone(''); setPassword(''); setCompany(''); setGtin(''); setBusiness('');
         setCountry(''); setStateVal(''); setCity(''); setAddress(''); setZip('');
+        setSendEmail(false);
       } else {
         toast.error(data.message || 'Failed to add client');
       }
@@ -120,7 +160,7 @@ export default function AddClient() {
 
   return (
     <div style={{ padding: 18 }}>
-      <h1 className="page-title">Add Client</h1>
+      {/* <h1 className="page-title">Add Client</h1> */}
       <p className="page-subtitle">Create a new client account — provide contact and location details.</p>
 
       <div className="modern-form-card" style={{ width: '100%' }}>
@@ -146,7 +186,34 @@ export default function AddClient() {
             </div>
             <div className="form-col">
               <label className="form-label">Password <span style={{color:'#e74c3c', marginLeft:6}}>*</span></label>
-              <input className={`form-control ${errors.password ? 'input-error' : ''}`} type="password" value={password} onChange={e => { setPassword(e.target.value); setErrors(s => ({ ...s, password: null })); }} />
+              <div style={{ position: 'relative' }}>
+                <input
+                  className={`form-control ${errors.password ? 'input-error' : ''}`}
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => { setPassword(e.target.value); setErrors(s => ({ ...s, password: null })); }}
+                  style={{ paddingRight: 36 }}
+                />
+                <span
+                  onClick={() => setShowPassword(v => !v)}
+                  style={{
+                    position: 'absolute',
+                    right: 10,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    cursor: 'pointer',
+                    color: '#777',
+                    fontSize: 18
+                  }}
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.06 10.06 0 0 1 12 20c-5.05 0-9.29-3.14-11-8 1.21-3.06 3.6-5.5 6.58-6.71"/><path d="M1 1l22 22"/><path d="M9.53 9.53A3.5 3.5 0 0 0 12 15.5c1.93 0 3.5-1.57 3.5-3.5 0-.47-.09-.92-.26-1.33"/></svg>
+                  ) : (
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12S5 5 12 5s11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                  )}
+                </span>
+              </div>
               {errors.password && <div style={{ color: '#e74c3c', fontSize: 13, marginTop: 6 }}>{errors.password}</div>}
             </div>
           </div>
@@ -212,8 +279,21 @@ export default function AddClient() {
             </div>
           )}
 
-          <div style={{ marginTop: 12 }}>
-            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Add Client'}</button>
+          <div className="form-row" style={{ marginTop: 12 }}>
+            <div className="form-col">
+              <label className="form-label">
+                <input
+                  type="checkbox"
+                  checked={sendEmail}
+                  onChange={e => setSendEmail(e.target.checked)}
+                  style={{ marginRight: 8 }}
+                />
+                Send email to client
+              </label>
+            </div>
+            <div className="form-col">
+              <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Add Client'}</button>
+            </div>
           </div>
         </form>
       </div>

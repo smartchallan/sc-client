@@ -49,13 +49,14 @@
 .page-title {
   font-size: 2.2rem;
   font-weight: 800;
-  background: linear-gradient(90deg, #42a5f5 0%, #43e97b 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #42a5f5;
+  background: none;
+  -webkit-background-clip: initial;
+  -webkit-text-fill-color: initial;
+  background-clip: initial;
   margin-bottom: 18px;
   letter-spacing: 0.5px;
-  text-shadow: 0 4px 16px rgba(66,165,245,0.10);
+  text-shadow: none;
   line-height: 1.1;
 }
 @media (max-width: 900px) {
@@ -239,7 +240,7 @@ body {
 /* Common Sidebar Styles */
 .sidebar {
   width: 270px;
-  background: linear-gradient(160deg, #42a5f5 0%, #43e97b 100%);
+  background: #42a5f5;
   color: #fff;
   padding: 20px 0;
   display: flex;
@@ -249,6 +250,7 @@ body {
   z-index: 1000;
   transition: background 0.3s, box-shadow 0.3s, transform 0.3s ease;
 }
+
 
 /* Sidebar behavior - desktop and mobile */
 .sidebar.closed {
@@ -335,28 +337,26 @@ body {
   transition: background 0.22s, color 0.22s, box-shadow 0.22s, transform 0.18s;
   margin-bottom: 5px;
   position: relative;
-  border-radius: 10px;
-  font-weight: 500;
+  border-radius: 0px;
+  /* font-weight: 500; */
   background: linear-gradient(90deg, rgba(255,255,255,0.01) 0%, rgba(76,206,172,0.04) 100%);
   box-shadow: 0 1px 4px rgba(60,120,200,0.03);
 
 }
 
 .nav-item:hover {
-  background: linear-gradient(90deg, #42a5f5 0%, #478ed1 100%);
+  background: #55cf2f;
   color: #fff;
   transform: scale(1.04);
   box-shadow: 0 4px 16px rgba(66,165,245,0.10);
-
 }
 
 .nav-item.active {
-  background: linear-gradient(90deg, #66bb6a 0%, #43e97b 100%);
+  background: #55cf2f;
   color: #fff;
   transform: scale(1.06);
   box-shadow: 0 6px 20px rgba(102,187,106,0.13);
-  font-weight: 700;
-
+  /* font-weight: 700; */
 }
 
 .nav-item.active::before {
@@ -366,7 +366,7 @@ body {
   top: 0;
   height: 100%;
   width: 4px;
-  background: linear-gradient(180deg, #42a5f5 0%, #43e97b 100%);
+  background: #42a5f5;
   border-radius: 4px;
 }
 
@@ -393,7 +393,7 @@ body {
   align-items: center;
   cursor: pointer;
   margin-bottom: 4px;
-  border-radius: 8px;
+  /* border-radius: 8px; */
   font-size: 0.95rem;
   color: #e3f0ff;
   opacity: 0.9;
@@ -419,7 +419,7 @@ body {
   color: #ffffff;
   transform: translateX(2px);
   box-shadow: 0 4px 14px rgba(102,187,106,0.18);
-  font-weight: 600;
+  /* font-weight: 600; */
 }
 
 .nav-subitem:hover i,
@@ -533,14 +533,14 @@ main.main-content,
 /* Common Header */
 .header {
   height: 70px;
-  background: linear-gradient(90deg, #42a5f5 0%, #43e97b 100%);
+  background: #42a5f5;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 36px;
   box-shadow: 0 4px 18px rgba(60,120,200,0.10);
-  border-radius: 0 0 18px 18px;
+  /* border-radius: 0 0 18px 18px; */
   position: sticky;
   top: 0;
   z-index: 5;
@@ -567,7 +567,7 @@ main.main-content,
 
 .header-title {
   font-size: 22px;
-  font-weight: 700;
+  /* font-weight: 700; */
   color: #fff;
   letter-spacing: 0.5px;
   text-shadow: 0 2px 8px rgba(0,0,0,0.10);
@@ -596,7 +596,7 @@ main.main-content,
 .header-avatar {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, #42a5f5 0%, #43e97b 100%);
+  background: #42a5f5;
   color: #fff;
   border-radius: 50%;
   display: flex;
@@ -617,15 +617,16 @@ main.main-content,
 }
 
 .dashboard-title {
-  font-size: 32px;
-  font-weight: 800;
-  background: linear-gradient(90deg, #42a5f5 0%, #43e97b 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: 22px;
+  font-weight: 400;
+  color: #222;
+  background: none;
+  -webkit-background-clip: initial;
+  -webkit-text-fill-color: initial;
+  background-clip: initial;
   margin-bottom: 5px;
   letter-spacing: 0.5px;
-  text-shadow: 0 4px 16px rgba(66,165,245,0.10);
+  text-shadow: none;
 }
 
 .dashboard-header p {
@@ -644,7 +645,7 @@ main.main-content,
 
 .stat-card {
   background: linear-gradient(135deg, #f5f7fa 0%, #e3f0ff 100%);
-  border-radius: 18px;
+  border-radius: 0px;
   padding: 22px 20px 18px 20px;
   box-shadow: 0 6px 24px 0 rgba(60, 120, 200, 0.10), 0 1.5px 6px 0 rgba(60, 120, 200, 0.08);
   flex: 1 1 260px;
@@ -1256,7 +1257,14 @@ main.main-content,
   }
   
   .dashboard-title {
-    font-size: 20px;
+    font-size: 16px;
+    font-weight: 400;
+    color: #222;
+    background: none;
+    -webkit-background-clip: initial;
+    -webkit-text-fill-color: initial;
+    background-clip: initial;
+    text-shadow: none;
   }
   
   .stat-card {

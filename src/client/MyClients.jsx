@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+// (removed duplicate imports)
 import { toast } from 'react-toastify';
 import CustomModal from './CustomModal';
 import RightSidebar from './RightSidebar';
@@ -16,6 +17,13 @@ export default function MyClients() {
   const [statusModal, setStatusModal] = useState({ open: false, client: null, action: '' });
   const [selectedClient, setSelectedClient] = useState(null);
   const API_ROOT = import.meta.env.VITE_API_BASE_URL || '';
+
+  // Strict: Clear search box when change password modal is opened (prevents autofill or indirect state sync)
+  useEffect(() => {
+    if (changePasswordModal.open) {
+      setSearch('');
+    }
+  }, [changePasswordModal.open]);
 
   // Get user_id from localStorage
   const getUserId = () => {
@@ -70,7 +78,7 @@ export default function MyClients() {
   useEffect(() => { fetchClients(); }, []);
 
   // Get unique states and cities for filters
-  const uniqueStates = React.useMemo(() => {
+  const uniqueStates = useMemo(() => {
     const states = new Set();
     clients.forEach(c => {
       const state = (c.user_meta || c.userMeta)?.state;
@@ -79,7 +87,7 @@ export default function MyClients() {
     return Array.from(states).sort();
   }, [clients]);
 
-  const uniqueCities = React.useMemo(() => {
+  const uniqueCities = useMemo(() => {
     const cities = new Set();
     clients.forEach(c => {
       const city = (c.user_meta || c.userMeta)?.city;
@@ -87,7 +95,6 @@ export default function MyClients() {
     });
     return Array.from(cities).sort();
   }, [clients]);
-
   const filtered = clients.filter(c => {
     // Search filter
     if (search) {
@@ -212,7 +219,7 @@ export default function MyClients() {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, padding: '0 24px 0 0', minHeight: 54 }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ width: 4, height: 32, background: 'linear-gradient(135deg, #2196f3 0%, #21cbf3 100%)', borderRadius: 3, marginRight: 14 }} />
+            <div style={{ width: 4, height: 32, background: '#42a5f5', borderRadius: 3, marginRight: 14 }} />
             <h2 style={{ margin: 0, fontSize: 19, color: '#1565c0', letterSpacing: '0.01em', fontFamily: 'Segoe UI, Arial, sans-serif', lineHeight: 1.2, fontWeight: 700 }}>My Clients Network</h2>
           </div>
           <div style={{ color: '#1565c0', fontSize: 14, background: '#f5f8fa', border: '1.5px solid #2196f3', borderRadius: 6, padding: '4px 12px', fontWeight: 700, display: 'inline-block', marginLeft: 0, boxShadow: '0 1px 4px #21cbf322' }}>
@@ -240,7 +247,13 @@ export default function MyClients() {
               className="form-control" 
               placeholder="Search clients..." 
               value={search} 
-              onChange={e => setSearch(e.target.value)} 
+              onChange={e => {
+                // Debug: log any programmatic value changes
+                if (e.nativeEvent && e.nativeEvent.inputType !== 'insertText') {
+                  console.log('Search input changed programmatically:', e.target.value, e.nativeEvent);
+                }
+                setSearch(e.target.value);
+              }} 
               style={{ 
                 width: 240,
                 padding: '10px 14px', 
@@ -248,6 +261,7 @@ export default function MyClients() {
                 border: '1.5px solid #cdd',
                 fontSize: 14
               }} 
+              autoComplete="off"
             />
             
             <select
@@ -448,7 +462,10 @@ export default function MyClients() {
                       </button>
                       <button
                         className="action-btn flat-btn"
-                        onClick={() => setChangePasswordModal({ open: true, client: c })}
+                        onClick={() => {
+                          // Strict: never set search box to client email or any value when opening modal
+                          setChangePasswordModal({ open: true, client: c });
+                        }}
                         title="Change Password"
                         style={{
                           fontSize: 16,
@@ -486,6 +503,7 @@ export default function MyClients() {
           setChangePasswordModal({ open: false, client: null });
           setNewPassword('');
           setShowPassword(false);
+          // Defensive: ensure closing modal does not affect search state
         }}
       >
         <div style={{ marginTop: 12 }}>
