@@ -102,46 +102,15 @@ export function LoginPage() {
   return (
     <div className="login-app-container">
       <ToastContainer position="top-right" autoClose={2000} hideProgressBar={false} newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover />
-      <header>
-        <div className="container">
-          <div className="header-content">
-            <div className="logo">
-              <img src={(IS_WHITELABEL && CUSTOM_LOGO_URL) ? CUSTOM_LOGO_URL : scLogo} alt="App Logo" />
-            </div>
             
-            {/* Desktop Navigation */}
-            <nav>
-              <ul>
-                <li><a href="https://www.smartchallan.com/">Home</a></li>
-                <li><a href="#services">Services</a></li>
-                <li><a href="#">About Us</a></li>
-                <li><a href="#">Contact</a></li>
-                <li><a href="#" style={{ color: '#0072ff' }}>Login</a></li>
-              </ul>
-            </nav>
-            
-            {/* Burger Menu Button */}
-            <button 
-              className={`burger-menu ${mobileMenuOpen ? 'active' : ''}`}
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle menu"
-            >
-              <span></span>
-              <span></span>
-              <span></span>
-            </button>
-          </div>
-        </div>
-      </header>
-      
       {/* Mobile Navigation Overlay */}
-      <div 
+      {/* <div 
         className={`nav-overlay ${mobileMenuOpen ? 'active' : ''}`}
         onClick={() => setMobileMenuOpen(false)}
       ></div>
       
       {/* Mobile Navigation Menu */}
-      <nav className={`mobile-nav ${mobileMenuOpen ? 'active' : ''}`}>
+      {/* <nav className={`mobile-nav ${mobileMenuOpen ? 'active' : ''}`}>
         <ul>
           <li><a href="https://www.smartchallan.com/" onClick={() => setMobileMenuOpen(false)}>Home</a></li>
           <li><a href="#services" onClick={() => setMobileMenuOpen(false)}>Services</a></li>
@@ -149,22 +118,22 @@ export function LoginPage() {
           <li><a href="#" onClick={() => setMobileMenuOpen(false)}>Contact</a></li>
           <li><a href="#" style={{ color: '#0072ff' }} onClick={() => setMobileMenuOpen(false)}>Login</a></li>
         </ul>
-      </nav>
+      </nav> */}
       
       <main>
-        <section className="hero">
+        {/* <section className="hero">
           <div className="container">
             <h1>Login to your account</h1>
             <p>Enter your credentials to access your SmartChallan account.</p>
           </div>
-        </section>
+        </section> */}
         <section className="registration-section" style={{ padding: '60px 0' }}>
           <div className="container">
             <div className="form-container">
               <div className="form-header">
-                {/* <div style={{textAlign:'center', marginBottom:16}}>
-                  <img src={scLogo} alt="App Logo" style={{height:100, marginBottom:8}} />
-                </div> */}
+                <div style={{textAlign:'center', marginBottom:16}}>
+                  <img src={(IS_WHITELABEL && CUSTOM_LOGO_URL) ? CUSTOM_LOGO_URL : scLogo} alt="App Logo" style={{height:100, marginBottom:8}} />
+                </div>
                 <h2>Login to your account</h2>
               </div>
               <form className="register-form" onSubmit={handleSubmit}>
