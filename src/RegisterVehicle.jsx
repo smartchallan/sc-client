@@ -100,6 +100,7 @@ export default function RegisterVehicle() {
       client_id: user.client_id || user.id,
       dealer_id: user.dealer_id,
       admin_id: user.admin_id,
+      parent_id: user.parent_id,
     };
   };
 
