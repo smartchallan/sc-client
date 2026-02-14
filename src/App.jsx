@@ -132,7 +132,7 @@ export function LoginPage() {
             <div className="form-container">
               <div className="form-header">
                 <div style={{textAlign:'center', marginBottom:16}}>
-                  <img src={(IS_WHITELABEL && CUSTOM_LOGO_URL) ? CUSTOM_LOGO_URL : scLogo} alt="App Logo" style={{height:100, marginBottom:8}} />
+                  <img src={(IS_WHITELABEL && CUSTOM_LOGO_URL) ? CUSTOM_LOGO_URL : scLogo} alt="App Logo" style={{height:70, marginBottom:8}} />
                 </div>
                 <h2>Login to your account</h2>
               </div>
