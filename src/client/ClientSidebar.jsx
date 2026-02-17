@@ -45,8 +45,8 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
       const parentVal = userObj.user.parent_id;
       // loose equality handles '0' (string) and numeric 0; null/undefined also match with == null
       const isParentAccount = (parentVal == null) || (parentVal == 0);
-      // Check flags coming from login response (`hasClients`) or user's options (`add_clients`)
-      const hasClientsFlag = !!(userObj.hasClients || (userObj.user_options && userObj.user_options.add_clients));
+      // Use hasClients flag from login response - this determines if user is in client management mode
+      const hasClientsFlag = !!(userObj.hasClients);
       // Final decision to show client management menu
       showClientPages = !!(hasClientsFlag || isParentAccount);
     }
@@ -66,22 +66,25 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
   // Base menu; we'll insert Client Management below Dashboard when appropriate
   const baseMenu = [
     { icon: "ri-home-4-line", label: "Dashboard" },
-    { icon: "ri-truck-line", label: "My Fleet" },
+    { icon: "ri-truck-line", label: showClientPages ? "Client Vehicles" : "My Fleet" },
     {
       icon: "ri-file-list-3-line",
       label: "Challan Management",
       group: true,
       children: challanChildren,
     },
-    { icon: "ri-car-line", label: "RTO Details" },
-    { icon: "ri-id-card-line", label: "DL Details" },
-    { icon: "ri-bank-card-line", label: "Fastag Details" },
+    // Conditionally include RTO Details, DL Details, and Fastag Details only when showClientPages is false
+    ...(!showClientPages ? [
+      { icon: "ri-car-line", label: "RTO Details" },
+      { icon: "ri-id-card-line", label: "DL Details" },
+      { icon: "ri-bank-card-line", label: "Fastag Details" },
+    ] : []),
     { icon: "ri-car-line", label: "Register Vehicle" },
     // { icon: "ri-money-rupee-circle-line", label: "My Billing" },
     { icon: "ri-user-3-line", label: "Profile" },
   ];
 
-  // Build final menu and insert Client Management after Dashboard (index 0) when allowed
+  // Build final menu and flatten Client Management children as main menu items when allowed
   const menu = [...baseMenu];
   if (showClientPages) {
     const clientChildren = [
@@ -89,9 +92,8 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
       { icon: "ri-group-line", label: "My Clients" },
       { icon: "ri-settings-3-line", label: "Client Settings" },
     ];
-    const clientManagement = { icon: "ri-briefcase-line", label: "Client Management", group: true, children: clientChildren };
-    // insert at position 1 (after Dashboard)
-    menu.splice(1, 0, clientManagement);
+    // Insert client menu items directly (flattened) at position 1 (after Dashboard)
+    menu.splice(1, 0, ...clientChildren);
   }
 
   const handleLogout = () => {

@@ -141,6 +141,8 @@ export default function AddClient() {
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         toast.success(data.message || 'Client added');
+        // Clear cached client network data so it's refreshed on next view
+        localStorage.removeItem('client_network');
         // reset form
         setName(''); setEmail(''); setPhone(''); setPassword(''); setCompany(''); setGtin(''); setBusiness('');
         setCountry(''); setStateVal(''); setCity(''); setAddress(''); setZip('');

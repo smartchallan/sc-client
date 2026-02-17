@@ -40,10 +40,44 @@ export default function ClientSettings() {
         setClients([]);
         return;
       }
+      
+      // Check if data already exists in localStorage (from login)
+      try {
+        const cachedData = localStorage.getItem('client_network');
+        if (cachedData) {
+          const data = JSON.parse(cachedData);
+          const rawData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
+          // Recursively flatten all nested children (from MyClients)
+          const flattenChildren = (node, dealerName = null) => {
+            const result = [];
+            result.push({ ...node, dealerName, isParent: !dealerName });
+            if (Array.isArray(node.children) && node.children.length > 0) {
+              node.children.forEach(child => {
+                result.push(...flattenChildren(child, node.name));
+              });
+            }
+            return result;
+          };
+          const flatClients = [];
+          rawData.forEach(parent => {
+            flatClients.push(...flattenChildren(parent));
+          });
+          setClients(flatClients);
+          if (flatClients.length > 0) setSelectedClient(flatClients[0].id || flatClients[0]._id || flatClients[0]);
+          return;
+        }
+      } catch (e) {
+        // If cached data is invalid, continue to fetch from API
+      }
+      
       try {
         const res = await fetch(`${API_ROOT}/getclientnetwork?parent_id=${userId}`);
         const data = await res.json().catch(() => []);
         const rawData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
+        
+        // Store in localStorage for future use
+        localStorage.setItem('client_network', JSON.stringify(data));
+        
         // Recursively flatten all nested children (from MyClients)
         const flattenChildren = (node, dealerName = null) => {
           const result = [];

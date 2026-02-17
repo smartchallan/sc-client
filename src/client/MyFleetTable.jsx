@@ -254,7 +254,126 @@ export default function MyFleetTable({
   filteredFleet = null,
   goToFleetRenewal = null,
   onConsumeFleetRenewal,
+  showClientPages = false,
 }) {
+  // Client selection state for Client Vehicles mode
+  const [selectedClientId, setSelectedClientId] = useState(null);
+  const [clientList, setClientList] = useState([]);
+  const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const [loadingClientVehicles, setLoadingClientVehicles] = useState(false);
+  const [clientVehiclesData, setClientVehiclesData] = useState([]);
+  const clientDropdownRef = useRef(null);
+  
+  // Load clients from localStorage when in Client Vehicles mode
+  useEffect(() => {
+    if (showClientPages) {
+      try {
+        const cachedData = localStorage.getItem('client_network');
+        if (cachedData) {
+          const data = JSON.parse(cachedData);
+          const rawData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
+          
+          // Flatten nested children
+          const flattenChildren = (node, dealerName = null) => {
+            const result = [];
+            result.push({ ...node, dealerName, isParent: !dealerName });
+            if (Array.isArray(node.children) && node.children.length > 0) {
+              node.children.forEach(child => {
+                result.push(...flattenChildren(child, node.name));
+              });
+            }
+            return result;
+          };
+          
+          const flatClients = [];
+          rawData.forEach(parent => {
+            flatClients.push(...flattenChildren(parent));
+          });
+          
+          setClientList(flatClients);
+        }
+      } catch (e) {
+        console.error('Failed to load clients:', e);
+      }
+    }
+  }, [showClientPages]);
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (clientDropdownRef.current && !clientDropdownRef.current.contains(event.target)) {
+        setShowClientDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+  
+  // Fetch vehicles when client is selected
+  useEffect(() => {
+    if (showClientPages && selectedClientId) {
+      setLoadingClientVehicles(true);
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+      fetch(`${baseUrl}/vehiclesummary`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client_id: selectedClientId, limit: 1000000, offset: 0 })
+      })
+        .then(res => res.json())
+        .then(data => {
+          console.log('✅ Raw API response for client', selectedClientId, ':', data);
+          let arr = [];
+          if (Array.isArray(data)) arr = data;
+          else if (Array.isArray(data.data)) arr = data.data;
+          else if (data && Array.isArray(data.rows)) arr = data.rows;
+          else if (data && Array.isArray(data.result)) arr = data.result;
+          else if (data && data.data && Array.isArray(data.data.rows)) arr = data.data.rows;
+          else if (data && data.data && Array.isArray(data.data.items)) arr = data.data.items;
+          else if (data && Array.isArray(data.vehicles)) arr = data.vehicles;
+          else if (data && typeof data === 'object') {
+            for (const k of Object.keys(data)) {
+              if (Array.isArray(data[k])) { arr = data[k]; break; }
+            }
+          }
+          console.log('✅ Extracted array:', arr?.length, 'items');
+          // Keep all fields from raw data and add normalized aliases
+          const normalized = (arr || []).map(r => ({
+            ...r, // Keep all original fields
+            vehicle_id: r.vehicle_id || r.id || r._id || r.vehicleId || null,
+            vehicle_number: r.vehicle_number || r.rc_regn_no || r.regn_no || r.vehicle_no || r.registration_number || r.vh_regn_no || r.reg_no || r.regn || '-',
+            rc_regn_dt: r.rc_regn_dt || r.registration_date || r.registered_at || '-',
+            pending_challan_count: r.pending_challan_count ?? r.pending_count ?? r.pending_challans ?? r.pending ?? 0,
+            disposed_challan_count: r.disposed_challan_count ?? r.disposed_count ?? r.disposed_challans ?? r.disposed ?? 0,
+            insurance_exp: r.insurance_exp || r.insuranceUpto || r.rc_insurance_upto || r.insurance_expiry || r.insuranceExpiry || '-',
+            road_tax_exp: r.road_tax_exp || r.roadTaxExp || r.rc_tax_upto || r.road_tax || '-',
+            fitness_exp: r.fitness_exp || r.fitnessUpto || r.rc_fit_upto || '-',
+            pollution_exp: r.pollution_exp || r.pollutionUpto || r.rc_pucc_upto || '-',
+            registered_at: r.registered_at || r.registeredAt || r.registration_date || r.created_at || r.createdAt || null,
+            _raw: r
+          }));
+          console.log('✅ Normalized vehicles:', normalized?.length, 'items');
+          console.log('✅ Sample vehicle:', normalized?.[0]);
+          console.log('🔄 Calling setClientVehiclesData with', normalized.length, 'items');
+          setClientVehiclesData(normalized);
+          setLoadingClientVehicles(false);
+          console.log('✅ State update calls complete - component should re-render now');
+        })
+        .catch((err) => {
+          console.error('Failed to load client vehicles:', err);
+          setClientVehiclesData([]);
+          setLoadingClientVehicles(false);
+        });
+    } else if (showClientPages && !selectedClientId) {
+      // Reset data when no client is selected
+      setClientVehiclesData([]);
+    }
+  }, [showClientPages, selectedClientId]);
+  
+  // Use client vehicles data when in Client Vehicles mode
+  const actualData = showClientPages ? clientVehiclesData : data;
+  const actualLoading = showClientPages ? loadingClientVehicles : loading;
+  
   // Sorting state for each date column
   const [sortConfig, setSortConfig] = useState({ key: 'rc_regn_dt', direction: 'desc' });
 
@@ -372,8 +491,20 @@ export default function MyFleetTable({
       onConsumeFleetRenewal();
     }
   }, [goToFleetRenewal, onConsumeFleetRenewal]);
+  
+  console.log('=== DATA FLOW DEBUG ===', { 
+    showClientPages, 
+    selectedClientId,
+    clientVehiclesData: clientVehiclesData?.length, 
+    actualData: actualData?.length,
+    filteredFleet: filteredFleet?.length,
+    willUse: (filteredFleet?.length > 0) ? 'filteredFleet' : 'actualData'
+  });
+  
   // Sort by selected column or registered_at DESC
-  let sortedAll = [...(filteredFleet || data || [])];
+  // Fix: Check if filteredFleet has items, not just if it exists (empty array is truthy!)
+  let sortedAll = [...((filteredFleet?.length > 0) ? filteredFleet : (actualData || []))];
+  console.log('sortedAll after spread:', sortedAll?.length);
   if (sortConfig.key) {
     sortedAll.sort((a, b) => {
       const aVal = getDateValue(a, sortConfig.key);
@@ -497,6 +628,7 @@ export default function MyFleetTable({
   // Default visible count is 30
   const [visibleCount, setVisibleCount] = React.useState(30);
   const visibleRows = sortedAll.slice(0, visibleCount);
+  console.log('Final render data:', { sortedAllLength: sortedAll.length, visibleCount, visibleRowsLength: visibleRows.length });
 
   // Helper to check if all expiry fields are fit
   const isAllFit = (row) => {
@@ -526,8 +658,230 @@ export default function MyFleetTable({
       isFit(row.rc_pucc_upto || row.pollution_exp)
     );
   };
+  // Get selected client name for loader
+  const selectedClient = clientList.find(c => (c.id || c._id) === selectedClientId);
+  const selectedClientName = selectedClient?.name || 'Client';
+
   return (
-    <><p className="page-subtitle">Quick summary for your fleet. Track your <b>expired vehicles</b>, <b>upcoming renewals</b>, and <b>challan statuses</b>.</p><div className="dashboard-latest" style={{
+    <>
+      {/* CSS for spinner animation */}
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+      
+      {/* Full-page loader when fetching client vehicles */}
+      {showClientPages && loadingClientVehicles && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(255, 255, 255, 0.96)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          backdropFilter: 'blur(5px)',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+        }}>
+          <div style={{
+            textAlign: 'center',
+            padding: '48px 56px',
+            background: '#fff',
+            borderRadius: 20,
+            boxShadow: '0 12px 48px rgba(33, 150, 243, 0.18), 0 4px 16px rgba(0, 0, 0, 0.08)',
+            border: '2px solid #2196f3',
+            minWidth: 380,
+            maxWidth: 480
+          }}>
+            <div style={{
+              width: 72,
+              height: 72,
+              border: '5px solid #e3f2fd',
+              borderTop: '5px solid #2196f3',
+              borderRadius: '50%',
+              animation: 'spin 0.9s linear infinite',
+              margin: '0 auto 28px'
+            }} />
+            <div style={{ 
+              fontSize: 22, 
+              fontWeight: 600, 
+              color: '#1565c0', 
+              marginBottom: 10,
+              letterSpacing: '-0.3px',
+              lineHeight: 1.3
+            }}>
+              Fetching vehicles for {selectedClientName}
+            </div>
+            <div style={{ 
+              fontSize: 15, 
+              color: '#666',
+              fontWeight: 400,
+              lineHeight: 1.5
+            }}>
+              Please wait...
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <p className="page-subtitle">
+        {showClientPages 
+          ? "Select a client to view their vehicles. Track expired vehicles, upcoming renewals, and challan statuses." 
+          : "Quick summary for your fleet. Track your expired vehicles, upcoming renewals, and challan statuses."
+        }
+      </p>
+      
+      {/* Client selector dropdown for Client Vehicles mode */}
+      {showClientPages && (
+        <div style={{ marginBottom: 20, padding: '0 0'}}>
+          <div style={{ position: 'relative', maxWidth: 650 }} ref={clientDropdownRef}>
+            <label style={{ 
+              display: 'block', 
+              marginBottom: 8, 
+              fontWeight: 600, 
+              color: '#1565c0', 
+              fontSize: 15,
+              letterSpacing: '-0.2px',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+            }}>
+              Select Client
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type="text"
+                placeholder="Search by name, company, or email..."
+                value={clientSearchTerm}
+                onChange={(e) => setClientSearchTerm(e.target.value)}
+                onFocus={() => setShowClientDropdown(true)}
+                style={{
+                  width: '100%',
+                  padding: '14px 44px 14px 18px',
+                  border: '2px solid #2196f3',
+                  borderRadius: 10,
+                  fontSize: 15,
+                  outline: 'none',
+                  background: '#fff',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 2px 8px rgba(33, 150, 243, 0.08)',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                }}
+                onMouseEnter={(e) => e.target.style.borderColor = '#1976d2'}
+                onMouseLeave={(e) => e.target.style.borderColor = '#2196f3'}
+              />
+              {clientSearchTerm && (
+                <button
+                  onClick={() => {
+                    setClientSearchTerm('');
+                    setSelectedClientId(null);
+                    setShowClientDropdown(false);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    right: 12,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: 28,
+                    height: 28,
+                    borderRadius: '50%',
+                    border: 'none',
+                    background: '#e3f2fd',
+                    color: '#1565c0',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 16,
+                    fontWeight: 700,
+                    transition: 'all 0.2s',
+                    lineHeight: 1
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = '#1565c0';
+                    e.target.style.color = '#fff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = '#e3f2fd';
+                    e.target.style.color = '#1565c0';
+                  }}
+                  title="Clear search"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+            {showClientDropdown && clientList.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                top: 'calc(100% + 4px)',
+                left: 0,
+                right: 0,
+                maxHeight: 360,
+                overflowY: 'auto',
+                background: '#fff',
+                border: '2px solid #2196f3',
+                borderRadius: 10,
+                boxShadow: '0 8px 24px rgba(33, 150, 243, 0.2), 0 2px 8px rgba(0, 0, 0, 0.08)',
+                zIndex: 1000,
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+              }}>
+                {clientList
+                  .filter(client => {
+                    const searchLower = clientSearchTerm.toLowerCase();
+                    const name = client.name || '';
+                    const email = client.email || '';
+                    const company = (client.user_meta || client.userMeta)?.company_name || '';
+                    return name.toLowerCase().includes(searchLower) || 
+                           email.toLowerCase().includes(searchLower) ||
+                           company.toLowerCase().includes(searchLower);
+                  })
+                  .map(client => (
+                    <div
+                      key={client.id || client._id}
+                      onClick={() => {
+                        setSelectedClientId(client.id || client._id);
+                        setClientSearchTerm(`${client.name} (${(client.user_meta || client.userMeta)?.company_name || 'N/A'})`);
+                        setShowClientDropdown(false);
+                      }}
+                      style={{
+                        padding: '14px 18px',
+                        cursor: 'pointer',
+                        borderBottom: '1px solid #e8f4fd',
+                        background: (client.id || client._id) === selectedClientId ? '#e3f2fd' : '#fff',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = (client.id || client._id) === selectedClientId ? '#bbdefb' : '#f5f9fc'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = (client.id || client._id) === selectedClientId ? '#e3f2fd' : '#fff'}
+                    >
+                      <div style={{ 
+                        fontWeight: 600, 
+                        color: '#1565c0', 
+                        fontSize: 15,
+                        marginBottom: 4,
+                        letterSpacing: '-0.2px'
+                      }}>{client.name}</div>
+                      <div style={{ 
+                        fontSize: 13, 
+                        color: '#666', 
+                        lineHeight: 1.4
+                      }}>
+                        {(client.user_meta || client.userMeta)?.company_name || 'N/A'} • {client.email || 'N/A'}
+                      </div>
+                    </div>
+                  ))
+                }
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
+      <div className="dashboard-latest" style={{
       background: '#fff',
       borderRadius: 14,
       boxShadow: '0 2px 12px 0 rgba(30,136,229,0.07)',
@@ -540,7 +894,9 @@ export default function MyFleetTable({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, padding: '0 24px 0 0', minHeight: 54 }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <div style={{ width: 4, height: 32, background: 'linear-gradient(135deg, #2196f3 0%, #21cbf3 100%)', borderRadius: 3, marginRight: 14 }} />
-          <h2 style={{ margin: 0, fontSize: 19, color: '#1565c0', letterSpacing: '0.01em', fontFamily: 'Segoe UI, Arial, sans-serif', lineHeight: 1.2, fontWeight: 700 }}>My Fleet</h2>
+          <h2 style={{ margin: 0, fontSize: 19, color: '#1565c0', letterSpacing: '0.01em', fontFamily: 'Segoe UI, Arial, sans-serif', lineHeight: 1.2, fontWeight: 700 }}>
+            {showClientPages ? 'Client Vehicles' : 'My Fleet'}
+          </h2>
         </div>
         <div style={{ color: '#1565c0', fontSize: 14, background: '#f5f8fa', border: '1.5px solid #2196f3', borderRadius: 6, padding: '4px 12px', fontWeight: 700, display: 'inline-block', marginLeft: 0, boxShadow: '0 1px 4px #21cbf322' }}>
           Showing {visibleRows.length} of {sortedAll.length} records
@@ -936,8 +1292,10 @@ export default function MyFleetTable({
             </tr>
           </thead>
           <tbody>
-            {loading ? (
+            {actualLoading ? (
               <tr><td colSpan={10}>Loading...</td></tr>
+            ) : showClientPages && !selectedClientId ? (
+              <tr><td colSpan={10} style={{ textAlign: 'center', padding: 24, color: '#666' }}>Please select a client from the dropdown above to view their vehicles.</td></tr>
             ) : sortedAll.length === 0 ? (
               <tr><td colSpan={10}>No data found.</td></tr>
             ) : (

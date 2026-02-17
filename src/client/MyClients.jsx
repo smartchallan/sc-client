@@ -35,7 +35,7 @@ export default function MyClients() {
     }
   };
 
-  const fetchClients = async () => {
+  const fetchClients = async (forceRefresh = false) => {
     setLoading(true);
     const userId = getUserId();
     if (!userId) {
@@ -43,10 +43,50 @@ export default function MyClients() {
       setLoading(false);
       return;
     }
+    
+    // Check if data already exists in localStorage (from login) unless forcing refresh
+    if (!forceRefresh) {
+      try {
+        const cachedData = localStorage.getItem('client_network');
+        if (cachedData) {
+          const data = JSON.parse(cachedData);
+          const rawData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
+          
+          // Recursively flatten all nested children
+          const flattenChildren = (node, dealerName = null) => {
+            const result = [];
+            // Add current node
+            result.push({ ...node, dealerName, isParent: !dealerName });
+            // Recursively add all children at any depth
+            if (Array.isArray(node.children) && node.children.length > 0) {
+              node.children.forEach(child => {
+                result.push(...flattenChildren(child, node.name));
+              });
+            }
+            return result;
+          };
+          
+          const flatClients = [];
+          rawData.forEach(parent => {
+            flatClients.push(...flattenChildren(parent));
+          });
+          
+          setClients(flatClients);
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        // If cached data is invalid, continue to fetch from API
+      }
+    }
+    
     try {
       const res = await fetch(`${API_ROOT}/getclientnetwork?parent_id=${userId}`);
       const data = await res.json().catch(() => []);
       const rawData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
+      
+      // Store in localStorage for future use
+      localStorage.setItem('client_network', JSON.stringify(data));
       
       // Recursively flatten all nested children
       const flattenChildren = (node, dealerName = null) => {
@@ -194,7 +234,7 @@ export default function MyClients() {
       if (res.ok) {
         toast.success(`Client ${action}d successfully`);
         setStatusModal({ open: false, client: null, action: '' });
-        fetchClients();
+        fetchClients(true);
       } else {
         toast.error(`Failed to ${action} client`);
       }
@@ -347,7 +387,7 @@ export default function MyClients() {
             )}
             
             <button 
-              onClick={fetchClients} 
+              onClick={() => fetchClients(true)} 
               disabled={loading}
               style={{ 
                 padding: '10px 20px', 

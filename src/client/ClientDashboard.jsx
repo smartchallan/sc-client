@@ -1,4 +1,3 @@
-
 import PayChallans from "./PayChallans";
 import ChallanRequests from "./ChallanRequests";
 import { FaFilePdf } from "react-icons/fa";
@@ -471,20 +470,20 @@ function SidebarVehicleReport({ vehicleChallanData }) {
       {pendingOpen && (
         <div style={{marginBottom:18, background:'#fff', borderRadius:8, boxShadow:'0 1px 6px #e74c3c10', padding:'8px 0'}}>
           {Array.isArray(pending_data) && pending_data.length > 0 && (
-            <>
+            <React.Fragment>
               <div style={{fontWeight:600, color:'#e74c3c', margin:'8px 0 4px 12px'}}>Pending Challans</div>
               {pending_data.map((challan, idx) => (
                 <ChallanCard key={challan.challan_no || idx} challan={challan} color="#e74c3c" />
               ))}
-            </>
+            </React.Fragment>
           )}
           {Array.isArray(disposed_data) && disposed_data.length > 0 && (
-            <>
+            <React.Fragment>
               <div style={{fontWeight:600, color:'#43a047', margin:'16px 0 4px 12px'}}>Disposed Challans</div>
               {disposed_data.map((challan, idx) => (
                 <ChallanCard key={challan.challan_no || idx} challan={challan} color="#43a047" />
               ))}
-            </>
+            </React.Fragment>
           )}
         </div>
       )}
@@ -615,11 +614,96 @@ const DriverVerification = lazy(() => import("./DriverVerification"));
 const LazyVehicleFastag = lazy(() => import("./VehicleFastag"));
 
 function ClientDashboard() {
+  // --- Network stats for client management accounts ---
+  const [networkStats, setNetworkStats] = useState(null);
+  const [loadingNetworkStats, setLoadingNetworkStats] = useState(false);
+  const [networkStatsError, setNetworkStatsError] = useState(null);
+
+  // Determine if client management menu should show (same logic as ClientSidebar)
+  let showClientPages = false;
+  try {
+    const userObj = JSON.parse(localStorage.getItem("sc_user"));
+    if (userObj && userObj.user) {
+      const parentVal = userObj.user.parent_id;
+      const isParentAccount = (parentVal == null) || (parentVal == 0);
+      // Use hasClients flag from login response - this determines if user is in client management mode
+      const hasClientsFlag = !!(userObj.hasClients);
+      showClientPages = !!(hasClientsFlag || isParentAccount);
+    }
+  } catch {}
+
+  // Refs for network stat charts
+  const chartRefNetworkClients = useRef(null);
+  const chartRefNetworkVehicles = useRef(null);
+
+  // Draw network stats charts when data is loaded
+  useEffect(() => {
+    if (!showClientPages || !networkStats) return;
+    // Clients chart
+    if (chartRefNetworkClients.current) {
+      if (window._networkClientsChart) window._networkClientsChart.destroy();
+      import('chart.js').then(chartjs => {
+        const { Chart, PieController, ArcElement, Tooltip, Legend } = chartjs;
+        Chart.register(PieController, ArcElement, Tooltip, Legend);
+        window._networkClientsChart = new Chart(chartRefNetworkClients.current, {
+          type: 'pie',
+          data: {
+            labels: ['Active', 'Inactive'],
+            datasets: [{
+              data: [networkStats.clientStatus?.active || 0, networkStats.clientStatus?.inactive || 0],
+              backgroundColor: ['#42a5f5', '#ffa726'],
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+          },
+        });
+      });
+    }
+    // Vehicles chart (build labels/data dynamically based on available keys)
+    if (chartRefNetworkVehicles.current) {
+      if (window._networkVehiclesChart) window._networkVehiclesChart.destroy();
+      import('chart.js').then(chartjs => {
+        const { Chart, PieController, ArcElement, Tooltip, Legend } = chartjs;
+        Chart.register(PieController, ArcElement, Tooltip, Legend);
+        const vs = networkStats.vehicleStatus || {};
+        const labels = [];
+        const data = [];
+        const colors = [];
+        if (Object.prototype.hasOwnProperty.call(vs, 'active')) { labels.push('Active'); data.push(vs.active || 0); colors.push('#42a5f5'); }
+        if (Object.prototype.hasOwnProperty.call(vs, 'inactive')) { labels.push('Inactive'); data.push(vs.inactive || 0); colors.push('#ffa726'); }
+        if (Object.prototype.hasOwnProperty.call(vs, 'deleted')) { labels.push('Deleted'); data.push(vs.deleted || 0); colors.push('#e15759'); }
+        // Fallback: if no keys found, show zeroed Active slice
+        if (labels.length === 0) { labels.push('Active'); data.push(0); colors.push('#42a5f5'); }
+        window._networkVehiclesChart = new Chart(chartRefNetworkVehicles.current, {
+          type: 'pie',
+          data: {
+            labels,
+            datasets: [{ data, backgroundColor: colors }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+          },
+        });
+      });
+    }
+    return () => {
+      if (window._networkClientsChart) { window._networkClientsChart.destroy(); window._networkClientsChart = null; }
+      if (window._networkVehiclesChart) { window._networkVehiclesChart.destroy(); window._networkVehiclesChart = null; }
+    };
+  }, [showClientPages, networkStats]);
     useAutoLogout();
+  // Helper to get the correct Fleet menu name based on showClientPages
+  const getFleetMenuName = () => showClientPages ? 'Client Vehicles' : 'My Fleet';
+
   // Feature flag for Pay Challans / Challan Settlement
   const challanSettlementLive = import.meta.env.VITE_CHALLAN_SETTLEMENT_LIVE === 'true';
 
-  // Track if navigation to My Fleet was triggered by a specific renewal stat card or challan filter
+  // Track if navigation to My Fleet/Client Vehicles was triggered by a specific renewal stat card or challan filter
   const [goToFleetRenewal, setGoToFleetRenewal] = useState(null); // null | 'insurance' | 'roadTax' | 'fitness' | 'pollution'
   const [goToFleetChallanFilter, setGoToFleetChallanFilter] = useState(null); // null | 'pending' | 'disposed'
   // --- Refresh confirmation modal state ---
@@ -661,7 +745,7 @@ function ClientDashboard() {
   const [vehicleSearchText, setVehicleSearchText] = useState('');
   const [vehicleSummary, setVehicleSummary] = useState([]);
   const [loadingVehicleSummary, setLoadingVehicleSummary] = useState(false);
-  const [fleetLimit, setFleetLimit] = useState(50);
+  const [fleetLimit, setFleetLimit] = useState(100); // Start with 100 for better initial UX
   const [fleetOffset, setFleetOffset] = useState(0);
   const [fleetAll, setFleetAll] = useState(false);
   // Read current logged-in user from localStorage when component mounts.
@@ -749,16 +833,26 @@ function ClientDashboard() {
   // Fetch vehicle summary whenever the user object changes (e.g., after login)
   // Fetch fleet data (pagination-aware)
   useEffect(() => {
+    // Skip if hasClient flag is true
+    if (showClientPages) {
+      setVehicleSummary([]);
+      setLoadingVehicleSummary(false);
+      return;
+    }
     const clientId = user?.user?.client_id || user?.user?.id;
     if (!clientId) return;
     setVehicleSummary([]);
     setLoadingVehicleSummary(true);
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-    // Always fetch all data: very high limit, offset 0
+    
+    // Use pagination state: start with reasonable limit (100) for better UX, then allow load more
+    const requestLimit = fleetAll ? 1000000 : (fleetLimit || 100);
+    const requestOffset = fleetOffset || 0;
+    
     fetch(`${baseUrl}/vehiclesummary`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client_id: clientId, limit: 1000000, offset: 0 })
+      body: JSON.stringify({ client_id: clientId, limit: requestLimit, offset: requestOffset })
     })
       .then(res => res.json())
       .then(data => {
@@ -788,18 +882,15 @@ function ClientDashboard() {
           registered_at: r.registered_at || r.registeredAt || r.registration_date || r.created_at || r.createdAt || null,
           _raw: r
         }));
-        if (fleetAll || fleetOffset === 0) {
-          setVehicleSummary(normalized);
-        } else {
-          setVehicleSummary(prev => [...prev, ...normalized]);
-        }
+        // Always replace data (accumulative loading pattern with offset=0)
+        setVehicleSummary(normalized);
         setLoadingVehicleSummary(false);
       })
       .catch(() => {
         setVehicleSummary([]);
         setLoadingVehicleSummary(false);
       });
-  }, [user, fleetLimit, fleetOffset, fleetAll]);
+  }, [user, fleetLimit, fleetOffset, fleetAll, showClientPages]);
   // initial filter to pass into MyChallans when opened via dashboard quick links
   const [initialChallanFilter, setInitialChallanFilter] = useState(null);
 
@@ -812,8 +903,8 @@ function ClientDashboard() {
     // Also provide a handler for Vehicle RTO Data view all from VehicleDataTable
     // Use the main menu key 'RTO Details' so the correct page is shown
     window.handleViewAllRtoData = () => setActiveMenu('RTO Details');
-    // Handler for Vehicle Summary Table (My Fleet)
-    window.handleViewAllMyFleet = () => setActiveMenu('My Fleet');
+    // Handler for Vehicle Summary Table (My Fleet / Client Vehicles)
+    window.handleViewAllMyFleet = () => setActiveMenu(showClientPages ? 'Client Vehicles' : 'My Fleet');
     return () => {
       delete window.handleViewAllChallans;
       delete window.handleViewAllRtoData;
@@ -962,13 +1053,54 @@ function ClientDashboard() {
       } finally {
         setLoadingClient(false);
       }
+      
+      // Fetch network stats and client network data if client management menu is shown
+      if (showClientPages) {
+        // Fetch network stats
+        setLoadingNetworkStats(true);
+        setNetworkStatsError(null);
+        try {
+          const scUser = JSON.parse(localStorage.getItem('sc_user')) || {};
+          const uid = scUser.user?.id || scUser.user?._id || scUser.user?.client_id || scUser.userId || null;
+          if (uid) {
+            fetch(`${baseUrl}/getnetworkstats?id=${uid}`)
+              .then(res => res.json())
+              .then(data => setNetworkStats(data))
+              .catch(() => setNetworkStatsError('Failed to load network stats'))
+              .finally(() => setLoadingNetworkStats(false));
+          }
+        } catch (e) {
+          setNetworkStatsError('Failed to load network stats');
+          setLoadingNetworkStats(false);
+        }
+        
+        // Fetch client network data
+        try {
+          const scUser = JSON.parse(localStorage.getItem('sc_user')) || {};
+          const userId = scUser.user?.id || scUser.user?._id || scUser.user?.client_id || null;
+          if (userId) {
+            const networkRes = await fetch(`${baseUrl}/getclientnetwork?parent_id=${userId}`);
+            const networkData = await networkRes.json().catch(() => []);
+            // Store client network data in localStorage for later use
+            localStorage.setItem('client_network', JSON.stringify(networkData));
+          }
+        } catch (e) {
+          console.error('Failed to fetch client network:', e);
+        }
+      }
     };
     fetchData();
-  }, [user]);
+  }, [user, showClientPages]);
 
   // Fetch vehicle RTO data for expiry tracking
   useEffect(() => {
     const fetchVehicleRtoData = async () => {
+      // Skip if hasClient flag is true
+      if (showClientPages) {
+        setVehicleRtoData([]);
+        setLoadingVehicleRto(false);
+        return;
+      }
       const clientId = user && user.user && (user.user.id || user.user._id || user.user.client_id);
       if (!clientId) return;
 
@@ -994,7 +1126,7 @@ function ClientDashboard() {
     };
     
     fetchVehicleRtoData();
-  }, [user]);
+  }, [user, showClientPages]);
 
   // Calculate expiry statistics with color-based categorization (matching VehicleDataTable logic)
   const calculateExpiryStats = () => {
@@ -1397,6 +1529,13 @@ function ClientDashboard() {
 
   useEffect(() => {
     if (activeMenu !== "Dashboard") return;
+    // Skip if hasClient flag is true
+    if (showClientPages) {
+      setVehicleChallanData([]);
+      setLoadingVehicleChallan(false);
+      setVehicleChallanError("");
+      return;
+    }
     const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
     const clientId = user && user.user && (user.user.id || user.user._id || user.user.client_id);
     if (!clientId) return;
@@ -1435,7 +1574,7 @@ function ClientDashboard() {
       })
       .catch(() => setVehicleChallanData([]))
       .finally(() => setLoadingVehicleChallan(false));
-  }, [activeMenu]);
+  }, [activeMenu, showClientPages]);
 
   // Calculate latestChallanRows for LatestChallansTable
   let latestChallanRows = [];
@@ -1768,7 +1907,7 @@ function ClientDashboard() {
     };
 
     return (
-    <>
+              <React.Fragment>
     <ToastContainer position="top-right" autoClose={2000} />
   <div className={`dashboard-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
       {/* Page loader commented out - only using graph loaders now */}
@@ -1883,7 +2022,7 @@ function ClientDashboard() {
           </div>
         </div>
         {activeMenu === "Dashboard" && (
-          <>
+          <React.Fragment>
             <div className="dashboard-header" style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative'}}>
               <div>
                 <h1 className="dashboard-title">Welcome back{user.user && user.user.name ? `, ${user.user.name}` : '123'}!</h1>
@@ -1907,9 +2046,11 @@ function ClientDashboard() {
                 </span>
               )}
             </div>
-            <div className="dashboard-stats">
-              <div className="stat-card" style={{background: 'linear-gradient(120deg, #93c5fd 60%, #dbeafe 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(59, 130, 246, 0.10)', border: '1.5px solid #dbeafe'}}>
-                <div className="stat-card-content">
+            <div className="dashboard-stats" style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+              {/* Top row: 4 stat cards if showClientPages, else 2 */}
+              <div style={{ display: 'flex', width: '100%', gap: 16 }}>
+                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: 'linear-gradient(120deg, #93c5fd 60%, #dbeafe 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(59, 130, 246, 0.10)', border: '1.5px solid #dbeafe'}}>
+                  <div className="stat-card-content">
                   <i className="ri-car-line"></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
                     <div>Registered Vehicles</div>
@@ -2032,8 +2173,8 @@ function ClientDashboard() {
                     ) : null}
                   </div>
                 </div>
-              <div className="stat-card" style={{background: 'linear-gradient(120deg, #6ee7b7 60%, #d1fae5 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(16, 185, 129, 0.10)', border: '1.5px solid #d1fae5'}}>
-                <div className="stat-card-content">
+                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: 'linear-gradient(120deg, #6ee7b7 60%, #d1fae5 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(16, 185, 129, 0.10)', border: '1.5px solid #d1fae5'}}>
+                  <div className="stat-card-content">
                   <i className="ri-error-warning-line"></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
                     <div>Challans Fetched</div>
@@ -2084,13 +2225,131 @@ function ClientDashboard() {
                       </button>
                     </div>
                   ) : null}
-                </div>
+                  </div>
+                  </div>
+                {/* Network stat cards if showClientPages - render as siblings, not nested */}
+                {showClientPages && (
+                  <React.Fragment>
+                    <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: 'linear-gradient(120deg, #fbbf24 60%, #fef3c7 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(251, 191, 36, 0.10)', border: '1.5px solid #fef3c7'}}>
+                      <div className="stat-card-content">
+                        <i className="ri-briefcase-line"></i>
+                        <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
+                          <div>My Clients</div>
+                          <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                            {loadingNetworkStats ? '...' : networkStatsError ? '--' : (networkStats && networkStats.totalClients != null ? networkStats.totalClients : '--')}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8, flexWrap: 'wrap' }}>
+                          <div
+                            className={`status-badge`}
+                            style={{ cursor: 'pointer', width: 'calc(50% - 6px)', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                            title="Active clients"
+                            onClick={() => {
+                              setActiveMenu('My Clients');
+                              setTimeout(() => {
+                                try {
+                                  const selects = Array.from(document.querySelectorAll('select'));
+                                  for (const s of selects) {
+                                    const opts = Array.from(s.options).map(o => (o.text || o.label || '').toLowerCase());
+                                    if (opts.includes('all status') || opts.includes('all')) {
+                                      s.value = 'active';
+                                      s.dispatchEvent(new Event('change', { bubbles: true }));
+                                      break;
+                                    }
+                                  }
+                                } catch (e) {}
+                              }, 300);
+                            }}
+                          >
+                            <div style={{ color: '#42a5f5', fontWeight: 700 }}>{loadingNetworkStats ? '...' : networkStats && networkStats.clientStatus && networkStats.clientStatus.active != null ? networkStats.clientStatus.active : '--'}</div>
+                            <div style={{ fontSize: 12, color: '#666' }}>Active</div>
+                          </div>
+                          <div
+                            className={`status-badge`}
+                            style={{ cursor: 'pointer', width: 'calc(50% - 6px)', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                            title="Inactive clients"
+                            onClick={() => {
+                              setActiveMenu('My Clients');
+                              setTimeout(() => {
+                                try {
+                                  const selects = Array.from(document.querySelectorAll('select'));
+                                  for (const s of selects) {
+                                    const opts = Array.from(s.options).map(o => (o.text || o.label || '').toLowerCase());
+                                    if (opts.includes('all status') || opts.includes('all')) {
+                                      s.value = 'inactive';
+                                      s.dispatchEvent(new Event('change', { bubbles: true }));
+                                      break;
+                                    }
+                                  }
+                                } catch (e) {}
+                              }, 300);
+                            }}
+                          >
+                            <div style={{ color: '#ffa726', fontWeight: 700 }}>{loadingNetworkStats ? '...' : networkStats && networkStats.clientStatus && networkStats.clientStatus.inactive != null ? networkStats.clientStatus.inactive : '0'}</div>
+                            <div style={{ fontSize: 12, color: '#666' }}>Inactive</div>
+                          </div>
+                        </div>
+                        {/* <div className="stat-chart-container">
+                          <canvas ref={chartRefNetworkClients} style={{height: 80, width: '100%', display: loadingNetworkStats || networkStatsError ? 'none' : 'block'}} />
+                          {loadingNetworkStats ? (
+                            <div className="default-loader" style={{ zIndex: 10 }}>
+                              <div className="loader-spinner"></div>
+                            </div>
+                          ) : networkStatsError ? (
+                            <div style={{ textAlign: 'center', padding: '20px' }}>
+                              <div style={{ color: '#666', marginBottom: '8px', fontSize: '13px' }}>Chart failed to load</div>
+                            </div>
+                          ) : null}
+                        </div> */}
+                      </div>
+                    </div>
+                    <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: 'linear-gradient(120deg, #a7f3d0 60%, #f0fdfa 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(16, 185, 129, 0.10)', border: '1.5px solid #f0fdfa'}}>
+                      <div className="stat-card-content">
+                        <i className="ri-user-3-line"></i>
+                        <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
+                          <div>Client Vehicles</div>
+                          <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                            {loadingNetworkStats ? '...' : networkStatsError ? '0' : (networkStats && networkStats.totalVehicles != null ? networkStats.totalVehicles : '--')}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8, flexWrap: 'wrap' }}>
+                          <div className={`status-badge`} style={{ cursor: 'default', width: 'calc(50% - 6px)', display: 'flex', justifyContent: 'space-between' }} title="Active vehicles">
+                            <div style={{ color: '#42a5f5', fontWeight: 700 }}>{loadingNetworkStats ? '...' : networkStats && networkStats.vehicleStatus && typeof networkStats.vehicleStatus.active !== 'undefined' ? networkStats.vehicleStatus.active : 0}</div>
+                            <div style={{ fontSize: 12, color: '#666' }}>Active</div>
+                          </div>
+                          <div className={`status-badge`} style={{ cursor: 'default', width: 'calc(50% - 6px)', display: 'flex', justifyContent: 'space-between' }} title="Inactive vehicles">
+                            <div style={{ color: '#ffa726', fontWeight: 700 }}>{loadingNetworkStats ? '...' : networkStats && networkStats.vehicleStatus && typeof networkStats.vehicleStatus.inactive !== 'undefined' ? networkStats.vehicleStatus.inactive : 0}</div>
+                            <div style={{ fontSize: 12, color: '#666' }}>Inactive</div>
+                          </div>
+                          <div className={`status-badge`} style={{ cursor: 'default', width: 'calc(50% - 6px)', display: 'flex', justifyContent: 'space-between' }} title="Deleted vehicles">
+                            <div style={{ color: '#e15759', fontWeight: 700 }}>{loadingNetworkStats ? '...' : networkStats && networkStats.vehicleStatus && typeof networkStats.vehicleStatus.deleted !== 'undefined' ? networkStats.vehicleStatus.deleted : 0}</div>
+                            <div style={{ fontSize: 12, color: '#666' }}>Deleted</div>
+                          </div>
+                        </div>
+                        {/* <div className="stat-chart-container">
+                          <canvas ref={chartRefNetworkVehicles} style={{height: 80, width: '100%', display: loadingNetworkStats || networkStatsError ? 'none' : 'block'}} />
+                          {loadingNetworkStats ? (
+                            <div className="default-loader" style={{ zIndex: 10 }}>
+                              <div className="loader-spinner"></div>
+                            </div>
+                          ) : networkStatsError ? (
+                            <div style={{ textAlign: 'center', padding: '20px' }}>
+                              <div style={{ color: '#666', marginBottom: '8px', fontSize: '13px' }}>Chart failed to load</div>
+                            </div>
+                          ) : null}
+                        </div> */}
+                      </div>
+                    </div>
+                  </React.Fragment>
+                )}
+                
               </div>
              
             </div>
 
-            <div className="dashboard-stats">
-                   <div className="stat-card" style={{background: 'linear-gradient(120deg, #f9a8d4 60%, #fce7f3 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(236, 72, 153, 0.10)', border: '1.5px solid #fce7f3'}}>
+            {/* Second row: 2 cards as before, 50% width each */}
+            <div className="dashboard-stats" style={{ display: 'flex', width: '100%', gap: 16, marginTop: 16 }}>
+              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320, background: 'linear-gradient(120deg, #f9a8d4 60%, #fce7f3 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(236, 72, 153, 0.10)', border: '1.5px solid #fce7f3'}}>
                 <div className="stat-card-content">
                   <i className="ri-alarm-warning-line"></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
@@ -2108,7 +2367,7 @@ function ClientDashboard() {
                         title="Show vehicles with expired insurance"
                         onClick={() => {
                           setGoToFleetRenewal('insurance');
-                          setActiveMenu('My Fleet');
+                          setActiveMenu(getFleetMenuName());
                         }}
                       >
                         <div style={{ color: '#ff5252', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.insurance}</div>
@@ -2120,7 +2379,7 @@ function ClientDashboard() {
                         title="Show vehicles with expired road tax"
                         onClick={() => {
                           setGoToFleetRenewal('roadTax');
-                          setActiveMenu('My Fleet');
+                          setActiveMenu(getFleetMenuName());
                         }}
                       >
                         <div style={{ color: '#ff8a65', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.roadTax}</div>
@@ -2132,7 +2391,7 @@ function ClientDashboard() {
                         title="Show vehicles with expired fitness certificate"
                         onClick={() => {
                           setGoToFleetRenewal('fitness');
-                          setActiveMenu('My Fleet');
+                          setActiveMenu(getFleetMenuName());
                         }}
                       >
                         <div style={{ color: '#f4b400', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.fitness}</div>
@@ -2144,7 +2403,7 @@ function ClientDashboard() {
                         title="Show vehicles with expired pollution certificate"
                         onClick={() => {
                           setGoToFleetRenewal('pollution');
-                          setActiveMenu('My Fleet');
+                          setActiveMenu(getFleetMenuName());
                         }}
                       >
                         <div style={{ color: '#42a5f5', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.pollution}</div>
@@ -2158,7 +2417,7 @@ function ClientDashboard() {
                         title="Show vehicles with expired national permit"
                         onClick={() => {
                           setGoToFleetRenewal('nationalPermit');
-                          setActiveMenu('My Fleet');
+                          setActiveMenu(getFleetMenuName());
                         }}
                       >
                         <div style={{ color: '#7e57c2', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.nationalPermit}</div>
@@ -2170,7 +2429,7 @@ function ClientDashboard() {
                         title="Show vehicles with expired permit validity"
                         onClick={() => {
                           setGoToFleetRenewal('permitValid');
-                          setActiveMenu('My Fleet');
+                          setActiveMenu(getFleetMenuName());
                         }}
                       >
                         <div style={{ color: '#26a69a', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.permitValid}</div>
@@ -2196,7 +2455,7 @@ function ClientDashboard() {
                   ) : null}
                 </div>
               </div>
-              <div className="stat-card" style={{background: 'linear-gradient(120deg, #fdba74 60%, #fef3c7 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(251, 191, 36, 0.10)', border: '1.5px solid #fef3c7'}}>
+              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320, background: 'linear-gradient(120deg, #fdba74 60%, #fef3c7 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(251, 191, 36, 0.10)', border: '1.5px solid #fef3c7'}}>
                 <div className="stat-card-content">
                   <i className="ri-money-rupee-circle-line"></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
@@ -2208,7 +2467,7 @@ function ClientDashboard() {
                   <div className="stat-value" style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 12 }}>
                     {loadingVehicleChallan
                       ? '...'
-                      : <>
+                      : <React.Fragment>
                           <span style={{color: '#e74c3c', fontWeight: 600, fontSize: '0.75em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}
                             title="Show pending challans"
                             onClick={() => { if (typeof window !== 'undefined' && window.handleViewAllChallans) { window.handleViewAllChallans('pending'); } else { localStorage.setItem('sc_challan_filter','pending'); setActiveMenu('Vehicle Challans'); } }}>
@@ -2219,7 +2478,7 @@ function ClientDashboard() {
                             onClick={() => { if (typeof window !== 'undefined' && window.handleViewAllChallans) { window.handleViewAllChallans('disposed'); } else { localStorage.setItem('sc_challan_filter','disposed'); setActiveMenu('Vehicle Challans'); } }}>
                             Paid: ₹{formatBriefAmount(disposedFineTotal)}
                           </span>
-                        </>
+                        </React.Fragment>
                     }
                   </div>
                 </div>
@@ -2272,26 +2531,29 @@ function ClientDashboard() {
               />
             </div>
 
-            <div className="dashboard-two-column-row">
-              <div className="dashboard-two-column-card">
-                <LatestChallansTable
-                  latestChallanRows={latestChallanRows.slice(0, 5)}
-                  loadingVehicleChallan={loadingVehicleChallan}
-                  vehicleChallanError={vehicleChallanError}
-                  totalCount={totalChallans}
-                  limit={5}
-                />
+            {/* Hide Latest Challans and RTO Tables when hasClient flag is true */}
+            {!showClientPages && (
+              <div className="dashboard-two-column-row">
+                <div className="dashboard-two-column-card">
+                  <LatestChallansTable
+                    latestChallanRows={latestChallanRows.slice(0, 5)}
+                    loadingVehicleChallan={loadingVehicleChallan}
+                    vehicleChallanError={vehicleChallanError}
+                    totalCount={totalChallans}
+                    limit={5}
+                  />
+                </div>
+                <div className="dashboard-two-column-card">
+                  <LatestRTOTable
+                    vehicleData={vehicleRtoData.slice(0, 5)}
+                    loading={loadingVehicleRto}
+                    error={vehicleRtoData && vehicleRtoData.error}
+                    setSelectedRtoData={setSelectedRtoData}
+                    totalCount={vehicleRtoData.length}
+                  />
+                </div>
               </div>
-              <div className="dashboard-two-column-card">
-                <LatestRTOTable
-                  vehicleData={vehicleRtoData.slice(0, 5)}
-                  loading={loadingVehicleRto}
-                  error={vehicleRtoData && vehicleRtoData.error}
-                  setSelectedRtoData={setSelectedRtoData}
-                  totalCount={vehicleRtoData.length}
-                />
-              </div>
-            </div>
+            )}
 
             {selectedVehicle && activeMenu === "Dashboard" && (
               <RightSidebar
@@ -2315,7 +2577,7 @@ function ClientDashboard() {
             {/* Registered vehicles table removed from dashboard as requested */}
             {/* QuickActions moved to a shared component rendered below so it's available on every page */}
             {/* Removed dashboard 'due' data section as requested */}
-          </>
+          </React.Fragment>
         )}
         {activeMenu === "Profile" && (
           <div className="client-profile-section-isolated">
@@ -2328,13 +2590,14 @@ function ClientDashboard() {
         {activeMenu === "Client Settings" && <ClientSettings />}
 
         {activeMenu === "Register Vehicle" && <RegisterVehicle />}
-        {activeMenu === "My Fleet" && (
+        {(activeMenu === "My Fleet" || activeMenu === "Client Vehicles") && (
           <div style={{marginBottom:24}}>
 
             <div id="my-fleet-table-print-area">
               <MyFleetTable
                 data={vehicleSummary}
                 loading={loadingVehicleSummary}
+                showClientPages={showClientPages}
                 onRefresh={row => {}}
                 onView={async row => {
                   setSelectedVehicle(row);
@@ -2365,18 +2628,19 @@ function ClientDashboard() {
                     setFleetAll(true);
                   } else {
                     setFleetAll(false);
+                    // Accumulative loading: increase limit but keep offset at 0
                     setFleetLimit(prev => prev + Number(val));
-                    setFleetOffset(prev => prev + Number(val));
+                    setFleetOffset(0); // Always fetch from beginning with increased limit
                   }
                 }}
                 onResetRecords={() => {
                   setFleetAll(false);
-                  setFleetLimit(50);
+                  setFleetLimit(100);
                   setFleetOffset(0);
                 }}
                 filteredFleet={filteredFleet}
               />
-              {selectedVehicle && activeMenu === "My Fleet" && (
+              {selectedVehicle && (activeMenu === "My Fleet" || activeMenu === "Client Vehicles") && (
                 <RightSidebar
                   open
                   onClose={() => {
@@ -2398,7 +2662,8 @@ function ClientDashboard() {
             </div>
           </div>
         )}
-        {activeMenu === "RTO Details" && (
+        {/* Hide RTO Details page when hasClient flag is true */}
+        {activeMenu === "RTO Details" && !showClientPages && (
           <VehicleRTOdataTable
             clientId={user.user && (user.user.client_id || user.user.id || user.user._id)}
             selectedRtoData={selectedRtoData}
@@ -2409,18 +2674,19 @@ function ClientDashboard() {
             onViewAll={() => setActiveMenu('RTO Details')}
           />
         )}
-    {activeMenu === "Vehicle Challans" && <MyChallans initialFilter={initialChallanFilter} />}
+    {activeMenu === "Vehicle Challans" && <MyChallans initialFilter={initialChallanFilter} showClientPages={showClientPages} />}
       {activeMenu === "Pay Challans" && challanSettlementLive && <PayChallans />}
       {activeMenu === "Challan Requests" && <ChallanRequests />}
         {activeMenu === "Challans" && <UserChallan />}
         {activeMenu === "My Billing" && <MyBilling clientId={user.user && (user.user.id || user.user._id)} />}
         {activeMenu === "Settings" && <UserSettings users={[]} />}
-        {activeMenu === "DL Details" && (
+        {/* Hide DL Details and Fastag Details pages when hasClient flag is true */}
+        {activeMenu === "DL Details" && !showClientPages && (
           <Suspense fallback={<div>Loading...</div>}>
             <DriverVerification />
           </Suspense>
         )}
-        {activeMenu === "Fastag Details" && (
+        {activeMenu === "Fastag Details" && !showClientPages && (
           <Suspense fallback={<div>Loading...</div>}>
             <LazyVehicleFastag />
           </Suspense>
@@ -2624,10 +2890,10 @@ function ClientDashboard() {
               <tr><td><b>Date of Proceeding</b></td><td>{selectedChallan.date_of_proceeding}</td></tr>
               <tr><td><b>DL No</b></td><td>{selectedChallan.dl_no}</td></tr>
               {selectedChallan.challan_status === 'Disposed' && (
-                <>
+                <React.Fragment>
                   <tr><td><b>Receipt No</b></td><td>{selectedChallan.receipt_no}</td></tr>
                   <tr><td><b>Received Amount</b></td><td>{selectedChallan.received_amount}</td></tr>
-                </>
+                </React.Fragment>
               )}
               <tr><td><b>Fine Imposed</b></td><td>{selectedChallan.fine_imposed}</td></tr>
               <tr><td><b>Amount of Fine Imposed</b></td><td>{selectedChallan.amount_of_fine_imposed}</td></tr>
@@ -2670,7 +2936,7 @@ function ClientDashboard() {
         </RightSidebar>
       )}
     </div>
-    </>
+    </React.Fragment>
   );
 }
 
