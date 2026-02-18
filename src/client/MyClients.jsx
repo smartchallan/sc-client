@@ -223,8 +223,8 @@ export default function MyClients() {
   const handleToggleStatus = async () => {
     const { client, action } = statusModal;
     try {
-      const res = await fetch(`${API_ROOT}/updateclientstatus`, {
-        method: 'POST',
+      const res = await fetch(`${API_ROOT}/userprofile/status`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: client.id || client._id,
