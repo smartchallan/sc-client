@@ -1,5 +1,6 @@
 import scLogo from './assets/sc-logo.png';
 import { resolvePerHostEnv, getWhitelabelHosts } from './utils/whitelabel';
+import { trackLoginActivity } from './utils/activityTracker';
 
 // Whitelabel config
 const WHITELABEL_HOSTS = getWhitelabelHosts();
@@ -81,6 +82,16 @@ export function LoginPage() {
           hasClients: data.hasClients || false,
         };
         localStorage.setItem('sc_user', JSON.stringify(stored));
+        
+        // Track login activity
+        const userId = data.user?.id || data.user?.user_id;
+        const parentId = data.user?.parent_id ?? null; // Use nullish coalescing to preserve 0
+        const clientName = data.user?.name || null;
+        if (userId) {
+          trackLoginActivity(userId, parentId, clientName).catch(err => {
+            console.error('Failed to track login activity:', err);
+          });
+        }
       } catch (e) {}
       // Always redirect to client dashboard regardless of role
       await delay(2000);

@@ -3,6 +3,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import CustomModal from "./client/CustomModal";
 import SelectShowMore from "./client/SelectShowMore";
+import { saveUserActivity } from "./utils/activityTracker";
 import "./RegisterVehicle.css";
 
 const FIELD_OPTIONS = [
@@ -39,6 +40,17 @@ export default function RegisterVehicle() {
   const [bulkUploadEnabled, setBulkUploadEnabled] = useState(false);
   // Loader state for Challan API calls (per vehicle)
   const [challanLoadingId, setChallanLoadingId] = useState(null);
+  
+  // Confirmation modal for adding vehicle
+  const [confirmModal, setConfirmModal] = useState(false);
+  const [addToClientAccount, setAddToClientAccount] = useState(false);
+  const [selectedClientForAdd, setSelectedClientForAdd] = useState(null);
+  const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const [clientList, setClientList] = useState([]);
+  const [hasClients, setHasClients] = useState(false);
+  const confirmModalRef = useRef(null);
+  const clientDropdownRef = useRef(null);
 
   // Get Vehicle Data and Challan handler
   const [dataLoadingId, setDataLoadingId] = useState(null);
@@ -135,9 +147,60 @@ export default function RegisterVehicle() {
   useEffect(() => {
     setDeletedVehiclesLimit(10);
   }, [sortDesc]);
+  
+  // Check if user has clients and load client list
+  useEffect(() => {
+    try {
+      const userObj = JSON.parse(localStorage.getItem('sc_user'));
+      if (userObj && userObj.user) {
+        const parentVal = userObj.user.parent_id;
+        const isParentAccount = (parentVal == null) || (parentVal == 0);
+        const hasClientsFlag = !!(userObj.hasClients);
+        setHasClients(!!(hasClientsFlag || isParentAccount));
+        
+        // Load client list from localStorage
+        if (hasClientsFlag || isParentAccount) {
+          const cachedData = localStorage.getItem('client_network');
+          if (cachedData) {
+            const data = JSON.parse(cachedData);
+            const rawData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
+            const flattenChildren = (node, dealerName = null) => {
+              const result = [];
+              result.push({ ...node, dealerName, isParent: !dealerName });
+              if (Array.isArray(node.children) && node.children.length > 0) {
+                node.children.forEach(child => {
+                  result.push(...flattenChildren(child, node.name));
+                });
+              }
+              return result;
+            };
+            const flatClients = [];
+            rawData.forEach(parent => {
+              flatClients.push(...flattenChildren(parent));
+            });
+            setClientList(flatClients);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error checking hasClients:', e);
+    }
+  }, []);
+  
+  // Close client dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (clientDropdownRef.current && !clientDropdownRef.current.contains(event.target)) {
+        setShowClientDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('handleSubmit called', { registerField, registerValue });
     if (!registerField || !registerValue) {
       toast.error("Please select a field and enter a value.");
       return;
@@ -151,16 +214,31 @@ export default function RegisterVehicle() {
         return;
       }
     }
+    // Show confirmation modal
+    console.log('Setting confirmModal to true');
+    setConfirmModal(true);
+  };
+  
+  // Actual registration function called from modal
+  const performRegistration = async () => {
+    setConfirmModal(false);
     setLoading(true);
     try {
       const ids = getUserIds();
-      const payload = {
+      let payload = {
         ...ids,
         admin_id: ids.admin_id, // ensure admin_id is always present
         vehicle_number: registerField === "vehicle_number" ? registerValue : undefined,
         engine_number: registerField === "engine_number" ? registerValue : undefined,
         chassis_number: registerField === "chassis_number" ? registerValue : undefined,
       };
+      
+      // If adding to client account, override client_id with selected client and add parent_id
+      if (addToClientAccount && selectedClientForAdd) {
+        payload.client_id = selectedClientForAdd;
+        payload.parent_id = ids.client_id; // current user becomes parent
+      }
+      
       const res = await fetch(API_ROOT + REGISTER_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -173,8 +251,43 @@ export default function RegisterVehicle() {
         toast.error(errorMessage);
       } else {
         toast.success(data.message);
+        
+        // Track activity for vehicle addition
+        try {
+          const ipResponse = await fetch('https://api.ipify.org?format=json');
+          const ipData = await ipResponse.json();
+          const ip = ipData.ip || 'Unknown';
+          
+          const locationResponse = await fetch(`http://ip-api.com/json/${ip}`);
+          const locationData = await locationResponse.json();
+          const location = locationData.status === 'success' 
+            ? `${locationData.city || ''}, ${locationData.regionName || ''}, ${locationData.country || ''}`.replace(/^, |, $/g, '') 
+            : 'Unknown';
+          
+          const vehicleNumber = registerField === "vehicle_number" ? registerValue : 
+                                registerField === "engine_number" ? `Engine: ${registerValue}` :
+                                `Chassis: ${registerValue}`;
+          
+          const description = `Added vehicle ${vehicleNumber} from web portal ${ip} and ${location}`;
+          
+          // Get user info from localStorage
+          const scUser = JSON.parse(localStorage.getItem('sc_user')) || {};
+          const userId = scUser.user?.id || scUser.user?._id;
+          const parentId = scUser.user?.parent_id || null;
+          const clientName = scUser.user?.name || null;
+          
+          await saveUserActivity(userId, parentId, clientName, 'vehicle added', description);
+        } catch (err) {
+          console.error('Failed to track vehicle addition activity:', err);
+          // Don't show error to user, activity tracking failure shouldn't affect the main flow
+        }
+        
         setRegisterValue("");
         setRegisterField("");
+        // Reset modal states
+        setAddToClientAccount(false);
+        setSelectedClientForAdd(null);
+        setClientSearchTerm('');
         // Fetch vehicles after successful registration
         if (ids.client_id) fetchVehicles(ids.client_id);
       }
@@ -893,6 +1006,259 @@ export default function RegisterVehicle() {
               </div>
             </>
           )}
+        </div>
+      </CustomModal>
+      
+      {/* Confirmation Modal for Adding Vehicle */}
+      <CustomModal
+        open={confirmModal}
+        onCancel={() => {
+          setConfirmModal(false);
+          setAddToClientAccount(false);
+          setSelectedClientForAdd(null);
+          setClientSearchTerm('');
+        }}
+        title="Confirm Vehicle Registration"
+      >
+        <div ref={confirmModalRef} style={{ padding: '20px', minWidth: '400px' }}>
+          <p style={{ marginBottom: '20px', fontSize: '15px', color: '#1a1a1a' }}>
+            Are you sure you want to add this vehicle?
+          </p>
+          
+          <div style={{ marginBottom: '16px', padding: '12px', background: '#f5f5f5', borderRadius: '6px' }}>
+            <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px' }}>
+              {FIELD_OPTIONS.find(f => f.value === registerField)?.label}
+            </div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: '#1a1a1a', fontFamily: 'monospace' }}>
+              {registerValue}
+            </div>
+          </div>
+          
+          {hasClients && (
+            <>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '8px' }}>
+                  <input
+                    type="checkbox"
+                    checked={addToClientAccount}
+                    onChange={(e) => {
+                      setAddToClientAccount(e.target.checked);
+                      if (!e.target.checked) {
+                        setSelectedClientForAdd(null);
+                        setClientSearchTerm('');
+                      }
+                    }}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: '14px', fontWeight: 500 }}>Add vehicle to client account</span>
+                </label>
+              </div>
+              
+              {addToClientAccount && (
+                <div ref={clientDropdownRef} style={{ position: 'relative', marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500, color: '#1a1a1a' }}>
+                    Select Client *
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="text"
+                      placeholder="Search client..."
+                      value={clientSearchTerm}
+                      onChange={(e) => {
+                        setClientSearchTerm(e.target.value);
+                        setShowClientDropdown(true);
+                      }}
+                      onFocus={() => setShowClientDropdown(true)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 40px 10px 14px',
+                        border: '2px solid ' + (showClientDropdown ? '#2196f3' : '#ddd'),
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        color: '#1a1a1a',
+                        background: '#fff',
+                        outline: 'none',
+                        transition: 'border-color 0.2s'
+                      }}
+                    />
+                    <i className="ri-search-line" style={{
+                      position: 'absolute',
+                      right: 12,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#78909c',
+                      fontSize: 18,
+                      pointerEvents: 'none'
+                    }}></i>
+                    {clientSearchTerm && (
+                      <button
+                        onClick={() => {
+                          setClientSearchTerm('');
+                          setSelectedClientForAdd(null);
+                          setShowClientDropdown(false);
+                        }}
+                        style={{
+                          position: 'absolute',
+                          right: 36,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          width: 24,
+                          height: 24,
+                          borderRadius: '50%',
+                          border: 'none',
+                          background: '#e3f2fd',
+                          color: '#1565c0',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 16,
+                          fontWeight: 700,
+                          transition: 'all 0.2s',
+                          lineHeight: 1
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = '#1565c0';
+                          e.target.style.color = '#fff';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = '#e3f2fd';
+                          e.target.style.color = '#1565c0';
+                        }}
+                        title="Clear search"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                  {showClientDropdown && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 4px)',
+                      left: 0,
+                      right: 0,
+                      maxHeight: 240,
+                      overflowY: 'auto',
+                      background: '#fff',
+                      border: '2px solid #2196f3',
+                      borderRadius: 8,
+                      boxShadow: '0 8px 24px rgba(33, 150, 243, 0.2)',
+                      zIndex: 1000
+                    }}>
+                      {(() => {
+                        const filteredList = clientList.filter(client => {
+                          const searchLower = clientSearchTerm.toLowerCase();
+                          const name = client.name || '';
+                          const email = client.email || '';
+                          const company = (client.user_meta || client.userMeta)?.company_name || '';
+                          return name.toLowerCase().includes(searchLower) || 
+                                 email.toLowerCase().includes(searchLower) ||
+                                 company.toLowerCase().includes(searchLower);
+                        });
+                        
+                        if (filteredList.length === 0) {
+                          return (
+                            <div style={{ padding: '20px', textAlign: 'center', color: '#78909c' }}>
+                              {clientList.length === 0 ? 'No clients found' : 'No matching clients'}
+                            </div>
+                          );
+                        }
+                        
+                        return filteredList.map(client => (
+                          <div
+                            key={client.id || client._id}
+                            onClick={() => {
+                              setSelectedClientForAdd(client.id || client._id);
+                              setClientSearchTerm(`${client.name} (${(client.user_meta || client.userMeta)?.company_name || 'N/A'})`);
+                              setShowClientDropdown(false);
+                            }}
+                            style={{
+                              padding: '12px 16px',
+                              cursor: 'pointer',
+                              borderBottom: '1px solid #e8f4fd',
+                              background: (client.id || client._id) === selectedClientForAdd ? '#e3f2fd' : '#fff',
+                              transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = (client.id || client._id) === selectedClientForAdd ? '#bbdefb' : '#f5f9fc'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = (client.id || client._id) === selectedClientForAdd ? '#e3f2fd' : '#fff'}
+                          >
+                            <div style={{ fontWeight: 600, fontSize: 14, color: '#1565c0', marginBottom: 4 }}>
+                              {client.name || 'Unknown'}
+                            </div>
+                            <div style={{ fontSize: 12, color: '#546e7a', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                              {(client.user_meta || client.userMeta)?.company_name && (
+                                <span>{(client.user_meta || client.userMeta).company_name}</span>
+                              )}
+                              {client.email && (
+                                <span style={{ color: '#78909c' }}>• {client.email}</span>
+                              )}
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+          
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
+            <button
+              onClick={() => {
+                setConfirmModal(false);
+                setAddToClientAccount(false);
+                setSelectedClientForAdd(null);
+                setClientSearchTerm('');
+              }}
+              style={{
+                padding: '10px 20px',
+                background: '#f5f5f5',
+                color: '#1a1a1a',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => e.target.style.background = '#e0e0e0'}
+              onMouseLeave={(e) => e.target.style.background = '#f5f5f5'}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={performRegistration}
+              disabled={addToClientAccount && !selectedClientForAdd}
+              style={{
+                padding: '10px 20px',
+                background: (addToClientAccount && !selectedClientForAdd) ? '#ccc' : 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: (addToClientAccount && !selectedClientForAdd) ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s',
+                boxShadow: (addToClientAccount && !selectedClientForAdd) ? 'none' : '0 2px 8px rgba(33, 150, 243, 0.3)'
+              }}
+              onMouseEnter={(e) => {
+                if (!(addToClientAccount && !selectedClientForAdd)) {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 4px 12px rgba(33, 150, 243, 0.4)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!(addToClientAccount && !selectedClientForAdd)) {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 2px 8px rgba(33, 150, 243, 0.3)';
+                }
+              }}
+            >
+              Confirm & Add Vehicle
+            </button>
+          </div>
         </div>
       </CustomModal>
     </div>

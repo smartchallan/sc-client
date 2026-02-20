@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import scLogo from "../assets/sc-logo.png";
 import { resolvePerHostEnv, getWhitelabelHosts } from "../utils/whitelabel";
+import { trackLogoutActivity, trackMenuClick } from "../utils/activityTracker";
 
 const WHITELABEL_HOSTS = getWhitelabelHosts();
 const CURRENT_HOSTNAME = (typeof window !== 'undefined' && window.location && window.location.hostname) ? window.location.hostname : '';
@@ -82,6 +83,10 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
     { icon: "ri-car-line", label: "Register Vehicle" },
     // { icon: "ri-money-rupee-circle-line", label: "My Billing" },
     { icon: "ri-user-3-line", label: "Profile" },
+    // Conditionally include Activity Tracker only when showClientPages is true
+    ...(showClientPages ? [
+      { icon: "ri-history-line", label: "Activity Tracker" },
+    ] : []),
   ];
 
   // Build final menu and flatten Client Management children as main menu items when allowed
@@ -101,7 +106,20 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
     setLogoutOpen(true);
   };
 
-  const confirmLogout = () => {
+  const confirmLogout = async () => {
+    // Track logout activity before clearing localStorage
+    try {
+      const userObj = JSON.parse(localStorage.getItem("sc_user"));
+      const userId = userObj?.user?.id || userObj?.user?.user_id;
+      const parentId = userObj?.user?.parent_id ?? null; // Use nullish coalescing to preserve 0
+      const clientName = userObj?.user?.name || null;
+      if (userId) {
+        await trackLogoutActivity(userId, parentId, clientName);
+      }
+    } catch (error) {
+      console.error('Failed to track logout activity:', error);
+    }
+    
     localStorage.clear();
     sessionStorage.clear();
     // close modal then redirect
@@ -111,6 +129,28 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
   };
 
   const cancelLogout = () => setLogoutOpen(false);
+
+  const handleMenuClick = (menuLabel) => {
+    // Track menu click activity
+    try {
+      const userObj = JSON.parse(localStorage.getItem("sc_user"));
+      const userId = userObj?.user?.id || userObj?.user?.user_id;
+      const parentId = userObj?.user?.parent_id ?? null; // Use nullish coalescing to preserve 0
+      const clientName = userObj?.user?.name || null;
+      if (userId) {
+        trackMenuClick(userId, parentId, clientName, menuLabel).catch(err => {
+          console.error('Failed to track menu click:', err);
+        });
+      }
+    } catch (error) {
+      console.error('Error tracking menu click:', error);
+    }
+    
+    // Call the original onMenuClick callback
+    if (onMenuClick) {
+      onMenuClick(menuLabel);
+    }
+  };
 
   return (
     <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`} style={{minWidth: '270px', left: 0}}>
@@ -148,7 +188,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
                   tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setOpenGroups(prev => ({ ...prev, [item.label]: !prev[item.label] })); }}
                 >
-                  <i className={item.icon} style={{ color: '#006400' }}></i>
+                  <i className={item.icon} style={{ color: import.meta.env.VITE_MENU_ICON_COLOR || '#FFD54F' }}></i>
                   <span style={{ flex: 1 }}>{item.label}</span>
                   <i
                     className={isOpen ? "ri-arrow-up-s-line" : "ri-arrow-down-s-line"}
@@ -161,7 +201,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
                       <div
                         key={child.label}
                         className={`nav-subitem${activeMenu === child.label ? " active" : ""}`}
-                        onClick={() => onMenuClick && onMenuClick(child.label)}
+                        onClick={() => handleMenuClick(child.label)}
                       >
                         <i className={child.icon}></i>
                         <span>{child.label}</span>
@@ -176,10 +216,10 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
               <div
                 className={`nav-item${activeMenu === item.label ? " active" : ""}`}
                 key={item.label}
-                onClick={() => onMenuClick && onMenuClick(item.label)}
+                onClick={() => handleMenuClick(item.label)}
                 style={{cursor: 'pointer'}}
               >
-                <i className={item.icon} style={{ color: '#006400' }}></i>
+                <i className={item.icon} style={{ color: import.meta.env.VITE_MENU_ICON_COLOR || '#FFD54F' }}></i>
                 <span>{item.label}</span>
               </div>
             );

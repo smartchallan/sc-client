@@ -19,6 +19,7 @@ import { resolvePerHostEnv, getWhitelabelHosts } from "../utils/whitelabel";
 import AddClient from './AddClient';
 import MyClients from './MyClients';
 import ClientSettings from './ClientSettings';
+import ActivityTracker from './ActivityTracker';
 // Auto-logout on inactivity
 function useAutoLogout() {
   const logoutTimeoutRef = useRef();
@@ -27,8 +28,11 @@ function useAutoLogout() {
     function resetLogoutTimer() {
       if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
       logoutTimeoutRef.current = setTimeout(() => {
+        console.log('Auto-logout triggered due to inactivity');
         localStorage.clear();
-        window.location.href = '/';
+        sessionStorage.clear();
+        // Use replace to prevent back button returning to dashboard
+        window.location.replace('/#/');
       }, AUTO_LOGOUT_SECONDS * 1000);
     }
     const events = ['mousemove', 'keydown', 'mousedown', 'touchstart'];
@@ -586,6 +590,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./LatestTable.css";
 import LatestChallansTable from "./LatestChallansTable";
+import LoadingSkeleton from "./LoadingSkeleton";
 import TrafficLightLoader from "../assets/TrafficLightLoader";
 import QuickActions from "./QuickActions";
 import VehicleRTOdataTable from "./VehicleRTOdata";
@@ -618,6 +623,18 @@ function ClientDashboard() {
   const [networkStats, setNetworkStats] = useState(null);
   const [loadingNetworkStats, setLoadingNetworkStats] = useState(false);
   const [networkStatsError, setNetworkStatsError] = useState(null);
+  
+  // --- User activities for client management accounts ---
+  const [userActivities, setUserActivities] = useState([]);
+  const [loadingActivities, setLoadingActivities] = useState(true);
+  const [activitiesPage, setActivitiesPage] = useState(1);
+  const [totalActivities, setTotalActivities] = useState(0);
+  const [selectedActivityClient, setSelectedActivityClient] = useState(null);
+  const [activityClientList, setActivityClientList] = useState([]);
+  const [activityClientSearchTerm, setActivityClientSearchTerm] = useState('');
+  const [showActivityClientDropdown, setShowActivityClientDropdown] = useState(false);
+  const activityClientDropdownRef = useRef(null);
+  const activitiesPerPage = 50;
 
   // Determine if client management menu should show (same logic as ClientSidebar)
   let showClientPages = false;
@@ -927,6 +944,17 @@ function ClientDashboard() {
   const chartRefActive = useRef(null);
   const chartRefPaid = useRef(null);
   const chartRefAmount = useRef(null);
+  
+  // Close activity client dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (activityClientDropdownRef.current && !activityClientDropdownRef.current.contains(event.target)) {
+        setShowActivityClientDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   // Chart loading states
   const [chartLoading, setChartLoading] = useState({
     total: true,
@@ -1087,10 +1115,84 @@ function ClientDashboard() {
         } catch (e) {
           console.error('Failed to fetch client network:', e);
         }
+        
+        // Load client list for activity filtering
+        try {
+          const cachedData = localStorage.getItem('client_network');
+          if (cachedData) {
+            const data = JSON.parse(cachedData);
+            const rawData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
+            const flattenChildren = (node, dealerName = null) => {
+              const result = [];
+              result.push({ ...node, dealerName, isParent: !dealerName });
+              if (Array.isArray(node.children) && node.children.length > 0) {
+                node.children.forEach(child => {
+                  result.push(...flattenChildren(child, node.name));
+                });
+              }
+              return result;
+            };
+            const flatClients = [];
+            rawData.forEach(parent => {
+              flatClients.push(...flattenChildren(parent));
+            });
+            setActivityClientList(flatClients);
+          }
+        } catch (e) {
+          console.error('Failed to load activity client list:', e);
+        }
+      }
+      
+      // Fetch user activities if client pages are shown
+      if (showClientPages) {
+        console.log('Fetching activities, setting loading to true...');
+        setLoadingActivities(true);
+        try {
+          const scUser = JSON.parse(localStorage.getItem('sc_user')) || {};
+          const parentId = scUser.user?.id || scUser.user?._id || scUser.user?.client_id || null;
+          if (parentId) {
+            // If a client is selected, filter by user_id, else show all with parent_id
+            let activityUrl;
+            if (selectedActivityClient) {
+              activityUrl = `${baseUrl}/saveuseractivity?user_id=${selectedActivityClient}&limit=50&offset=0`;
+              console.log('Fetching activities for client:', selectedActivityClient);
+            } else {
+              activityUrl = `${baseUrl}/saveuseractivity?parent_id=${parentId}&limit=50&offset=0`;
+              console.log('Fetching all activities for parent:', parentId);
+            }
+            fetch(activityUrl)
+              .then(res => res.json())
+              .then(data => {
+                console.log('Activities fetched successfully');
+                const activitiesData = data.activities || data.data || data || [];
+                const totalCount = data.total || data.count || (Array.isArray(activitiesData) ? activitiesData.length : 0);
+                setUserActivities(Array.isArray(activitiesData) ? activitiesData : []);
+                setTotalActivities(totalCount);
+              })
+              .catch((err) => {
+                console.error('Error fetching activities:', err);
+                setUserActivities([]);
+                setTotalActivities(0);
+              })
+              .finally(() => {
+                console.log('Fetch completed, setting loading to false');
+                setLoadingActivities(false);
+              });
+          } else {
+            console.log('No parent ID, setting loading to false');
+            setLoadingActivities(false);
+          }
+        } catch (e) {
+          console.error('Failed to fetch activities:', e);
+          setLoadingActivities(false);
+        }
+      } else {
+        // If showClientPages is false, set loading to false
+        setLoadingActivities(false);
       }
     };
     fetchData();
-  }, [user, showClientPages]);
+  }, [user, showClientPages, selectedActivityClient]);
 
   // Fetch vehicle RTO data for expiry tracking
   useEffect(() => {
@@ -2049,6 +2151,7 @@ function ClientDashboard() {
             <div className="dashboard-stats" style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
               {/* Top row: 4 stat cards if showClientPages, else 2 */}
               <div style={{ display: 'flex', width: '100%', gap: 16 }}>
+                {!showClientPages && (
                 <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: 'linear-gradient(120deg, #93c5fd 60%, #dbeafe 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(59, 130, 246, 0.10)', border: '1.5px solid #dbeafe'}}>
                   <div className="stat-card-content">
                   <i className="ri-car-line"></i>
@@ -2173,6 +2276,8 @@ function ClientDashboard() {
                     ) : null}
                   </div>
                 </div>
+                )}
+                {!showClientPages && (
                 <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: 'linear-gradient(120deg, #6ee7b7 60%, #d1fae5 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(16, 185, 129, 0.10)', border: '1.5px solid #d1fae5'}}>
                   <div className="stat-card-content">
                   <i className="ri-error-warning-line"></i>
@@ -2227,6 +2332,7 @@ function ClientDashboard() {
                   ) : null}
                   </div>
                   </div>
+                )}
                 {/* Network stat cards if showClientPages - render as siblings, not nested */}
                 {showClientPages && (
                   <React.Fragment>
@@ -2344,10 +2450,120 @@ function ClientDashboard() {
                 )}
                 
               </div>
+              
+              {/* Second row of network stats cards */}
+              {showClientPages && (
+                <div style={{ display: 'flex', width: '100%', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
+                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: 'linear-gradient(120deg, #6ee7b7 60%, #d1fae5 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(16, 185, 129, 0.10)', border: '1.5px solid #d1fae5'}}>
+                    <div className="stat-card-content">
+                      <i className="ri-error-warning-line"></i>
+                      <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
+                        <div>Total Challans Fetched</div>
+                        <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                          {loadingNetworkStats ? '...' : networkStatsError ? '0' : (networkStats && networkStats.totalChallans != null ? networkStats.totalChallans : '0')}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8 }}>
+                        <div className={`status-badge`} style={{ cursor: 'default', width: 'calc(50% - 6px)', display: 'flex', justifyContent: 'space-between' }} title="Pending challans">
+                          <div style={{ color: '#e74c3c', fontWeight: 700 }}>
+                            {loadingNetworkStats ? '...' : networkStats && networkStats.challanStatus && typeof networkStats.challanStatus.pending !== 'undefined' ? networkStats.challanStatus.pending : '0'}
+                          </div>
+                          <div style={{ fontSize: 12, color: '#666' }}>Pending</div>
+                        </div>
+                        <div className={`status-badge`} style={{ cursor: 'default', width: 'calc(50% - 6px)', display: 'flex', justifyContent: 'space-between' }} title="Disposed challans">
+                          <div style={{ color: '#66bb6a', fontWeight: 700 }}>
+                            {loadingNetworkStats ? '...' : networkStats && networkStats.challanStatus && typeof networkStats.challanStatus.disposed !== 'undefined' ? networkStats.challanStatus.disposed : '0'}
+                          </div>
+                          <div style={{ fontSize: 12, color: '#666' }}>Disposed</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: 'linear-gradient(120deg, #f9a8d4 60%, #fce7f3 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(236, 72, 153, 0.10)', border: '1.5px solid #fce7f3'}}>
+                    <div className="stat-card-content">
+                      <i className="ri-alarm-warning-line"></i>
+                      <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
+                        <div>Clients Renewals</div>
+                        <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                          {loadingNetworkStats ? '...' : networkStatsError ? '0' : (networkStats && networkStats.totalRenewals != null ? networkStats.totalRenewals : '0')}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 9, justifyContent: 'flex-start', marginTop: 10, flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: 9, width: '100%' }}>
+                          <div className={`status-badge`} style={{ cursor: 'default' }} title="Insurance renewals">
+                            <div style={{ color: '#ff5252', fontWeight: 700 }}>
+                              {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.insurance !== 'undefined' ? networkStats.renewalTypes.insurance : '0'}
+                            </div>
+                            <div style={{ fontSize: 11, color: '#666' }}>Insurance</div>
+                          </div>
+                          <div className={`status-badge`} style={{ cursor: 'default' }} title="Road tax renewals">
+                            <div style={{ color: '#ff8a65', fontWeight: 700 }}>
+                              {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.roadTax !== 'undefined' ? networkStats.renewalTypes.roadTax : '0'}
+                            </div>
+                            <div style={{ fontSize: 11, color: '#666' }}>Road Tax</div>
+                          </div>
+                          <div className={`status-badge`} style={{ cursor: 'default' }} title="Fitness renewals">
+                            <div style={{ color: '#f4b400', fontWeight: 700 }}>
+                              {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.fitness !== 'undefined' ? networkStats.renewalTypes.fitness : '0'}
+                            </div>
+                            <div style={{ fontSize: 11, color: '#666' }}>Fitness</div>
+                          </div>
+                          <div className={`status-badge`} style={{ cursor: 'default' }} title="Pollution renewals">
+                            <div style={{ color: '#42a5f5', fontWeight: 700 }}>
+                              {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.pollution !== 'undefined' ? networkStats.renewalTypes.pollution : '0'}
+                            </div>
+                            <div style={{ fontSize: 11, color: '#666' }}>Pollution</div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 9, marginTop: 2 }}>
+                          <div className={`status-badge`} style={{ cursor: 'default' }} title="National permit renewals">
+                            <div style={{ color: '#7e57c2', fontWeight: 700 }}>
+                              {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.nationalPermit !== 'undefined' ? networkStats.renewalTypes.nationalPermit : '0'}
+                            </div>
+                            <div style={{ fontSize: 11, color: '#666' }}>National Permit</div>
+                          </div>
+                          <div className={`status-badge`} style={{ cursor: 'default' }} title="Permit validity renewals">
+                            <div style={{ color: '#26a69a', fontWeight: 700 }}>
+                              {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.permitValid !== 'undefined' ? networkStats.renewalTypes.permitValid : '0'}
+                            </div>
+                            <div style={{ fontSize: 11, color: '#666' }}>Permit Valid</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: 'linear-gradient(120deg, #fdba74 60%, #fef3c7 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(251, 191, 36, 0.10)', border: '1.5px solid #fef3c7'}}>
+                    <div className="stat-card-content">
+                      <i className="ri-money-rupee-circle-line"></i>
+                      <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
+                        <div>Total Challan Amount</div>
+                        <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                          {loadingNetworkStats ? '...' : networkStatsError ? '₹0' : (networkStats && networkStats.totalChallanAmount != null ? `₹${formatBriefAmount(networkStats.totalChallanAmount)}` : '₹0')}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8, flexDirection: 'column' }}>
+                        <div className={`status-badge`} style={{ cursor: 'default', display: 'flex', justifyContent: 'space-between' }} title="Pending challan amount">
+                          <div style={{ fontSize: 12, color: '#666' }}>Pending:</div>
+                          <div style={{ color: '#e74c3c', fontWeight: 700, fontSize: 14 }}>
+                            {loadingNetworkStats ? '...' : networkStats && networkStats.challanAmounts && typeof networkStats.challanAmounts.pending !== 'undefined' ? `₹${formatBriefAmount(networkStats.challanAmounts.pending)}` : '₹0'}
+                          </div>
+                        </div>
+                        <div className={`status-badge`} style={{ cursor: 'default', display: 'flex', justifyContent: 'space-between' }} title="Disposed challan amount">
+                          <div style={{ fontSize: 12, color: '#666' }}>Disposed:</div>
+                          <div style={{ color: '#4caf50', fontWeight: 700, fontSize: 14 }}>
+                            {loadingNetworkStats ? '...' : networkStats && networkStats.challanAmounts && typeof networkStats.challanAmounts.disposed !== 'undefined' ? `₹${formatBriefAmount(networkStats.challanAmounts.disposed)}` : '₹0'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
              
             </div>
 
             {/* Second row: 2 cards as before, 50% width each */}
+            {!showClientPages && (
             <div className="dashboard-stats" style={{ display: 'flex', width: '100%', gap: 16, marginTop: 16 }}>
               <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320, background: 'linear-gradient(120deg, #f9a8d4 60%, #fce7f3 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(236, 72, 153, 0.10)', border: '1.5px solid #fce7f3'}}>
                 <div className="stat-card-content">
@@ -2501,34 +2717,381 @@ function ClientDashboard() {
               </div>
 
             </div>
+            )}
             <div style={{marginBottom:24}}>
-              <VehicleSummaryTable
-                data={vehicleSummary}
-                loading={loadingVehicleSummary}
-                onRefresh={row => {
-                  setRefreshModal({ open: true, vehicle: row });
-                }}
-                onView={async row => {
-                  setSelectedVehicle(row);
-                  setSelectedVehicleReport(null);
-                  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-                  const clientID = row.client_id || row.clientID || user?.user?.client_id || user?.user?.id;
-                  const vehicleNumber = row.vehicle_number || row.vehicleNumber;
-                  setTimeout(async () => {
-                    try {
-                      const res = await fetch(`${baseUrl}/getvehiclereport`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ clientID, vehicleNumber })
-                      });
-                      const data = await res.json();
-                      setSelectedVehicleReport(data);
-                    } catch (e) {
-                      setSelectedVehicleReport({ error: 'Failed to fetch vehicle report.' });
-                    }
-                  }, 0);
-                }}
-              />
+              {!showClientPages ? (
+                <VehicleSummaryTable
+                  data={vehicleSummary}
+                  loading={loadingVehicleSummary}
+                  onRefresh={row => {
+                    setRefreshModal({ open: true, vehicle: row });
+                  }}
+                  onView={async row => {
+                    setSelectedVehicle(row);
+                    setSelectedVehicleReport(null);
+                    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+                    const clientID = row.client_id || row.clientID || user?.user?.client_id || user?.user?.id;
+                    const vehicleNumber = row.vehicle_number || row.vehicleNumber;
+                    setTimeout(async () => {
+                      try {
+                        const res = await fetch(`${baseUrl}/getvehiclereport`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ clientID, vehicleNumber })
+                        });
+                        const data = await res.json();
+                        setSelectedVehicleReport(data);
+                      } catch (e) {
+                        setSelectedVehicleReport({ error: 'Failed to fetch vehicle report.' });
+                      }
+                    }, 0);
+                  }}
+                />
+              ) : (
+                <>
+                  {/* User Activities Table for Client Management */}
+                  <div style={{ background: '#fff', borderRadius: 8, padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
+                      <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: '#1a1a1a' }}>
+                        Recent User Activities
+                      </h2>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                        {/* Client Filter Dropdown */}
+                        <div ref={activityClientDropdownRef} style={{ position: 'relative', minWidth: '280px' }}>
+                          <div style={{ position: 'relative' }}>
+                            <input
+                              type="text"
+                              placeholder="Search client..."
+                              value={activityClientSearchTerm}
+                              onChange={(e) => {
+                                setActivityClientSearchTerm(e.target.value);
+                                setShowActivityClientDropdown(true);
+                              }}
+                              onFocus={() => setShowActivityClientDropdown(true)}
+                              style={{
+                                width: '100%',
+                                padding: '10px 40px 10px 14px',
+                                border: '2px solid ' + (showActivityClientDropdown ? '#2196f3' : '#ddd'),
+                                borderRadius: '8px',
+                                fontSize: '14px',
+                                fontWeight: 500,
+                                color: '#1a1a1a',
+                                background: '#fff',
+                                outline: 'none',
+                                transition: 'border-color 0.2s',
+                                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                              }}
+                            />
+                            <i className="ri-search-line" style={{
+                              position: 'absolute',
+                              right: 12,
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              color: '#78909c',
+                              fontSize: 18,
+                              pointerEvents: 'none'
+                            }}></i>
+                            {activityClientSearchTerm && (
+                              <button
+                                onClick={() => {
+                                  setLoadingActivities(true);
+                                  setActivityClientSearchTerm('');
+                                  setSelectedActivityClient(null);
+                                  setShowActivityClientDropdown(false);
+                                }}
+                                style={{
+                                  position: 'absolute',
+                                  right: 36,
+                                  top: '50%',
+                                  transform: 'translateY(-50%)',
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: '50%',
+                                  border: 'none',
+                                  background: '#e3f2fd',
+                                  color: '#1565c0',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: 16,
+                                  fontWeight: 700,
+                                  transition: 'all 0.2s',
+                                  lineHeight: 1
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.target.style.background = '#1565c0';
+                                  e.target.style.color = '#fff';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.target.style.background = '#e3f2fd';
+                                  e.target.style.color = '#1565c0';
+                                }}
+                                title="Clear search"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                          {showActivityClientDropdown && (
+                            <div style={{
+                              position: 'absolute',
+                              top: 'calc(100% + 4px)',
+                              left: 0,
+                              right: 0,
+                              maxHeight: 300,
+                              overflowY: 'auto',
+                              background: '#fff',
+                              border: '2px solid #2196f3',
+                              borderRadius: 8,
+                              boxShadow: '0 8px 24px rgba(33, 150, 243, 0.2)',
+                              zIndex: 1000
+                            }}>
+                              {(() => {
+                                const filteredList = activityClientList.filter(client => {
+                                  const searchLower = activityClientSearchTerm.toLowerCase();
+                                  const name = client.name || '';
+                                  const email = client.email || '';
+                                  const company = (client.user_meta || client.userMeta)?.company_name || '';
+                                  return name.toLowerCase().includes(searchLower) || 
+                                         email.toLowerCase().includes(searchLower) ||
+                                         company.toLowerCase().includes(searchLower);
+                                });
+                                
+                                if (filteredList.length === 0) {
+                                  return (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#78909c' }}>
+                                      {activityClientList.length === 0 ? 'No clients found' : 'No matching clients'}
+                                    </div>
+                                  );
+                                }
+                                
+                                return filteredList.map(client => (
+                                  <div
+                                    key={client.id || client._id}
+                                    onClick={() => {
+                                      setLoadingActivities(true);
+                                      setSelectedActivityClient(client.id || client._id);
+                                      setActivityClientSearchTerm(`${client.name} (${(client.user_meta || client.userMeta)?.company_name || 'N/A'})`);
+                                      setShowActivityClientDropdown(false);
+                                    }}
+                                    style={{
+                                      padding: '12px 16px',
+                                      cursor: 'pointer',
+                                      borderBottom: '1px solid #e8f4fd',
+                                      background: (client.id || client._id) === selectedActivityClient ? '#e3f2fd' : '#fff',
+                                      transition: 'all 0.15s ease'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = (client.id || client._id) === selectedActivityClient ? '#bbdefb' : '#f5f9fc'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = (client.id || client._id) === selectedActivityClient ? '#e3f2fd' : '#fff'}
+                                  >
+                                    <div style={{ fontWeight: 600, fontSize: 14, color: '#1565c0', marginBottom: 4 }}>
+                                      {client.name || 'Unknown'}
+                                    </div>
+                                    <div style={{ fontSize: 12, color: '#546e7a', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                      {(client.user_meta || client.userMeta)?.company_name && (
+                                        <span>{(client.user_meta || client.userMeta).company_name}</span>
+                                      )}
+                                      {client.email && (
+                                        <span style={{ color: '#78909c' }}>• {client.email}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ));
+                              })()}
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* View All Activities Button */}
+                        <button
+                          onClick={() => setActiveMenu('Activity Tracker')}
+                          style={{
+                            padding: '10px 20px',
+                            background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            transition: 'all 0.2s',
+                            boxShadow: '0 2px 8px rgba(33, 150, 243, 0.3)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.transform = 'translateY(-2px)';
+                            e.target.style.boxShadow = '0 4px 12px rgba(33, 150, 243, 0.4)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.transform = 'translateY(0)';
+                            e.target.style.boxShadow = '0 2px 8px rgba(33, 150, 243, 0.3)';
+                          }}
+                        >
+                          <i className="ri-list-check-2"></i>
+                          View All Activities
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {loadingActivities ? (
+                      <div style={{ 
+                        textAlign: 'center', 
+                        padding: '60px 20px',
+                        background: '#f8f9fa',
+                        borderRadius: '8px',
+                        border: '1px solid #e9ecef'
+                      }}>
+                        <div style={{ 
+                          display: 'inline-block',
+                          width: '40px',
+                          height: '40px',
+                          border: '4px solid #e3f2fd',
+                          borderTop: '4px solid #2196f3',
+                          borderRadius: '50%',
+                          animation: 'spin 1s linear infinite',
+                          marginBottom: '16px'
+                        }}></div>
+                        <div style={{ 
+                          fontSize: '16px', 
+                          color: '#546e7a',
+                          fontWeight: 500,
+                          marginBottom: '8px'
+                        }}>
+                          Loading User Activities...
+                        </div>
+                        <div style={{ 
+                          fontSize: '13px', 
+                          color: '#78909c'
+                        }}>
+                          Please wait while we fetch the latest activity records
+                        </div>
+                        <style>{`
+                          @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                          }
+                        `}</style>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="table-wrapper">
+                          <table className="latest-table">
+                            <thead>
+                              <tr>
+                                <th style={{ width: '60px' }}>S.No.</th>
+                                <th>Client Name</th>
+                                <th style={{ width: '140px' }}>Action</th>
+                                <th>Description</th>
+                                <th style={{ width: '200px' }}>Location</th>
+                                <th style={{ width: '180px' }}>Time</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {userActivities.length === 0 ? (
+                                <tr>
+                                  <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#78909c' }}>
+                                    {selectedActivityClient 
+                                      ? 'No activity records found for this client'
+                                      : 'No activity records found'
+                                    }
+                                  </td>
+                                </tr>
+                              ) : (
+                                userActivities.slice(0, 50).map((activity, index) => {
+                                  // Extract location from description
+                                  const extractLocation = (desc) => {
+                                    if (!desc) return '-';
+                                    // Pattern: "from web portal 192.168.1.1 and New York, NY, United States"
+                                    const match = desc.match(/and\s+(.+)$/);
+                                    return match ? match[1].trim() : '-';
+                                  };
+                                  
+                                  // Remove location from description
+                                  const cleanDescription = (desc) => {
+                                    if (!desc) return '-';
+                                    return desc.replace(/\s+and\s+[^]+$/, '').trim();
+                                  };
+                                  
+                                  const formatDateTime = (dateStr) => {
+                                    if (!dateStr) return '-';
+                                    try {
+                                      const d = new Date(dateStr);
+                                      return d.toLocaleString('en-GB', {
+                                        day: '2-digit',
+                                        month: 'short',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      });
+                                    } catch {
+                                      return dateStr;
+                                    }
+                                  };
+                                  
+                                  return (
+                                    <tr key={activity.id || index}>
+                                      <td>{index + 1}</td>
+                                      <td style={{ fontWeight: 500 }}>{activity.client_name || '-'}</td>
+                                      <td>
+                                        <span style={{
+                                          padding: '5px 12px',
+                                          borderRadius: '6px',
+                                          fontSize: '12px',
+                                          fontWeight: 600,
+                                          textTransform: 'capitalize',
+                                          display: 'inline-block',
+                                          backgroundColor: activity.action_type === 'login' ? '#d1f4e0' :
+                                                         activity.action_type === 'logout' ? '#ffe5e5' :
+                                                         '#e3f2fd',
+                                          color: activity.action_type === 'login' ? '#0d7d3a' :
+                                                 activity.action_type === 'logout' ? '#c92a2a' :
+                                                 '#1565c0',
+                                        }}>
+                                          {activity.action_type?.replace('_', ' ') || '-'}
+                                        </span>
+                                      </td>
+                                      <td style={{ fontSize: '14px', color: '#546e7a' }}>
+                                        {cleanDescription(activity.description)}
+                                      </td>
+                                      <td style={{ fontSize: '13px', color: '#78909c' }}>
+                                        {extractLocation(activity.description)}
+                                      </td>
+                                      <td style={{ fontSize: '13px', color: '#78909c' }}>
+                                        {formatDateTime(activity.created_at || activity.timestamp)}
+                                      </td>
+                                    </tr>
+                                  );
+                                })
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Show record count */}
+                        {userActivities.length > 0 && (
+                          <div style={{ 
+                            marginTop: '16px',
+                            fontSize: '14px',
+                            color: '#78909c',
+                            textAlign: 'right'
+                          }}>
+                            Showing {Math.min(userActivities.length, 50)} of {totalActivities} total records
+                            {totalActivities > 50 && (
+                              <span style={{ marginLeft: '8px', color: '#1565c0', cursor: 'pointer', textDecoration: 'underline' }}
+                                onClick={() => setActiveMenu('Activity Tracker')}>
+                                View all →
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Hide Latest Challans and RTO Tables when hasClient flag is true */}
@@ -2588,6 +3151,7 @@ function ClientDashboard() {
         {activeMenu === "Add Client" && <AddClient />}
         {activeMenu === "My Clients" && <MyClients />}
         {activeMenu === "Client Settings" && <ClientSettings />}
+        {activeMenu === "Activity Tracker" && <ActivityTracker />}
 
         {activeMenu === "Register Vehicle" && <RegisterVehicle />}
         {(activeMenu === "My Fleet" || activeMenu === "Client Vehicles") && (
@@ -2675,7 +3239,7 @@ function ClientDashboard() {
           />
         )}
     {activeMenu === "Vehicle Challans" && <MyChallans initialFilter={initialChallanFilter} showClientPages={showClientPages} />}
-      {activeMenu === "Pay Challans" && challanSettlementLive && <PayChallans />}
+      {activeMenu === "Pay Challans" && challanSettlementLive && <PayChallans showClientPages={showClientPages} />}
       {activeMenu === "Challan Requests" && <ChallanRequests />}
         {activeMenu === "Challans" && <UserChallan />}
         {activeMenu === "My Billing" && <MyBilling clientId={user.user && (user.user.id || user.user._id)} />}

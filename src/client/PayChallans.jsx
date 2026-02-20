@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { ChallanTableV2, handleChallanPrint, handleChallanDownloadExcel } from "./MyChallans";
 import RightSidebar from "./RightSidebar";
 import ChallanCartModal from "./ChallanCartModal";
 
-export default function PayChallans() {
+export default function PayChallans({ showClientPages = false }) {
   const ONLINE_FEE = Number(import.meta.env.VITE_ONLINE_CHALLAN_FEE || 170);
   const VIRTUAL_COURT_FEE = Number(import.meta.env.VITE_VIRTUAL_COURT_FEE || 499);
   const REGISTERED_COURT_FEE = Number(import.meta.env.VITE_REGISTERED_COURT_FEE || 899);
@@ -17,6 +17,61 @@ export default function PayChallans() {
   const [cartSidebarOpen, setCartSidebarOpen] = useState(false);
   const [cartModalOpen, setCartModalOpen] = useState(false);
   const [isSubmittingCart, setIsSubmittingCart] = useState(false);
+  
+  // Client selection state for Client mode
+  const [selectedClientId, setSelectedClientId] = useState(null);
+  const [clientList, setClientList] = useState([]);
+  const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const clientDropdownRef = useRef(null);
+  
+  // Load clients from localStorage when in Client mode
+  useEffect(() => {
+    if (showClientPages) {
+      try {
+        const cachedData = localStorage.getItem('client_network');
+        if (cachedData) {
+          const data = JSON.parse(cachedData);
+          const rawData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
+          
+          // Flatten nested children (same logic as MyFleetTable)
+          const flattenChildren = (node, dealerName = null) => {
+            const result = [];
+            result.push({ ...node, dealerName, isParent: !dealerName });
+            if (Array.isArray(node.children) && node.children.length > 0) {
+              node.children.forEach(child => {
+                result.push(...flattenChildren(child, node.name));
+              });
+            }
+            return result;
+          };
+          
+          const flatClients = [];
+          rawData.forEach(parent => {
+            flatClients.push(...flattenChildren(parent));
+          });
+          
+          setClientList(flatClients);
+        }
+      } catch (e) {
+        console.error('Failed to load client list:', e);
+      }
+    }
+  }, [showClientPages]);
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!showClientPages) return;
+    const handleClickOutside = (event) => {
+      if (clientDropdownRef.current && !clientDropdownRef.current.contains(event.target)) {
+        setShowClientDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showClientPages]);
+  
+  const selectedClientName = clientList.find(c => (c.id || c._id) === selectedClientId)?.name || '';
 
   useEffect(() => {
     const handleToggle = () => {
@@ -34,22 +89,36 @@ export default function PayChallans() {
 
   useEffect(() => {
     async function fetchChallans() {
+      // Don't fetch if in client mode and no client is selected
+      if (showClientPages && !selectedClientId) {
+        setPendingChallans([]);
+        setIsLoading(false);
+        return;
+      }
+      
+      setIsLoading(true);
       try {
         const API_ROOT = import.meta.env.VITE_API_BASE_URL;
         if (!API_ROOT) {
           throw new Error("VITE_API_BASE_URL is not set. Please check your .env file and restart the dev server.");
         }
+        // Determine clientId from selected client or logged-in user
         let clientId = null;
-        try {
-          const stored = JSON.parse(localStorage.getItem("sc_user")) || {};
-          if (stored && stored.user) {
-            clientId = stored.user.id || stored.user._id || stored.user.client_id || null;
+        if (showClientPages && selectedClientId) {
+          clientId = selectedClientId;
+        } else {
+          try {
+            const stored = JSON.parse(localStorage.getItem("sc_user")) || {};
+            if (stored && stored.user) {
+              clientId = stored.user.id || stored.user._id || stored.user.client_id || null;
+            }
+          } catch (e) {
+            clientId = null;
           }
-        } catch (e) {
-          clientId = null;
         }
         if (!clientId) {
           setPendingChallans([]);
+          setIsLoading(false);
           return;
         }
         const url = `${API_ROOT}/getvehicleechallandata?clientId=${clientId}`;
@@ -80,7 +149,7 @@ export default function PayChallans() {
       }
     }
     fetchChallans();
-  }, []);
+  }, [showClientPages, selectedClientId]);
 
   const addToCart = (challan) => {
     setCart((prev) => {
@@ -140,9 +209,244 @@ export default function PayChallans() {
 
   return (
     <div className="my-challans-content">
-      <p className="page-subtitle">Select vehicle challans for challan settlement and add them to your cart.</p>
+      {/* Loader styles */}
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+      
+      {/* Full-page loader when fetching client challans */}
+      {showClientPages && isLoading && selectedClientId && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(255, 255, 255, 0.96)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          backdropFilter: 'blur(5px)',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+        }}>
+          <div style={{
+            textAlign: 'center',
+            padding: '48px 56px',
+            background: '#fff',
+            borderRadius: 20,
+            boxShadow: '0 12px 48px rgba(33, 150, 243, 0.18), 0 4px 16px rgba(0, 0, 0, 0.08)',
+            border: '2px solid #2196f3',
+            minWidth: 380,
+            maxWidth: 480
+          }}>
+            <div style={{
+              width: 72,
+              height: 72,
+              border: '5px solid #e3f2fd',
+              borderTop: '5px solid #2196f3',
+              borderRadius: '50%',
+              animation: 'spin 0.9s linear infinite',
+              margin: '0 auto 28px'
+            }} />
+            <div style={{ 
+              fontSize: 22, 
+              fontWeight: 600, 
+              color: '#1565c0', 
+              marginBottom: 10,
+              letterSpacing: '-0.3px',
+              lineHeight: 1.3
+            }}>
+              Fetching challans for {selectedClientName}
+            </div>
+            <div style={{ 
+              fontSize: 15, 
+              color: '#666',
+              fontWeight: 400,
+              lineHeight: 1.5
+            }}>
+              Please wait...
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <p className="page-subtitle">
+        {showClientPages 
+          ? "Select a client to view their vehicle challans for settlement" 
+          : "Select vehicle challans for challan settlement and add them to your cart."
+        }
+      </p>
+      
+      {/* Client selector dropdown for Client mode */}
+      {showClientPages && (
+        <div style={{ marginBottom: 20, padding: '0 0'}}>
+          <div style={{ position: 'relative', maxWidth: 650 }} ref={clientDropdownRef}>
+            <label style={{ 
+              display: 'block', 
+              marginBottom: 8, 
+              fontWeight: 600, 
+              color: '#1565c0', 
+              fontSize: 15,
+              letterSpacing: '-0.2px',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+            }}>
+              Select Client
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type="text"
+                placeholder="Search by name, company, or email..."
+                value={clientSearchTerm}
+                onChange={(e) => setClientSearchTerm(e.target.value)}
+                onFocus={() => setShowClientDropdown(true)}
+                style={{
+                  width: '100%',
+                  padding: '14px 44px 14px 18px',
+                  border: '2px solid #2196f3',
+                  borderRadius: 10,
+                  fontSize: 15,
+                  outline: 'none',
+                  background: '#fff',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 2px 8px rgba(33, 150, 243, 0.08)',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                }}
+                onMouseEnter={(e) => e.target.style.borderColor = '#1976d2'}
+                onMouseLeave={(e) => e.target.style.borderColor = '#2196f3'}
+              />
+              {clientSearchTerm && (
+                <button
+                  onClick={() => {
+                    setClientSearchTerm('');
+                    setSelectedClientId(null);
+                    setShowClientDropdown(false);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    right: 12,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: 28,
+                    height: 28,
+                    borderRadius: '50%',
+                    border: 'none',
+                    background: '#e3f2fd',
+                    color: '#1565c0',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 16,
+                    fontWeight: 700,
+                    transition: 'all 0.2s',
+                    lineHeight: 1
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = '#1565c0';
+                    e.target.style.color = '#fff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = '#e3f2fd';
+                    e.target.style.color = '#1565c0';
+                  }}
+                  title="Clear search"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+            {showClientDropdown && clientList.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                top: 'calc(100% + 4px)',
+                left: 0,
+                right: 0,
+                maxHeight: 360,
+                overflowY: 'auto',
+                background: '#fff',
+                border: '2px solid #2196f3',
+                borderRadius: 10,
+                boxShadow: '0 8px 24px rgba(33, 150, 243, 0.2), 0 2px 8px rgba(0, 0, 0, 0.08)',
+                zIndex: 1000,
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+              }}>
+                {clientList
+                  .filter(client => {
+                    const searchLower = clientSearchTerm.toLowerCase();
+                    const name = client.name || '';
+                    const email = client.email || '';
+                    const company = (client.user_meta || client.userMeta)?.company_name || '';
+                    return name.toLowerCase().includes(searchLower) || 
+                           email.toLowerCase().includes(searchLower) ||
+                           company.toLowerCase().includes(searchLower);
+                  })
+                  .map(client => (
+                    <div
+                      key={client.id || client._id}
+                      onClick={() => {
+                        setSelectedClientId(client.id || client._id);
+                        setClientSearchTerm(`${client.name} (${(client.user_meta || client.userMeta)?.company_name || 'N/A'})`);
+                        setShowClientDropdown(false);
+                      }}
+                      style={{
+                        padding: '14px 18px',
+                        cursor: 'pointer',
+                        borderBottom: '1px solid #e8f4fd',
+                        background: (client.id || client._id) === selectedClientId ? '#e3f2fd' : '#fff',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = (client.id || client._id) === selectedClientId ? '#bbdefb' : '#f5f9fc'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = (client.id || client._id) === selectedClientId ? '#e3f2fd' : '#fff'}
+                    >
+                      <div style={{ 
+                        fontWeight: 600, 
+                        color: '#1565c0', 
+                        fontSize: 15,
+                        marginBottom: 4,
+                        letterSpacing: '-0.2px'
+                      }}>{client.name}</div>
+                      <div style={{ 
+                        fontSize: 13, 
+                        color: '#666', 
+                        lineHeight: 1.4
+                      }}>
+                        {(client.user_meta || client.userMeta)?.company_name || 'N/A'} • {client.email || 'N/A'}
+                      </div>
+                    </div>
+                  ))
+                }
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
-      {isLoading ? (
+      {showClientPages && !selectedClientId ? (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '60px 20px',
+            background: '#f5f9fc',
+            borderRadius: 12,
+            border: '2px dashed #bbdefb',
+            marginTop: 18
+          }}
+        >
+          <div style={{ textAlign: 'center', color: '#666', fontSize: 15 }}>
+            <div style={{ fontSize: 18, fontWeight: 600, color: '#1565c0', marginBottom: 8 }}>
+              No Client Selected
+            </div>
+            Please select a client from the dropdown above to view their vehicle challans.
+          </div>
+        </div>
+      ) : isLoading ? (
         <div style={{ marginTop: 32, textAlign: "center", color: "#555", fontSize: 14 }}>
           <div
             style={{

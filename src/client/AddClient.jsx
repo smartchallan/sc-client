@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PiTrayArrowUpLight } from 'react-icons/pi';
-import { toast } from 'react-toastify';
+import { ToastContainer, toast } from 'react-toastify';
 
 // Country -> states -> cities dataset. India expanded.
 const GEO = {
@@ -299,6 +299,7 @@ export default function AddClient() {
           </div>
         </form>
       </div>
+      <ToastContainer position="top-right" autoClose={2000} hideProgressBar={false} newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover />
     </div>
   );
 }
