@@ -711,18 +711,18 @@ main.main-content,
   text-shadow: 0 2px 8px rgba(0,0,0,0.28), 0 1px 0 #000;
 }
 
-/* High-contrast stat-value color for each card */
+/* High-contrast stat-value color for each card - dark colors for white backgrounds */
 .stat-card:nth-child(1) .stat-value {
-  color: #fffde7; /* pale yellow for blue bg */
+  color: #1e293b; /* dark slate for white bg */
 }
 .stat-card:nth-child(2) .stat-value {
-  color: #fff3e0; /* light orange for red bg */
+  color: #1e293b; /* dark slate for white bg */
 }
 .stat-card:nth-child(3) .stat-value {
-  color: #fffde7; /* pale yellow for yellow/orange bg */
+  color: #1e293b; /* dark slate for white bg */
 }
 .stat-card:nth-child(4) .stat-value {
-  color: #eafff7; /* mint for green bg */
+  color: #1e293b; /* dark slate for white bg */
 }
 
 .stat-chart-container {

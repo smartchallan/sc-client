@@ -2152,12 +2152,16 @@ function ClientDashboard() {
               {/* Top row: 4 stat cards if showClientPages, else 2 */}
               <div style={{ display: 'flex', width: '100%', gap: 16 }}>
                 {!showClientPages && (
-                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: 'linear-gradient(120deg, #93c5fd 60%, #dbeafe 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(59, 130, 246, 0.10)', border: '1.5px solid #dbeafe'}}>
+                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: 'linear-gradient(135deg, #eff6ff 0%, #ffffff 100%)', borderRadius: 12, boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #3b82f6', transition: 'all 0.3s ease'}}>
                   <div className="stat-card-content">
-                  <i className="ri-car-line"></i>
-                  <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
-                    <div>Registered Vehicles</div>
-                    <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16}}>
+                    <div style={{width: 48, height: 48, borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                      <i className="ri-car-line" style={{fontSize: 24, color: '#3b82f6'}}></i>
+                    </div>
+                  </div>
+                  <div style={{marginBottom: 12}}>
+                    <div style={{fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px'}}>Registered Vehicles</div>
+                    <div style={{fontSize: 32, fontWeight: 700, color: '#1e293b', lineHeight: 1}}>
                       {loadingClient ? '...' : (clientData && Array.isArray(clientData.vehicles) ? clientData.vehicles.length : 0)}
                     </div>
                   </div>
@@ -2278,12 +2282,16 @@ function ClientDashboard() {
                 </div>
                 )}
                 {!showClientPages && (
-                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: 'linear-gradient(120deg, #6ee7b7 60%, #d1fae5 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(16, 185, 129, 0.10)', border: '1.5px solid #d1fae5'}}>
+                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: 'linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)', borderRadius: 12, boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #10b981', transition: 'all 0.3s ease'}}>
                   <div className="stat-card-content">
-                  <i className="ri-error-warning-line"></i>
-                  <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
-                    <div>Challans Fetched</div>
-                    <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16}}>
+                    <div style={{width: 48, height: 48, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                      <i className="ri-error-warning-line" style={{fontSize: 24, color: '#10b981'}}></i>
+                    </div>
+                  </div>
+                  <div style={{marginBottom: 12}}>
+                    <div style={{fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px'}}>Challans Fetched</div>
+                    <div style={{fontSize: 32, fontWeight: 700, color: '#1e293b', lineHeight: 1}}>
                       {loadingVehicleChallan ? '...' : dashboardTotalChallans}
                     </div>
                   </div>
@@ -2336,12 +2344,16 @@ function ClientDashboard() {
                 {/* Network stat cards if showClientPages - render as siblings, not nested */}
                 {showClientPages && (
                   <React.Fragment>
-                    <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: 'linear-gradient(120deg, #fbbf24 60%, #fef3c7 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(251, 191, 36, 0.10)', border: '1.5px solid #fef3c7'}}>
+                    <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: 'linear-gradient(135deg, #fffbeb 0%, #ffffff 100%)', borderRadius: 12, boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #f59e0b', transition: 'all 0.3s ease'}}>
                       <div className="stat-card-content">
-                        <i className="ri-briefcase-line"></i>
-                        <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
-                          <div>My Clients</div>
-                          <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16}}>
+                          <div style={{width: 48, height: 48, borderRadius: '50%', background: 'rgba(245, 158, 11, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                            <i className="ri-briefcase-line" style={{fontSize: 24, color: '#f59e0b'}}></i>
+                          </div>
+                        </div>
+                        <div style={{marginBottom: 12}}>
+                          <div style={{fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px'}}>My Clients</div>
+                          <div style={{fontSize: 32, fontWeight: 700, color: '#1e293b', lineHeight: 1}}>
                             {loadingNetworkStats ? '...' : networkStatsError ? '--' : (networkStats && networkStats.totalClients != null ? networkStats.totalClients : '--')}
                           </div>
                         </div>
@@ -2409,12 +2421,16 @@ function ClientDashboard() {
                         </div> */}
                       </div>
                     </div>
-                    <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: 'linear-gradient(120deg, #a7f3d0 60%, #f0fdfa 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(16, 185, 129, 0.10)', border: '1.5px solid #f0fdfa'}}>
+                    <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: 'linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)', borderRadius: 12, boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #10b981', transition: 'all 0.3s ease'}}>
                       <div className="stat-card-content">
-                        <i className="ri-user-3-line"></i>
-                        <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
-                          <div>Client Vehicles</div>
-                          <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16}}>
+                          <div style={{width: 48, height: 48, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                            <i className="ri-user-3-line" style={{fontSize: 24, color: '#10b981'}}></i>
+                          </div>
+                        </div>
+                        <div style={{marginBottom: 12}}>
+                          <div style={{fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px'}}>Client Vehicles</div>
+                          <div style={{fontSize: 32, fontWeight: 700, color: '#1e293b', lineHeight: 1}}>
                             {loadingNetworkStats ? '...' : networkStatsError ? '0' : (networkStats && networkStats.totalVehicles != null ? networkStats.totalVehicles : '--')}
                           </div>
                         </div>
@@ -2454,12 +2470,16 @@ function ClientDashboard() {
               {/* Second row of network stats cards */}
               {showClientPages && (
                 <div style={{ display: 'flex', width: '100%', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
-                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: 'linear-gradient(120deg, #6ee7b7 60%, #d1fae5 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(16, 185, 129, 0.10)', border: '1.5px solid #d1fae5'}}>
+                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: 'linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)', borderRadius: 12, boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #10b981', transition: 'all 0.3s ease'}}>
                     <div className="stat-card-content">
-                      <i className="ri-error-warning-line"></i>
-                      <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
-                        <div>Total Challans Fetched</div>
-                        <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                      <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16}}>
+                        <div style={{width: 48, height: 48, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                          <i className="ri-error-warning-line" style={{fontSize: 24, color: '#10b981'}}></i>
+                        </div>
+                      </div>
+                      <div style={{marginBottom: 12}}>
+                        <div style={{fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px'}}>Total Challans Fetched</div>
+                        <div style={{fontSize: 32, fontWeight: 700, color: '#1e293b', lineHeight: 1}}>
                           {loadingNetworkStats ? '...' : networkStatsError ? '0' : (networkStats && networkStats.totalChallans != null ? networkStats.totalChallans : '0')}
                         </div>
                       </div>
@@ -2479,12 +2499,16 @@ function ClientDashboard() {
                       </div>
                     </div>
                   </div>
-                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: 'linear-gradient(120deg, #f9a8d4 60%, #fce7f3 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(236, 72, 153, 0.10)', border: '1.5px solid #fce7f3'}}>
+                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: 'linear-gradient(135deg, #fdf2f8 0%, #ffffff 100%)', borderRadius: 12, boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #ec4899', transition: 'all 0.3s ease'}}>
                     <div className="stat-card-content">
-                      <i className="ri-alarm-warning-line"></i>
-                      <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
-                        <div>Clients Renewals</div>
-                        <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                      <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16}}>
+                        <div style={{width: 48, height: 48, borderRadius: '50%', background: 'rgba(236, 72, 153, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                          <i className="ri-alarm-warning-line" style={{fontSize: 24, color: '#ec4899'}}></i>
+                        </div>
+                      </div>
+                      <div style={{marginBottom: 12}}>
+                        <div style={{fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px'}}>Clients Renewals</div>
+                        <div style={{fontSize: 32, fontWeight: 700, color: '#1e293b', lineHeight: 1}}>
                           {loadingNetworkStats ? '...' : networkStatsError ? '0' : (networkStats && networkStats.totalRenewals != null ? networkStats.totalRenewals : '0')}
                         </div>
                       </div>
@@ -2532,26 +2556,30 @@ function ClientDashboard() {
                       </div>
                     </div>
                   </div>
-                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: 'linear-gradient(120deg, #fdba74 60%, #fef3c7 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(251, 191, 36, 0.10)', border: '1.5px solid #fef3c7'}}>
+                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: 'linear-gradient(135deg, #fffbeb 0%, #ffffff 100%)', borderRadius: 12, boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #f59e0b', transition: 'all 0.3s ease'}}>
                     <div className="stat-card-content">
-                      <i className="ri-money-rupee-circle-line"></i>
-                      <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
-                        <div>Total Challan Amount</div>
-                        <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
-                          {loadingNetworkStats ? '...' : networkStatsError ? '₹0' : (networkStats && networkStats.totalChallanAmount != null ? `₹${formatBriefAmount(networkStats.totalChallanAmount)}` : '₹0')}
+                      <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16}}>
+                        <div style={{width: 48, height: 48, borderRadius: '50%', background: 'rgba(245, 158, 11, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                          <i className="ri-money-rupee-circle-line" style={{fontSize: 24, color: '#f59e0b'}}></i>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8, flexDirection: 'column' }}>
-                        <div className={`status-badge`} style={{ cursor: 'default', display: 'flex', justifyContent: 'space-between' }} title="Pending challan amount">
+                      <div style={{marginBottom: 12}}>
+                        <div style={{fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px'}}>Total Challan Amount</div>
+                        <div style={{fontSize: 32, fontWeight: 700, color: '#1e293b', lineHeight: 1}}>
+                          {loadingNetworkStats ? '...' : networkStatsError ? '₹0' : (networkStats && networkStats.challanAmount && networkStats.challanAmount.total != null ? `₹${formatBriefAmount(networkStats.challanAmount.total)}` : '₹0')}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8 }}>
+                        <div className={`status-badge`} style={{ cursor: 'default', width: 'calc(50% - 6px)', display: 'flex', justifyContent: 'space-between' }} title="Pending challan amount">
                           <div style={{ fontSize: 12, color: '#666' }}>Pending:</div>
                           <div style={{ color: '#e74c3c', fontWeight: 700, fontSize: 14 }}>
-                            {loadingNetworkStats ? '...' : networkStats && networkStats.challanAmounts && typeof networkStats.challanAmounts.pending !== 'undefined' ? `₹${formatBriefAmount(networkStats.challanAmounts.pending)}` : '₹0'}
+                            {loadingNetworkStats ? '...' : networkStats && networkStats.challanAmount && typeof networkStats.challanAmount.pending !== 'undefined' ? `₹${formatBriefAmount(networkStats.challanAmount.pending)}` : '₹0'}
                           </div>
                         </div>
-                        <div className={`status-badge`} style={{ cursor: 'default', display: 'flex', justifyContent: 'space-between' }} title="Disposed challan amount">
-                          <div style={{ fontSize: 12, color: '#666' }}>Disposed:</div>
+                        <div className={`status-badge`} style={{ cursor: 'default', width: 'calc(50% - 6px)', display: 'flex', justifyContent: 'space-between' }} title="Paid challan amount">
+                          <div style={{ fontSize: 12, color: '#666' }}>Paid:</div>
                           <div style={{ color: '#4caf50', fontWeight: 700, fontSize: 14 }}>
-                            {loadingNetworkStats ? '...' : networkStats && networkStats.challanAmounts && typeof networkStats.challanAmounts.disposed !== 'undefined' ? `₹${formatBriefAmount(networkStats.challanAmounts.disposed)}` : '₹0'}
+                            {loadingNetworkStats ? '...' : networkStats && networkStats.challanAmount && typeof networkStats.challanAmount.paid !== 'undefined' ? `₹${formatBriefAmount(networkStats.challanAmount.paid)}` : '₹0'}
                           </div>
                         </div>
                       </div>
@@ -2565,13 +2593,16 @@ function ClientDashboard() {
             {/* Second row: 2 cards as before, 50% width each */}
             {!showClientPages && (
             <div className="dashboard-stats" style={{ display: 'flex', width: '100%', gap: 16, marginTop: 16 }}>
-              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320, background: 'linear-gradient(120deg, #f9a8d4 60%, #fce7f3 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(236, 72, 153, 0.10)', border: '1.5px solid #fce7f3'}}>
+              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320, background: 'linear-gradient(135deg, #fdf2f8 0%, #ffffff 100%)', borderRadius: 12, boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #ec4899', transition: 'all 0.3s ease'}}>
                 <div className="stat-card-content">
-                  <i className="ri-alarm-warning-line"></i>
-                  <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
-                    <div>Vehicle Renewals</div>
-                    {/* <span style={{ color: '#666', fontSize: 12, float: 'left' }}>Expired</span> */}
-                    <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16}}>
+                    <div style={{width: 48, height: 48, borderRadius: '50%', background: 'rgba(236, 72, 153, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                      <i className="ri-alarm-warning-line" style={{fontSize: 24, color: '#ec4899'}}></i>
+                    </div>
+                  </div>
+                  <div style={{marginBottom: 12}}>
+                    <div style={{fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px'}}>Vehicle Renewals</div>
+                    <div style={{fontSize: 32, fontWeight: 700, color: '#1e293b', lineHeight: 1}}>
                       {loadingVehicleRto ? '...' : vehicleRenewalsTotal}
                     </div>
                   </div>
@@ -2671,12 +2702,16 @@ function ClientDashboard() {
                   ) : null}
                 </div>
               </div>
-              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320, background: 'linear-gradient(120deg, #fdba74 60%, #fef3c7 100%)', borderRadius: 0, boxShadow: '0 6px 24px rgba(251, 191, 36, 0.10)', border: '1.5px solid #fef3c7'}}>
+              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320, background: 'linear-gradient(135deg, #fffbeb 0%, #ffffff 100%)', borderRadius: 12, boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #f59e0b', transition: 'all 0.3s ease'}}>
                 <div className="stat-card-content">
-                  <i className="ri-money-rupee-circle-line"></i>
-                  <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
-                    <div>Challan Amount</div>
-                    <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16}}>
+                    <div style={{width: 48, height: 48, borderRadius: '50%', background: 'rgba(245, 158, 11, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                      <i className="ri-money-rupee-circle-line" style={{fontSize: 24, color: '#f59e0b'}}></i>
+                    </div>
+                  </div>
+                  <div style={{marginBottom: 12}}>
+                    <div style={{fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px'}}>Challan Amount</div>
+                    <div style={{fontSize: 32, fontWeight: 700, color: '#1e293b', lineHeight: 1}}>
                       {loadingVehicleChallan ? '...' : `₹${formatBriefAmount(totalFineAmount)}`}
                     </div>
                   </div>

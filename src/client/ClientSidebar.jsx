@@ -19,6 +19,7 @@ import "../shared/CommonDashboard.css";
 function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }) {
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState({});
+  
   // Get logged in user from localStorage
   let userName = "John Smith";
   let initials = "JS";
@@ -188,7 +189,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
                   tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setOpenGroups(prev => ({ ...prev, [item.label]: !prev[item.label] })); }}
                 >
-                  <i className={item.icon} style={{ color: import.meta.env.VITE_MENU_ICON_COLOR || '#FFD54F' }}></i>
+                  <i className={item.icon} style={{ color: import.meta.env.VITE_MENU_ICON_COLOR }}></i>
                   <span style={{ flex: 1 }}>{item.label}</span>
                   <i
                     className={isOpen ? "ri-arrow-up-s-line" : "ri-arrow-down-s-line"}
@@ -219,7 +220,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
                 onClick={() => handleMenuClick(item.label)}
                 style={{cursor: 'pointer'}}
               >
-                <i className={item.icon} style={{ color: import.meta.env.VITE_MENU_ICON_COLOR || '#FFD54F' }}></i>
+                <i className={item.icon} style={{ color: import.meta.env.VITE_MENU_ICON_COLOR }}></i>
                 <span>{item.label}</span>
               </div>
             );
