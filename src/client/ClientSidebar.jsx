@@ -19,6 +19,25 @@ import "../shared/CommonDashboard.css";
 function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }) {
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState({});
+  const [permissionDeniedModal, setPermissionDeniedModal] = useState({ open: false, message: '' });
+  
+  // Permission mapping for menu items
+  const PERMISSION_MAP = {
+    'Register Vehicle': 'add_vehicle',
+    'Add Client': 'add_clients',
+    'My Clients': 'add_clients',
+    'Client Settings': 'add_clients',
+    'Vehicle Challans': 'fetch_challans',
+    'RTO Details': 'fetch_rto_data',
+    // Add more mappings as needed
+  };
+  
+  const PERMISSION_MESSAGES = {
+    'add_vehicle': 'You do not have required permission to add vehicles in your account. Please contact your dealer.',
+    'add_clients': 'You do not have required permission to manage clients in your account. Please contact your dealer.',
+    'fetch_challans': 'You do not have required permission to fetch challans in your account. Please contact your dealer.',
+    'fetch_rto_data': 'You do not have required permission to fetch RTO data in your account. Please contact your dealer.',
+  };
   
   // Get logged in user from localStorage
   let userName = "John Smith";
@@ -49,8 +68,11 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
       const isParentAccount = (parentVal == null) || (parentVal == 0);
       // Use hasClients flag from login response - this determines if user is in client management mode
       const hasClientsFlag = !!(userObj.hasClients);
-      // Final decision to show client management menu
-      showClientPages = !!(hasClientsFlag || isParentAccount);
+    // If hasClients is false, check add_clients permission
+    const userOptions = userObj?.user_options || userObj?.user?.user_options || {};
+    const hasAddClientsPermission = userOptions.add_clients === "1" || userOptions.add_clients === 1;
+    // Final decision to show client management menu
+    showClientPages = !!(hasClientsFlag || hasAddClientsPermission || isParentAccount);
     }
   } catch {}
 
@@ -132,6 +154,29 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
   const cancelLogout = () => setLogoutOpen(false);
 
   const handleMenuClick = (menuLabel) => {
+    // Check if this menu item requires a permission
+    const requiredPermission = PERMISSION_MAP[menuLabel];
+    
+    if (requiredPermission) {
+      // Get user_options from localStorage
+      try {
+        const userObj = JSON.parse(localStorage.getItem("sc_user"));
+        const userOptions = userObj?.user_options || userObj?.user?.user_options || {};
+        
+        // Check if permission is granted (value should be "1" or 1)
+        const hasPermission = userOptions[requiredPermission] === "1" || userOptions[requiredPermission] === 1;
+        
+        if (!hasPermission) {
+          // Show permission denied modal
+          const message = PERMISSION_MESSAGES[requiredPermission] || 'You do not have required permission to access this feature. Please contact your dealer.';
+          setPermissionDeniedModal({ open: true, message });
+          return; // Don't proceed with navigation
+        }
+      } catch (error) {
+        console.error('Error checking permissions:', error);
+      }
+    }
+    
     // Track menu click activity
     try {
       const userObj = JSON.parse(localStorage.getItem("sc_user"));
@@ -238,6 +283,17 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
       
       <CustomModal open={logoutOpen} title="Confirm logout" description="You will be signed out of Smart Challan and returned to the login page." icon="ri-logout-box-r-line" onConfirm={confirmLogout} onCancel={cancelLogout} confirmText="Logout" cancelText="Stay">
       </CustomModal>
+      
+      <CustomModal 
+        open={permissionDeniedModal.open} 
+        title="Permission Denied" 
+        description={permissionDeniedModal.message} 
+        icon="ri-error-warning-line" 
+        onConfirm={() => setPermissionDeniedModal({ open: false, message: '' })} 
+        confirmText="OK" 
+        onCancel={() => setPermissionDeniedModal({ open: false, message: '' })}
+        cancelText=""
+      />
     </aside>
   );
 }

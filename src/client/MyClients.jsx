@@ -11,6 +11,7 @@ export default function MyClients() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [stateFilter, setStateFilter] = useState('all');
   const [cityFilter, setCityFilter] = useState('all');
+  const [changePasswordConfirmModal, setChangePasswordConfirmModal] = useState({ open: false, client: null });
   const [changePasswordModal, setChangePasswordModal] = useState({ open: false, client: null });
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -191,13 +192,20 @@ export default function MyClients() {
     }
   };
 
-  const handleChangePassword = async () => {
+  const handleChangePasswordClick = () => {
     if (!newPassword || newPassword.length < 6) {
       toast.error('Password must be at least 6 characters');
       return;
     }
+    // Close password modal and open confirmation modal
+    const client = changePasswordModal.client;
+    setChangePasswordModal({ open: false, client: null });
+    setChangePasswordConfirmModal({ open: true, client });
+  };
+
+  const handleChangePassword = async () => {
     try {
-      const userId = changePasswordModal.client.id || changePasswordModal.client._id;
+      const userId = changePasswordConfirmModal.client.id || changePasswordConfirmModal.client._id;
       const res = await fetch(`${API_ROOT}/userprofile/updatepassword/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -208,7 +216,7 @@ export default function MyClients() {
       });
       if (res.ok) {
         toast.success('Password changed successfully');
-        setChangePasswordModal({ open: false, client: null });
+        setChangePasswordConfirmModal({ open: false, client: null });
         setNewPassword('');
         setShowPassword(false);
       } else {
@@ -283,26 +291,64 @@ export default function MyClients() {
           position: 'relative'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flex: 1 }}>
-            <input 
-              className="form-control" 
-              placeholder="Search clients..." 
-              value={search} 
-              onChange={e => {
-                // Debug: log any programmatic value changes
-                if (e.nativeEvent && e.nativeEvent.inputType !== 'insertText') {
-                  console.log('Search input changed programmatically:', e.target.value, e.nativeEvent);
-                }
-                setSearch(e.target.value);
-              }} 
-              style={{ 
-                width: 240,
-                padding: '10px 14px', 
-                borderRadius: 6, 
-                border: '1.5px solid #cdd',
-                fontSize: 14
-              }} 
-              autoComplete="off"
-            />
+            <div style={{ position: 'relative' }}>
+              <input 
+                className="form-control" 
+                placeholder="Search clients..." 
+                value={search} 
+                onChange={e => {
+                  // Debug: log any programmatic value changes
+                  if (e.nativeEvent && e.nativeEvent.inputType !== 'insertText') {
+                    console.log('Search input changed programmatically:', e.target.value, e.nativeEvent);
+                  }
+                  setSearch(e.target.value);
+                }} 
+                style={{ 
+                  width: 240,
+                  padding: '10px 40px 10px 14px', 
+                  borderRadius: 6, 
+                  border: '1.5px solid #cdd',
+                  fontSize: 14
+                }} 
+                autoComplete="off"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  style={{
+                    position: 'absolute',
+                    right: 10,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    border: 'none',
+                    background: '#e3f2fd',
+                    color: '#1565c0',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    transition: 'all 0.2s',
+                    lineHeight: 1
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = '#1565c0';
+                    e.target.style.color = '#fff';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = '#e3f2fd';
+                    e.target.style.color = '#1565c0';
+                  }}
+                  title="Clear search"
+                >
+                  ×
+                </button>
+              )}
+            </div>
             
             <select
               value={statusFilter}
@@ -503,7 +549,7 @@ export default function MyClients() {
                       <button
                         className="action-btn flat-btn"
                         onClick={() => {
-                          // Strict: never set search box to client email or any value when opening modal
+                          // Open password change modal directly
                           setChangePasswordModal({ open: true, client: c });
                         }}
                         title="Change Password"
@@ -531,14 +577,29 @@ export default function MyClients() {
         </div>
       </div>
 
+      {/* Change Password Confirmation Modal */}
+      <CustomModal
+        open={changePasswordConfirmModal.open}
+        title="Confirm Change Password"
+        description={`Are you sure you want to change the password for ${changePasswordConfirmModal.client?.name || 'this client'}?`}
+        confirmText="Yes, Change Password"
+        cancelText="Cancel"
+        onConfirm={handleChangePassword}
+        onCancel={() => {
+          setChangePasswordConfirmModal({ open: false, client: null });
+          setNewPassword('');
+          setShowPassword(false);
+        }}
+      />
+
       {/* Change Password Modal */}
       <CustomModal
         open={changePasswordModal.open}
         title="Change Password"
         description={`Change password for ${changePasswordModal.client?.name || 'client'}`}
-        confirmText="Change Password"
+        confirmText="Continue"
         cancelText="Cancel"
-        onConfirm={handleChangePassword}
+        onConfirm={handleChangePasswordClick}
         onCancel={() => {
           setChangePasswordModal({ open: false, client: null });
           setNewPassword('');

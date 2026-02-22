@@ -15,8 +15,15 @@ function ActivityTracker() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [parentId, setParentId] = useState(null);
-  const recordsPerPage = 50;
+  const recordsPerPage = 30;
   const clientDropdownRef = useRef(null);
+  
+  // New filter states
+  const [actionFilter, setActionFilter] = useState('all');
+  const [locationFilter, setLocationFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
   // Get user info from localStorage and set parentId
   useEffect(() => {
@@ -96,11 +103,11 @@ function ActivityTracker() {
       try {
         let url = '';
         if (selectedClientId) {
-          // Fetch activities for specific client
-          url = `${API_ROOT}/saveuseractivity?user_id=${selectedClientId}&limit=${recordsPerPage}&offset=${(currentPage - 1) * recordsPerPage}`;
+          // Fetch all activities for specific client (no limit)
+          url = `${API_ROOT}/saveuseractivity?user_id=${selectedClientId}`;
         } else {
-          // Fetch all activities for parent
-          url = `${API_ROOT}/saveuseractivity?parent_id=${parentId}&limit=${recordsPerPage}&offset=${(currentPage - 1) * recordsPerPage}`;
+          // Fetch all activities for parent (no limit)
+          url = `${API_ROOT}/saveuseractivity?parent_id=${parentId}`;
         }
 
         console.log('Activity Tracker - Fetching from URL:', url);
@@ -117,7 +124,7 @@ function ActivityTracker() {
 
         if (response.ok) {
           const activitiesData = data.activities || data.data || data || [];
-          const totalCount = data.total || data.count || (Array.isArray(activitiesData) ? activitiesData.length : 0);
+          const totalCount = Array.isArray(activitiesData) ? activitiesData.length : 0;
           
           console.log('Activity Tracker - Setting activities:', activitiesData.length, 'records');
           console.log('Activity Tracker - Setting total:', totalCount);
@@ -141,7 +148,7 @@ function ActivityTracker() {
     };
 
     fetchActivities();
-  }, [parentId, selectedClientId, currentPage]);
+  }, [parentId, selectedClientId]);
 
   const handleClientSelect = (client) => {
     setSelectedClientId(client.id || client._id);
@@ -174,7 +181,69 @@ function ActivityTracker() {
     }
   };
 
-  const totalPages = Math.ceil(totalRecords / recordsPerPage);
+  // Extract location from description
+  const extractLocation = (desc) => {
+    if (!desc) return '-';
+    // Pattern: "from web portal 192.168.1.1 and New York, NY, United States"
+    const match = desc.match(/and\s+(.+)$/);
+    return match ? match[1].trim() : '-';
+  };
+
+  // Remove location from description
+  const cleanDescription = (desc) => {
+    if (!desc) return '-';
+    return desc.replace(/\s+and\s+[^]+$/, '').trim();
+  };
+
+  // Filter activities based on filters (client-side filtering)
+  const filteredActivities = activities.filter(activity => {
+    // Action filter
+    if (actionFilter !== 'all' && activity.action_type !== actionFilter) {
+      return false;
+    }
+    
+    // Location filter
+    if (locationFilter && locationFilter.trim() !== '') {
+      const location = extractLocation(activity.description).toLowerCase();
+      if (!location.includes(locationFilter.toLowerCase())) {
+        return false;
+      }
+    }
+    
+    // Date range filter
+    if (dateFrom || dateTo) {
+      const activityDate = new Date(activity.created_at || activity.timestamp);
+      if (dateFrom && activityDate < new Date(dateFrom)) {
+        return false;
+      }
+      if (dateTo) {
+        const endDate = new Date(dateTo);
+        endDate.setHours(23, 59, 59, 999); // End of the day
+        if (activityDate > endDate) {
+          return false;
+        }
+      }
+    }
+    
+    return true;
+  });
+
+  // Client-side pagination
+  const totalFilteredRecords = filteredActivities.length;
+  const totalPages = Math.ceil(totalFilteredRecords / recordsPerPage);
+  const startIndex = (currentPage - 1) * recordsPerPage;
+  const endIndex = startIndex + recordsPerPage;
+  const paginatedActivities = filteredActivities.slice(startIndex, endIndex);
+
+  // Get unique action types for filter dropdown
+  const uniqueActionTypes = [...new Set(activities.map(a => a.action_type).filter(Boolean))];
+
+  // Reset to first page when filters change (but note: filters only apply to current page data)
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [actionFilter, locationFilter, dateFrom, dateTo]);
 
   const filteredClientList = clientList.filter(client => {
     const searchLower = clientSearchTerm.toLowerCase();
@@ -190,7 +259,12 @@ function ActivityTracker() {
   console.log('Activity Tracker - Render state:', {
     loading,
     activitiesCount: activities.length,
-    totalRecords,
+    filteredCount: filteredActivities.length,
+    paginatedCount: paginatedActivities.length,
+    totalFilteredRecords,
+    totalPages,
+    recordsPerPage,
+    showPagination: totalFilteredRecords > recordsPerPage,
     parentId,
     selectedClientId,
     currentPage,
@@ -199,7 +273,7 @@ function ActivityTracker() {
 
   return (
     <div className="latest-table-container">
-      <h2 className="page-title">Activity Tracker</h2>
+      {/* <h2 className="page-title">Activity Tracker</h2> */}
       <p className="page-subtitle">
         View all client activity history including login, logout, and navigation. Filter by specific client to see their activities.
       </p>
@@ -342,6 +416,190 @@ function ActivityTracker() {
         </div>
       </div>
 
+      {/* Filters Section */}
+      <div style={{ marginBottom: 24, padding: '0 0' }}>
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          style={{
+            padding: '10px 18px',
+            background: '#2196f3',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 8,
+            cursor: 'pointer',
+            fontSize: 14,
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            transition: 'all 0.2s',
+            marginBottom: showFilters ? 16 : 0
+          }}
+          onMouseEnter={(e) => e.target.style.background = '#1976d2'}
+          onMouseLeave={(e) => e.target.style.background = '#2196f3'}
+        >
+          <i className={`ri-filter-${showFilters ? 'off' : '3'}-line`}></i>
+          {showFilters ? 'Hide Filters' : 'Show Filters'}
+        </button>
+
+        {showFilters && (
+          <div style={{
+            background: '#f5f9fc',
+            borderRadius: 10,
+            padding: 20,
+            border: '2px solid #e3f2fd',
+            boxShadow: '0 2px 8px rgba(33, 150, 243, 0.08)'
+          }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: 16
+            }}>
+              {/* Action Filter */}
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: 6,
+                  fontWeight: 600,
+                  color: '#1565c0',
+                  fontSize: 14
+                }}>
+                  Action Type
+                </label>
+                <select
+                  value={actionFilter}
+                  onChange={(e) => setActionFilter(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '2px solid #2196f3',
+                    borderRadius: 8,
+                    fontSize: 14,
+                    outline: 'none',
+                    background: '#fff',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="all">All Actions</option>
+                  {uniqueActionTypes.map(type => (
+                    <option key={type} value={type}>{type.replace('_', ' ').toUpperCase()}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Location Filter */}
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: 6,
+                  fontWeight: 600,
+                  color: '#1565c0',
+                  fontSize: 14
+                }}>
+                  Location
+                </label>
+                <input
+                  type="text"
+                  placeholder="Search by location..."
+                  value={locationFilter}
+                  onChange={(e) => setLocationFilter(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '2px solid #2196f3',
+                    borderRadius: 8,
+                    fontSize: 14,
+                    outline: 'none',
+                    background: '#fff'
+                  }}
+                />
+              </div>
+
+              {/* Date From Filter */}
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: 6,
+                  fontWeight: 600,
+                  color: '#1565c0',
+                  fontSize: 14
+                }}>
+                  From Date
+                </label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '2px solid #2196f3',
+                    borderRadius: 8,
+                    fontSize: 14,
+                    outline: 'none',
+                    background: '#fff',
+                    cursor: 'pointer'
+                  }}
+                />
+              </div>
+
+              {/* Date To Filter */}
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: 6,
+                  fontWeight: 600,
+                  color: '#1565c0',
+                  fontSize: 14
+                }}>
+                  To Date
+                </label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '2px solid #2196f3',
+                    borderRadius: 8,
+                    fontSize: 14,
+                    outline: 'none',
+                    background: '#fff',
+                    cursor: 'pointer'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Clear Filters Button */}
+            {(actionFilter !== 'all' || locationFilter || dateFrom || dateTo) && (
+              <button
+                onClick={() => {
+                  setActionFilter('all');
+                  setLocationFilter('');
+                  setDateFrom('');
+                  setDateTo('');
+                }}
+                style={{
+                  marginTop: 16,
+                  padding: '8px 16px',
+                  background: '#ff6b6b',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 600
+                }}
+              >
+                Clear All Filters
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {loading ? (
         <LoadingSkeleton />
       ) : (
@@ -354,21 +612,24 @@ function ActivityTracker() {
                   <th>Client Name</th>
                   <th style={{ width: '140px' }}>Action</th>
                   <th>Description</th>
+                  <th style={{ width: '200px' }}>Location</th>
                   <th style={{ width: '180px' }}>Time</th>
                 </tr>
               </thead>
               <tbody>
-                {activities.length === 0 ? (
+                {filteredActivities.length === 0 ? (
                   <tr>
-                    <td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: '#78909c' }}>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#78909c' }}>
                       {selectedClientId 
                         ? 'No activity records found for this client'
-                        : 'No activity records found'
+                        : actionFilter !== 'all' || locationFilter || dateFrom || dateTo
+                          ? 'No activity records match the selected filters'
+                          : 'No activity records found'
                       }
                     </td>
                   </tr>
                 ) : (
-                  activities.map((activity, index) => (
+                  paginatedActivities.map((activity, index) => (
                     <tr key={activity.id || index}>
                       <td>{(currentPage - 1) * recordsPerPage + index + 1}</td>
                       <td style={{ fontWeight: 500 }}>{activity.client_name || '-'}</td>
@@ -390,7 +651,12 @@ function ActivityTracker() {
                           {activity.action_type?.replace('_', ' ') || '-'}
                         </span>
                       </td>
-                      <td style={{ fontSize: '14px', color: '#546e7a' }}>{activity.description || '-'}</td>
+                      <td style={{ fontSize: '14px', color: '#546e7a' }}>
+                        {cleanDescription(activity.description)}
+                      </td>
+                      <td style={{ fontSize: '13px', color: '#78909c' }}>
+                        {extractLocation(activity.description)}
+                      </td>
                       <td style={{ fontSize: '13px', color: '#78909c' }}>
                         {formatDateTime(activity.created_at || activity.timestamp)}
                       </td>
@@ -402,88 +668,101 @@ function ActivityTracker() {
           </div>
 
           {/* Pagination */}
-          {totalRecords > recordsPerPage && (
+          {totalFilteredRecords > 0 && (
             <div style={{ 
-              marginTop: '24px', 
+              marginTop: '20px', 
               display: 'flex', 
               justifyContent: 'space-between',
               alignItems: 'center',
               flexWrap: 'wrap',
-              gap: '16px'
+              gap: '16px',
+              padding: '16px 20px',
+              backgroundColor: '#f8f9fa',
+              borderRadius: '8px'
             }}>
-              <div style={{ fontSize: '14px', color: '#78909c' }}>
-                Showing {activities.length > 0 ? (currentPage - 1) * recordsPerPage + 1 : 0} to{' '}
-                {Math.min(currentPage * recordsPerPage, totalRecords)} of {totalRecords} records
+              <div style={{ fontSize: '14px', color: '#546e7a', fontWeight: 500 }}>
+                Showing {startIndex + 1} to {Math.min(endIndex, totalFilteredRecords)} of {totalFilteredRecords} records
+                {totalFilteredRecords !== totalRecords && (
+                  <span style={{ color: '#2196f3', marginLeft: 8 }}>
+                    (filtered from {totalRecords} total)
+                  </span>
+                )}
               </div>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <button
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  style={{
-                    padding: '8px 12px',
-                    border: '1px solid #ddd',
-                    borderRadius: '6px',
-                    background: currentPage === 1 ? '#f5f5f5' : '#fff',
-                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                    fontSize: '13px',
-                    color: currentPage === 1 ? '#bbb' : '#1565c0',
-                    fontWeight: 500
-                  }}
-                >
-                  First
-                </button>
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  style={{
-                    padding: '8px 12px',
-                    border: '1px solid #ddd',
-                    borderRadius: '6px',
-                    background: currentPage === 1 ? '#f5f5f5' : '#fff',
-                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                    fontSize: '13px',
-                    color: currentPage === 1 ? '#bbb' : '#1565c0',
-                    fontWeight: 500
-                  }}
-                >
-                  Previous
-                </button>
-                <span style={{ padding: '0 12px', fontSize: '14px', color: '#546e7a', fontWeight: 500 }}>
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  style={{
-                    padding: '8px 12px',
-                    border: '1px solid #ddd',
-                    borderRadius: '6px',
-                    background: currentPage === totalPages ? '#f5f5f5' : '#fff',
-                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                    fontSize: '13px',
-                    color: currentPage === totalPages ? '#bbb' : '#1565c0',
-                    fontWeight: 500
-                  }}
-                >
-                  Next
-                </button>
-                <button
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  style={{
-                    padding: '8px 12px',
-                    border: '1px solid #ddd',
-                    borderRadius: '6px',
-                    background: currentPage === totalPages ? '#f5f5f5' : '#fff',
-                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                    fontSize: '13px',
-                    color: currentPage === totalPages ? '#bbb' : '#1565c0',
-                    fontWeight: 500
-                  }}
-                >
-                  Last
-                </button>
-              </div>
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    style={{
+                      padding: '8px 14px',
+                      border: '1px solid #ddd',
+                      borderRadius: '6px',
+                      background: currentPage === 1 ? '#e9ecef' : '#fff',
+                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '13px',
+                      color: currentPage === 1 ? '#adb5bd' : '#1565c0',
+                      fontWeight: 500,
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    First
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    style={{
+                      padding: '8px 14px',
+                      border: '1px solid #ddd',
+                      borderRadius: '6px',
+                      background: currentPage === 1 ? '#e9ecef' : '#fff',
+                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '13px',
+                      color: currentPage === 1 ? '#adb5bd' : '#1565c0',
+                      fontWeight: 500,
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Previous
+                  </button>
+                  <span style={{ padding: '0 12px', fontSize: '14px', color: '#495057', fontWeight: 600 }}>
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    style={{
+                      padding: '8px 14px',
+                      border: '1px solid #ddd',
+                      borderRadius: '6px',
+                      background: currentPage === totalPages ? '#e9ecef' : '#fff',
+                      cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                      fontSize: '13px',
+                      color: currentPage === totalPages ? '#adb5bd' : '#1565c0',
+                      fontWeight: 500,
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Next
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    style={{
+                      padding: '8px 14px',
+                      border: '1px solid #ddd',
+                      borderRadius: '6px',
+                      background: currentPage === totalPages ? '#e9ecef' : '#fff',
+                      cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                      fontSize: '13px',
+                      color: currentPage === totalPages ? '#adb5bd' : '#1565c0',
+                      fontWeight: 500,
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Last
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </>

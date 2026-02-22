@@ -990,6 +990,52 @@ function ClientDashboard() {
   const [activeMenu, setActiveMenu] = useState("Dashboard");
   const [selectedChallan, setSelectedChallan] = useState(null);
   const [selectedRtoData, setSelectedRtoData] = useState(null);
+  // Permission denied modal
+  const [permissionDeniedModal, setPermissionDeniedModal] = useState({ open: false, message: '' });
+  
+  // Permission mapping for menu items
+  const PERMISSION_MAP = {
+    'Register Vehicle': 'add_vehicle',
+    'Add Client': 'add_clients',
+    'My Clients': 'add_clients',
+    'Client Settings': 'add_clients',
+    'Vehicle Challans': 'fetch_challans',
+    'RTO Details': 'fetch_rto_data',
+  };
+  
+  const PERMISSION_MESSAGES = {
+    'add_vehicle': 'You do not have required permission to add vehicles in your account. Please contact your dealer.',
+    'add_clients': 'You do not have required permission to manage clients in your account. Please contact your dealer.',
+    'fetch_challans': 'You do not have required permission to fetch challans in your account. Please contact your dealer.',
+    'fetch_rto_data': 'You do not have required permission to fetch RTO data in your account. Please contact your dealer.',
+  };
+  
+  // Helper function to check permission before navigating to a page
+  const checkPermissionAndNavigate = (menuLabel) => {
+    const requiredPermission = PERMISSION_MAP[menuLabel];
+    
+    if (requiredPermission) {
+      try {
+        const userObj = JSON.parse(localStorage.getItem("sc_user"));
+        const userOptions = userObj?.user_options || userObj?.user?.user_options || {};
+        
+        // Check if permission is granted (value should be "1" or 1)
+        const hasPermission = userOptions[requiredPermission] === "1" || userOptions[requiredPermission] === 1;
+        
+        if (!hasPermission) {
+          const message = PERMISSION_MESSAGES[requiredPermission] || 'You do not have required permission to access this feature. Please contact your dealer.';
+          setPermissionDeniedModal({ open: true, message });
+          return false;
+        }
+      } catch (error) {
+        console.error('Error checking permissions:', error);
+      }
+    }
+    
+    setActiveMenu(menuLabel);
+    return true;
+  };
+  
   // Sidebar: closed on very small screens (< 600px), open otherwise
   const [sidebarOpen, setSidebarOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth > 600 : true));
   // Initial filter state for Vehicle RTO Data
@@ -2152,16 +2198,12 @@ function ClientDashboard() {
               {/* Top row: 4 stat cards if showClientPages, else 2 */}
               <div style={{ display: 'flex', width: '100%', gap: 16 }}>
                 {!showClientPages && (
-                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: 'linear-gradient(135deg, #eff6ff 0%, #ffffff 100%)', borderRadius: 12, boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #3b82f6', transition: 'all 0.3s ease'}}>
+                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: '#3b82f6', borderRadius: 0, boxShadow: '0 6px 24px rgba(59, 130, 246, 0.20)', border: '1.5px solid #2563eb'}}>
                   <div className="stat-card-content">
-                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16}}>
-                    <div style={{width: 48, height: 48, borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                      <i className="ri-car-line" style={{fontSize: 24, color: '#3b82f6'}}></i>
-                    </div>
-                  </div>
-                  <div style={{marginBottom: 12}}>
-                    <div style={{fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px'}}>Registered Vehicles</div>
-                    <div style={{fontSize: 32, fontWeight: 700, color: '#1e293b', lineHeight: 1}}>
+                  <i className="ri-car-line"></i>
+                  <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
+                    <div>Registered Vehicles</div>
+                    <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
                       {loadingClient ? '...' : (clientData && Array.isArray(clientData.vehicles) ? clientData.vehicles.length : 0)}
                     </div>
                   </div>
@@ -2184,7 +2226,7 @@ function ClientDashboard() {
                           style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
                           title="View active registered vehicles"
                           onClick={() => {
-                            setActiveMenu('Register Vehicle');
+                            checkPermissionAndNavigate('Register Vehicle');
                             setTimeout(() => {
                               try {
                                 const section = document.getElementById('registered-vehicles-section');
@@ -2211,7 +2253,7 @@ function ClientDashboard() {
                           style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
                           title="View inactive registered vehicles"
                           onClick={() => {
-                            setActiveMenu('Register Vehicle');
+                            checkPermissionAndNavigate('Register Vehicle');
                             setTimeout(() => {
                               try {
                                 const section = document.getElementById('registered-vehicles-section');
@@ -2238,7 +2280,7 @@ function ClientDashboard() {
                           style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
                           title="View deleted vehicles"
                           onClick={() => {
-                            setActiveMenu('Register Vehicle');
+                            checkPermissionAndNavigate('Register Vehicle');
                             let tries = 0;
                             const maxTries = 10;
                             const attemptScroll = () => {
@@ -2282,16 +2324,12 @@ function ClientDashboard() {
                 </div>
                 )}
                 {!showClientPages && (
-                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: 'linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)', borderRadius: 12, boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #10b981', transition: 'all 0.3s ease'}}>
+                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: '#10b981', borderRadius: 0, boxShadow: '0 6px 24px rgba(16, 185, 129, 0.20)', border: '1.5px solid #059669'}}>
                   <div className="stat-card-content">
-                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16}}>
-                    <div style={{width: 48, height: 48, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                      <i className="ri-error-warning-line" style={{fontSize: 24, color: '#10b981'}}></i>
-                    </div>
-                  </div>
-                  <div style={{marginBottom: 12}}>
-                    <div style={{fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px'}}>Challans Fetched</div>
-                    <div style={{fontSize: 32, fontWeight: 700, color: '#1e293b', lineHeight: 1}}>
+                  <i className="ri-error-warning-line"></i>
+                  <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
+                    <div>Challans Fetched</div>
+                    <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
                       {loadingVehicleChallan ? '...' : dashboardTotalChallans}
                     </div>
                   </div>
@@ -2344,20 +2382,16 @@ function ClientDashboard() {
                 {/* Network stat cards if showClientPages - render as siblings, not nested */}
                 {showClientPages && (
                   <React.Fragment>
-                    <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: 'linear-gradient(135deg, #fffbeb 0%, #ffffff 100%)', borderRadius: 12, boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #f59e0b', transition: 'all 0.3s ease'}}>
+                    <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: '#f59e0b', borderRadius: 0, boxShadow: '0 6px 24px rgba(245, 158, 11, 0.20)', border: '1.5px solid #d97706'}}>
                       <div className="stat-card-content">
-                        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16}}>
-                          <div style={{width: 48, height: 48, borderRadius: '50%', background: 'rgba(245, 158, 11, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                            <i className="ri-briefcase-line" style={{fontSize: 24, color: '#f59e0b'}}></i>
-                          </div>
-                        </div>
-                        <div style={{marginBottom: 12}}>
-                          <div style={{fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px'}}>My Clients</div>
-                          <div style={{fontSize: 32, fontWeight: 700, color: '#1e293b', lineHeight: 1}}>
+                        <i className="ri-briefcase-line"></i>
+                        <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
+                          <div>My Clients</div>
+                          <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
                             {loadingNetworkStats ? '...' : networkStatsError ? '--' : (networkStats && networkStats.totalClients != null ? networkStats.totalClients : '--')}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8, flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8, flexWrap: 'nowrap' }}>
                           <div
                             className={`status-badge`}
                             style={{ cursor: 'pointer', width: 'calc(50% - 6px)', textDecoration: 'underline', textUnderlineOffset: 2 }}
@@ -2421,20 +2455,16 @@ function ClientDashboard() {
                         </div> */}
                       </div>
                     </div>
-                    <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: 'linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)', borderRadius: 12, boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #10b981', transition: 'all 0.3s ease'}}>
+                    <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: '#059669', borderRadius: 0, boxShadow: '0 6px 24px rgba(5, 150, 105, 0.20)', border: '1.5px solid #047857'}}>
                       <div className="stat-card-content">
-                        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16}}>
-                          <div style={{width: 48, height: 48, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                            <i className="ri-user-3-line" style={{fontSize: 24, color: '#10b981'}}></i>
-                          </div>
-                        </div>
-                        <div style={{marginBottom: 12}}>
-                          <div style={{fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px'}}>Client Vehicles</div>
-                          <div style={{fontSize: 32, fontWeight: 700, color: '#1e293b', lineHeight: 1}}>
+                        <i className="ri-user-3-line"></i>
+                        <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
+                          <div>Client Vehicles</div>
+                          <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
                             {loadingNetworkStats ? '...' : networkStatsError ? '0' : (networkStats && networkStats.totalVehicles != null ? networkStats.totalVehicles : '--')}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8, flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8, flexWrap: 'nowrap' }}>
                           <div className={`status-badge`} style={{ cursor: 'default', width: 'calc(50% - 6px)', display: 'flex', justifyContent: 'space-between' }} title="Active vehicles">
                             <div style={{ color: '#42a5f5', fontWeight: 700 }}>{loadingNetworkStats ? '...' : networkStats && networkStats.vehicleStatus && typeof networkStats.vehicleStatus.active !== 'undefined' ? networkStats.vehicleStatus.active : 0}</div>
                             <div style={{ fontSize: 12, color: '#666' }}>Active</div>
@@ -2470,16 +2500,12 @@ function ClientDashboard() {
               {/* Second row of network stats cards */}
               {showClientPages && (
                 <div style={{ display: 'flex', width: '100%', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
-                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: 'linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)', borderRadius: 12, boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #10b981', transition: 'all 0.3s ease'}}>
+                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: '#10b981', borderRadius: 0, boxShadow: '0 6px 24px rgba(16, 185, 129, 0.20)', border: '1.5px solid #059669'}}>
                     <div className="stat-card-content">
-                      <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16}}>
-                        <div style={{width: 48, height: 48, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                          <i className="ri-error-warning-line" style={{fontSize: 24, color: '#10b981'}}></i>
-                        </div>
-                      </div>
-                      <div style={{marginBottom: 12}}>
-                        <div style={{fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px'}}>Total Challans Fetched</div>
-                        <div style={{fontSize: 32, fontWeight: 700, color: '#1e293b', lineHeight: 1}}>
+                      <i className="ri-error-warning-line"></i>
+                      <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
+                        <div>Total Challans Fetched</div>
+                        <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
                           {loadingNetworkStats ? '...' : networkStatsError ? '0' : (networkStats && networkStats.totalChallans != null ? networkStats.totalChallans : '0')}
                         </div>
                       </div>
@@ -2499,16 +2525,12 @@ function ClientDashboard() {
                       </div>
                     </div>
                   </div>
-                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: 'linear-gradient(135deg, #fdf2f8 0%, #ffffff 100%)', borderRadius: 12, boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #ec4899', transition: 'all 0.3s ease'}}>
+                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: '#ec4899', borderRadius: 0, boxShadow: '0 6px 24px rgba(236, 72, 153, 0.20)', border: '1.5px solid #db2777'}}>
                     <div className="stat-card-content">
-                      <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16}}>
-                        <div style={{width: 48, height: 48, borderRadius: '50%', background: 'rgba(236, 72, 153, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                          <i className="ri-alarm-warning-line" style={{fontSize: 24, color: '#ec4899'}}></i>
-                        </div>
-                      </div>
-                      <div style={{marginBottom: 12}}>
-                        <div style={{fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px'}}>Clients Renewals</div>
-                        <div style={{fontSize: 32, fontWeight: 700, color: '#1e293b', lineHeight: 1}}>
+                      <i className="ri-alarm-warning-line"></i>
+                      <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
+                        <div>Clients Renewals</div>
+                        <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
                           {loadingNetworkStats ? '...' : networkStatsError ? '0' : (networkStats && networkStats.totalRenewals != null ? networkStats.totalRenewals : '0')}
                         </div>
                       </div>
@@ -2556,30 +2578,26 @@ function ClientDashboard() {
                       </div>
                     </div>
                   </div>
-                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: 'linear-gradient(135deg, #fffbeb 0%, #ffffff 100%)', borderRadius: 12, boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #f59e0b', transition: 'all 0.3s ease'}}>
+                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: '#f97316', borderRadius: 0, boxShadow: '0 6px 24px rgba(249, 115, 22, 0.20)', border: '1.5px solid #ea580c'}}>
                     <div className="stat-card-content">
-                      <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16}}>
-                        <div style={{width: 48, height: 48, borderRadius: '50%', background: 'rgba(245, 158, 11, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                          <i className="ri-money-rupee-circle-line" style={{fontSize: 24, color: '#f59e0b'}}></i>
-                        </div>
-                      </div>
-                      <div style={{marginBottom: 12}}>
-                        <div style={{fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px'}}>Total Challan Amount</div>
-                        <div style={{fontSize: 32, fontWeight: 700, color: '#1e293b', lineHeight: 1}}>
-                          {loadingNetworkStats ? '...' : networkStatsError ? '₹0' : (networkStats && networkStats.challanAmount && networkStats.challanAmount.total != null ? `₹${formatBriefAmount(networkStats.challanAmount.total)}` : '₹0')}
+                      <i className="ri-money-rupee-circle-line"></i>
+                      <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
+                        <div>Total Challan Amount</div>
+                        <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
+                          {loadingNetworkStats ? '...' : networkStatsError ? '₹0' : (networkStats?.challanAmount?.total != null ? `₹${formatBriefAmount(networkStats.challanAmount.total)}` : '₹0')}
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8 }}>
                         <div className={`status-badge`} style={{ cursor: 'default', width: 'calc(50% - 6px)', display: 'flex', justifyContent: 'space-between' }} title="Pending challan amount">
                           <div style={{ fontSize: 12, color: '#666' }}>Pending:</div>
                           <div style={{ color: '#e74c3c', fontWeight: 700, fontSize: 14 }}>
-                            {loadingNetworkStats ? '...' : networkStats && networkStats.challanAmount && typeof networkStats.challanAmount.pending !== 'undefined' ? `₹${formatBriefAmount(networkStats.challanAmount.pending)}` : '₹0'}
+                            {loadingNetworkStats ? '...' : (networkStats?.challanAmount?.pending != null ? `₹${formatBriefAmount(networkStats.challanAmount.pending)}` : '₹0')}
                           </div>
                         </div>
                         <div className={`status-badge`} style={{ cursor: 'default', width: 'calc(50% - 6px)', display: 'flex', justifyContent: 'space-between' }} title="Paid challan amount">
                           <div style={{ fontSize: 12, color: '#666' }}>Paid:</div>
                           <div style={{ color: '#4caf50', fontWeight: 700, fontSize: 14 }}>
-                            {loadingNetworkStats ? '...' : networkStats && networkStats.challanAmount && typeof networkStats.challanAmount.paid !== 'undefined' ? `₹${formatBriefAmount(networkStats.challanAmount.paid)}` : '₹0'}
+                            {loadingNetworkStats ? '...' : (networkStats?.challanAmount?.paid != null ? `₹${formatBriefAmount(networkStats.challanAmount.paid)}` : '₹0')}
                           </div>
                         </div>
                       </div>
@@ -2593,16 +2611,13 @@ function ClientDashboard() {
             {/* Second row: 2 cards as before, 50% width each */}
             {!showClientPages && (
             <div className="dashboard-stats" style={{ display: 'flex', width: '100%', gap: 16, marginTop: 16 }}>
-              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320, background: 'linear-gradient(135deg, #fdf2f8 0%, #ffffff 100%)', borderRadius: 12, boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #ec4899', transition: 'all 0.3s ease'}}>
+              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320, background: '#ec4899', borderRadius: 0, boxShadow: '0 6px 24px rgba(236, 72, 153, 0.20)', border: '1.5px solid #db2777'}}>
                 <div className="stat-card-content">
-                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16}}>
-                    <div style={{width: 48, height: 48, borderRadius: '50%', background: 'rgba(236, 72, 153, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                      <i className="ri-alarm-warning-line" style={{fontSize: 24, color: '#ec4899'}}></i>
-                    </div>
-                  </div>
-                  <div style={{marginBottom: 12}}>
-                    <div style={{fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px'}}>Vehicle Renewals</div>
-                    <div style={{fontSize: 32, fontWeight: 700, color: '#1e293b', lineHeight: 1}}>
+                  <i className="ri-alarm-warning-line"></i>
+                  <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
+                    <div>Vehicle Renewals</div>
+                    {/* <span style={{ color: '#666', fontSize: 12, float: 'left' }}>Expired</span> */}
+                    <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
                       {loadingVehicleRto ? '...' : vehicleRenewalsTotal}
                     </div>
                   </div>
@@ -2702,20 +2717,16 @@ function ClientDashboard() {
                   ) : null}
                 </div>
               </div>
-              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320, background: 'linear-gradient(135deg, #fffbeb 0%, #ffffff 100%)', borderRadius: 12, boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)', borderLeft: '4px solid #f59e0b', transition: 'all 0.3s ease'}}>
+              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320, background: '#f97316', borderRadius: 0, boxShadow: '0 6px 24px rgba(249, 115, 22, 0.20)', border: '1.5px solid #ea580c'}}>
                 <div className="stat-card-content">
-                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16}}>
-                    <div style={{width: 48, height: 48, borderRadius: '50%', background: 'rgba(245, 158, 11, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                      <i className="ri-money-rupee-circle-line" style={{fontSize: 24, color: '#f59e0b'}}></i>
-                    </div>
-                  </div>
-                  <div style={{marginBottom: 12}}>
-                    <div style={{fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px'}}>Challan Amount</div>
-                    <div style={{fontSize: 32, fontWeight: 700, color: '#1e293b', lineHeight: 1}}>
+                  <i className="ri-money-rupee-circle-line"></i>
+                  <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
+                    <div>Challan Amount</div>
+                    <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
                       {loadingVehicleChallan ? '...' : `₹${formatBriefAmount(totalFineAmount)}`}
                     </div>
                   </div>
-                  <div className="stat-value" style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 12 }}>
+                  <div className="stat-value" style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 12, color: '#f0f0f0' }}>
                     {loadingVehicleChallan
                       ? '...'
                       : <React.Fragment>
@@ -3290,30 +3301,31 @@ function ClientDashboard() {
             <LazyVehicleFastag />
           </Suspense>
         )}
-      {/* Shared quick actions bar available on every page except Vehicle Challans */}
-      {!(selectedChallan || selectedRtoData) && activeMenu !== "Vehicle Challans" && (
+      {/* Shared quick actions bar available on every page except Vehicle Challans and when user has clients */}
+      {!(selectedChallan || selectedRtoData) && activeMenu !== "Vehicle Challans" && !showClientPages && (
         <div className="main-quick-actions-wrapper" style={{ padding: '0 30px 30px 30px' }}>
           <QuickActions
             title="Quick Actions"
             sticky={true}
-            onAddVehicle={() => setActiveMenu('Register Vehicle')}
+            onAddVehicle={() => checkPermissionAndNavigate('Register Vehicle')}
             onBulkUpload={() => {
-              setActiveMenu('Register Vehicle');
-              setTimeout(() => {
-                try {
-                  const el = document.querySelector('input[type=file][accept*=".xlsx"]');
-                  if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); try { el.focus(); } catch(e){} }
-                } catch (e) {}
-                try {
-                  const card = document.querySelector('.upload-card');
-                  if (card) {
-                    card.classList.remove('highlight-upload');
-                    void card.offsetWidth;
-                    card.classList.add('highlight-upload');
-                    setTimeout(() => card.classList.remove('highlight-upload'), 2600);
-                  }
-                } catch (e) {}
-              }, 300);
+              if (checkPermissionAndNavigate('Register Vehicle')) {
+                setTimeout(() => {
+                  try {
+                    const el = document.querySelector('input[type=file][accept*=".xlsx"]');
+                    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); try { el.focus(); } catch(e){} }
+                  } catch (e) {}
+                  try {
+                    const card = document.querySelector('.upload-card');
+                    if (card) {
+                      card.classList.remove('highlight-upload');
+                      void card.offsetWidth;
+                      card.classList.add('highlight-upload');
+                      setTimeout(() => card.classList.remove('highlight-upload'), 2600);
+                    }
+                  } catch (e) {}
+                }, 300);
+              }
             }}
             onPay={() => handleMenuClick('Pay Challans')}
             onReports={() => setReportsModal({ open: true })}
@@ -3534,6 +3546,18 @@ function ClientDashboard() {
           </table>
         </RightSidebar>
       )}
+      
+      {/* Permission Denied Modal */}
+      <CustomModal 
+        open={permissionDeniedModal.open} 
+        title="Permission Denied" 
+        description={permissionDeniedModal.message} 
+        icon="ri-error-warning-line" 
+        onConfirm={() => setPermissionDeniedModal({ open: false, message: '' })} 
+        confirmText="OK" 
+        onCancel={() => setPermissionDeniedModal({ open: false, message: '' })}
+        cancelText=""
+      />
     </div>
     </React.Fragment>
   );
