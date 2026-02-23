@@ -51,7 +51,7 @@ export function ChallanTableV2({
   const [visibleCount, setVisibleCount] = React.useState(DEFAULT_LIMIT);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [maxFineFilter, setMaxFineFilter] = React.useState(null);
-  const [challanTypeFilter, setChallanTypeFilter] = React.useState({ regCourt: false, virtualCourt: false });
+  const [challanTypeFilter, setChallanTypeFilter] = React.useState({ online: false, regCourt: false, virtualCourt: false });
   // Status filter: Pending / Disposed checkboxes (both unchecked = show all)
   const [statusFilter, setStatusFilter] = React.useState({ pending: false, disposed: false });
   const [showChallanTypeDropdown, setShowChallanTypeDropdown] = React.useState(false);
@@ -120,7 +120,7 @@ export function ChallanTableV2({
       }, [filteredData]);
     };
 
-    const { regCourt, virtualCourt } = challanTypeFilter;
+    const { online, regCourt, virtualCourt } = challanTypeFilter;
     const { pending, disposed } = statusFilter;
 
     let result = data.filter((c) => {
@@ -145,21 +145,33 @@ export function ChallanTableV2({
         if (!Number.isNaN(fine) && fine > maxFineFilter) return false;
       }
 
-      if (regCourt || virtualCourt) {
+      if (online || regCourt || virtualCourt) {
         const regRaw = c.sent_to_reg_court ?? c.sent_to_court_on ?? c.sent_to_court;
         const virtRaw = c.sent_to_virtual_court ?? c.sent_to_virtual;
 
         const regFlag = normalizeCourtFlag(regRaw);
         const virtFlag = normalizeCourtFlag(virtRaw);
 
-        let pass = true;
-        if (regCourt && !virtualCourt) {
-          pass = regFlag === true;
-        } else if (!regCourt && virtualCourt) {
-          pass = virtFlag === true;
-        } else if (regCourt && virtualCourt) {
-          // Show only records where BOTH are yes
-          pass = regFlag === true && virtFlag === true;
+        let pass = false;
+        
+        // Online: not sent to any court
+        if (online && regFlag !== true && virtFlag !== true) {
+          pass = true;
+        }
+        
+        // Registered court only
+        if (regCourt && regFlag === true && !virtualCourt) {
+          pass = true;
+        }
+        
+        // Virtual court only
+        if (virtualCourt && virtFlag === true && !regCourt) {
+          pass = true;
+        }
+        
+        // Both registered and virtual
+        if (regCourt && virtualCourt && regFlag === true && virtFlag === true) {
+          pass = true;
         }
 
         if (!pass) return false;
@@ -528,10 +540,14 @@ export function ChallanTableV2({
               }}
               onClick={() => setShowChallanTypeDropdown((v) => !v)}
             >
-              {(!challanTypeFilter.regCourt &&
+              {(!challanTypeFilter.online &&
+              !challanTypeFilter.regCourt &&
               !challanTypeFilter.virtualCourt)
                 ? "Select challan type"
                 : [
+                    challanTypeFilter.online
+                      ? "Online"
+                      : null,
                     challanTypeFilter.regCourt
                       ? "Registered court"
                       : null,
@@ -541,7 +557,8 @@ export function ChallanTableV2({
                   ]
                     .filter(Boolean)
                     .join(", ")}
-              {(challanTypeFilter.regCourt ||
+              {(challanTypeFilter.online ||
+                challanTypeFilter.regCourt ||
                 challanTypeFilter.virtualCourt) && (
                 <span
                   style={{
@@ -554,7 +571,8 @@ export function ChallanTableV2({
                     fontWeight: 600,
                   }}
                 >
-                  {Number(!!challanTypeFilter.regCourt) +
+                  {Number(!!challanTypeFilter.online) +
+                    Number(!!challanTypeFilter.regCourt) +
                     Number(!!challanTypeFilter.virtualCourt)}
                 </span>
               )}
@@ -584,6 +602,27 @@ export function ChallanTableV2({
                   padding: 8,
                 }}
               >
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "4px 0",
+                    cursor: "pointer",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={challanTypeFilter.online}
+                    onChange={(e) =>
+                      setChallanTypeFilter((prev) => ({
+                        ...prev,
+                        online: e.target.checked,
+                      }))
+                    }
+                  />
+                  Online
+                </label>
                 <label
                   style={{
                     display: "flex",
@@ -626,7 +665,8 @@ export function ChallanTableV2({
                   />
                   Virtual court
                 </label>
-                {(challanTypeFilter.regCourt ||
+                {(challanTypeFilter.online ||
+                  challanTypeFilter.regCourt ||
                   challanTypeFilter.virtualCourt) && (
                   <div
                     style={{
@@ -649,6 +689,7 @@ export function ChallanTableV2({
                       }}
                       onClick={() =>
                         setChallanTypeFilter({
+                          online: false,
                           regCourt: false,
                           virtualCourt: false,
                         })

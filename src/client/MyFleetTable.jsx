@@ -75,6 +75,7 @@ const parseFlexibleDate = (raw) => {
 const handleDownload = (rows) => {
   const exportData = rows.map(row => ({
     'Vehicle Number': row.vehicle_number,
+    'Body Type': row.rc_body_type_desc || row.body_type_desc || row.body_type || '-',
     'Registration Date': row.rc_regn_dt || row.registration_date || row.registered_at,
     'Insurance Upto': typeof (row.rc_insurance_upto || row.insurance_exp) === 'object' ? (row.rc_insurance_upto || row.insurance_exp).value : (row.rc_insurance_upto || row.insurance_exp),
     'Road Tax Upto': typeof (row.rc_tax_upto || row.road_tax_exp) === 'object' ? (row.rc_tax_upto || row.road_tax_exp).value : (row.rc_tax_upto || row.road_tax_exp),
@@ -350,6 +351,7 @@ export default function MyFleetTable({
             fitness_exp: r.fitness_exp || r.fitnessUpto || r.rc_fit_upto || '-',
             pollution_exp: r.pollution_exp || r.pollutionUpto || r.rc_pucc_upto || '-',
             registered_at: r.registered_at || r.registeredAt || r.registration_date || r.created_at || r.createdAt || null,
+            rc_body_type_desc: r.rc_body_type_desc || r.body_type_desc || r.body_type || r._raw?.rto_data?.VehicleDetails?.rc_body_type_desc || r.rto_data?.VehicleDetails?.rc_body_type_desc || '-',
             _raw: r
           }));
           console.log('✅ Normalized vehicles:', normalized?.length, 'items');
@@ -1203,6 +1205,7 @@ export default function MyFleetTable({
             <tr>
               <th>#</th>
               <th>Vehicle No.</th>
+              <th>Body Type</th>
               <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('rc_regn_dt')}>
                 Registration Date
                 <span style={{ fontSize: 13, marginLeft: 2 }}>{sortConfig.key === 'rc_regn_dt' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
@@ -1271,7 +1274,7 @@ export default function MyFleetTable({
               <th>View</th>
             </tr>
             <tr>
-              <th colSpan={9}></th>
+              <th colSpan={10}></th>
               <th
                 className="challan-sub-header"
                 style={{ color: '#e74c3c', cursor: 'pointer', userSelect: 'none' }}
@@ -1293,11 +1296,11 @@ export default function MyFleetTable({
           </thead>
           <tbody>
             {actualLoading ? (
-              <tr><td colSpan={10}>Loading...</td></tr>
+              <tr><td colSpan={11}>Loading...</td></tr>
             ) : showClientPages && !selectedClientId ? (
-              <tr><td colSpan={10} style={{ textAlign: 'center', padding: 24, color: '#666' }}>Please select a client from the dropdown above to view their vehicles.</td></tr>
+              <tr><td colSpan={11} style={{ textAlign: 'center', padding: 24, color: '#666' }}>Please select a client from the dropdown above to view their vehicles.</td></tr>
             ) : sortedAll.length === 0 ? (
-              <tr><td colSpan={10}>No data found.</td></tr>
+              <tr><td colSpan={11}>No data found.</td></tr>
             ) : (
               visibleRows.map((row, idx) => (
                 <tr key={row.vehicle_id || idx}>
@@ -1316,6 +1319,7 @@ export default function MyFleetTable({
                     {row.vehicle_number || '-'}
                     {isAllFit(row) && <BlueTickIcon />}
                   </td>
+                  <td>{row.rc_body_type_desc || row.body_type_desc || row.body_type || row._raw?.rto_data?.VehicleDetails?.rc_body_type_desc || row.rto_data?.VehicleDetails?.rc_body_type_desc || '-'}</td>
                   <td>{(row.rc_regn_dt || row.registration_date || row.registered_at) ?? 'N/A'}</td>
                   <td
                     style={expiredTypes.includes('insurance') ? { background: '#e3f2fd', fontWeight: 600 } : {}}

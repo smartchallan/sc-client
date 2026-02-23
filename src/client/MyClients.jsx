@@ -11,6 +11,7 @@ export default function MyClients() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [stateFilter, setStateFilter] = useState('all');
   const [cityFilter, setCityFilter] = useState('all');
+  const [dealerFilter, setDealerFilter] = useState('all');
   const [changePasswordConfirmModal, setChangePasswordConfirmModal] = useState({ open: false, client: null });
   const [changePasswordModal, setChangePasswordModal] = useState({ open: false, client: null });
   const [newPassword, setNewPassword] = useState('');
@@ -136,6 +137,14 @@ export default function MyClients() {
     });
     return Array.from(cities).sort();
   }, [clients]);
+
+  const uniqueDealers = useMemo(() => {
+    const dealers = new Set();
+    clients.forEach(c => {
+      if (c.dealerName) dealers.add(c.dealerName);
+    });
+    return Array.from(dealers).sort();
+  }, [clients]);
   const filtered = clients.filter(c => {
     // Search filter
     if (search) {
@@ -165,6 +174,11 @@ export default function MyClients() {
     if (cityFilter !== 'all') {
       const city = (c.user_meta || c.userMeta)?.city;
       if (city !== cityFilter) return false;
+    }
+    
+    // Dealer filter
+    if (dealerFilter !== 'all') {
+      if (c.dealerName !== dealerFilter) return false;
     }
     
     return true;
@@ -409,13 +423,33 @@ export default function MyClients() {
               ))}
             </select>
             
-            {(search || statusFilter !== 'all' || stateFilter !== 'all' || cityFilter !== 'all') && (
+            <select
+              value={dealerFilter}
+              onChange={e => setDealerFilter(e.target.value)}
+              style={{
+                padding: '10px 14px',
+                borderRadius: 6,
+                border: '1.5px solid #cdd',
+                fontSize: 14,
+                background: '#fff',
+                cursor: 'pointer',
+                minWidth: 160
+              }}
+            >
+              <option value="all">All Dealers</option>
+              {uniqueDealers.map(dealer => (
+                <option key={dealer} value={dealer}>{dealer}</option>
+              ))}
+            </select>
+            
+            {(search || statusFilter !== 'all' || stateFilter !== 'all' || cityFilter !== 'all' || dealerFilter !== 'all') && (
               <button
                 onClick={() => {
                   setSearch('');
                   setStatusFilter('all');
                   setStateFilter('all');
                   setCityFilter('all');
+                  setDealerFilter('all');
                 }}
                 style={{
                   padding: '10px 16px',

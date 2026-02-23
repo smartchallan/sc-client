@@ -645,7 +645,11 @@ function ClientDashboard() {
       const isParentAccount = (parentVal == null) || (parentVal == 0);
       // Use hasClients flag from login response - this determines if user is in client management mode
       const hasClientsFlag = !!(userObj.hasClients);
-      showClientPages = !!(hasClientsFlag || isParentAccount);
+      // If hasClients is false, check add_clients permission
+      const userOptions = userObj?.user_options || userObj?.user?.user_options || {};
+      const hasAddClientsPermission = userOptions.add_clients === "1" || userOptions.add_clients === 1;
+      // Final decision to show client management menu
+      showClientPages = !!(hasClientsFlag || hasAddClientsPermission || isParentAccount);
     }
   } catch {}
 
@@ -764,7 +768,7 @@ function ClientDashboard() {
   const [loadingVehicleSummary, setLoadingVehicleSummary] = useState(false);
   const [fleetLimit, setFleetLimit] = useState(100); // Start with 100 for better initial UX
   const [fleetOffset, setFleetOffset] = useState(0);
-  const [fleetAll, setFleetAll] = useState(false);
+  const [fleetAll, setFleetAll] = useState(true); // Load all vehicles by default so users can search through complete fleet
   // Read current logged-in user from localStorage when component mounts.
   // State for challan filter in My Fleet
   const [fleetChallanFilter, setFleetChallanFilter] = useState('all');
@@ -887,6 +891,7 @@ function ClientDashboard() {
           }
         }
         const normalized = (arr || []).map(r => ({
+          ...r, // Keep all fields from API response
           vehicle_id: r.vehicle_id || r.id || r._id || r.vehicleId || null,
           vehicle_number: r.vehicle_number || r.rc_regn_no || r.regn_no || r.vehicle_no || r.registration_number || r.vh_regn_no || r.reg_no || r.regn || '-',
           rc_regn_dt: r.rc_regn_dt || r.registration_date || r.registered_at || '-',
@@ -1844,17 +1849,28 @@ function ClientDashboard() {
       if (/\d{4}-\d{2}-\d{2}/.test(dateStr)) return new Date(dateStr);
       return new Date(dateStr);
     };
-    // Only count expired (date in the past)
+    // Count expired (date has passed - less than or equal to current date)
     const isExpired = (dateStr) => {
+      // Handle object format like { value: "date", status: "fit" }
+      if (dateStr && typeof dateStr === 'object' && dateStr.value) {
+        dateStr = dateStr.value;
+      }
       const d = parseDateStr(dateStr);
       if (!d || isNaN(d.getTime())) return false;
-      const diffDays = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
-      return diffDays < 0;
+      // Compare dates only (strip time component)
+      const expiryDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const currentDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      return expiryDate <= currentDate;
     };
     vehicleRtoData.forEach(v => {
       if (isExpired(v.insurance_exp || v.insuranceUpto || v.rc_insurance_upto)) expiryCounts.insurance++;
       if (isExpired(v.road_tax_exp || v.roadTaxExp || v.rc_tax_upto)) expiryCounts.roadTax++;
-      if (isExpired(v.fitness_exp || v.fitnessUpto || v.rc_fit_upto)) expiryCounts.fitness++;
+      if (isExpired(v.fitness_exp || v.fitnessUpto || v.rc_fit_upto)) {
+        const vehicleNo = v.rc_regn_no || v.vehicle_number || v.registration_number || v.regn_no || v.reg_no || 'Unknown';
+        const fitnessDate = v.fitness_exp || v.fitnessUpto || v.rc_fit_upto;
+        console.log(`Fitness expired for vehicle: ${vehicleNo}, Expiry date: ${fitnessDate}`);
+        expiryCounts.fitness++;
+      }
       if (isExpired(v.pollution_exp || v.pollutionUpto || v.rc_pucc_upto)) expiryCounts.pollution++;
       if (isExpired(v.rc_np_upto)) expiryCounts.nationalPermit++;
       if (isExpired(v.rc_permit_valid_upto || (v.temp_permit && v.temp_permit.rc_permit_valid_upto))) expiryCounts.permitValid++;
