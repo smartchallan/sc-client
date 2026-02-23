@@ -904,6 +904,16 @@ function ClientDashboard() {
           registered_at: r.registered_at || r.registeredAt || r.registration_date || r.created_at || r.createdAt || null,
           _raw: r
         }));
+        // Debug: log first vehicle to check body type data
+        if (normalized.length > 0) {
+          console.log('First normalized vehicle data:', normalized[0]);
+          console.log('Body type fields:', {
+            rc_body_type_desc: normalized[0].rc_body_type_desc,
+            body_type_desc: normalized[0].body_type_desc,
+            body_type: normalized[0].body_type,
+            raw_body_type: normalized[0]._raw?.body_type
+          });
+        }
         // Always replace data (accumulative loading pattern with offset=0)
         setVehicleSummary(normalized);
         setLoadingVehicleSummary(false);
@@ -2345,7 +2355,7 @@ function ClientDashboard() {
                   <i className="ri-error-warning-line"></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
                     <div>Challans Fetched</div>
-                    <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6 }}>
+                    <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
                       {loadingVehicleChallan ? '...' : dashboardTotalChallans}
                     </div>
                   </div>
@@ -2594,7 +2604,7 @@ function ClientDashboard() {
                       </div>
                     </div>
                   </div>
-                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: '#f97316', borderRadius: 0, boxShadow: '0 6px 24px rgba(249, 115, 22, 0.20)', border: '1.5px solid #ea580c'}}>
+                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: '#eab308', borderRadius: 0, boxShadow: '0 6px 24px rgba(234, 179, 8, 0.20)', border: '1.5px solid #ca8a04'}}>
                     <div className="stat-card-content">
                       <i className="ri-money-rupee-circle-line"></i>
                       <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
@@ -2733,7 +2743,7 @@ function ClientDashboard() {
                   ) : null}
                 </div>
               </div>
-              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320, background: '#f97316', borderRadius: 0, boxShadow: '0 6px 24px rgba(249, 115, 22, 0.20)', border: '1.5px solid #ea580c'}}>
+              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320, background: '#eab308', borderRadius: 0, boxShadow: '0 6px 24px rgba(234, 179, 8, 0.20)', border: '1.5px solid #ca8a04'}}>
                 <div className="stat-card-content">
                   <i className="ri-money-rupee-circle-line"></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
