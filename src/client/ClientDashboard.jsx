@@ -737,6 +737,35 @@ function ClientDashboard() {
   }, [upcomingRenewalRange]);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [selectedVehicleReport, setSelectedVehicleReport] = useState(null);
+  
+  // Theme toggle state (default: false for blue theme, true for metallic theme)
+  const [isMetallicTheme, setIsMetallicTheme] = useState(() => {
+    const saved = localStorage.getItem('sc_theme');
+    return saved === 'metallic';
+  });
+  
+  // Apply/remove theme class on body element
+  useEffect(() => {
+    if (isMetallicTheme) {
+      document.body.classList.add('theme-metallic');
+      localStorage.setItem('sc_theme', 'metallic');
+    } else {
+      document.body.classList.remove('theme-metallic');
+      localStorage.setItem('sc_theme', 'blue');
+    }
+  }, [isMetallicTheme]);
+  
+  // Cleanup theme class on unmount
+  useEffect(() => {
+    return () => {
+      document.body.classList.remove('theme-metallic');
+    };
+  }, []);
+  
+  // Toggle theme function
+  const toggleTheme = () => {
+    setIsMetallicTheme(prev => !prev);
+  };
   // const [vehicleChallanData, setVehicleChallanData] = useState(null);
   // const [sidebarOpen, setSidebarOpen] = useState(false);
   // Print filteredFleet table
@@ -2187,6 +2216,45 @@ function ClientDashboard() {
             </div>
           </div>
           <div className="header-right" style={{display:'flex',alignItems:'center',gap:18,cursor:'pointer'}} onClick={() => setActiveMenu('Profile')} role="button" aria-label="Open profile">
+            {/* Theme Toggle Button */}
+            <button 
+              className="theme-toggle-btn" 
+              title={isMetallicTheme ? "Switch to Blue Theme" : "Switch to Metallic Theme"} 
+              onClick={(e)=>{ e.stopPropagation(); toggleTheme(); }} 
+              style={{
+                background: isMetallicTheme 
+                  ? 'linear-gradient(145deg, #6fa8dc 0%, #4682b4 50%, #3a6a94 100%)' 
+                  : 'linear-gradient(135deg, #42a5f5 0%, #478ed1 100%)',
+                border: isMetallicTheme ? '2px solid #3a6a94' : '2px solid #1976d2',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                color: '#fff',
+                fontSize: 18,
+                width: 40,
+                height: 40,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: isMetallicTheme 
+                  ? '0 4px 8px rgba(0, 0, 0, 0.15), 0 -2px 6px rgba(255, 255, 255, 0.6) inset'
+                  : '0 4px 8px rgba(66, 165, 245, 0.3)',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = isMetallicTheme
+                  ? '0 8px 16px rgba(70, 130, 180, 0.4), 0 -4px 8px rgba(255, 255, 255, 0.4) inset'
+                  : '0 6px 12px rgba(66, 165, 245, 0.4)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = isMetallicTheme
+                  ? '0 4px 8px rgba(0, 0, 0, 0.15), 0 -2px 6px rgba(255, 255, 255, 0.6) inset'
+                  : '0 4px 8px rgba(66, 165, 245, 0.3)';
+              }}
+            >
+              <i className={isMetallicTheme ? "ri-palette-line" : "ri-contrast-2-line"}></i>
+            </button>
             <button className="header-more" title="Hide / Show sidebar" onClick={(e)=>{ e.stopPropagation(); setSidebarOpen(s => !s); }} style={{background:'transparent',border:'none',cursor:'pointer',color:'#333',fontSize:20}}>
               <i className="ri-more-2-fill" />
             </button>

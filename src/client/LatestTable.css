@@ -112,9 +112,9 @@ body .latest-table .cell-ellipsis {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #1565c0;
-  border: 2px solid #e3f2fd;
-  box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.18);
+  background: linear-gradient(135deg, #42a5f5 0%, #478ed1 100%);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.18), 0 2px 6px rgba(60, 120, 200, 0.16);
   cursor: pointer;
 }
 
@@ -122,9 +122,9 @@ body .latest-table .cell-ellipsis {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #1565c0;
-  border: 2px solid #e3f2fd;
-  box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.18);
+  background: linear-gradient(135deg, #42a5f5 0%, #478ed1 100%);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.18), 0 2px 6px rgba(60, 120, 200, 0.16);
   cursor: pointer;
 }
 
@@ -137,7 +137,7 @@ body .latest-table .cell-ellipsis {
 .fine-filter-value {
   font-size: 13px;
   font-weight: 700;
-  color: #1565c0;
+  color: #42a5f5;
   min-width: 70px;
 }
 

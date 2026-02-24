@@ -4,8 +4,8 @@
   background: #fff6f6;
 }
 .input-valid {
-  border: 2px solid #43e97b !important;
-  background: #f6fff8;
+  border: 2px solid #4682b4 !important;
+  background: #f0f8ff;
 }
 /* Ensure all .form-row in admin forms display 2 fields per row */
 .form-row {
@@ -49,15 +49,16 @@
 .page-title {
   font-size: 2.2rem;
   font-weight: 800;
-  color: #42a5f5;
-  background: none;
-  -webkit-background-clip: initial;
-  -webkit-text-fill-color: initial;
-  background-clip: initial;
+  color: #5a5a5a;
+  background: linear-gradient(145deg, #5a5a5a 0%, #8a8a8a 50%, #5a5a5a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin-bottom: 18px;
   letter-spacing: 0.5px;
-  text-shadow: none;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.3);
   line-height: 1.1;
+  position: relative;
 }
 @media (max-width: 900px) {
   .page-title {
@@ -67,12 +68,14 @@
 }
 /* Modern Card for Forms and Sections */
 .modern-form-card {
-  background: linear-gradient(120deg, #fafdff 60%, #e3f0ff 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #e8e8e8 25%, #d0d0d0 50%, #e8e8e8 75%, #ffffff 100%);
   border-radius: 18px;
-  box-shadow: 0 6px 24px rgba(60,120,200,0.08);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 -4px 8px rgba(255, 255, 255, 0.7) inset, 0 12px 24px rgba(0, 0, 0, 0.15);
   padding: 32px 28px 28px 28px;
   margin-bottom: 32px;
-  border: 1.5px solid #e3f0ff;
+  border: 2px solid #d4d4d4;
+  position: relative;
+  overflow: hidden;
 }
 
 @media (max-width: 900px) {
@@ -87,32 +90,38 @@
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  background: linear-gradient(120deg, #fafdff 60%, #e3f0ff 100%);
+  background: linear-gradient(145deg, #f0f0f0 0%, #c0c0c0 50%, #a8a8a8 100%);
   border-radius: 16px;
-  box-shadow: 0 4px 18px rgba(60,120,200,0.08);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 -4px 8px rgba(255, 255, 255, 0.7) inset, 0 12px 24px rgba(0, 0, 0, 0.15);
   overflow: hidden;
   margin-bottom: 28px;
-  border: 1.5px solid #e3f0ff;
+  border: 2px solid #d4d4d4;
 }
 .vehicle-challan-table th {
-  background: #42a5f5;
+  background: linear-gradient(145deg, #7a7a7a 0%, #5a5a5a 50%, #3a3a3a 100%);
   color: #fff;
   font-weight: 700;
   font-size: 15px;
   padding: 14px 12px;
-  border-bottom: 2.5px solid #43e97b;
+  border-bottom: 3px solid #4682b4;
   letter-spacing: 0.1px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) inset;
 }
 .vehicle-challan-table td {
-  background: #fafdff;
-  color: #222;
+  background: linear-gradient(180deg, #f5f5f5 0%, #e8e8e8 100%);
+  color: #2c2c2c;
   font-size: 14px;
   padding: 13px 12px;
-  border-bottom: 1.5px solid #e3f0ff;
-  transition: background 0.18s;
+  border-bottom: 1px solid #a0a0a0;
+  transition: all 0.2s;
 }
 .vehicle-challan-table tbody tr:hover {
-  background: #e3f0ff;
+  background: linear-gradient(135deg, #ffffff 0%, #e8e8e8 25%, #d0d0d0 50%, #e8e8e8 75%, #ffffff 100%);
+}
+.vehicle-challan-table tbody tr:hover td {
+  transform: translateX(2px);
+  box-shadow: -2px 0 8px rgba(70, 130, 180, 0.2);
 }
 .vehicle-challan-table tr:last-child td {
   border-bottom: none;
@@ -134,34 +143,41 @@
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  background: linear-gradient(120deg, #fafdff 60%, #e3f0ff 100%);
+  background: linear-gradient(145deg, #f0f0f0 0%, #c0c0c0 50%, #a8a8a8 100%);
   border-radius: 16px;
-  box-shadow: 0 4px 18px rgba(60,120,200,0.08);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 -4px 8px rgba(255, 255, 255, 0.7) inset, 0 12px 24px rgba(0, 0, 0, 0.15);
   overflow: hidden;
   margin-bottom: 28px;
+  border: 2px solid #d4d4d4;
 }
 
 .vehicle-challan-table th {
-  background: #42a5f5;
+  background: linear-gradient(145deg, #7a7a7a 0%, #5a5a5a 50%, #3a3a3a 100%);
   color: #fff;
   font-weight: 700;
   font-size: 15px;
   padding: 14px 12px;
-  border-bottom: 2.5px solid #43e97b;
+  border-bottom: 3px solid #4682b4;
   letter-spacing: 0.1px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) inset;
 }
 
 .vehicle-challan-table td {
-  background: #fafdff;
-  color: #222;
+  background: linear-gradient(180deg, #f5f5f5 0%, #e8e8e8 100%);
+  color: #2c2c2c;
   font-size: 14px;
   padding: 13px 12px;
-  border-bottom: 1.5px solid #e3f0ff;
-  transition: background 0.18s;
+  border-bottom: 1px solid #a0a0a0;
+  transition: all 0.2s;
 }
 
 .vehicle-challan-table tbody tr:hover {
-  background: #e3f0ff;
+  background: linear-gradient(135deg, #ffffff 0%, #e8e8e8 25%, #d0d0d0 50%, #e8e8e8 75%, #ffffff 100%);
+}
+.vehicle-challan-table tbody tr:hover td {
+  transform: translateX(2px);
+  box-shadow: -2px 0 8px rgba(70, 130, 180, 0.2);
 }
 
 .vehicle-challan-table tr:last-child td {
@@ -415,10 +431,10 @@ body {
 }
 
 .nav-subitem.active {
-  background: linear-gradient(90deg, #66bb6a 0%, #43e97b 100%);
+  background: linear-gradient(145deg, #6fa8dc 0%, #4682b4 100%);
   color: #ffffff;
   transform: translateX(2px);
-  box-shadow: 0 4px 14px rgba(102,187,106,0.18);
+  box-shadow: 0 4px 12px rgba(70, 130, 180, 0.3), 0 -2px 4px rgba(255, 255, 255, 0.2) inset;
   /* font-weight: 600; */
 }
 
@@ -438,7 +454,9 @@ body {
 .user-avatar {
   width: 36px;
   height: 36px;
-  background-color: #4CAF50;
+  background: linear-gradient(145deg, #6fa8dc 0%, #4682b4 100%);
+  border: 2px solid #a0a0a0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), 0 -1px 2px rgba(255, 255, 255, 0.3) inset;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -446,6 +464,7 @@ body {
   margin-right: 10px;
   font-size: 16px;
   font-weight: bold;
+  color: #fff;
 }
 
 .user-info {
@@ -863,13 +882,13 @@ main.main-content,
 
 /* Tables */
 .dashboard-latest {
-  background: linear-gradient(120deg, #f5f7fa 60%, #e3f0ff 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #e8e8e8 25%, #d0d0d0 50%, #e8e8e8 75%, #ffffff 100%);
   border-radius: 18px;
   padding: 28px 24px 24px 24px;
-  box-shadow: 0 6px 24px rgba(60,120,200,0.08);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 -4px 8px rgba(255, 255, 255, 0.7) inset, 0 12px 24px rgba(0, 0, 0, 0.15);
   margin-bottom: 32px;
   overflow: hidden;
-  border: 1.5px solid #e3f0ff;
+  border: 2px solid #d4d4d4;
 }
 
 .latest-header {
@@ -877,7 +896,7 @@ main.main-content,
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
-  border-bottom: 2px solid #e3f0ff;
+  border-bottom: 2px solid #a0a0a0;
   padding-bottom: 16px;
   background: none;
 }
@@ -885,27 +904,29 @@ main.main-content,
 .latest-header h2 {
   font-size: 22px;
   font-weight: 700;
-  color: #42a5f5;
+  color: #5a5a5a;
   letter-spacing: 0.2px;
-  text-shadow: 0 2px 8px rgba(66,165,245,0.08);
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
 }
 
 .view-all {
   color: #fff;
-  background: linear-gradient(90deg, #42a5f5 0%, #43e97b 100%);
+  background: linear-gradient(145deg, #6fa8dc 0%, #4682b4 100%);
   text-decoration: none;
   font-weight: 600;
   font-size: 14px;
   padding: 7px 16px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(66,165,245,0.10);
-  transition: all 0.2s;
+  box-shadow: 0 4px 8px rgba(70, 130, 180, 0.3), 0 -2px 4px rgba(255, 255, 255, 0.3) inset;
+  transition: all 0.3s;
+  border: 1px solid #3a6a94;
 }
 
 .view-all:hover {
-  background: linear-gradient(90deg, #43e97b 0%, #42a5f5 100%);
+  background: linear-gradient(145deg, #8fc0ec 0%, #6fa8dc 100%);
   color: #fff;
-  box-shadow: 0 4px 16px rgba(66,165,245,0.13);
+  box-shadow: 0 6px 12px rgba(70, 130, 180, 0.4), 0 -2px 4px rgba(255, 255, 255, 0.4) inset;
+  transform: translateY(-2px);
 }
 
 .latest-table {
@@ -946,23 +967,24 @@ main.main-content,
 
 .latest-table th {
   font-weight: 700;
-  color: #42a5f5;
+  color: #5a5a5a;
   font-size: 15px;
-  background: #e3f0ff;
-  border-bottom: 2px solid #42a5f5;
+  background: linear-gradient(180deg, #e8e8e8 0%, #d4d4d4 100%);
+  border-bottom: 2px solid #4682b4;
   letter-spacing: 0.1px;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
 }
 
 .latest-table td {
   font-size: 14px;
-  color: #222;
-  background: #fafdff;
-  border-bottom: 1.5px solid #e3f0ff;
+  color: #2c2c2c;
+  background: linear-gradient(180deg, #f5f5f5 0%, #e8e8e8 100%);
+  border-bottom: 1px solid #c0c0c0;
 }
 
 .latest-table tbody tr:hover {
-  background: #e3f0ff;
-  transition: background 0.18s;
+  background: linear-gradient(135deg, #ffffff 0%, #e8e8e8 25%, #d0d0d0 50%, #e8e8e8 75%, #ffffff 100%);
+  transition: background 0.3s;
 }
 
 /* Table Container for Mobile Scrolling */
@@ -1044,9 +1066,9 @@ main.main-content,
 }
 
 .action-btn {
-  background: #0072ff;
+  background: linear-gradient(145deg, #6fa8dc 0%, #4682b4 50%, #3a6a94 100%);
   color: white;
-  border: none;
+  border: 2px solid #3a6a94;
   padding: 12px 20px;
   border-radius: 8px;
   font-size: 14px;
@@ -1055,12 +1077,15 @@ main.main-content,
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15), 0 -2px 6px rgba(255, 255, 255, 0.6) inset;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .action-btn:hover {
-  background: #0056cc;
-  transform: translateY(-1px);
+  background: linear-gradient(145deg, #8fc0ec 0%, #6fa8dc 50%, #4682b4 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(70, 130, 180, 0.4), 0 -4px 8px rgba(255, 255, 255, 0.4) inset;
 }
 
 .action-btn i {
@@ -1509,31 +1534,36 @@ main.main-content,
   padding: 8px 12px;
   font-size: 0.95em;
   border-radius: 8px;
-  background: transparent;
-  color: #1a3a8f;
-  border: 1px solid rgba(26,58,143,0.08);
+  background: linear-gradient(145deg, #f0f0f0 0%, #c0c0c0 50%, #a8a8a8 100%);
+  color: #2c2c2c;
+  border: 2px solid #d4d4d4;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(255, 255, 255, 0.5) inset;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .main-quick-actions-wrapper .quick-actions-list .action-btn:hover {
-  background: rgba(26,58,143,0.05);
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, #ffffff 0%, #e8e8e8 25%, #d0d0d0 50%, #e8e8e8 75%, #ffffff 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15), 0 -2px 6px rgba(255, 255, 255, 0.6) inset;
 }
 
 /* Primary emphasis for the first action (Add New Vehicle) */
 .main-quick-actions-wrapper .quick-actions-list .action-btn:first-child {
-  background: linear-gradient(180deg,#1a3a8f,#0f5a7a);
+  background: linear-gradient(145deg, #6fa8dc 0%, #4682b4 50%, #3a6a94 100%);
   color: #fff;
-  border: none;
+  border: 2px solid #3a6a94;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15), 0 -2px 6px rgba(255, 255, 255, 0.6) inset;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .main-quick-actions-wrapper .quick-actions-list .action-btn:first-child:hover {
-  background: linear-gradient(180deg,#0f2f6f,#0a4a5a);
-  transform: translateY(-1px);
+  background: linear-gradient(145deg, #8fc0ec 0%, #6fa8dc 50%, #4682b4 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(70, 130, 180, 0.4), 0 -4px 8px rgba(255, 255, 255, 0.4) inset;
 }
 
 /* Mobile responsive adjustments for quick actions */

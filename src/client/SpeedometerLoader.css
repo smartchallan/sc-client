@@ -43,22 +43,24 @@
 
 /* Chart retry button styling */
 .stat-chart-container .action-btn {
-  background: linear-gradient(180deg, #42a5f5, #1976d2);
+  background: linear-gradient(135deg, #42a5f5 0%, #478ed1 100%);
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 0 2px 8px rgba(66, 165, 245, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(60, 120, 200, 0.16);
 }
 
 .stat-chart-container .action-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(66, 165, 245, 0.4);
+  background: linear-gradient(135deg, #478ed1 0%, #3a7bc8 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(60, 120, 200, 0.24);
 }
 
 .stat-chart-container .action-btn:active {
   transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(60, 120, 200, 0.2);
 }
 
 /* Default loader styles */
