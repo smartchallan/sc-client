@@ -2690,7 +2690,7 @@ function ClientDashboard() {
                         </div>
                         <div className={`status-badge`} style={{ cursor: 'default', width: 'calc(50% - 6px)', display: 'flex', justifyContent: 'space-between' }} title="Paid challan amount">
                           <div style={{ fontSize: 12, color: '#666' }}>Paid:</div>
-                          <div style={{ color: '#4caf50', fontWeight: 700, fontSize: 14 }}>
+                          <div style={{ color: '#2d7d2d', fontWeight: 700, fontSize: 14 }}>
                             {loadingNetworkStats ? '...' : (networkStats?.challanAmount?.paid != null ? `₹${formatBriefAmount(networkStats.challanAmount.paid)}` : '₹0')}
                           </div>
                         </div>
@@ -2829,7 +2829,7 @@ function ClientDashboard() {
                             onClick={() => { if (typeof window !== 'undefined' && window.handleViewAllChallans) { window.handleViewAllChallans('pending'); } else { localStorage.setItem('sc_challan_filter','pending'); setActiveMenu('Vehicle Challans'); } }}>
                             Pending: ₹{formatBriefAmount(pendingFineTotal)}
                           </span>
-                          <span style={{color: '#4caf50', fontWeight: 600, fontSize: '0.65em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}
+                          <span style={{color: '#2d7d2d', fontWeight: 600, fontSize: '0.65em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}
                             title="Show paid challans"
                             onClick={() => { if (typeof window !== 'undefined' && window.handleViewAllChallans) { window.handleViewAllChallans('disposed'); } else { localStorage.setItem('sc_challan_filter','disposed'); setActiveMenu('Vehicle Challans'); } }}>
                             Paid: ₹{formatBriefAmount(disposedFineTotal)}

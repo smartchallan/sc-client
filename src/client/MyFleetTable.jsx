@@ -922,7 +922,7 @@ export default function MyFleetTable({
         {/* Controls row: search, filters, right-aligned print/download */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', flex: 1 }}>
           {/* Vehicle number search styled as number plate */}
-          <div style={{ width: 300 }}>
+          <div style={{ width: 350 }}>
             <div className="number-plate-container">
               <div className="number-plate-wrapper">
               <div className="number-plate-badge">IND</div>

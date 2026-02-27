@@ -171,6 +171,8 @@
   outline: none;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   text-transform: uppercase;
+  height: 35px;
+  padding: 6px 0;
 }
 
 .number-plate-input::placeholder {
@@ -251,6 +253,8 @@
   .number-plate-input {
     font-size: 15px;
     letter-spacing: 1.5px;
+    height: 35px;
+    padding: 6px 0;
   }
   
   .number-plate-badge {
@@ -274,6 +278,8 @@
   .number-plate-input {
     font-size: 14px;
     letter-spacing: 1px;
+    height: 35px;
+    padding: 4px 0;
   }
   
   .number-plate-input::placeholder {

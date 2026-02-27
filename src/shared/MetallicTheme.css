@@ -30,22 +30,24 @@ body.theme-metallic .nav-item {
   background: linear-gradient(145deg, #f0f0f0 0%, #c0c0c0 50%, #a8a8a8 100%);
   border: 1px solid #d4d4d4;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(255, 255, 255, 0.5) inset;
-  color: #2c2c2c;
+  color: #1a1a1a;
+  font-weight: 700;
+  font-size: 17px;
 }
 
 body.theme-metallic .nav-item i {
-  color: #5a5a5a;
+  color: #1a1a1a;
+  font-size: 20px;
 }
 
 body.theme-metallic .nav-item:hover {
   background: linear-gradient(135deg, #ffffff 0%, #e8e8e8 25%, #d0d0d0 50%, #e8e8e8 75%, #ffffff 100%);
-  color: #2c2c2c;
+  color: #1a1a1a;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15), 0 -2px 6px rgba(255, 255, 255, 0.6) inset, 0 8px 16px rgba(0, 0, 0, 0.1);
 }
 
 body.theme-metallic .nav-item:hover i {
-  color: #2c2c2c;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+  color: #1a1a1a;
 }
 
 body.theme-metallic .nav-item.active {
@@ -80,15 +82,13 @@ body.theme-metallic .header-avatar {
 
 /* Stat cards as 3D metallic plates with engraved text */
 body.theme-metallic .stat-card {
-  background: 
-    linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 25%, transparent 50%, rgba(0,0,0,0.05) 75%, transparent 100%),
-    linear-gradient(145deg, #d8d8d8 0%, #c0c0c0 30%, #a8a8a8 50%, #c0c0c0 70%, #d8d8d8 100%) !important;
-  border: 3px solid #b0b0b0 !important;
-  border-top-color: #e8e8e8 !important;
-  border-left-color: #e0e0e0 !important;
-  border-bottom-color: #888888 !important;
-  border-right-color: #909090 !important;
-  border-radius: 12px !important;
+  background: #989898 !important;
+  border: 3px solid #888888 !important;
+  border-top-color: #b8b8b8 !important;
+  border-left-color: #b0b0b0 !important;
+  border-bottom-color: #606060 !important;
+  border-right-color: #707070 !important;
+  border-radius: 0 !important;
   box-shadow: 
     0 12px 24px rgba(0, 0, 0, 0.35),
     0 6px 12px rgba(0, 0, 0, 0.25),
@@ -119,45 +119,37 @@ body.theme-metallic .stat-card::before {
   z-index: 1;
 }
 
-/* Individual card colors with enhanced 3D effect */
+/* Individual card colors with plain metallic look */
 body.theme-metallic .stat-card:nth-child(1) {
-  background: 
-    linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.15) 25%, transparent 50%, rgba(0,0,0,0.1) 75%, transparent 100%),
-    linear-gradient(145deg, #a8c4d8 0%, #7a9ab8 30%, #5a7a98 50%, #7a9ab8 70%, #a8c4d8 100%) !important;
-  border-top-color: #c4d8e8 !important;
-  border-left-color: #b8cce0 !important;
-  border-bottom-color: #4a6a88 !important;
-  border-right-color: #5a7a98 !important;
+  background: #989898 !important;
+  border-top-color: #b8b8b8 !important;
+  border-left-color: #b0b0b0 !important;
+  border-bottom-color: #404040 !important;
+  border-right-color: #505050 !important;
 }
 
 body.theme-metallic .stat-card:nth-child(2) {
-  background: 
-    linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.15) 25%, transparent 50%, rgba(0,0,0,0.1) 75%, transparent 100%),
-    linear-gradient(145deg, #c0c0c0 0%, #909090 30%, #707070 50%, #909090 70%, #c0c0c0 100%) !important;
-  border-top-color: #d8d8d8 !important;
-  border-left-color: #d0d0d0 !important;
+  background: #989898 !important;
+  border-top-color: #b8b8b8 !important;
+  border-left-color: #b0b0b0 !important;
+  border-bottom-color: #404040 !important;
+  border-right-color: #505050 !important;
+}
+
+body.theme-metallic .stat-card:nth-child(3) {
+  background: #a0a0a0 !important;
+  border-top-color: #c0c0c0 !important;
+  border-left-color: #b8b8b8 !important;
   border-bottom-color: #505050 !important;
   border-right-color: #606060 !important;
 }
 
-body.theme-metallic .stat-card:nth-child(3) {
-  background: 
-    linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.15) 25%, transparent 50%, rgba(0,0,0,0.1) 75%, transparent 100%),
-    linear-gradient(145deg, #d0d0d0 0%, #a0a0a0 30%, #808080 50%, #a0a0a0 70%, #d0d0d0 100%) !important;
-  border-top-color: #e8e8e8 !important;
-  border-left-color: #e0e0e0 !important;
-  border-bottom-color: #606060 !important;
-  border-right-color: #707070 !important;
-}
-
 body.theme-metallic .stat-card:nth-child(4) {
-  background: 
-    linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.15) 25%, transparent 50%, rgba(0,0,0,0.1) 75%, transparent 100%),
-    linear-gradient(145deg, #b8c0c4 0%, #8a9298 30%, #6a7278 50%, #8a9298 70%, #b8c0c4 100%) !important;
-  border-top-color: #d0d8dc !important;
-  border-left-color: #c8d0d4 !important;
-  border-bottom-color: #4a5258 !important;
-  border-right-color: #5a6268 !important;
+  background: #909498 !important;
+  border-top-color: #b0b4b8 !important;
+  border-left-color: #a8acb0 !important;
+  border-bottom-color: #3a3e42 !important;
+  border-right-color: #4a4e52 !important;
 }
 
 body.theme-metallic .stat-card:hover {
@@ -200,37 +192,50 @@ body.theme-metallic .modern-form-card {
 
 /* Tables */
 body.theme-metallic .dashboard-latest {
-  background: linear-gradient(135deg, #ffffff 0%, #e8e8e8 25%, #d0d0d0 50%, #e8e8e8 75%, #ffffff 100%);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 -4px 8px rgba(255, 255, 255, 0.7) inset, 0 12px 24px rgba(0, 0, 0, 0.15);
-  border: 2px solid #d4d4d4;
+  background: #989898 !important;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), inset 0 2px 8px rgba(255, 255, 255, 0.3), inset 0 -2px 8px rgba(0, 0, 0, 0.2);
+  border: 3px solid #707070 !important;
+  border-top-color: #b0b0b0 !important;
+  border-left-color: #a8a8a8 !important;
+  border-bottom-color: #505050 !important;
+  border-right-color: #606060 !important;
+}
+
+body.theme-metallic table {
+  background: #989898 !important;
 }
 
 body.theme-metallic .vehicle-challan-table {
-  background: linear-gradient(145deg, #f0f0f0 0%, #c0c0c0 50%, #a8a8a8 100%);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 -4px 8px rgba(255, 255, 255, 0.7) inset, 0 12px 24px rgba(0, 0, 0, 0.15);
-  border: 2px solid #d4d4d4;
+  background: #989898 !important;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), inset 0 2px 8px rgba(255, 255, 255, 0.3), inset 0 -2px 8px rgba(0, 0, 0, 0.2);
+  border: 2px solid #707070;
 }
 
 body.theme-metallic .vehicle-challan-table th {
-  background: linear-gradient(145deg, #7a7a7a 0%, #5a5a5a 50%, #3a3a3a 100%);
-  border-bottom: 3px solid #4682b4;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) inset;
+  background: #707070 !important;
+  color: #1a1a1a !important;
+  border-bottom: 3px solid #505050 !important;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.6), -1px -1px 1px rgba(0, 0, 0, 0.4);
+  font-weight: 700;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.2), inset 0 -2px 4px rgba(0, 0, 0, 0.3);
 }
 
 body.theme-metallic .vehicle-challan-table td {
-  background: linear-gradient(180deg, #f5f5f5 0%, #e8e8e8 100%);
-  color: #2c2c2c;
-  border-bottom: 1px solid #a0a0a0;
+  background: #a8a8a8 !important;
+  color: #1a1a1a !important;
+  border-bottom: 1px solid #909090 !important;
+  font-weight: 600;
 }
 
 body.theme-metallic .vehicle-challan-table tbody tr:hover {
-  background: linear-gradient(135deg, #ffffff 0%, #e8e8e8 25%, #d0d0d0 50%, #e8e8e8 75%, #ffffff 100%);
+  background: #b8b8b8 !important;
 }
 
 body.theme-metallic .vehicle-challan-table tbody tr:hover td {
+  background: #b8b8b8 !important;
+  color: #0a0a0a !important;
   transform: translateX(2px);
-  box-shadow: -2px 0 8px rgba(70, 130, 180, 0.2);
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
 }
 
 /* Buttons */
@@ -251,38 +256,69 @@ body.theme-metallic button:not(.header-more):hover {
 /* Page titles */
 body.theme-metallic .page-title,
 body.theme-metallic .dashboard-title {
-  color: #5a5a5a;
-  background: linear-gradient(145deg, #5a5a5a 0%, #8a8a8a 50%, #5a5a5a 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.3);
+  color: #2a2a2a !important;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5), -1px -1px 2px rgba(0, 0, 0, 0.3);
+}
+
+body.theme-metallic h1 {
+  font-size: 24px !important;
+}
+
+body.theme-metallic .dashboard-title + p,
+body.theme-metallic .main-content p {
+  color: #2a2a2a !important;
 }
 
 body.theme-metallic .latest-header h2 {
-  color: #5a5a5a;
-  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+  color: #1a1a1a;
+  font-weight: 700;
+  font-size: 20px;
+  text-shadow: 
+    1px 1px 2px rgba(255, 255, 255, 0.6),
+    -1px -1px 1px rgba(0, 0, 0, 0.4);
+  padding: 12px 16px;
+  background: #888888;
+  border-radius: 0;
+  margin: 0;
 }
 
 body.theme-metallic .latest-header {
-  border-bottom: 2px solid #a0a0a0;
+  border-bottom: 3px solid #606060;
+  background: #888888;
+  border-radius: 0;
+}
+
+body.theme-metallic .latest-table {
+  border: 2px solid #808080 !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 body.theme-metallic .latest-table th {
-  background: linear-gradient(180deg, #e8e8e8 0%, #d4d4d4 100%);
-  color: #5a5a5a;
-  border-bottom: 2px solid #4682b4;
-  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
+  background: #888888 !important;
+  color: #1a1a1a !important;
+  border-bottom: 2px solid #606060 !important;
+  border-right: 1px solid #707070 !important;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.6), -1px -1px 1px rgba(0, 0, 0, 0.4);
+  font-weight: 700;
+  padding: 12px 8px !important;
 }
 
 body.theme-metallic .latest-table td {
-  background: linear-gradient(180deg, #f5f5f5 0%, #e8e8e8 100%);
-  color: #2c2c2c;
-  border-bottom: 1px solid #c0c0c0;
+  background: #a8a8a8 !important;
+  color: #1a1a1a !important;
+  border-bottom: 1px solid #909090 !important;
+  border-right: 1px solid #989898 !important;
+  font-weight: 600;
+  padding: 10px 8px !important;
 }
 
 body.theme-metallic .latest-table tbody tr:hover {
-  background: linear-gradient(135deg, #ffffff 0%, #e8e8e8 25%, #d0d0d0 50%, #e8e8e8 75%, #ffffff 100%);
+  background: #b8b8b8 !important;
+}
+
+body.theme-metallic .latest-table tbody tr:hover td {
+  background: #b8b8b8 !important;
+  color: #0a0a0a !important;
 }
 
 body.theme-metallic .view-all {
