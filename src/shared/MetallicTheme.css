@@ -192,50 +192,37 @@ body.theme-metallic .modern-form-card {
 
 /* Tables */
 body.theme-metallic .dashboard-latest {
-  background: #989898 !important;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), inset 0 2px 8px rgba(255, 255, 255, 0.3), inset 0 -2px 8px rgba(0, 0, 0, 0.2);
-  border: 3px solid #707070 !important;
-  border-top-color: #b0b0b0 !important;
-  border-left-color: #a8a8a8 !important;
-  border-bottom-color: #505050 !important;
-  border-right-color: #606060 !important;
-}
-
-body.theme-metallic table {
-  background: #989898 !important;
+  background: linear-gradient(135deg, #ffffff 0%, #e8e8e8 25%, #d0d0d0 50%, #e8e8e8 75%, #ffffff 100%);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 -4px 8px rgba(255, 255, 255, 0.7) inset, 0 12px 24px rgba(0, 0, 0, 0.15);
+  border: 2px solid #d4d4d4;
 }
 
 body.theme-metallic .vehicle-challan-table {
-  background: #989898 !important;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), inset 0 2px 8px rgba(255, 255, 255, 0.3), inset 0 -2px 8px rgba(0, 0, 0, 0.2);
-  border: 2px solid #707070;
+  background: linear-gradient(145deg, #f0f0f0 0%, #c0c0c0 50%, #a8a8a8 100%);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 -4px 8px rgba(255, 255, 255, 0.7) inset, 0 12px 24px rgba(0, 0, 0, 0.15);
+  border: 2px solid #d4d4d4;
 }
 
 body.theme-metallic .vehicle-challan-table th {
-  background: #707070 !important;
-  color: #1a1a1a !important;
-  border-bottom: 3px solid #505050 !important;
-  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.6), -1px -1px 1px rgba(0, 0, 0, 0.4);
-  font-weight: 700;
-  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.2), inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(145deg, #7a7a7a 0%, #5a5a5a 50%, #3a3a3a 100%);
+  border-bottom: 3px solid #4682b4;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) inset;
 }
 
 body.theme-metallic .vehicle-challan-table td {
-  background: #a8a8a8 !important;
-  color: #1a1a1a !important;
-  border-bottom: 1px solid #909090 !important;
-  font-weight: 600;
+  background: linear-gradient(180deg, #f5f5f5 0%, #e8e8e8 100%);
+  color: #2c2c2c;
+  border-bottom: 1px solid #a0a0a0;
 }
 
 body.theme-metallic .vehicle-challan-table tbody tr:hover {
-  background: #b8b8b8 !important;
+  background: linear-gradient(135deg, #ffffff 0%, #e8e8e8 25%, #d0d0d0 50%, #e8e8e8 75%, #ffffff 100%);
 }
 
 body.theme-metallic .vehicle-challan-table tbody tr:hover td {
-  background: #b8b8b8 !important;
-  color: #0a0a0a !important;
   transform: translateX(2px);
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
+  box-shadow: -2px 0 8px rgba(70, 130, 180, 0.2);
 }
 
 /* Buttons */
@@ -270,55 +257,29 @@ body.theme-metallic .main-content p {
 }
 
 body.theme-metallic .latest-header h2 {
-  color: #1a1a1a;
-  font-weight: 700;
-  font-size: 20px;
-  text-shadow: 
-    1px 1px 2px rgba(255, 255, 255, 0.6),
-    -1px -1px 1px rgba(0, 0, 0, 0.4);
-  padding: 12px 16px;
-  background: #888888;
-  border-radius: 0;
-  margin: 0;
+  color: #5a5a5a;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
 }
 
 body.theme-metallic .latest-header {
-  border-bottom: 3px solid #606060;
-  background: #888888;
-  border-radius: 0;
-}
-
-body.theme-metallic .latest-table {
-  border: 2px solid #808080 !important;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-bottom: 2px solid #a0a0a0;
 }
 
 body.theme-metallic .latest-table th {
-  background: #888888 !important;
-  color: #1a1a1a !important;
-  border-bottom: 2px solid #606060 !important;
-  border-right: 1px solid #707070 !important;
-  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.6), -1px -1px 1px rgba(0, 0, 0, 0.4);
-  font-weight: 700;
-  padding: 12px 8px !important;
+  background: linear-gradient(180deg, #e8e8e8 0%, #d4d4d4 100%);
+  color: #5a5a5a;
+  border-bottom: 2px solid #4682b4;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
 }
 
 body.theme-metallic .latest-table td {
-  background: #a8a8a8 !important;
-  color: #1a1a1a !important;
-  border-bottom: 1px solid #909090 !important;
-  border-right: 1px solid #989898 !important;
-  font-weight: 600;
-  padding: 10px 8px !important;
+  background: linear-gradient(180deg, #f5f5f5 0%, #e8e8e8 100%);
+  color: #2c2c2c;
+  border-bottom: 1px solid #c0c0c0;
 }
 
 body.theme-metallic .latest-table tbody tr:hover {
-  background: #b8b8b8 !important;
-}
-
-body.theme-metallic .latest-table tbody tr:hover td {
-  background: #b8b8b8 !important;
-  color: #0a0a0a !important;
+  background: linear-gradient(135deg, #ffffff 0%, #e8e8e8 25%, #d0d0d0 50%, #e8e8e8 75%, #ffffff 100%);
 }
 
 body.theme-metallic .view-all {

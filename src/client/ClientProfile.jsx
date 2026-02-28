@@ -17,6 +17,11 @@ export default function ClientProfile() {
   const [marketingNotification, setMarketingNotification] = useState(false);
   const [settingsDirty, setSettingsDirty] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
+  // Theme preference state
+  const [selectedTheme, setSelectedTheme] = useState('blue');
+  const [themeSaving, setThemeSaving] = useState(false);
+  const [themeDirty, setThemeDirty] = useState(false);
+  const initialThemeRef = React.useRef('blue');
   const initialOptionsRef = React.useRef(null);
   const billingFetchedRef = React.useRef(false);
   const emailsFetchedRef = React.useRef(false);
@@ -26,6 +31,21 @@ export default function ClientProfile() {
   const [newEmail, setNewEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [addingEmail, setAddingEmail] = useState(false);
+  
+  // Alert Preferences state
+  const [alertChallan, setAlertChallan] = useState(true);
+  const [alertInsurance, setAlertInsurance] = useState(true);
+  const [alertInsuranceDays, setAlertInsuranceDays] = useState(15);
+  const [alertRoadTax, setAlertRoadTax] = useState(true);
+  const [alertRoadTaxDays, setAlertRoadTaxDays] = useState(15);
+  const [alertFitness, setAlertFitness] = useState(true);
+  const [alertFitnessDays, setAlertFitnessDays] = useState(15);
+  const [alertPollution, setAlertPollution] = useState(true);
+  const [alertPollutionDays, setAlertPollutionDays] = useState(15);
+  const [alertsDirty, setAlertsDirty] = useState(false);
+  const [alertsSaving, setAlertsSaving] = useState(false);
+  const initialAlertsRef = React.useRef(null);
+  
   // Get user info from localStorage
   const scUser = (() => {
     try {
@@ -38,12 +58,19 @@ export default function ClientProfile() {
   // Initialize notification settings from login `user_options` if present
   React.useEffect(() => {
     try {
-      const opts = (user && user.user_options) ? user.user_options : (scUser.user_options || {});
+      // Merge user_options from both locations
+      const topLevelOptions = scUser.user_options || {};
+      const nestedOptions = (user && user.user_options) || {};
+      const opts = { ...topLevelOptions, ...nestedOptions };
       const isTrue = (v) => v === true || v === 1 || v === '1' || v === 'true' || v === 'True';
-      if (opts) {
+      if (Object.keys(opts).length > 0) {
         setEmailNotification(isTrue(opts.receive_email_notification));
         setSmsNotification(isTrue(opts.receive_sms_notification));
         setMarketingNotification(isTrue(opts.receive_marketing_communication));
+        // initialize theme preference
+        const theme = opts.default_theme || 'blue';
+        setSelectedTheme(theme);
+        initialThemeRef.current = theme;
         // initialize notification emails if provided
         if (Array.isArray(opts.notification_emails)) {
           // normalize to objects { id, value }
@@ -55,11 +82,34 @@ export default function ClientProfile() {
           }).filter(Boolean);
           setNotificationEmails(normalized);
         }
+        
+        // initialize alert preferences
+        setAlertChallan(isTrue(opts.alert_challan ?? true));
+        setAlertInsurance(isTrue(opts.alert_insurance ?? true));
+        setAlertInsuranceDays(parseInt(opts.alert_insurance_days) || 15);
+        setAlertRoadTax(isTrue(opts.alert_road_tax ?? true));
+        setAlertRoadTaxDays(parseInt(opts.alert_road_tax_days) || 15);
+        setAlertFitness(isTrue(opts.alert_fitness ?? true));
+        setAlertFitnessDays(parseInt(opts.alert_fitness_days) || 15);
+        setAlertPollution(isTrue(opts.alert_pollution ?? true));
+        setAlertPollutionDays(parseInt(opts.alert_pollution_days) || 15);
+        
         // store initial snapshot for dirty-checks
         initialOptionsRef.current = {
           receive_email_notification: opts.receive_email_notification,
           receive_sms_notification: opts.receive_sms_notification,
           receive_marketing_communication: opts.receive_marketing_communication
+        };
+        initialAlertsRef.current = {
+          alert_challan: opts.alert_challan ?? 1,
+          alert_insurance: opts.alert_insurance ?? 1,
+          alert_insurance_days: parseInt(opts.alert_insurance_days) || 15,
+          alert_road_tax: opts.alert_road_tax ?? 1,
+          alert_road_tax_days: parseInt(opts.alert_road_tax_days) || 15,
+          alert_fitness: opts.alert_fitness ?? 1,
+          alert_fitness_days: parseInt(opts.alert_fitness_days) || 15,
+          alert_pollution: opts.alert_pollution ?? 1,
+          alert_pollution_days: parseInt(opts.alert_pollution_days) || 15
         };
         setSettingsDirty(false);
       }
@@ -115,6 +165,33 @@ export default function ClientProfile() {
     }
   }, [emailNotification, smsNotification, marketingNotification]);
 
+  // mark themeDirty when theme changes
+  React.useEffect(() => {
+    setThemeDirty(selectedTheme !== initialThemeRef.current);
+  }, [selectedTheme]);
+
+  // mark alertsDirty when alert settings change
+  React.useEffect(() => {
+    try {
+      const init = initialAlertsRef.current || {};
+      const toNum = v => v === true || v === '1' || v === 1 || v === 'true' ? 1 : 0;
+      const dirty = (
+        toNum(init.alert_challan) !== toNum(alertChallan) ||
+        toNum(init.alert_insurance) !== toNum(alertInsurance) ||
+        parseInt(init.alert_insurance_days) !== parseInt(alertInsuranceDays) ||
+        toNum(init.alert_road_tax) !== toNum(alertRoadTax) ||
+        parseInt(init.alert_road_tax_days) !== parseInt(alertRoadTaxDays) ||
+        toNum(init.alert_fitness) !== toNum(alertFitness) ||
+        parseInt(init.alert_fitness_days) !== parseInt(alertFitnessDays) ||
+        toNum(init.alert_pollution) !== toNum(alertPollution) ||
+        parseInt(init.alert_pollution_days) !== parseInt(alertPollutionDays)
+      );
+      setAlertsDirty(!!dirty);
+    } catch (e) {
+      setAlertsDirty(false);
+    }
+  }, [alertChallan, alertInsurance, alertInsuranceDays, alertRoadTax, alertRoadTaxDays, alertFitness, alertFitnessDays, alertPollution, alertPollutionDays]);
+
   const saveNotificationSettings = async () => {
     setSettingsSaving(true);
     try {
@@ -143,8 +220,13 @@ export default function ClientProfile() {
         // update localStorage sc_user.user.user_options
         try {
           const newScUser = { ...scUser };
-          const userOptions = { ...payload.settings };
+          // Merge user_options from both locations to preserve all settings
+          const topLevelOptions = newScUser.user_options || {};
+          const nestedOptions = (newScUser.user && newScUser.user.user_options) || {};
+          const userOptions = { ...topLevelOptions, ...nestedOptions, ...payload.settings };
           if (notificationEmails && notificationEmails.length) userOptions.notification_emails = notificationEmails.slice(0,5);
+          // Update both locations to keep them in sync
+          newScUser.user_options = userOptions;
           newScUser.user = { ...newScUser.user, user_options: userOptions };
           localStorage.setItem('sc_user', JSON.stringify(newScUser));
           initialOptionsRef.current = { ...payload.settings };
@@ -160,6 +242,117 @@ export default function ClientProfile() {
       toast.error('Failed to save settings');
     } finally {
       setSettingsSaving(false);
+    }
+  };
+
+  const saveThemePreference = async () => {
+    setThemeSaving(true);
+    try {
+      const user_id = user.id || user._id || user.client_id || null;
+      const user_role = user.role || 'client';
+      const payload = {
+        user_id,
+        user_role,
+        settings: {
+          default_theme: selectedTheme
+        }
+      };
+      const token = scUser.token || '';
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/useroptions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        // update localStorage sc_user.user.user_options
+        try {
+          const newScUser = { ...scUser };
+          // Merge user_options from both locations to preserve all settings
+          const topLevelOptions = newScUser.user_options || {};
+          const nestedOptions = (newScUser.user && newScUser.user.user_options) || {};
+          const userOptions = { ...topLevelOptions, ...nestedOptions };
+          userOptions.default_theme = selectedTheme;
+          // Update both locations to keep them in sync
+          newScUser.user_options = userOptions;
+          newScUser.user = { ...newScUser.user, user_options: userOptions };
+          localStorage.setItem('sc_user', JSON.stringify(newScUser));
+          initialThemeRef.current = selectedTheme;
+          setThemeDirty(false);
+          toast.success(data.message || 'Theme preference saved');
+          // reload page to apply theme
+          setTimeout(() => window.location.reload(), 1000);
+        } catch (e) {
+          // ignore
+        }
+      } else {
+        toast.error(data.message || 'Failed to save theme preference');
+      }
+    } catch (err) {
+      toast.error('Failed to save theme preference');
+    } finally {
+      setThemeSaving(false);
+    }
+  };
+
+  const saveAlertPreferences = async () => {
+    setAlertsSaving(true);
+    try {
+      const user_id = user.id || user._id || user.client_id || null;
+      const user_role = user.role || 'client';
+      const payload = {
+        user_id,
+        user_role,
+        settings: {
+          alert_challan: alertChallan ? 1 : 0,
+          alert_insurance: alertInsurance ? 1 : 0,
+          alert_insurance_days: parseInt(alertInsuranceDays) || 15,
+          alert_road_tax: alertRoadTax ? 1 : 0,
+          alert_road_tax_days: parseInt(alertRoadTaxDays) || 15,
+          alert_fitness: alertFitness ? 1 : 0,
+          alert_fitness_days: parseInt(alertFitnessDays) || 15,
+          alert_pollution: alertPollution ? 1 : 0,
+          alert_pollution_days: parseInt(alertPollutionDays) || 15
+        }
+      };
+      const token = scUser.token || '';
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/useroptions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        // update localStorage sc_user.user.user_options
+        try {
+          const newScUser = { ...scUser };
+          // Merge user_options from both locations to preserve all settings
+          const topLevelOptions = newScUser.user_options || {};
+          const nestedOptions = (newScUser.user && newScUser.user.user_options) || {};
+          const userOptions = { ...topLevelOptions, ...nestedOptions, ...payload.settings };
+          // Update both locations to keep them in sync
+          newScUser.user_options = userOptions;
+          newScUser.user = { ...newScUser.user, user_options: userOptions };
+          localStorage.setItem('sc_user', JSON.stringify(newScUser));
+          initialAlertsRef.current = { ...payload.settings };
+          setAlertsDirty(false);
+          toast.success(data.message || 'Alert preferences saved');
+        } catch (e) {
+          // ignore
+        }
+      } else {
+        toast.error(data.message || 'Failed to save alert preferences');
+      }
+    } catch (err) {
+      toast.error('Failed to save alert preferences');
+    } finally {
+      setAlertsSaving(false);
     }
   };
 
@@ -209,8 +402,13 @@ export default function ClientProfile() {
         // update localStorage snapshot
         try {
           const newScUser = { ...scUser };
-          const prevOpts = (newScUser.user && newScUser.user.user_options) ? { ...newScUser.user.user_options } : {};
+          // Merge user_options from both locations to preserve all settings
+          const topLevelOptions = newScUser.user_options || {};
+          const nestedOptions = (newScUser.user && newScUser.user.user_options) || {};
+          const prevOpts = { ...topLevelOptions, ...nestedOptions };
           prevOpts.notification_emails = (Array.isArray(prevOpts.notification_emails) ? prevOpts.notification_emails.slice(0) : []).concat(v).slice(0,5);
+          // Update both locations to keep them in sync
+          newScUser.user_options = prevOpts;
           newScUser.user = { ...newScUser.user, user_options: prevOpts };
           localStorage.setItem('sc_user', JSON.stringify(newScUser));
         } catch (e) {}
@@ -253,8 +451,13 @@ export default function ClientProfile() {
             // update localStorage snapshot
             try {
               const newScUser = { ...scUser };
-              const prevOpts = (newScUser.user && newScUser.user.user_options) ? { ...newScUser.user.user_options } : {};
+              // Merge user_options from both locations to preserve all settings
+              const topLevelOptions = newScUser.user_options || {};
+              const nestedOptions = (newScUser.user && newScUser.user.user_options) || {};
+              const prevOpts = { ...topLevelOptions, ...nestedOptions };
               prevOpts.notification_emails = (Array.isArray(prevOpts.notification_emails) ? prevOpts.notification_emails.filter(v => v !== value) : []);
+              // Update both locations to keep them in sync
+              newScUser.user_options = prevOpts;
               newScUser.user = { ...newScUser.user, user_options: prevOpts };
               localStorage.setItem('sc_user', JSON.stringify(newScUser));
             } catch (e) {}
@@ -399,6 +602,51 @@ export default function ClientProfile() {
               <button className="btn btn-primary" disabled>Save Changes</button>
             </div>
           </form>
+        </div>
+
+        {/* Theme Preference section */}
+        <div className="profile-section">
+          <h3>Theme Preference</h3>
+          <div style={{margin: '12px 0'}}>
+            <div className="form-row">
+              <div className="form-col" style={{width:'50%'}}>
+                <div className="form-group">
+                  <label className="form-label">Select Theme</label>
+                  <select 
+                    className="form-control" 
+                    value={selectedTheme}
+                    onChange={(e) => setSelectedTheme(e.target.value)}
+                  >
+                    <option value="blue">Blue</option>
+                    <option value="metallic">Metallic</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div style={{textAlign:"right", marginTop:'10px', display: 'flex', justifyContent: 'flex-end', gap: 8}}>
+              <button 
+                type="button" 
+                className="btn btn-outline" 
+                style={{marginRight: '8px'}} 
+                onClick={() => {
+                  setSelectedTheme(initialThemeRef.current);
+                  setThemeDirty(false);
+                }}
+                disabled={!themeDirty}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={saveThemePreference}
+                disabled={!themeDirty || themeSaving}
+                style={{ background: themeDirty ? undefined : '#9aa', opacity: themeDirty ? 1 : 0.7 }}
+              >
+                {themeSaving ? 'Saving...' : (themeDirty ? 'Confirm' : 'No Changes')}
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* My Tarrifs section */}
@@ -641,6 +889,212 @@ export default function ClientProfile() {
             </div>
           )}
           {emailError && <div style={{color:'#d33', marginTop:8}}>{emailError}</div>}
+        </div>
+      </div>
+
+      {/* Alert Preferences section */}
+      <div className="profile-section">
+        <h3>Alert Preferences</h3>
+        <p style={{ color: '#666', fontSize: 14, marginBottom: 16 }}>Configure when you want to receive alerts for different events</p>
+        <div style={{margin: '12px 0'}}>
+          
+          {/* Challan Alert */}
+          <div className="form-row" style={{ marginBottom: 16, alignItems: 'center' }}>
+            <div className="form-col" style={{width:'40%'}}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontWeight: 600 }}>Challan Detected</label>
+                <p style={{ fontSize: 13, color: '#777', margin: '4px 0 0 0' }}>Notify immediately when new challan is detected</p>
+              </div>
+            </div>
+            <div className="form-col" style={{width:'20%', textAlign: 'center'}}>
+              <label className="toggle-switch">
+                <input type="checkbox" checked={alertChallan} onChange={e => setAlertChallan(e.target.checked)} />
+                <span className="toggle-slider">
+                  <span className="toggle-circle"></span>
+                </span>
+              </label>
+            </div>
+            <div className="form-col" style={{width:'40%'}}>
+              <span style={{ fontSize: 13, color: '#999' }}>Instant notification</span>
+            </div>
+          </div>
+
+          {/* Insurance Alert */}
+          <div className="form-row" style={{ marginBottom: 16, alignItems: 'center' }}>
+            <div className="form-col" style={{width:'40%'}}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontWeight: 600 }}>Insurance Expiry</label>
+                <p style={{ fontSize: 13, color: '#777', margin: '4px 0 0 0' }}>Notify before insurance expiry</p>
+              </div>
+            </div>
+            <div className="form-col" style={{width:'20%', textAlign: 'center'}}>
+              <label className="toggle-switch">
+                <input type="checkbox" checked={alertInsurance} onChange={e => setAlertInsurance(e.target.checked)} />
+                <span className="toggle-slider">
+                  <span className="toggle-circle"></span>
+                </span>
+              </label>
+            </div>
+            <div className="form-col" style={{width:'40%'}}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <select 
+                  className="form-control" 
+                  value={alertInsuranceDays} 
+                  onChange={e => setAlertInsuranceDays(parseInt(e.target.value))}
+                  disabled={!alertInsurance}
+                  style={{ width: 100 }}
+                >
+                  <option value="7">7 days</option>
+                  <option value="15">15 days</option>
+                  <option value="30">30 days</option>
+                  <option value="45">45 days</option>
+                  <option value="60">60 days</option>
+                </select>
+                <span style={{ fontSize: 13, color: '#666' }}>before expiry</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Road Tax Alert */}
+          <div className="form-row" style={{ marginBottom: 16, alignItems: 'center' }}>
+            <div className="form-col" style={{width:'40%'}}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontWeight: 600 }}>Road Tax Expiry</label>
+                <p style={{ fontSize: 13, color: '#777', margin: '4px 0 0 0' }}>Notify before road tax expiry</p>
+              </div>
+            </div>
+            <div className="form-col" style={{width:'20%', textAlign: 'center'}}>
+              <label className="toggle-switch">
+                <input type="checkbox" checked={alertRoadTax} onChange={e => setAlertRoadTax(e.target.checked)} />
+                <span className="toggle-slider">
+                  <span className="toggle-circle"></span>
+                </span>
+              </label>
+            </div>
+            <div className="form-col" style={{width:'40%'}}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <select 
+                  className="form-control" 
+                  value={alertRoadTaxDays} 
+                  onChange={e => setAlertRoadTaxDays(parseInt(e.target.value))}
+                  disabled={!alertRoadTax}
+                  style={{ width: 100 }}
+                >
+                  <option value="7">7 days</option>
+                  <option value="15">15 days</option>
+                  <option value="30">30 days</option>
+                  <option value="45">45 days</option>
+                  <option value="60">60 days</option>
+                </select>
+                <span style={{ fontSize: 13, color: '#666' }}>before expiry</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Fitness Alert */}
+          <div className="form-row" style={{ marginBottom: 16, alignItems: 'center' }}>
+            <div className="form-col" style={{width:'40%'}}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontWeight: 600 }}>Fitness Expiry</label>
+                <p style={{ fontSize: 13, color: '#777', margin: '4px 0 0 0' }}>Notify before fitness certificate expiry</p>
+              </div>
+            </div>
+            <div className="form-col" style={{width:'20%', textAlign: 'center'}}>
+              <label className="toggle-switch">
+                <input type="checkbox" checked={alertFitness} onChange={e => setAlertFitness(e.target.checked)} />
+                <span className="toggle-slider">
+                  <span className="toggle-circle"></span>
+                </span>
+              </label>
+            </div>
+            <div className="form-col" style={{width:'40%'}}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <select 
+                  className="form-control" 
+                  value={alertFitnessDays} 
+                  onChange={e => setAlertFitnessDays(parseInt(e.target.value))}
+                  disabled={!alertFitness}
+                  style={{ width: 100 }}
+                >
+                  <option value="7">7 days</option>
+                  <option value="15">15 days</option>
+                  <option value="30">30 days</option>
+                  <option value="45">45 days</option>
+                  <option value="60">60 days</option>
+                </select>
+                <span style={{ fontSize: 13, color: '#666' }}>before expiry</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Pollution Alert */}
+          <div className="form-row" style={{ marginBottom: 16, alignItems: 'center' }}>
+            <div className="form-col" style={{width:'40%'}}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontWeight: 600 }}>Pollution Certificate Expiry</label>
+                <p style={{ fontSize: 13, color: '#777', margin: '4px 0 0 0' }}>Notify before pollution certificate expiry</p>
+              </div>
+            </div>
+            <div className="form-col" style={{width:'20%', textAlign: 'center'}}>
+              <label className="toggle-switch">
+                <input type="checkbox" checked={alertPollution} onChange={e => setAlertPollution(e.target.checked)} />
+                <span className="toggle-slider">
+                  <span className="toggle-circle"></span>
+                </span>
+              </label>
+            </div>
+            <div className="form-col" style={{width:'40%'}}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <select 
+                  className="form-control" 
+                  value={alertPollutionDays} 
+                  onChange={e => setAlertPollutionDays(parseInt(e.target.value))}
+                  disabled={!alertPollution}
+                  style={{ width: 100 }}
+                >
+                  <option value="7">7 days</option>
+                  <option value="15">15 days</option>
+                  <option value="30">30 days</option>
+                  <option value="45">45 days</option>
+                  <option value="60">60 days</option>
+                </select>
+                <span style={{ fontSize: 13, color: '#666' }}>before expiry</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{textAlign:"right", marginTop:'20px', display: 'flex', justifyContent: 'flex-end', gap: 8}}>
+            <button 
+              type="button" 
+              className="btn btn-outline" 
+              style={{marginRight: '8px'}} 
+              onClick={() => {
+                const init = initialAlertsRef.current || {};
+                setAlertChallan(!!(init.alert_challan === 1 || init.alert_challan === '1' || init.alert_challan === true));
+                setAlertInsurance(!!(init.alert_insurance === 1 || init.alert_insurance === '1' || init.alert_insurance === true));
+                setAlertInsuranceDays(parseInt(init.alert_insurance_days) || 15);
+                setAlertRoadTax(!!(init.alert_road_tax === 1 || init.alert_road_tax === '1' || init.alert_road_tax === true));
+                setAlertRoadTaxDays(parseInt(init.alert_road_tax_days) || 15);
+                setAlertFitness(!!(init.alert_fitness === 1 || init.alert_fitness === '1' || init.alert_fitness === true));
+                setAlertFitnessDays(parseInt(init.alert_fitness_days) || 15);
+                setAlertPollution(!!(init.alert_pollution === 1 || init.alert_pollution === '1' || init.alert_pollution === true));
+                setAlertPollutionDays(parseInt(init.alert_pollution_days) || 15);
+                setAlertsDirty(false);
+              }}
+              disabled={!alertsDirty}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={saveAlertPreferences}
+              disabled={!alertsDirty || alertsSaving}
+              style={{ background: alertsDirty ? undefined : '#9aa', opacity: alertsDirty ? 1 : 0.7 }}
+            >
+              {alertsSaving ? 'Saving...' : (alertsDirty ? 'Save Alert Preferences' : 'No Changes')}
+            </button>
+          </div>
         </div>
       </div>
       

@@ -22,7 +22,7 @@ const formatExpiry = (dateStr, useColor = true) => {
 };
 import React, { useState, useEffect, useRef } from "react";
 import SelectShowMore from "./SelectShowMore";
-import { FaSyncAlt, FaEye } from "react-icons/fa";
+import { FaSyncAlt, FaEye, FaUpload } from "react-icons/fa";
 import { FiDownloadCloud, FiPrinter } from "react-icons/fi";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
@@ -123,21 +123,28 @@ const buildPrintableTableHtml = () => {
   const printTable = table.cloneNode(true);
 
   try {
+    const uploadEnabled = import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true';
+    const columnsToRemove = uploadEnabled ? 2 : 1; // Remove View and Upload if enabled, else just View
+
     const theadRows = printTable.querySelectorAll('thead tr');
     theadRows.forEach((tr, rowIndex) => {
       const cells = tr.querySelectorAll('th');
-      if (cells.length >= 1) {
-        // Remove the last header cell (View column) from all header rows for print/PDF
-        tr.removeChild(cells[cells.length - 1]);
+      if (cells.length >= columnsToRemove) {
+        // Remove the last header cell(s) (View and Upload columns) from all header rows for print/PDF
+        for (let i = 0; i < columnsToRemove; i++) {
+          tr.removeChild(cells[cells.length - 1 - i]);
+        }
       }
     });
 
     const bodyRows = printTable.querySelectorAll('tbody tr');
     bodyRows.forEach((tr) => {
       const cells = tr.querySelectorAll('td');
-      if (cells.length >= 1) {
-        // Remove the last cell (View column) from each body row
-        tr.removeChild(cells[cells.length - 1]);
+      if (cells.length >= columnsToRemove) {
+        // Remove the last cell(s) (View and Upload columns) from each body row
+        for (let i = 0; i < columnsToRemove; i++) {
+          tr.removeChild(cells[cells.length - 1 - i]);
+        }
       }
     });
   } catch (e) {
@@ -439,6 +446,17 @@ export default function MyFleetTable({
   // Download format modal state
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [downloadFormat, setDownloadFormat] = useState('excel'); // 'excel' | 'pdf'
+
+  // Upload document modal state
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedVehicleForUpload, setSelectedVehicleForUpload] = useState(null);
+  const [uploadFiles, setUploadFiles] = useState({
+    insurance: null,
+    pollution: null,
+    roadTax: null,
+    fitness: null,
+    permit: null
+  });
 
   // Refs for detecting clicks outside dropdowns
   const expiredDropdownRef = useRef(null);
@@ -1272,6 +1290,9 @@ export default function MyFleetTable({
               </th>
               <th colSpan={2} className="challans-header">Challans</th>
               <th>View</th>
+              {import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' && (
+                <th>Upload Docs</th>
+              )}
             </tr>
             <tr>
               <th colSpan={10}></th>
@@ -1292,15 +1313,18 @@ export default function MyFleetTable({
                 <span style={{ fontSize: 13, marginLeft: 6 }}>{sortConfig.key === 'disposed_challan_count' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
               </th>
               <th></th>
+              {import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' && (
+                <th></th>
+              )}
             </tr>
           </thead>
           <tbody>
             {actualLoading ? (
-              <tr><td colSpan={11}>Loading...</td></tr>
+              <tr><td colSpan={import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' ? 14 : 13}>Loading...</td></tr>
             ) : showClientPages && !selectedClientId ? (
-              <tr><td colSpan={11} style={{ textAlign: 'center', padding: 24, color: '#666' }}>Please select a client from the dropdown above to view their vehicles.</td></tr>
+              <tr><td colSpan={import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' ? 14 : 13} style={{ textAlign: 'center', padding: 24, color: '#666' }}>Please select a client from the dropdown above to view their vehicles.</td></tr>
             ) : sortedAll.length === 0 ? (
-              <tr><td colSpan={11}>No data found.</td></tr>
+              <tr><td colSpan={import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' ? 14 : 13}>No data found.</td></tr>
             ) : (
               visibleRows.map((row, idx) => (
                 <tr key={row.vehicle_id || idx}>
@@ -1408,6 +1432,21 @@ export default function MyFleetTable({
                       <FaEye style={{ fontSize: '1.2em' }} />
                     </button>
                   </td>
+                  {import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' && (
+                    <td style={{ textAlign: 'center' }}>
+                      <button 
+                        className="action-btn flat-btn" 
+                        title="Upload Documents" 
+                        style={{ fontSize: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                        onClick={() => {
+                          setSelectedVehicleForUpload(row);
+                          setShowUploadModal(true);
+                        }}
+                      >
+                        <FaUpload style={{ fontSize: '1.2em' }} />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))
             )}
@@ -1467,6 +1506,108 @@ export default function MyFleetTable({
               onChange={() => setDownloadFormat('pdf')} />
             <span>PDF</span>
           </label>
+        </div>
+      </CustomModal>
+
+      {/* Upload document modal */}
+      <CustomModal
+        open={showUploadModal}
+        title="Upload Vehicle Documents"
+        description={selectedVehicleForUpload ? `Upload documents for ${selectedVehicleForUpload.vehicle_number}` : "Upload vehicle documents"}
+        confirmText="Upload Documents"
+        cancelText="Cancel"
+        onConfirm={() => {
+          // TODO: Implement file upload API call
+          console.log('Uploading documents:', uploadFiles);
+          setShowUploadModal(false);
+          setUploadFiles({
+            insurance: null,
+            pollution: null,
+            roadTax: null,
+            fitness: null,
+            permit: null
+          });
+        }}
+        onCancel={() => {
+          setShowUploadModal(false);
+          setUploadFiles({
+            insurance: null,
+            pollution: null,
+            roadTax: null,
+            fitness: null,
+            permit: null
+          });
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontWeight: 600, fontSize: 14, color: '#333' }}>Insurance Document</label>
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={(e) => setUploadFiles({ ...uploadFiles, insurance: e.target.files[0] })}
+              style={{ padding: 6, border: '1px solid #ccc', borderRadius: 4 }}
+            />
+            {uploadFiles.insurance && (
+              <span style={{ fontSize: 12, color: '#666' }}>Selected: {uploadFiles.insurance.name}</span>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontWeight: 600, fontSize: 14, color: '#333' }}>Pollution Certificate (PUC)</label>
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={(e) => setUploadFiles({ ...uploadFiles, pollution: e.target.files[0] })}
+              style={{ padding: 6, border: '1px solid #ccc', borderRadius: 4 }}
+            />
+            {uploadFiles.pollution && (
+              <span style={{ fontSize: 12, color: '#666' }}>Selected: {uploadFiles.pollution.name}</span>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontWeight: 600, fontSize: 14, color: '#333' }}>Road Tax Document</label>
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={(e) => setUploadFiles({ ...uploadFiles, roadTax: e.target.files[0] })}
+              style={{ padding: 6, border: '1px solid #ccc', borderRadius: 4 }}
+            />
+            {uploadFiles.roadTax && (
+              <span style={{ fontSize: 12, color: '#666' }}>Selected: {uploadFiles.roadTax.name}</span>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontWeight: 600, fontSize: 14, color: '#333' }}>Fitness Certificate</label>
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={(e) => setUploadFiles({ ...uploadFiles, fitness: e.target.files[0] })}
+              style={{ padding: 6, border: '1px solid #ccc', borderRadius: 4 }}
+            />
+            {uploadFiles.fitness && (
+              <span style={{ fontSize: 12, color: '#666' }}>Selected: {uploadFiles.fitness.name}</span>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontWeight: 600, fontSize: 14, color: '#333' }}>Permit Document</label>
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={(e) => setUploadFiles({ ...uploadFiles, permit: e.target.files[0] })}
+              style={{ padding: 6, border: '1px solid #ccc', borderRadius: 4 }}
+            />
+            {uploadFiles.permit && (
+              <span style={{ fontSize: 12, color: '#666' }}>Selected: {uploadFiles.permit.name}</span>
+            )}
+          </div>
+
+          <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+            Accepted formats: PDF, JPG, PNG
+          </div>
         </div>
       </CustomModal>
     </div></>

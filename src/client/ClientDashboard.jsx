@@ -52,6 +52,20 @@ const IS_DEFAULT_DOMAIN = CURRENT_HOSTNAME === DEFAULT_HOST;
 const IS_WHITELABEL = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME) && !IS_DEFAULT_DOMAIN;
 const BRAND_LOGO = (IS_WHITELABEL && resolvePerHostEnv(CURRENT_HOSTNAME, 'LOGO_URL')) || import.meta.env.VITE_CUSTOM_LOGO_URL || scLogo;
 
+// Client Dashboard Card Colors
+const CARD_COLOR_REGISTERED_VEHICLES = import.meta.env.VITE_CLIENT_REGISTERED_VEHICLES_COLOR || '#57A5FF';
+const CARD_COLOR_CHALLANS_FETCHED = import.meta.env.VITE_CLIENT_CHALLANS_FETCHED_COLOR || '#47DDBF';
+const CARD_COLOR_VEHICLE_RENEWALS = import.meta.env.VITE_CLIENT_VEHICLE_RENEWALS_COLOR || '#FFC167';
+const CARD_COLOR_CHALLAN_AMOUNT = import.meta.env.VITE_CLIENT_CHALLAN_AMOUNT_COLOR || '#FF6B84';
+
+// Debug: Log color values
+console.log('Card Colors:', {
+  registeredVehicles: CARD_COLOR_REGISTERED_VEHICLES,
+  challansFetched: CARD_COLOR_CHALLANS_FETCHED,
+  vehicleRenewals: CARD_COLOR_VEHICLE_RENEWALS,
+  challanAmount: CARD_COLOR_CHALLAN_AMOUNT
+});
+
 
 import { FaDownload } from "react-icons/fa";
 import "react-toastify/dist/ReactToastify.css";
@@ -586,7 +600,7 @@ function ChallanCard({ challan, color }) {
     </div>
   );
 }
-import { ToastContainer } from "react-toastify";
+import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./LatestTable.css";
 import LatestChallansTable from "./LatestChallansTable";
@@ -738,20 +752,53 @@ function ClientDashboard() {
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [selectedVehicleReport, setSelectedVehicleReport] = useState(null);
   
+  // Legal acceptance modal state
+  const [showLegalModal, setShowLegalModal] = useState(false);
+  const [legalAccepting, setLegalAccepting] = useState(false);
+  
   // Theme toggle state (default: false for blue theme, true for metallic theme)
   const [isMetallicTheme, setIsMetallicTheme] = useState(() => {
+    // Check user_options.default_theme first
+    try {
+      const scUser = JSON.parse(localStorage.getItem('sc_user') || '{}');
+      // Merge user_options from both locations
+      const topLevelOptions = scUser.user_options || {};
+      const nestedOptions = (scUser.user && scUser.user.user_options) || {};
+      const userOptions = { ...topLevelOptions, ...nestedOptions };
+      if (userOptions.default_theme) {
+        return userOptions.default_theme === 'metallic';
+      }
+    } catch (e) {
+      // ignore
+    }
+    // Fall back to old sc_theme localStorage key
     const saved = localStorage.getItem('sc_theme');
     return saved === 'metallic';
   });
   
   // Apply/remove theme class on body element
   useEffect(() => {
+    const themeValue = isMetallicTheme ? 'metallic' : 'blue';
     if (isMetallicTheme) {
       document.body.classList.add('theme-metallic');
-      localStorage.setItem('sc_theme', 'metallic');
     } else {
       document.body.classList.remove('theme-metallic');
-      localStorage.setItem('sc_theme', 'blue');
+    }
+    // Update both localStorage keys
+    localStorage.setItem('sc_theme', themeValue);
+    try {
+      const scUser = JSON.parse(localStorage.getItem('sc_user') || '{}');
+      // Merge user_options from both locations to preserve all settings
+      const topLevelOptions = scUser.user_options || {};
+      const nestedOptions = (scUser.user && scUser.user.user_options) || {};
+      const userOptions = { ...topLevelOptions, ...nestedOptions };
+      userOptions.default_theme = themeValue;
+      // Update both locations to keep them in sync
+      scUser.user_options = userOptions;
+      scUser.user = { ...scUser.user, user_options: userOptions };
+      localStorage.setItem('sc_user', JSON.stringify(scUser));
+    } catch (e) {
+      // ignore
     }
   }, [isMetallicTheme]);
   
@@ -761,6 +808,84 @@ function ClientDashboard() {
       document.body.classList.remove('theme-metallic');
     };
   }, []);
+  
+  // Check legal acceptance on mount
+  useEffect(() => {
+    // Check if legal acceptance feature is enabled
+    const legalFeatureEnabled = import.meta.env.VITE_LEGAL_ACCEPTANCE_ENABLED === 'true';
+    if (!legalFeatureEnabled) return;
+    
+    try {
+      const scUser = JSON.parse(localStorage.getItem('sc_user') || '{}');
+      // Merge user_options from both possible locations to handle cases where theme was saved
+      const nestedOptions = (scUser.user && scUser.user.user_options) || {};
+      const topLevelOptions = scUser.user_options || {};
+      const userOptions = { ...topLevelOptions, ...nestedOptions };
+      const legalAccepted = userOptions.legal_accepted;
+      
+      // Show modal only if legal_accepted is explicitly not accepted
+      // Accepted values: 1, "1", true, "true"
+      const isAccepted = legalAccepted === 1 || legalAccepted === '1' || legalAccepted === true || legalAccepted === 'true';
+      
+      if (!isAccepted) {
+        setShowLegalModal(true);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+  
+  // Accept legal terms
+  const acceptLegalTerms = async () => {
+    setLegalAccepting(true);
+    try {
+      const scUser = JSON.parse(localStorage.getItem('sc_user') || '{}');
+      const user_id = scUser.user?.id || scUser.user?._id || scUser.user?.client_id || null;
+      const user_role = scUser.user?.role || 'client';
+      const payload = {
+        user_id,
+        user_role,
+        settings: {
+          legal_accepted: 1
+        }
+      };
+      const token = scUser.token || '';
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/useroptions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        // update localStorage sc_user.user.user_options
+        try {
+          const newScUser = { ...scUser };
+          // Merge user_options from both locations to preserve all settings
+          const topLevelOptions = newScUser.user_options || {};
+          const nestedOptions = (newScUser.user && newScUser.user.user_options) || {};
+          const userOptions = { ...topLevelOptions, ...nestedOptions };
+          userOptions.legal_accepted = 1;
+          // Update both locations to keep them in sync
+          newScUser.user_options = userOptions;
+          newScUser.user = { ...newScUser.user, user_options: userOptions };
+          localStorage.setItem('sc_user', JSON.stringify(newScUser));
+          setShowLegalModal(false);
+          toast.success(data.message || 'Terms accepted');
+        } catch (e) {
+          // ignore
+        }
+      } else {
+        toast.error(data.message || 'Failed to save acceptance');
+      }
+    } catch (err) {
+      toast.error('Failed to save acceptance');
+    } finally {
+      setLegalAccepting(false);
+    }
+  };
   
   // Toggle theme function
   const toggleTheme = () => {
@@ -2292,9 +2417,9 @@ function ClientDashboard() {
               {/* Top row: 4 stat cards if showClientPages, else 2 */}
               <div style={{ display: 'flex', width: '100%', gap: 16 }}>
                 {!showClientPages && (
-                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: '#3b82f6', borderRadius: 0, boxShadow: '0 6px 24px rgba(59, 130, 246, 0.20)', border: '1.5px solid #2563eb'}}>
+                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: CARD_COLOR_REGISTERED_VEHICLES, borderRadius: 0, boxShadow: `0 6px 24px ${CARD_COLOR_REGISTERED_VEHICLES}40`, border: `1.5px solid ${CARD_COLOR_REGISTERED_VEHICLES}`}}>
                   <div className="stat-card-content">
-                  <i className="ri-car-line"></i>
+                  <i className="ri-car-line" style={{ color: '#1a1a1a', fontSize: '2.5em', filter: 'drop-shadow(1px 1px 2px rgba(255, 255, 255, 0.6)) drop-shadow(-1px -1px 1px rgba(0, 0, 0, 0.5))' }}></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
                     <div>Registered Vehicles</div>
                     <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
@@ -2418,9 +2543,9 @@ function ClientDashboard() {
                 </div>
                 )}
                 {!showClientPages && (
-                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: '#10b981', borderRadius: 0, boxShadow: '0 6px 24px rgba(16, 185, 129, 0.20)', border: '1.5px solid #059669'}}>
+                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: CARD_COLOR_CHALLANS_FETCHED, borderRadius: 0, boxShadow: `0 6px 24px ${CARD_COLOR_CHALLANS_FETCHED}40`, border: `1.5px solid ${CARD_COLOR_CHALLANS_FETCHED}`}}>
                   <div className="stat-card-content">
-                  <i className="ri-error-warning-line"></i>
+                  <i className="ri-error-warning-line" style={{ color: '#1a1a1a', fontSize: '2.5em', filter: 'drop-shadow(1px 1px 2px rgba(255, 255, 255, 0.6)) drop-shadow(-1px -1px 1px rgba(0, 0, 0, 0.5))' }}></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
                     <div>Challans Fetched</div>
                     <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
@@ -2705,9 +2830,9 @@ function ClientDashboard() {
             {/* Second row: 2 cards as before, 50% width each */}
             {!showClientPages && (
             <div className="dashboard-stats" style={{ display: 'flex', width: '100%', gap: 16, marginTop: 16 }}>
-              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320, background: '#ec4899', borderRadius: 0, boxShadow: '0 6px 24px rgba(236, 72, 153, 0.20)', border: '1.5px solid #db2777'}}>
+              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320, background: CARD_COLOR_VEHICLE_RENEWALS, borderRadius: 0, boxShadow: `0 6px 24px ${CARD_COLOR_VEHICLE_RENEWALS}40`, border: `1.5px solid ${CARD_COLOR_VEHICLE_RENEWALS}`}}>
                 <div className="stat-card-content">
-                  <i className="ri-alarm-warning-line"></i>
+                  <i className="ri-alarm-warning-line" style={{ color: '#1a1a1a', fontSize: '2.5em', filter: 'drop-shadow(1px 1px 2px rgba(255, 255, 255, 0.6)) drop-shadow(-1px -1px 1px rgba(0, 0, 0, 0.5))' }}></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
                     <div>Vehicle Renewals</div>
                     {/* <span style={{ color: '#666', fontSize: 12, float: 'left' }}>Expired</span> */}
@@ -2811,9 +2936,9 @@ function ClientDashboard() {
                   ) : null}
                 </div>
               </div>
-              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320, background: '#eab308', borderRadius: 0, boxShadow: '0 6px 24px rgba(234, 179, 8, 0.20)', border: '1.5px solid #ca8a04'}}>
+              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320, background: CARD_COLOR_CHALLAN_AMOUNT, borderRadius: 0, boxShadow: `0 6px 24px ${CARD_COLOR_CHALLAN_AMOUNT}40`, border: `1.5px solid ${CARD_COLOR_CHALLAN_AMOUNT}`}}>
                 <div className="stat-card-content">
-                  <i className="ri-money-rupee-circle-line"></i>
+                  <i className="ri-money-rupee-circle-line" style={{ color: '#1a1a1a', fontSize: '2.5em', filter: 'drop-shadow(1px 1px 2px rgba(255, 255, 255, 0.6)) drop-shadow(-1px -1px 1px rgba(0, 0, 0, 0.5))' }}></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
                     <div>Challan Amount</div>
                     <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
@@ -3640,6 +3765,58 @@ function ClientDashboard() {
           </table>
         </RightSidebar>
       )}
+      
+      {/* Legal Acceptance Modal */}
+      <CustomModal
+        open={showLegalModal}
+        title="Terms and Conditions"
+        onConfirm={acceptLegalTerms}
+        onCancel={() => setShowLegalModal(false)}
+        confirmText={legalAccepting ? "Accepting..." : "Accept"}
+        cancelText="Close"
+      >
+        <div style={{ lineHeight: 1.7, fontSize: 15, maxHeight: '400px', overflowY: 'auto', padding: '10px 0' }}>
+          <h4 style={{ marginTop: 0, marginBottom: 12 }}>User Agreement</h4>
+          <p>
+            By accessing and using this platform, you agree to comply with and be bound by the following terms and conditions. 
+            Please review the following terms carefully.
+          </p>
+          
+          <h4 style={{ marginBottom: 8, marginTop: 16 }}>1. Acceptance of Terms</h4>
+          <p>
+            You acknowledge that you have read, understood, and agree to be bound by these terms. 
+            If you do not agree to these terms, please do not use this service.
+          </p>
+          
+          <h4 style={{ marginBottom: 8, marginTop: 16 }}>2. Use of Service</h4>
+          <p>
+            This platform is provided for managing vehicle challans and related information. 
+            You agree to use this service only for lawful purposes and in accordance with these terms.
+          </p>
+          
+          <h4 style={{ marginBottom: 8, marginTop: 16 }}>3. Data Privacy</h4>
+          <p>
+            We are committed to protecting your privacy. Your personal information will be handled in accordance 
+            with applicable data protection laws and our privacy policy.
+          </p>
+          
+          <h4 style={{ marginBottom: 8, marginTop: 16 }}>4. User Responsibilities</h4>
+          <p>
+            You are responsible for maintaining the confidentiality of your account credentials and for all 
+            activities that occur under your account. You agree to notify us immediately of any unauthorized use.
+          </p>
+          
+          <h4 style={{ marginBottom: 8, marginTop: 16 }}>5. Limitation of Liability</h4>
+          <p>
+            The service is provided "as is" without warranties of any kind. We shall not be liable for any 
+            damages arising from the use or inability to use this service.
+          </p>
+          
+          <p style={{ marginTop: 20, fontWeight: 600, color: '#1976d2' }}>
+            Click "Accept" to continue using the platform, or "Close" to exit.
+          </p>
+        </div>
+      </CustomModal>
       
       {/* Permission Denied Modal */}
       <CustomModal 

@@ -665,7 +665,7 @@ main.main-content,
 .stat-card {
   background: linear-gradient(135deg, #f5f7fa 0%, #e3f0ff 100%);
   border-radius: 0px;
-  padding: 22px 20px 18px 20px;
+  padding: 15px 20px 18px 20px;
   box-shadow: 0 6px 24px 0 rgba(60, 120, 200, 0.10), 0 1.5px 6px 0 rgba(60, 120, 200, 0.08);
   flex: 1 1 260px;
   min-width: 220px;
@@ -706,7 +706,7 @@ main.main-content,
 
 .stat-card i {
   font-size: 32px;
-  margin-bottom: 10px;
+  margin-bottom: 2px;
   color: #fff !important;
   filter: drop-shadow(0 2px 8px rgba(0,0,0,0.10));
 }
@@ -717,7 +717,7 @@ main.main-content,
   align-items: flex-start;
   width: 100%;
   flex: 0 0 auto;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   padding-left: 0;
   color: #fff;
 }
@@ -1397,7 +1397,7 @@ main.main-content,
   /* Compact icon and text spacing */
   .stat-card i {
     font-size: 16px !important;
-    margin-bottom: 4px !important;
+    margin-bottom: 2px !important;
   }
   
   /* Ensure tables are fully scrollable */

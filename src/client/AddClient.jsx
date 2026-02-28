@@ -113,7 +113,19 @@ export default function AddClient() {
     try {
       const scUser = JSON.parse(localStorage.getItem('sc_user')) || {};
       parentId = scUser.user?.id || scUser.user?.client_id || scUser.user?._id || 0;
-    } catch {}
+    } catch (e) {
+      console.error('Failed to get parent_id from localStorage:', e);
+    }
+    
+    // Prevent submission if parent_id is invalid
+    if (!parentId || parentId === 0) {
+      toast.error('Session error: Unable to identify parent user. Please logout and login again.');
+      setSaving(false);
+      return;
+    }
+    
+    console.log('Adding client with parent_id:', parentId); // Debug log
+    
     // Build payload as per sample
     const payload = {
       name,
@@ -139,6 +151,9 @@ export default function AddClient() {
         body: JSON.stringify(payload)
       });
       const data = await res.json().catch(() => ({}));
+      
+      console.log('Add client response:', { status: res.status, ok: res.ok, data }); // Debug log
+      
       if (res.ok) {
         toast.success(data.message || 'Client added');
         // Clear cached client network data so it's refreshed on next view
@@ -148,9 +163,12 @@ export default function AddClient() {
         setCountry(''); setStateVal(''); setCity(''); setAddress(''); setZip('');
         setSendEmail(false);
       } else {
+        // Log the error details for debugging
+        console.error('Add client failed:', data);
         toast.error(data.message || 'Failed to add client');
       }
     } catch (e) {
+      console.error('Add client error:', e);
       toast.error('Failed to add client');
     } finally {
       setSaving(false);
@@ -270,8 +288,9 @@ export default function AddClient() {
           {city && (
             <div className="form-row">
               <div className="form-col">
-                <label className="form-label">Address</label>
-                <input className="form-control" value={address} onChange={e => { setAddress(e.target.value); setErrors(s => ({ ...s, address: null })); }} />
+                <label className="form-label">Address <span style={{color:'#e74c3c', marginLeft:6}}>*</span></label>
+                <input className={`form-control ${errors.address ? 'input-error' : ''}`} value={address} onChange={e => { setAddress(e.target.value); setErrors(s => ({ ...s, address: null })); }} />
+                {errors.address && <div style={{ color: '#e74c3c', fontSize: 13, marginTop: 6 }}>{errors.address}</div>}
               </div>
               <div className="form-col">
                 <label className="form-label">Zip Code <span style={{color:'#e74c3c', marginLeft:6}}>*</span></label>
