@@ -18,7 +18,6 @@ import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { resolvePerHostEnv, getWhitelabelHosts } from "../utils/whitelabel";
 import AddClient from './AddClient';
 import MyClients from './MyClients';
-import ClientSettings from './ClientSettings';
 import ActivityTracker from './ActivityTracker';
 // Auto-logout on inactivity
 function useAutoLogout() {
@@ -652,6 +651,7 @@ function ClientDashboard() {
 
   // Determine if client management menu should show (same logic as ClientSidebar)
   let showClientPages = false;
+  let hasAddClientsPermission = false;
   try {
     const userObj = JSON.parse(localStorage.getItem("sc_user"));
     if (userObj && userObj.user) {
@@ -659,11 +659,13 @@ function ClientDashboard() {
       const isParentAccount = (parentVal == null) || (parentVal == 0);
       // Use hasClients flag from login response - this determines if user is in client management mode
       const hasClientsFlag = !!(userObj.hasClients);
-      // If hasClients is false, check add_clients permission
+      // Check add_clients permission for menu items like "Add Client"
       const userOptions = userObj?.user_options || userObj?.user?.user_options || {};
-      const hasAddClientsPermission = userOptions.add_clients === "1" || userOptions.add_clients === 1;
-      // Final decision to show client management menu
-      showClientPages = !!(hasClientsFlag || hasAddClientsPermission || isParentAccount);
+      hasAddClientsPermission = userOptions.add_clients === "1" || userOptions.add_clients === 1;
+      // Final decision to show client management UI (selectors, My Clients page, etc.)
+      // Show client pages only if user actually has clients OR is a parent account
+      // Having add_clients permission alone is not enough to show client selectors
+      showClientPages = !!(hasClientsFlag || isParentAccount);
     }
   } catch {}
 
@@ -1167,7 +1169,6 @@ function ClientDashboard() {
     'Register Vehicle': 'add_vehicle',
     'Add Client': 'add_clients',
     'My Clients': 'add_clients',
-    'Client Settings': 'add_clients',
     'Vehicle Challans': 'fetch_challans',
     'RTO Details': 'fetch_rto_data',
   };
@@ -3415,7 +3416,6 @@ function ClientDashboard() {
 
         {activeMenu === "Add Client" && <AddClient />}
         {activeMenu === "My Clients" && <MyClients />}
-        {activeMenu === "Client Settings" && <ClientSettings />}
         {activeMenu === "Activity Tracker" && <ActivityTracker />}
 
         {activeMenu === "Register Vehicle" && <RegisterVehicle />}

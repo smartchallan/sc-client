@@ -26,7 +26,6 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
     'Register Vehicle': 'add_vehicle',
     'Add Client': 'add_clients',
     'My Clients': 'add_clients',
-    'Client Settings': 'add_clients',
     'Vehicle Challans': 'fetch_challans',
     'RTO Details': 'fetch_rto_data',
     // Add more mappings as needed
@@ -44,6 +43,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
   let initials = "JS";
   let userRole = "client";
   let showClientPages = false;
+  let hasAddClientsPermission = false;
   let userObj = null;
   try {
     userObj = JSON.parse(localStorage.getItem("sc_user"));
@@ -68,11 +68,13 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
       const isParentAccount = (parentVal == null) || (parentVal == 0);
       // Use hasClients flag from login response - this determines if user is in client management mode
       const hasClientsFlag = !!(userObj.hasClients);
-    // If hasClients is false, check add_clients permission
+    // Check add_clients permission for showing Add Client menu
     const userOptions = userObj?.user_options || userObj?.user?.user_options || {};
-    const hasAddClientsPermission = userOptions.add_clients === "1" || userOptions.add_clients === 1;
-    // Final decision to show client management menu
-    showClientPages = !!(hasClientsFlag || hasAddClientsPermission || isParentAccount);
+    hasAddClientsPermission = userOptions.add_clients === "1" || userOptions.add_clients === 1;
+    // Final decision to show client management UI (selectors, My Clients page, etc.)
+    // Show client pages only if user actually has clients OR is a parent account
+    // Having add_clients permission alone is not enough to show client management UI
+    showClientPages = !!(hasClientsFlag || isParentAccount);
     }
   } catch {}
 
@@ -112,16 +114,23 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
     ] : []),
   ];
 
-  // Build final menu and flatten Client Management children as main menu items when allowed
+  // Build final menu and add client management items when appropriate
   const menu = [...baseMenu];
+  const clientMenuItems = [];
+  
+  // Add "Add Client" if user has permission (even without clients)
+  if (hasAddClientsPermission) {
+    clientMenuItems.push({ icon: "ri-user-add-line", label: "Add Client" });
+  }
+  
+  // Add "My Clients" only if user has clients or is parent account
   if (showClientPages) {
-    const clientChildren = [
-      { icon: "ri-user-add-line", label: "Add Client" },
-      { icon: "ri-group-line", label: "My Clients" },
-      { icon: "ri-settings-3-line", label: "Client Settings" },
-    ];
-    // Insert client menu items directly (flattened) at position 1 (after Dashboard)
-    menu.splice(1, 0, ...clientChildren);
+    clientMenuItems.push({ icon: "ri-group-line", label: "My Clients" });
+  }
+  
+  // Insert client menu items at position 1 (after Dashboard)
+  if (clientMenuItems.length > 0) {
+    menu.splice(1, 0, ...clientMenuItems);
   }
 
   const handleLogout = () => {

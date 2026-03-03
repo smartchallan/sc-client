@@ -3,6 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import CustomModal from './CustomModal';
 import RightSidebar from './RightSidebar';
+import ClientSettingsSidebar from './ClientSettingsSidebar';
 
 export default function MyClients() {
   const [clients, setClients] = useState([]);
@@ -18,6 +19,7 @@ export default function MyClients() {
   const [showPassword, setShowPassword] = useState(false);
   const [statusModal, setStatusModal] = useState({ open: false, client: null, action: '' });
   const [selectedClient, setSelectedClient] = useState(null);
+  const [settingsClient, setSettingsClient] = useState(null);
   const API_ROOT = import.meta.env.VITE_API_BASE_URL || '';
 
   // Strict: Clear search box when change password modal is opened (prevents autofill or indirect state sync)
@@ -559,6 +561,25 @@ export default function MyClients() {
                       </button>
                       <button
                         className="action-btn flat-btn"
+                        onClick={() => setSettingsClient(c)}
+                        title="Client Settings"
+                        style={{
+                          fontSize: 16,
+                          padding: '6px 10px',
+                          borderRadius: 5,
+                          background: '#f3e5f5',
+                          color: '#7b1fa2',
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <i className="ri-settings-3-line"></i>
+                      </button>
+                      <button
+                        className="action-btn flat-btn"
                         onClick={() => setStatusModal({ 
                           open: true, 
                           client: c, 
@@ -769,6 +790,13 @@ export default function MyClients() {
           </div>
         </RightSidebar>
       )}
+
+      {/* Client Settings Sidebar */}
+      <ClientSettingsSidebar
+        open={!!settingsClient}
+        onClose={() => setSettingsClient(null)}
+        client={settingsClient}
+      />
     </>
   );
 }

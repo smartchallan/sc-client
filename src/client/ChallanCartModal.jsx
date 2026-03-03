@@ -20,6 +20,19 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove, onSubm
   const [isSubmittingTxn, setIsSubmittingTxn] = useState(false);
   const [transactionError, setTransactionError] = useState("");
 
+  // Add spin animation for loaders
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
+
   useEffect(() => {
     if (typeof onSubmittingChange === 'function') {
       onSubmittingChange(isSubmittingCart || isSubmittingTxn);
@@ -57,15 +70,13 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove, onSubm
     }
 
     let clientId = null;
-    let dealerId = null;
-    let adminId = null;
+    let parentId = null;
     try {
       const stored = JSON.parse(localStorage.getItem("sc_user")) || {};
       if (stored && stored.user) {
         const u = stored.user;
         clientId = u.client_id || u.id || u._id || null;
-        dealerId = u.dealer_id || null;
-        adminId = u.admin_id || null;
+        parentId = u.parent_id || null;
       }
     } catch (e) {
       // ignore, will send null ids
@@ -95,8 +106,7 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove, onSubm
 
     const payload = {
       client_id: clientId,
-      dealer_id: dealerId,
-      admin_id: adminId,
+      parent_id: parentId,
       request_type: "challan",
       item_count: cart.length,
       line_items: lineItems,
@@ -155,15 +165,13 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove, onSubm
     }
 
     let clientId = null;
-    let dealerId = null;
-    let adminId = null;
+    let parentId = null;
     try {
       const stored = JSON.parse(localStorage.getItem("sc_user")) || {};
       if (stored && stored.user) {
         const u = stored.user;
         clientId = u.client_id || u.id || u._id || null;
-        dealerId = u.dealer_id || null;
-        adminId = u.admin_id || null;
+        parentId = u.parent_id || null;
       }
     } catch (e) {
       // ignore, will send null ids
@@ -176,8 +184,7 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove, onSubm
 
     const payload = {
       client_id: clientId,
-      admin_id: adminId,
-      dealer_id: dealerId,
+      parent_id: parentId,
       request_id: requestId,
       transaction_id: transactionId.trim(),
     };
@@ -257,7 +264,7 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove, onSubm
 
     return (
       <div className="custom-modal-overlay">
-        <div className="custom-modal">
+        <div className="custom-modal" style={{ maxWidth: showPayment ? 1100 : 1400, width: '95%' }}>
           <button
             type="button"
             className="custom-modal-close"
@@ -267,162 +274,537 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove, onSubm
             ×
           </button>
           <div className="custom-modal-content">
-        <h2>
-          {showPayment
-            ? `Congrats, we have received your challan settlement request #${requestId}.`
-            : `Challan Cart (${cart.length})`}
-        </h2>
-        <div style={{ lineHeight: 1.7, fontSize: 15 }}>
+        <div style={{ 
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          marginBottom: 24,
+          paddingBottom: 16,
+          borderBottom: '2px solid #e2e8f0'
+        }}>
+          {showPayment ? (
+            <>
+              <div style={{
+                width: 48,
+                height: 48,
+                borderRadius: 12,
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+              }}>
+                <i className="ri-checkbox-circle-fill" style={{ fontSize: 28, color: '#fff' }}></i>
+              </div>
+              <div style={{ flex: 1 }}>
+                <h2 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: '#1e293b', lineHeight: 1.3 }}>
+                  Request Submitted Successfully!
+                </h2>
+                <div style={{ fontSize: 16, color: '#64748b', marginTop: 4 }}>
+                  Request ID: <span style={{ fontWeight: 600, color: '#0891b2' }}>#{requestId}</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{
+                width: 48,
+                height: 48,
+                borderRadius: 12,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+              }}>
+                <i className="ri-shopping-cart-2-fill" style={{ fontSize: 24, color: '#fff' }}></i>
+              </div>
+              <div style={{ flex: 1 }}>
+                <h2 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: '#1e293b' }}>
+                  Review Your Cart
+                </h2>
+                <div style={{ fontSize: 16, color: '#64748b', marginTop: 4 }}>
+                  {cart.length} {cart.length === 1 ? 'challan' : 'challans'} ready for settlement
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div style={{ lineHeight: 1.7, fontSize: 17 }}>
           {!showPayment && cart.length === 0 ? (
-            <div>No challans in cart.</div>
+            <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
+              <i className="ri-shopping-cart-line" style={{ fontSize: 64, display: 'block', marginBottom: 16, color: '#cbd5e1' }}></i>
+              No challans in cart.
+            </div>
           ) : (
             <>
               {!showPayment && (
                 <>
-                  <div style={{ maxHeight: 260, overflowY: 'auto', marginTop: 8 }}>
-                    <table className="latest-table" style={{ width: '100%', fontSize: 13 }}>
-                      <thead>
-                        <tr>
-                          <th>Challan No</th>
-                          <th>Vehicle No.</th>
-                          <th>Type</th>
-                          <th>Challan Amount</th>
-                          <th>Service Fee</th>
-                          <th>GST @{GST_PERCENT}%</th>
-                          <th>Total</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {cart.map((c) => {
-                          const base = parseAmount(c.fine_imposed);
-                          const fee = getServiceFee(c);
-                          const gst = (fee * GST_PERCENT) / 100;
-                          const lineTotal = base + fee + gst;
-                          const type = getChallanType(c);
-                          const label =
-                            type === "virtual"
-                              ? "Virtual Court"
-                              : type === "registered"
-                              ? "Registered Court"
-                              : "Online";
-                          return (
-                            <tr key={c.challan_no}>
-                              <td>{c.challan_no}</td>
-                              <td>{c.vehicle_number}</td>
-                              <td>{label}</td>
-                              <td>₹{base.toLocaleString('en-IN')}</td>
-                              <td>₹{fee.toLocaleString('en-IN')}</td>
-                              <td>₹{gst.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                              <td>₹{lineTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                              <td>
-                                <button
-                                  className="action-btn flat-btn"
-                                  style={{ background: '#eee', color: '#e53935', fontSize: 16, padding: '2px 6px' }}
-                                  type="button"
-                                  title="Remove from cart"
-                                  onClick={() => onRemove && onRemove(c)}
-                                >
-                                  <i className="ri-delete-bin-line" />
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                  <div style={{ 
+                    marginTop: 8,
+                    background: '#f8fafc',
+                    borderRadius: 12,
+                    padding: 16
+                  }}>
+                    <div style={{ 
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                      gap: 14
+                    }}>
+                      {cart.map((c) => {
+                        const base = parseAmount(c.fine_imposed);
+                        const fee = getServiceFee(c);
+                        const gst = (fee * GST_PERCENT) / 100;
+                        const lineTotal = base + fee + gst;
+                        const type = getChallanType(c);
+                        const label =
+                          type === "virtual"
+                            ? "Virtual Court"
+                            : type === "registered"
+                            ? "Registered Court"
+                            : "Online";
+                        
+                        const typeColor = 
+                          type === "virtual" ? "#9333ea" : 
+                          type === "registered" ? "#dc2626" : 
+                          "#0891b2";
+                        
+                        const typeBg = 
+                          type === "virtual" ? "#faf5ff" : 
+                          type === "registered" ? "#fef2f2" : 
+                          "#ecfeff";
+
+                        return (
+                          <div
+                            key={c.challan_no}
+                            style={{
+                              background: '#fff',
+                              borderRadius: 10,
+                              padding: 16,
+                              border: '1px solid #e2e8f0',
+                              position: 'relative',
+                              transition: 'all 0.2s',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                              e.currentTarget.style.borderColor = '#cbd5e1';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+                              e.currentTarget.style.borderColor = '#e2e8f0';
+                            }}
+                          >
+                            <button
+                              className="action-btn flat-btn"
+                              style={{ 
+                                position: 'absolute',
+                                top: 10,
+                                right: 10,
+                                background: '#fee',
+                                color: '#dc2626',
+                                fontSize: 16,
+                                padding: '6px 8px',
+                                borderRadius: 8,
+                                border: 'none',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                zIndex: 1
+                              }}
+                              type="button"
+                              title="Remove from cart"
+                              onClick={() => onRemove && onRemove(c)}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#dc2626';
+                                e.currentTarget.style.color = '#fff';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = '#fee';
+                                e.currentTarget.style.color = '#dc2626';
+                              }}
+                            >
+                              <i className="ri-delete-bin-line" />
+                            </button>
+
+                            <div style={{ 
+                              display: 'inline-block',
+                              background: typeBg,
+                              color: typeColor,
+                              padding: '5px 12px',
+                              borderRadius: 6,
+                              fontSize: 13,
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                              marginBottom: 10
+                            }}>
+                              {label}
+                            </div>
+
+                            <div style={{ 
+                              fontSize: 17,
+                              fontWeight: 700,
+                              color: '#1e293b',
+                              marginBottom: 6,
+                              paddingRight: 35,
+                              wordBreak: 'break-all'
+                            }}>
+                              {c.challan_no}
+                            </div>
+
+                            <div style={{ 
+                              fontSize: 15,
+                              color: '#64748b',
+                              marginBottom: 14,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 6
+                            }}>
+                              <i className="ri-car-line" style={{ fontSize: 17 }}></i>
+                              {c.vehicle_number}
+                            </div>
+
+                            <div style={{ 
+                              background: '#f8fafc',
+                              borderRadius: 8,
+                              padding: 12,
+                              fontSize: 15
+                            }}>
+                              <div style={{ 
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                marginBottom: 6,
+                                color: '#475569'
+                              }}>
+                                <span>Challan</span>
+                                <span style={{ fontWeight: 600, color: '#1e293b' }}>₹{base.toLocaleString('en-IN')}</span>
+                              </div>
+                              <div style={{ 
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                marginBottom: 6,
+                                color: '#475569'
+                              }}>
+                                <span>Service</span>
+                                <span style={{ fontWeight: 600, color: '#1e293b' }}>₹{fee.toLocaleString('en-IN')}</span>
+                              </div>
+                              <div style={{ 
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                marginBottom: 10,
+                                color: '#475569'
+                              }}>
+                                <span>GST</span>
+                                <span style={{ fontWeight: 600, color: '#1e293b' }}>₹{gst.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+                              </div>
+                              <div style={{ 
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                paddingTop: 10,
+                                borderTop: '2px dashed #cbd5e1',
+                                color: '#0f172a',
+                                fontSize: 16
+                              }}>
+                                <span style={{ fontWeight: 700 }}>Total</span>
+                                <span style={{ fontWeight: 700, color: '#0891b2' }}>
+                                  ₹{lineTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div style={{ marginTop: 12, fontSize: 14 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>Total challans</span>
-                      <span>{cart.length}</span>
+                  
+                  <div style={{ 
+                    marginTop: 20,
+                    background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                    borderRadius: 12,
+                    padding: 20,
+                    border: '2px solid #e2e8f0'
+                  }}>
+                    <div style={{ 
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: '#64748b',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.8px',
+                      marginBottom: 14
+                    }}>
+                      Payment Summary
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                      <span>Total challan amount</span>
-                      <span>₹{cartTotals.base.toLocaleString('en-IN')}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 16, color: '#475569' }}>
+                      <span>Total Challans ({cart.length})</span>
+                      <span style={{ fontWeight: 600 }}>₹{cartTotals.base.toLocaleString('en-IN')}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                      <span>Total service fee</span>
-                      <span>₹{cartTotals.fee.toLocaleString('en-IN')}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 16, color: '#475569' }}>
+                      <span>Service Fee</span>
+                      <span style={{ fontWeight: 600 }}>₹{cartTotals.fee.toLocaleString('en-IN')}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                      <span>Total GST @ {GST_PERCENT}%</span>
-                      <span>₹{cartTotals.gst.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14, fontSize: 16, color: '#475569' }}>
+                      <span>GST @ {GST_PERCENT}%</span>
+                      <span style={{ fontWeight: 600 }}>₹{cartTotals.gst.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontWeight: 600 }}>
-                      <span>Grand total</span>
-                      <span>₹{cartTotals.total.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+                    <div style={{ 
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      paddingTop: 14,
+                      borderTop: '2px dashed #cbd5e1',
+                      fontSize: 20
+                    }}>
+                      <span style={{ fontWeight: 700, color: '#0f172a' }}>Grand Total</span>
+                      <span style={{ fontWeight: 700, color: '#0891b2' }}>
+                        ₹{cartTotals.total.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                      </span>
                     </div>
                   </div>
+                  
                   <button
                     className="action-btn"
                     type="button"
-                    style={{ marginTop: 16, width: '100%' }}
+                    style={{ 
+                      marginTop: 20,
+                      width: '100%',
+                      background: 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)',
+                      color: '#fff',
+                      padding: '14px 24px',
+                      fontSize: 17,
+                      fontWeight: 700,
+                      borderRadius: 10,
+                      border: 'none',
+                      cursor: isSubmittingCart ? 'wait' : 'pointer',
+                      boxShadow: '0 4px 14px rgba(8, 145, 178, 0.3)',
+                      transition: 'all 0.2s',
+                      opacity: isSubmittingCart ? 0.8 : 1
+                    }}
                     onClick={submitCartRequest}
                     disabled={isSubmittingCart}
+                    onMouseEnter={(e) => {
+                      if (!isSubmittingCart) {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 6px 18px rgba(8, 145, 178, 0.4)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 14px rgba(8, 145, 178, 0.3)';
+                    }}
                   >
-                    {isSubmittingCart ? "Submitting..." : "Submit Request"}
+                    {isSubmittingCart ? (
+                      <>
+                        <i className="ri-loader-4-line" style={{ marginRight: 8, animation: 'spin 1s linear infinite' }}></i>
+                        Submitting Request...
+                      </>
+                    ) : (
+                      <>
+                        <i className="ri-checkbox-circle-line" style={{ marginRight: 8 }}></i>
+                        Submit Settlement Request
+                      </>
+                    )}
                   </button>
                 </>
               )}
               {showPayment && (
-                <div
-                  style={{
-                    marginTop: 18,
-                    padding: 18,
-                    borderRadius: 12,
-                    border: '1px solid #d0e2ff',
-                    background: 'linear-gradient(135deg, #f5f9ff 0%, #eef5ff 100%)',
-                  }}
-                >
-                  <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'stretch' }}>
-                    <div
-                      style={{
-                        flex: '0 0 auto',
+                <div style={{ marginTop: 8 }}>
+                  {/* Payment Amount Card */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    borderRadius: 16,
+                    padding: '24px 28px',
+                    marginBottom: 24,
+                    boxShadow: '0 8px 24px rgba(102, 126, 234, 0.25)',
+                    color: '#fff',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: 15, opacity: 0.95, marginBottom: 8, fontWeight: 500 }}>
+                      Total Payment Amount
+                    </div>
+                    <div style={{ fontSize: 42, fontWeight: 700, letterSpacing: '-1px', marginBottom: 8 }}>
+                      ₹{cartTotals.total.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    </div>
+                    <div style={{ fontSize: 14, opacity: 0.9, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      <i className="ri-information-line"></i>
+                      Request ID: #{requestId}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '400px 1fr', gap: 24, alignItems: 'start' }}>
+                    {/* QR Code Section */}
+                    <div style={{
+                      background: '#fff',
+                      borderRadius: 16,
+                      padding: 28,
+                      border: '1px solid #e2e8f0',
+                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{
+                        fontSize: 17,
+                        fontWeight: 700,
+                        color: '#0f172a',
+                        marginBottom: 20,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        padding: 12,
-                        background: '#fff',
+                        gap: 8
+                      }}>
+                        <i className="ri-qr-scan-2-line" style={{ fontSize: 22, color: '#667eea' }}></i>
+                        Scan QR to Pay
+                      </div>
+
+                      <div style={{
+                        background: 'linear-gradient(145deg, #f8fafc 0%, #fff 100%)',
+                        padding: 20,
+                        borderRadius: 16,
+                        border: '3px solid #e2e8f0',
+                        marginBottom: 20,
+                        boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.04)'
+                      }}>
+                        <img
+                          src={qrImageUrl}
+                          alt="UPI Payment QR Code"
+                          width={240}
+                          height={240}
+                          style={{ display: 'block', margin: '0 auto', borderRadius: 8 }}
+                          onError={e => { e.target.onerror = null; e.target.src = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=upi://pay?pa=demo@upi&pn=Smart%20Challan&am=1.00&cu=INR'; }}
+                        />
+                      </div>
+
+                      <div style={{
+                        background: '#f0fdf4',
+                        border: '1px solid #86efac',
                         borderRadius: 10,
-                        border: '1px solid #d0d7e2',
-                        boxShadow: '0 4px 12px rgba(15, 76, 129, 0.12)',
-                      }}
-                    >
-                      <img
-                        src={qrImageUrl}
-                        alt="Smart Challan UPI QR code"
-                        width={190}
-                        height={190}
-                        style={{ display: 'block' }}
-                        onError={e => { e.target.onerror = null; e.target.src = 'https://api.qrserver.com/v1/create-qr-code/?size=190x190&data=upi://pay?pa=demo@upi&pn=Smart%20Challan&am=1.00&cu=INR'; }}
-                      />
+                        padding: '10px 14px',
+                        marginBottom: 16
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 14, color: '#166534', fontWeight: 600 }}>
+                          <i className="ri-shield-check-fill" style={{ fontSize: 18, color: '#10b981' }}></i>
+                          100% Secure Payment
+                        </div>
+                      </div>
+
+                      <div style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6 }}>
+                        Scan with any UPI app
+                      </div>
+                      <div style={{ 
+                        display: 'flex', 
+                        gap: 12, 
+                        justifyContent: 'center', 
+                        marginTop: 12,
+                        flexWrap: 'wrap'
+                      }}>
+                        {['Google Pay', 'PhonePe', 'Paytm', 'BHIM'].map(app => (
+                          <div key={app} style={{
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: 8,
+                            padding: '6px 12px',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: '#475569'
+                          }}>
+                            {app}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div style={{ flex: 1, minWidth: 260, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                      <div>
-                        <div style={{
-                          display: 'inline-flex',
+
+                    {/* Instructions & Input Section */}
+                    <div>
+                      {/* Steps Card */}
+                      <div style={{
+                        background: '#fff',
+                        borderRadius: 16,
+                        padding: 24,
+                        border: '1px solid #e2e8f0',
+                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
+                        marginBottom: 20
+                      }}>
+                        <div style={{ 
+                          fontSize: 17,
+                          fontWeight: 700,
+                          color: '#0f172a',
+                          marginBottom: 18,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8
+                        }}>
+                          <div style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 8,
+                            background: 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#fff'
+                          }}>
+                            <i className="ri-guide-line" style={{ fontSize: 18 }}></i>
+                          </div>
+                          Payment Instructions
+                        </div>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                          {[
+                            { icon: 'ri-smartphone-line', text: 'Open any UPI app on your phone' },
+                            { icon: 'ri-qr-scan-line', text: 'Scan the QR code displayed on the left' },
+                            { icon: 'ri-check-double-line', text: `Verify amount: ₹${cartTotals.total.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+                            { icon: 'ri-secure-payment-line', text: 'Complete the payment securely' },
+                            { icon: 'ri-file-list-3-line', text: 'Copy the transaction ID from your UPI app' },
+                            { icon: 'ri-input-method-line', text: 'Enter the transaction ID below and submit' }
+                          ].map((step, idx) => (
+                            <div key={idx} style={{ display: 'flex', alignItems: 'start', gap: 12 }}>
+                              <div style={{
+                                minWidth: 32,
+                                height: 32,
+                                borderRadius: 8,
+                                background: '#f0f9ff',
+                                border: '1px solid #bae6fd',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#0891b2',
+                                fontSize: 14,
+                                fontWeight: 700
+                              }}>
+                                {idx + 1}
+                              </div>
+                              <div style={{
+                                flex: 1,
+                                paddingTop: 6
+                              }}>
+                                <div style={{ fontSize: 15, color: '#1e293b', lineHeight: 1.6, fontWeight: idx === 2 ? 600 : 400 }}>
+                                  {step.text}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Transaction ID Input Card */}
+                      <div style={{
+                        background: '#fff',
+                        borderRadius: 16,
+                        padding: 24,
+                        border: transactionError ? '2px solid #ef4444' : '1px solid #e2e8f0',
+                        boxShadow: transactionError ? '0 4px 20px rgba(239, 68, 68, 0.15)' : '0 4px 20px rgba(0, 0, 0, 0.06)',
+                        marginBottom: 20
+                      }}>
+                        <label style={{ 
+                          fontSize: 16,
+                          fontWeight: 700,
+                          color: '#0f172a',
+                          display: 'flex',
                           alignItems: 'center',
                           gap: 8,
-                          padding: '4px 10px',
-                          borderRadius: 999,
-                          background: '#e8f5e9',
-                          color: '#2e7d32',
-                          fontSize: 12,
-                          fontWeight: 600,
-                          marginBottom: 8,
+                          marginBottom: 12
                         }}>
-                          <i className="ri-shield-check-line" style={{ fontSize: 16 }} />
-                          Secure UPI payment
-                        </div>
-                        <p style={{ marginTop: 0, marginBottom: 4, fontSize: 14 }}>
-                          Scan the QR in any UPI app to make payment for your selected challans.
-                        </p>
-                        <p style={{ fontSize: 12, color: '#57606a', marginTop: 0, marginBottom: 12 }}>
-                          After payment, enter your UPI transaction / reference ID below so our team can verify and mark the challans as paid.
-                        </p>
-                        <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>
-                          Transaction / UPI Reference ID
+                          <i className="ri-key-2-line" style={{ fontSize: 20, color: '#667eea' }}></i>
+                          Enter Transaction ID
+                          <span style={{ color: '#ef4444', fontSize: 18 }}>*</span>
                         </label>
                         <input
                           type="text"
@@ -434,51 +816,141 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove, onSubm
                               setTransactionError("");
                             }
                           }}
-                          placeholder="Enter transaction ID from your UPI app"
+                          placeholder="Enter UPI transaction or reference ID"
                           style={{
                             width: '100%',
-                            padding: '8px 10px',
-                            borderRadius: 8,
-                            border: transactionError ? '1px solid #e53935' : '1px solid #c5d0e6',
-                            fontSize: 14,
+                            padding: '14px 16px',
+                            borderRadius: 10,
+                            border: transactionError ? '2px solid #ef4444' : '2px solid #e2e8f0',
+                            fontSize: 16,
                             boxSizing: 'border-box',
                             outline: 'none',
+                            transition: 'all 0.2s',
+                            fontFamily: 'monospace',
+                            letterSpacing: '0.5px',
+                            background: '#fafbfc'
+                          }}
+                          onFocus={(e) => {
+                            if (!transactionError) {
+                              e.target.style.borderColor = '#667eea';
+                              e.target.style.boxShadow = '0 0 0 4px rgba(102, 126, 234, 0.1)';
+                              e.target.style.background = '#fff';
+                            }
+                          }}
+                          onBlur={(e) => {
+                            e.target.style.borderColor = transactionError ? '#ef4444' : '#e2e8f0';
+                            e.target.style.boxShadow = 'none';
+                            e.target.style.background = '#fafbfc';
                           }}
                         />
                         {transactionError && (
-                          <div style={{ marginTop: 4, fontSize: 12, color: '#e53935' }}>
+                          <div style={{ 
+                            marginTop: 10,
+                            fontSize: 14,
+                            color: '#ef4444',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            padding: 10,
+                            background: '#fef2f2',
+                            borderRadius: 8,
+                            border: '1px solid #fecaca'
+                          }}>
+                            <i className="ri-error-warning-fill"></i>
                             {transactionError}
                           </div>
                         )}
+                        <div style={{ 
+                          marginTop: 10,
+                          fontSize: 14,
+                          color: '#64748b',
+                          display: 'flex',
+                          alignItems: 'start',
+                          gap: 8,
+                          padding: 10,
+                          background: '#f8fafc',
+                          borderRadius: 8
+                        }}>
+                          <i className="ri-lightbulb-line" style={{ marginTop: 2, color: '#0891b2' }}></i>
+                          <span>Find the transaction ID in your UPI app's payment history or SMS confirmation</span>
+                        </div>
                       </div>
-                      <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+
+                      {/* Action Buttons */}
+                      <div style={{ display: 'flex', gap: 12 }}>
                         <button
                           className="action-btn flat-btn"
                           type="button"
                           onClick={onClose}
                           style={{
-                            padding: '6px 16px',
-                            fontSize: 13,
-                            opacity: isSubmittingTxn ? 0.7 : 1,
+                            flex: 1,
+                            padding: '14px 24px',
+                            fontSize: 16,
+                            fontWeight: 600,
+                            background: '#fff',
+                            color: '#64748b',
+                            border: '2px solid #e2e8f0',
+                            borderRadius: 12,
                             cursor: isSubmittingTxn ? 'not-allowed' : 'pointer',
+                            opacity: isSubmittingTxn ? 0.5 : 1,
+                            transition: 'all 0.2s'
                           }}
                           disabled={isSubmittingTxn}
+                          onMouseEnter={(e) => {
+                            if (!isSubmittingTxn) {
+                              e.currentTarget.style.background = '#f8fafc';
+                              e.currentTarget.style.borderColor = '#cbd5e1';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#fff';
+                            e.currentTarget.style.borderColor = '#e2e8f0';
+                          }}
                         >
-                          Close
+                          <i className="ri-close-line" style={{ marginRight: 8 }}></i>
+                          Cancel
                         </button>
                         <button
                           className="action-btn"
                           type="button"
                           onClick={submitTransaction}
                           style={{
-                            padding: '6px 18px',
-                            fontSize: 13,
-                            opacity: isSubmittingTxn ? 0.8 : 1,
+                            flex: 2,
+                            padding: '14px 28px',
+                            fontSize: 16,
+                            fontWeight: 700,
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: 12,
                             cursor: isSubmittingTxn ? 'wait' : 'pointer',
+                            opacity: isSubmittingTxn ? 0.8 : 1,
+                            boxShadow: '0 6px 20px rgba(16, 185, 129, 0.3)',
+                            transition: 'all 0.2s'
                           }}
                           disabled={isSubmittingTxn}
+                          onMouseEnter={(e) => {
+                            if (!isSubmittingTxn) {
+                              e.currentTarget.style.transform = 'translateY(-2px)';
+                              e.currentTarget.style.boxShadow = '0 8px 24px rgba(16, 185, 129, 0.4)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.3)';
+                          }}
                         >
-                          {isSubmittingTxn ? 'Submitting...' : 'Submit transaction'}
+                          {isSubmittingTxn ? (
+                            <>
+                              <i className="ri-loader-4-line" style={{ marginRight: 8, animation: 'spin 1s linear infinite' }}></i>
+                              Verifying Payment...
+                            </>
+                          ) : (
+                            <>
+                              <i className="ri-check-double-line" style={{ marginRight: 8 }}></i>
+                              Confirm Payment
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
