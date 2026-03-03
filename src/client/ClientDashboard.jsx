@@ -19,6 +19,7 @@ import { resolvePerHostEnv, getWhitelabelHosts } from "../utils/whitelabel";
 import AddClient from './AddClient';
 import MyClients from './MyClients';
 import ActivityTracker from './ActivityTracker';
+import HoliAnimation from './HoliAnimation';
 // Auto-logout on inactivity
 function useAutoLogout() {
   const logoutTimeoutRef = useRef();
@@ -757,6 +758,20 @@ function ClientDashboard() {
   // Legal acceptance modal state
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [legalAccepting, setLegalAccepting] = useState(false);
+  
+  // Holi animation state
+  const [showHoliAnimation, setShowHoliAnimation] = useState(() => {
+    const holiEnabled = import.meta.env.VITE_ENABLE_HOLI_ANIMATION === 'true';
+    if (!holiEnabled) return false;
+    // Check if animation was already shown in this session
+    const hasShownHoli = sessionStorage.getItem('holi_animation_shown');
+    return !hasShownHoli;
+  });
+  
+  const handleHoliAnimationComplete = () => {
+    setShowHoliAnimation(false);
+    sessionStorage.setItem('holi_animation_shown', 'true');
+  };
   
   // Theme toggle state (default: false for blue theme, true for metallic theme)
   const [isMetallicTheme, setIsMetallicTheme] = useState(() => {
@@ -2237,6 +2252,7 @@ function ClientDashboard() {
 
     return (
               <React.Fragment>
+    {showHoliAnimation && <HoliAnimation onComplete={handleHoliAnimationComplete} />}
     <ToastContainer position="top-right" autoClose={2000} />
   <div className={`dashboard-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
       {/* Page loader commented out - only using graph loaders now */}
