@@ -2,3 +2,22 @@
 @import './shared/MetallicTheme.css';
 
 /* index.css - Global theme imports */
+
+/* Application zoom - 90% */
+html {
+  zoom: 0.9;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}

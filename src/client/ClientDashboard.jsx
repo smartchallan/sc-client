@@ -2418,7 +2418,7 @@ function ClientDashboard() {
               {/* Top row: 4 stat cards if showClientPages, else 2 */}
               <div style={{ display: 'flex', width: '100%', gap: 16 }}>
                 {!showClientPages && (
-                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: CARD_COLOR_REGISTERED_VEHICLES, borderRadius: 0, boxShadow: `0 6px 24px ${CARD_COLOR_REGISTERED_VEHICLES}40`, border: `1.5px solid ${CARD_COLOR_REGISTERED_VEHICLES}`}}>
+                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0}}>
                   <div className="stat-card-content">
                   <i className="ri-car-line" style={{ color: '#1a1a1a', fontSize: '2.5em', filter: 'drop-shadow(1px 1px 2px rgba(255, 255, 255, 0.6)) drop-shadow(-1px -1px 1px rgba(0, 0, 0, 0.5))' }}></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
@@ -2544,7 +2544,7 @@ function ClientDashboard() {
                 </div>
                 )}
                 {!showClientPages && (
-                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: CARD_COLOR_CHALLANS_FETCHED, borderRadius: 0, boxShadow: `0 6px 24px ${CARD_COLOR_CHALLANS_FETCHED}40`, border: `1.5px solid ${CARD_COLOR_CHALLANS_FETCHED}`}}>
+                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0}}>
                   <div className="stat-card-content">
                   <i className="ri-error-warning-line" style={{ color: '#1a1a1a', fontSize: '2.5em', filter: 'drop-shadow(1px 1px 2px rgba(255, 255, 255, 0.6)) drop-shadow(-1px -1px 1px rgba(0, 0, 0, 0.5))' }}></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
@@ -2602,7 +2602,7 @@ function ClientDashboard() {
                 {/* Network stat cards if showClientPages - render as siblings, not nested */}
                 {showClientPages && (
                   <React.Fragment>
-                    <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: '#f59e0b', borderRadius: 0, boxShadow: '0 6px 24px rgba(245, 158, 11, 0.20)', border: '1.5px solid #d97706'}}>
+                    <div className="stat-card" style={{flex: '1 1 0', minWidth: 0}}>
                       <div className="stat-card-content">
                         <i className="ri-briefcase-line"></i>
                         <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
@@ -2675,7 +2675,7 @@ function ClientDashboard() {
                         </div> */}
                       </div>
                     </div>
-                    <div className="stat-card" style={{flex: '1 1 0', minWidth: 0, background: '#059669', borderRadius: 0, boxShadow: '0 6px 24px rgba(5, 150, 105, 0.20)', border: '1.5px solid #047857'}}>
+                    <div className="stat-card" style={{flex: '1 1 0', minWidth: 0}}>
                       <div className="stat-card-content">
                         <i className="ri-user-3-line"></i>
                         <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
@@ -2720,7 +2720,7 @@ function ClientDashboard() {
               {/* Second row of network stats cards */}
               {showClientPages && (
                 <div style={{ display: 'flex', width: '100%', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
-                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: '#10b981', borderRadius: 0, boxShadow: '0 6px 24px rgba(16, 185, 129, 0.20)', border: '1.5px solid #059669'}}>
+                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280}}>
                     <div className="stat-card-content">
                       <i className="ri-error-warning-line"></i>
                       <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
@@ -2745,7 +2745,7 @@ function ClientDashboard() {
                       </div>
                     </div>
                   </div>
-                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: '#ec4899', borderRadius: 0, boxShadow: '0 6px 24px rgba(236, 72, 153, 0.20)', border: '1.5px solid #db2777'}}>
+                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280}}>
                     <div className="stat-card-content">
                       <i className="ri-alarm-warning-line"></i>
                       <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
@@ -2798,7 +2798,7 @@ function ClientDashboard() {
                       </div>
                     </div>
                   </div>
-                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280, background: '#eab308', borderRadius: 0, boxShadow: '0 6px 24px rgba(234, 179, 8, 0.20)', border: '1.5px solid #ca8a04'}}>
+                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280}}>
                     <div className="stat-card-content">
                       <i className="ri-money-rupee-circle-line"></i>
                       <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
@@ -2831,7 +2831,7 @@ function ClientDashboard() {
             {/* Second row: 2 cards as before, 50% width each */}
             {!showClientPages && (
             <div className="dashboard-stats" style={{ display: 'flex', width: '100%', gap: 16, marginTop: 16 }}>
-              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320, background: CARD_COLOR_VEHICLE_RENEWALS, borderRadius: 0, boxShadow: `0 6px 24px ${CARD_COLOR_VEHICLE_RENEWALS}40`, border: `1.5px solid ${CARD_COLOR_VEHICLE_RENEWALS}`}}>
+              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320}}>
                 <div className="stat-card-content">
                   <i className="ri-alarm-warning-line" style={{ color: '#1a1a1a', fontSize: '2.5em', filter: 'drop-shadow(1px 1px 2px rgba(255, 255, 255, 0.6)) drop-shadow(-1px -1px 1px rgba(0, 0, 0, 0.5))' }}></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
@@ -2937,7 +2937,7 @@ function ClientDashboard() {
                   ) : null}
                 </div>
               </div>
-              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320, background: CARD_COLOR_CHALLAN_AMOUNT, borderRadius: 0, boxShadow: `0 6px 24px ${CARD_COLOR_CHALLAN_AMOUNT}40`, border: `1.5px solid ${CARD_COLOR_CHALLAN_AMOUNT}`}}>
+              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320}}>
                 <div className="stat-card-content">
                   <i className="ri-money-rupee-circle-line" style={{ color: '#1a1a1a', fontSize: '2.5em', filter: 'drop-shadow(1px 1px 2px rgba(255, 255, 255, 0.6)) drop-shadow(-1px -1px 1px rgba(0, 0, 0, 0.5))' }}></i>
                   <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
