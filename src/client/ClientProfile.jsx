@@ -6,6 +6,7 @@ import CustomModal from "./CustomModal";
 
 export default function ClientProfile() {
   const navigate = useNavigate();
+  const [profileTab, setProfileTab] = useState('personal');
   const [passwordError, setPasswordError] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -530,22 +531,58 @@ export default function ClientProfile() {
     initials = userName.substring(0,2).toUpperCase();
   }
 
+  const profileTabs = [
+    { key: 'personal', label: 'Personal Info', icon: 'ri-user-settings-line' },
+    { key: 'preferences', label: 'Preferences', icon: 'ri-palette-line' },
+    { key: 'security', label: 'Security', icon: 'ri-lock-password-line' },
+    { key: 'notifications', label: 'Notifications', icon: 'ri-notification-3-line' },
+  ];
+
   return (
     <div className="profile-content1">
-      {/* ToastContainer for toast notifications */}
       <ToastContainer position="top-right" autoClose={2000} hideProgressBar={false} newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover />
       <div className="content">
-        <div className="profile-header-profile">
-          <div className="profile-picture">{initials}</div>
-          <div>
-            <h2 style={{fontWeight:800, fontSize:28, marginBottom:8}}>{userName}</h2>
-            <p style={{color:'#555', fontSize:16, marginBottom:2}}>{userEmail}</p>
-            <p style={{color:'#888', fontSize:15}}>Member since: {userJoined}</p>
+        {/* Dashboard-style gradient banner header */}
+        <div className="profile-banner">
+          <div className="profile-banner-bg-circle profile-banner-bg-circle-1" />
+          <div className="profile-banner-bg-circle profile-banner-bg-circle-2" />
+          <div className="profile-banner-inner">
+            <div className="profile-banner-left">
+              <div className="profile-picture">{initials}</div>
+              <div className="profile-banner-info">
+                <div className="profile-banner-name">{userName}</div>
+                <div className="profile-banner-email"><i className="ri-mail-line"></i> {userEmail}</div>
+                <div className="profile-banner-legends">
+                  <span><i className="ri-calendar-check-line"></i> Joined {userJoined}</span>
+                  {userPhone && userPhone !== 'Not available' && (
+                    <span><i className="ri-phone-line"></i> {userPhone}</span>
+                  )}
+                  {companyName && companyName !== 'Not available' && (
+                    <span><i className="ri-building-line"></i> {companyName}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Tab Navigation */}
+          <div className="profile-tabs">
+            {profileTabs.map(tab => (
+              <button
+                key={tab.key}
+                className={`profile-tab ${profileTab === tab.key ? 'active' : ''}`}
+                onClick={() => setProfileTab(tab.key)}
+              >
+                <i className={tab.icon}></i>
+                <span>{tab.label}</span>
+              </button>
+            ))}
           </div>
         </div>
+
+        {/* Tab Content */}
+        {profileTab === 'personal' && (
         <div className="profile-section">
-          <div className="card-icon personal"><i className="ri-user-settings-line"></i></div>
-          <h3 className="card-title" style={{marginBottom:18}}>Personal Information</h3>
+          <h3><i className="ri-user-settings-line" style={{ color: '#6366f1' }}></i> Personal Information</h3>
           <form className="profile-form">
             <div className="form-row">
               <div className="form-col">
@@ -602,10 +639,14 @@ export default function ClientProfile() {
             </div>
           </form>
         </div>
+        )}
 
+        {/* Preferences Tab: Theme + Tariffs */}
+        {profileTab === 'preferences' && (
+        <>
         {/* Theme Preference section */}
         <div className="profile-section">
-          <h3>Theme Preference</h3>
+          <h3><i className="ri-palette-line" style={{ color: '#6366f1' }}></i> Theme Preference</h3>
           <div style={{margin: '12px 0'}}>
             <div className="form-row">
               <div className="form-col" style={{width:'50%'}}>
@@ -650,7 +691,7 @@ export default function ClientProfile() {
 
         {/* My Tarrifs section */}
         <div className="profile-section">
-          <h3>My Tarrifs</h3>
+          <h3><i className="ri-money-dollar-circle-line" style={{ color: '#6366f1' }}></i> My Tariffs</h3>
           <div style={{margin: '12px 0'}}>
             {billing ? (
               <div className="form-row">
@@ -690,8 +731,13 @@ export default function ClientProfile() {
             )}
           </div>
         </div>
+        </>
+        )}
+
+        {/* Security Tab: Password */}
+        {profileTab === 'security' && (
       <div className="profile-section">
-        <h3>Update Password</h3>
+        <h3><i className="ri-lock-password-line" style={{ color: '#6366f1' }}></i> Update Password</h3>
         <form className="profile-form">
           {/* Billing fields moved to 'My Tarrifs' section below */}
 
@@ -796,10 +842,14 @@ export default function ClientProfile() {
           
         </form>
       </div>
+        )}
 
+      {/* Notifications Tab: Settings + Emails + Alerts */}
+      {profileTab === 'notifications' && (
+      <>
       {/* Notification Settings: toggles for email/sms/marketing */}
       <div className="profile-section">
-        <h3>Notification Settings</h3>
+        <h3><i className="ri-notification-3-line" style={{ color: '#6366f1' }}></i> Notification Settings</h3>
         <div style={{margin: '12px 0'}}>
           <div className="form-row">
             <div className="form-col" style={{width:'33%'}}>
@@ -859,7 +909,7 @@ export default function ClientProfile() {
 
       {/* Separate Notification Emails section */}
       <div className="profile-section">
-        <h3>Notification Emails</h3>
+        <h3><i className="ri-mail-send-line" style={{ color: '#6366f1' }}></i> Notification Emails</h3>
         <div style={{margin: '12px 0'}}>
           <div style={{display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8}}>
             {notificationEmails.length > 0 ? notificationEmails.map((em, idx) => {
@@ -893,7 +943,7 @@ export default function ClientProfile() {
 
       {/* Alert Preferences section */}
       <div className="profile-section">
-        <h3>Alert Preferences</h3>
+        <h3><i className="ri-alarm-warning-line" style={{ color: '#6366f1' }}></i> Alert Preferences</h3>
         <p style={{ color: '#666', fontSize: 14, marginBottom: 16 }}>Configure when you want to receive alerts for different events</p>
         <div style={{margin: '12px 0'}}>
           
@@ -1096,6 +1146,8 @@ export default function ClientProfile() {
           </div>
         </div>
       </div>
+      </>
+      )}
       
       </div>
       

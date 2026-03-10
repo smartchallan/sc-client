@@ -269,367 +269,197 @@ export default function MyClients() {
 
   return (
     <>
-      <p className="page-subtitle">Manage your complete client network. View all clients and their dealers in a hierarchical structure.</p>
-      <div className="dashboard-latest" style={{
-        background: '#fff',
-        borderRadius: 14,
-        boxShadow: '0 2px 12px 0 rgba(30,136,229,0.07)',
-        border: '1.5px solid #e3eaf1',
-        padding: '0 0 18px 0',
-        marginBottom: 0,
-        minHeight: 340,
-        transition: 'box-shadow 0.2s'
-      }}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, padding: '0 24px 0 0', minHeight: 54 }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ width: 4, height: 32, background: '#42a5f5', borderRadius: 3, marginRight: 14 }} />
-            <h2 style={{ margin: 0, fontSize: 19, color: '#1565c0', letterSpacing: '0.01em', fontFamily: 'Segoe UI, Arial, sans-serif', lineHeight: 1.2, fontWeight: 700 }}>My Clients Network</h2>
-          </div>
-          <div style={{ color: '#1565c0', fontSize: 14, background: '#f5f8fa', border: '1.5px solid #2196f3', borderRadius: 6, padding: '4px 12px', fontWeight: 700, display: 'inline-block', marginLeft: 0, boxShadow: '0 1px 4px #21cbf322' }}>
-            Showing {filtered.length} of {clients.length} clients
+      {/* Dashboard-style gradient banner header */}
+      <div className="profile-banner">
+        <div className="profile-banner-bg-circle profile-banner-bg-circle-1" />
+        <div className="profile-banner-bg-circle profile-banner-bg-circle-2" />
+        <div className="profile-banner-inner">
+          <div className="profile-banner-left">
+            <div className="profile-picture" style={{ background: 'rgba(255,255,255,0.18)' }}>
+              <i className="ri-team-line" style={{ fontSize: 24 }}></i>
+            </div>
+            <div className="profile-banner-info">
+              <div className="profile-banner-name">My Clients Network</div>
+              <div className="profile-banner-email">Manage your complete client network — view, search and filter all clients</div>
+              <div className="profile-banner-legends">
+                <span><i className="ri-group-line"></i> {clients.length} Total Clients</span>
+                <span><i className="ri-checkbox-circle-line"></i> {clients.filter(c => c.status === 'active' || !c.status).length} Active</span>
+                <span><i className="ri-close-circle-line"></i> {clients.filter(c => c.status === 'inactive').length} Inactive</span>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Search and Filter Controls */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          marginBottom: 18,
-          marginTop: 0,
-          flexWrap: 'wrap',
-          background: '#f5f8fa',
-          borderRadius: 8,
-          padding: '16px 18px 10px 18px',
-          border: '1.5px solid #e3eaf1',
-          boxShadow: '0 1px 4px #21cbf322',
-          position: 'relative'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flex: 1 }}>
-            <div style={{ position: 'relative' }}>
-              <input 
-                className="form-control" 
-                placeholder="Search clients..." 
-                value={search} 
-                onChange={e => {
-                  // Debug: log any programmatic value changes
-                  if (e.nativeEvent && e.nativeEvent.inputType !== 'insertText') {
-                    console.log('Search input changed programmatically:', e.target.value, e.nativeEvent);
-                  }
-                  setSearch(e.target.value);
-                }} 
-                style={{ 
-                  width: 240,
-                  padding: '10px 40px 10px 14px', 
-                  borderRadius: 6, 
-                  border: '1.5px solid #cdd',
-                  fontSize: 14
-                }} 
-                autoComplete="off"
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch('')}
-                  style={{
-                    position: 'absolute',
-                    right: 10,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    width: 24,
-                    height: 24,
-                    borderRadius: '50%',
-                    border: 'none',
-                    background: '#e3f2fd',
-                    color: '#1565c0',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 14,
-                    fontWeight: 700,
-                    transition: 'all 0.2s',
-                    lineHeight: 1
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = '#1565c0';
-                    e.target.style.color = '#fff';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = '#e3f2fd';
-                    e.target.style.color = '#1565c0';
-                  }}
-                  title="Clear search"
-                >
-                  ×
-                </button>
-              )}
-            </div>
-            
-            <select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              style={{
-                padding: '10px 14px',
-                borderRadius: 6,
-                border: '1.5px solid #cdd',
-                fontSize: 14,
-                background: '#fff',
-                cursor: 'pointer',
-                minWidth: 120
-              }}
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-            
-            <select
-              value={stateFilter}
+      {/* Toolbar — search, filters, actions (matching My Fleet style) */}
+      <div className="vst-toolbar">
+        <div className="vst-toolbar__left">
+          <div style={{ position: 'relative', width: 220, flexShrink: 0 }}>
+            <i className="ri-search-line" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: 15, pointerEvents: 'none' }}></i>
+            <input
+              className="vst-filter-trigger"
+              style={{ width: '100%', paddingLeft: 32, paddingRight: search ? 28 : 14, border: '1.5px solid #e0e7ff', background: '#fff' }}
+              placeholder="Search clients..."
+              value={search}
               onChange={e => {
-                setStateFilter(e.target.value);
-                setCityFilter('all');
+                if (e.nativeEvent && e.nativeEvent.inputType !== 'insertText') {
+                  console.log('Search input changed programmatically:', e.target.value, e.nativeEvent);
+                }
+                setSearch(e.target.value);
               }}
-              style={{
-                padding: '10px 14px',
-                borderRadius: 6,
-                border: '1.5px solid #cdd',
-                fontSize: 14,
-                background: '#fff',
-                cursor: 'pointer',
-                minWidth: 140
-              }}
-            >
-              <option value="all">All States</option>
-              {uniqueStates.map(state => (
-                <option key={state} value={state}>{state}</option>
-              ))}
-            </select>
-            
-            <select
-              value={cityFilter}
-              onChange={e => setCityFilter(e.target.value)}
-              style={{
-                padding: '10px 14px',
-                borderRadius: 6,
-                border: '1.5px solid #cdd',
-                fontSize: 14,
-                background: '#fff',
-                cursor: 'pointer',
-                minWidth: 140
-              }}
-            >
-              <option value="all">All Cities</option>
-              {uniqueCities.map(city => (
-                <option key={city} value={city}>{city}</option>
-              ))}
-            </select>
-            
-            <select
-              value={dealerFilter}
-              onChange={e => setDealerFilter(e.target.value)}
-              style={{
-                padding: '10px 14px',
-                borderRadius: 6,
-                border: '1.5px solid #cdd',
-                fontSize: 14,
-                background: '#fff',
-                cursor: 'pointer',
-                minWidth: 160
-              }}
-            >
-              <option value="all">All Dealers</option>
-              {uniqueDealers.map(dealer => (
-                <option key={dealer} value={dealer}>{dealer}</option>
-              ))}
-            </select>
-            
-            {(search || statusFilter !== 'all' || stateFilter !== 'all' || cityFilter !== 'all' || dealerFilter !== 'all') && (
+              autoComplete="off"
+            />
+            {search && (
               <button
-                onClick={() => {
-                  setSearch('');
-                  setStatusFilter('all');
-                  setStateFilter('all');
-                  setCityFilter('all');
-                  setDealerFilter('all');
-                }}
-                style={{
-                  padding: '10px 16px',
-                  borderRadius: 6,
-                  background: '#fff',
-                  border: '1.5px solid #cdd',
-                  color: '#666',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                  fontWeight: 500
-                }}
+                onClick={() => setSearch('')}
+                style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 16, padding: 0, lineHeight: 1 }}
+                title="Clear search"
               >
-                Reset
+                <i className="ri-close-line"></i>
               </button>
             )}
-            
-            <button 
-              onClick={() => fetchClients(true)} 
-              disabled={loading}
-              style={{ 
-                padding: '10px 20px', 
-                borderRadius: 6,
-                background: loading ? '#e0e0e0' : '#e3f2fd',
-                border: '1.5px solid #bbdefb',
-                color: loading ? '#999' : '#1565c0',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontWeight: 600,
-                fontSize: 14,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                marginLeft: 'auto'
-              }}
-            >
-              <i className={loading ? 'ri-loader-4-line' : 'ri-refresh-line'} style={{ fontSize: 16 }}></i>
-              {loading ? 'Refreshing...' : 'Refresh'}
-            </button>
           </div>
-        </div>
 
-        {/* Table Container with horizontal scroll only */}
-        <div style={{ overflowX: 'auto', padding: '0 18px' }}>
-          <table className="latest-table vehicle-summary-table" style={{ width: '100%', marginTop: 8 }}>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Dealer</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Address</th>
-                <th>Registered On</th>
-                <th>Status</th>
-                <th>Last Login</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={10} style={{ textAlign: 'center', color: '#666', padding: 20 }}>
-                    {loading ? 'Loading...' : 'No clients found.'}
-                  </td>
-                </tr>
-              ) : filtered.map((c, i) => (
-                <tr key={c.id || c._id || i}>
-                  <td>{i + 1}</td>
-                  <td style={{ fontWeight: 500 }}>{c.name || '-'}</td>
-                  <td>{c.dealerName || '-'}</td>
-                  <td>{c.email || '-'}</td>
-                  <td>{(c.user_meta || c.userMeta)?.phone || (c.user_meta || c.userMeta)?.mobile || '-'}</td>
-                  <td style={{ maxWidth: 200, whiteSpace: 'normal' }}>{formatAddress(c)}</td>
-                  <td>{formatDate(c.created_at || c.createdAt || c.registered_at)}</td>
-                  <td>
-                    <span style={{
-                      padding: '3px 10px',
-                      borderRadius: 12,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      background: (c.status === 'active' || !c.status) ? '#e8f5e9' : '#ffebee',
-                      color: (c.status === 'active' || !c.status) ? '#2e7d32' : '#c62828'
-                    }}>
-                      {c.status === 'active' || !c.status ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td>{formatDate(c.last_login_at || c.last_login || c.lastLogin)}</td>
-                  <td>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'nowrap' }}>
-                      <button
-                        className="action-btn flat-btn"
-                        onClick={() => setSelectedClient(c)}
-                        title="View Details"
-                        style={{
-                          fontSize: 16,
-                          padding: '6px 10px',
-                          borderRadius: 5,
-                          background: '#e3f2fd',
-                          color: '#1565c0',
-                          border: 'none',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        <i className="ri-eye-line"></i>
-                      </button>
-                      <button
-                        className="action-btn flat-btn"
-                        onClick={() => setSettingsClient(c)}
-                        title="Client Settings"
-                        style={{
-                          fontSize: 16,
-                          padding: '6px 10px',
-                          borderRadius: 5,
-                          background: '#f3e5f5',
-                          color: '#7b1fa2',
-                          border: 'none',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        <i className="ri-settings-3-line"></i>
-                      </button>
-                      <button
-                        className="action-btn flat-btn"
-                        onClick={() => setStatusModal({ 
-                          open: true, 
-                          client: c, 
-                          action: (c.status === 'active' || !c.status) ? 'disable' : 'enable' 
-                        })}
-                        title={(c.status === 'active' || !c.status) ? 'Disable Client' : 'Enable Client'}
-                        style={{
-                          fontSize: 16,
-                          padding: '6px 10px',
-                          borderRadius: 5,
-                          background: (c.status === 'active' || !c.status) ? '#ffebee' : '#e8f5e9',
-                          color: (c.status === 'active' || !c.status) ? '#c62828' : '#2e7d32',
-                          border: 'none',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        <i className={(c.status === 'active' || !c.status) ? 'ri-close-circle-line' : 'ri-checkbox-circle-line'}></i>
-                      </button>
-                      <button
-                        className="action-btn flat-btn"
-                        onClick={() => {
-                          // Open password change modal directly
-                          setChangePasswordModal({ open: true, client: c });
-                        }}
-                        title="Change Password"
-                        style={{
-                          fontSize: 16,
-                          padding: '6px 10px',
-                          borderRadius: 5,
-                          background: '#fff3e0',
-                          color: '#e65100',
-                          border: 'none',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        <i className="ri-lock-password-line"></i>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <select className="vst-filter-trigger" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ width: 120, flexShrink: 0 }}>
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+
+          <select className="vst-filter-trigger" value={stateFilter} onChange={e => { setStateFilter(e.target.value); setCityFilter('all'); }} style={{ width: 140, flexShrink: 0 }}>
+            <option value="all">All States</option>
+            {uniqueStates.map(state => (
+              <option key={state} value={state}>{state}</option>
+            ))}
+          </select>
+
+          <select className="vst-filter-trigger" value={cityFilter} onChange={e => setCityFilter(e.target.value)} style={{ width: 140, flexShrink: 0 }}>
+            <option value="all">All Cities</option>
+            {uniqueCities.map(city => (
+              <option key={city} value={city}>{city}</option>
+            ))}
+          </select>
+
+          <select className="vst-filter-trigger" value={dealerFilter} onChange={e => setDealerFilter(e.target.value)} style={{ width: 150, flexShrink: 0 }}>
+            <option value="all">All Dealers</option>
+            {uniqueDealers.map(dealer => (
+              <option key={dealer} value={dealer}>{dealer}</option>
+            ))}
+          </select>
+
+          {(search || statusFilter !== 'all' || stateFilter !== 'all' || cityFilter !== 'all' || dealerFilter !== 'all') && (
+            <button
+              className="vst-filter-trigger"
+              onClick={() => {
+                setSearch('');
+                setStatusFilter('all');
+                setStateFilter('all');
+                setCityFilter('all');
+                setDealerFilter('all');
+              }}
+              style={{ color: '#ef4444', borderColor: '#fecaca', background: '#fef2f2' }}
+            >
+              <i className="ri-filter-off-line"></i> Reset
+            </button>
+          )}
         </div>
+        <div className="vst-toolbar__right">
+          <span className="vst-record-badge">Showing {filtered.length} of {clients.length}</span>
+          <button
+            className="vst-action-btn vst-action-btn--download"
+            onClick={() => fetchClients(true)}
+            disabled={loading}
+            title="Refresh"
+          >
+            <i className={loading ? 'ri-loader-4-line' : 'ri-refresh-line'} style={loading ? { animation: 'spin 1s linear infinite' } : {}} />
+            <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Table — using vst-table classes matching My Fleet */}
+      <div className="vst-table-wrap">
+        <table className="vst-table" style={{ width: '100%' }}>
+          <thead>
+            <tr>
+              <th className="vst-th--num">#</th>
+              <th>Name</th>
+              <th>Dealer</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Address</th>
+              <th>Registered On</th>
+              <th>Status</th>
+              <th>Last Login</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={10} style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 20px' }}>
+                  {loading ? (
+                    <span><i className="ri-loader-4-line" style={{ animation: 'spin 1s linear infinite', marginRight: 8 }}></i> Loading clients...</span>
+                  ) : (
+                    <span><i className="ri-inbox-line" style={{ fontSize: 24, display: 'block', marginBottom: 8 }}></i> No clients found.</span>
+                  )}
+                </td>
+              </tr>
+            ) : filtered.map((c, i) => (
+              <tr key={c.id || c._id || i} className="vst-row">
+                <td className="vst-td--num">{i + 1}</td>
+                <td style={{ fontWeight: 600, color: '#1e293b', maxWidth: 350, whiteSpace: 'normal', wordBreak: 'break-word' }}>{c.name || '-'}</td>
+                <td>{c.dealerName || '-'}</td>
+                <td>{c.email || '-'}</td>
+                <td>{(c.user_meta || c.userMeta)?.phone || (c.user_meta || c.userMeta)?.mobile || '-'}</td>
+                <td style={{ maxWidth: 150, whiteSpace: 'normal' }}>{formatAddress(c)}</td>
+                <td>{formatDate(c.created_at || c.createdAt || c.registered_at)}</td>
+                <td>
+                  <span className={`client-status-pill ${(c.status === 'active' || !c.status) ? 'active' : 'inactive'}`}>
+                    {c.status === 'active' || !c.status ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
+                <td>{formatDate(c.last_login_at || c.last_login || c.lastLogin)}</td>
+                <td>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'nowrap' }}>
+                    <button
+                      className="client-action-btn view"
+                      onClick={() => setSelectedClient(c)}
+                      title="View Details"
+                    >
+                      <i className="ri-eye-line"></i>
+                    </button>
+                    <button
+                      className="client-action-btn settings"
+                      onClick={() => setSettingsClient(c)}
+                      title="Client Settings"
+                    >
+                      <i className="ri-settings-3-line"></i>
+                    </button>
+                    <button
+                      className={`client-action-btn ${(c.status === 'active' || !c.status) ? 'toggle-disable' : 'toggle-enable'}`}
+                      onClick={() => setStatusModal({
+                        open: true,
+                        client: c,
+                        action: (c.status === 'active' || !c.status) ? 'disable' : 'enable'
+                      })}
+                      title={(c.status === 'active' || !c.status) ? 'Disable Client' : 'Enable Client'}
+                    >
+                      <i className={(c.status === 'active' || !c.status) ? 'ri-close-circle-line' : 'ri-checkbox-circle-line'}></i>
+                    </button>
+                    <button
+                      className="client-action-btn password"
+                      onClick={() => setChangePasswordModal({ open: true, client: c })}
+                      title="Change Password"
+                    >
+                      <i className="ri-lock-password-line"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {/* Change Password Confirmation Modal */}
@@ -715,75 +545,67 @@ export default function MyClients() {
           onClose={() => setSelectedClient(null)}
           title={`Client: ${selectedClient.name || 'Details'}`}
         >
-          <div style={{ padding: 16 }}>
-            <div style={{ marginBottom: 24 }}>
-              <h3 style={{ fontSize: 18, marginBottom: 16, color: '#1565c0', borderBottom: '2px solid #e3f2fd', paddingBottom: 8 }}>Basic Information</h3>
-              <div style={{ display: 'grid', gap: 12 }}>
-                <div>
-                  <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>Name</label>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>{selectedClient.name || '-'}</div>
+          <div className="sidebar-detail-content">
+            <div className="sidebar-detail-section">
+              <h3 className="sidebar-section-title">Basic Information</h3>
+              <div className="sidebar-detail-grid">
+                <div className="sidebar-detail-item">
+                  <label>Name</label>
+                  <div className="value">{selectedClient.name || '-'}</div>
                 </div>
-                <div>
-                  <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>Dealer</label>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>{selectedClient.dealerName || '-'}</div>
+                <div className="sidebar-detail-item">
+                  <label>Dealer</label>
+                  <div className="value">{selectedClient.dealerName || '-'}</div>
                 </div>
-                <div>
-                  <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>Email</label>
-                  <div style={{ fontSize: 14 }}>{selectedClient.email || '-'}</div>
+                <div className="sidebar-detail-item">
+                  <label>Email</label>
+                  <div>{selectedClient.email || '-'}</div>
                 </div>
-                <div>
-                  <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>Phone</label>
-                  <div style={{ fontSize: 14 }}>{(selectedClient.user_meta || selectedClient.userMeta)?.phone || (selectedClient.user_meta || selectedClient.userMeta)?.mobile || '-'}</div>
+                <div className="sidebar-detail-item">
+                  <label>Phone</label>
+                  <div>{(selectedClient.user_meta || selectedClient.userMeta)?.phone || (selectedClient.user_meta || selectedClient.userMeta)?.mobile || '-'}</div>
                 </div>
-                <div>
-                  <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>Status</label>
-                  <span style={{
-                    padding: '4px 12px',
-                    borderRadius: 12,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    background: (selectedClient.status === 'active' || !selectedClient.status) ? '#e8f5e9' : '#ffebee',
-                    color: (selectedClient.status === 'active' || !selectedClient.status) ? '#2e7d32' : '#c62828',
-                    display: 'inline-block'
-                  }}>
+                <div className="sidebar-detail-item">
+                  <label>Status</label>
+                  <span className={`client-status-pill ${(selectedClient.status === 'active' || !selectedClient.status) ? 'active' : 'inactive'}`}>
                     {selectedClient.status === 'active' || !selectedClient.status ? 'Active' : 'Inactive'}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div style={{ marginBottom: 24 }}>
-              <h3 style={{ fontSize: 18, marginBottom: 16, color: '#1565c0', borderBottom: '2px solid #e3f2fd', paddingBottom: 8 }}>Company Details</h3>
-              <div style={{ display: 'grid', gap: 12 }}>
-                <div>
-                  <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>Company Name</label>
-                  <div style={{ fontSize: 14 }}>{(selectedClient.user_meta || selectedClient.userMeta)?.company || (selectedClient.user_meta || selectedClient.userMeta)?.company_name || '-'}</div>
+            <div className="sidebar-detail-section">
+              <h3 className="sidebar-section-title">Company Details</h3>
+              <div className="sidebar-detail-grid">
+                <div className="sidebar-detail-item">
+                  <label>Company Name</label>
+                  <div>{(selectedClient.user_meta || selectedClient.userMeta)?.company || (selectedClient.user_meta || selectedClient.userMeta)?.company_name || '-'}</div>
                 </div>
-                <div>
-                  <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>GTIN</label>
-                  <div style={{ fontSize: 14 }}>{(selectedClient.user_meta || selectedClient.userMeta)?.gtin || (selectedClient.user_meta || selectedClient.userMeta)?.gstin || '-'}</div>
+                <div className="sidebar-detail-item">
+                  <label>GTIN</label>
+                  <div>{(selectedClient.user_meta || selectedClient.userMeta)?.gtin || (selectedClient.user_meta || selectedClient.userMeta)?.gstin || '-'}</div>
                 </div>
-                <div>
-                  <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>Address</label>
-                  <div style={{ fontSize: 14 }}>{formatAddress(selectedClient)}</div>
+                <div className="sidebar-detail-item">
+                  <label>Address</label>
+                  <div>{formatAddress(selectedClient)}</div>
                 </div>
               </div>
             </div>
 
-            <div>
-              <h3 style={{ fontSize: 18, marginBottom: 16, color: '#1565c0', borderBottom: '2px solid #e3f2fd', paddingBottom: 8 }}>Account Information</h3>
-              <div style={{ display: 'grid', gap: 12 }}>
-                <div>
-                  <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>Registered On</label>
-                  <div style={{ fontSize: 14 }}>{formatDate(selectedClient.created_at || selectedClient.createdAt || selectedClient.registered_at)}</div>
+            <div className="sidebar-detail-section">
+              <h3 className="sidebar-section-title">Account Information</h3>
+              <div className="sidebar-detail-grid">
+                <div className="sidebar-detail-item">
+                  <label>Registered On</label>
+                  <div>{formatDate(selectedClient.created_at || selectedClient.createdAt || selectedClient.registered_at)}</div>
                 </div>
-                <div>
-                  <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>Last Login</label>
-                  <div style={{ fontSize: 14 }}>{formatDate(selectedClient.last_login_at || selectedClient.last_login || selectedClient.lastLogin)}</div>
+                <div className="sidebar-detail-item">
+                  <label>Last Login</label>
+                  <div>{formatDate(selectedClient.last_login_at || selectedClient.last_login || selectedClient.lastLogin)}</div>
                 </div>
-                <div>
-                  <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>Client ID</label>
-                  <div style={{ fontSize: 14, fontFamily: 'monospace' }}>{selectedClient.id || selectedClient._id || '-'}</div>
+                <div className="sidebar-detail-item">
+                  <label>Client ID</label>
+                  <div style={{ fontFamily: 'monospace' }}>{selectedClient.id || selectedClient._id || '-'}</div>
                 </div>
               </div>
             </div>
