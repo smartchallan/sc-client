@@ -39,7 +39,6 @@ const IS_WHITELABEL = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME) && !IS_DEFAULT
 const BRAND_LOGO = (IS_WHITELABEL && resolvePerHostEnv(CURRENT_HOSTNAME, 'LOGO_URL')) || import.meta.env.VITE_CUSTOM_LOGO_URL || scLogo;
 import html2canvas from "html2canvas";
 import { fetchImageAsDataUrl } from "../utils/whitelabel";
-import "../RegisterVehicle.css";
 
 // Helper to parse various date formats and handle object fields like { value, status }
 const parseFlexibleDate = (raw) => {
@@ -901,45 +900,23 @@ export default function MyFleetTable({
         </div>
       )}
       
-      <div className="dashboard-latest" style={{
-      background: '#fff',
-      borderRadius: 14,
-      boxShadow: '0 2px 12px 0 rgba(30,136,229,0.07)',
-      border: '1.5px solid #e3eaf1',
-      padding: '0 0 18px 0',
-      marginBottom: 0,
-      minHeight: 340,
-      transition: 'box-shadow 0.2s'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, padding: '0 24px 0 0', minHeight: 54 }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ width: 4, height: 32, background: 'linear-gradient(135deg, #2196f3 0%, #21cbf3 100%)', borderRadius: 3, marginRight: 14 }} />
-          <h2 style={{ margin: 0, fontSize: 19, color: '#1565c0', letterSpacing: '0.01em', fontFamily: 'Segoe UI, Arial, sans-serif', lineHeight: 1.2, fontWeight: 700 }}>
-            {showClientPages ? 'Client Vehicles' : 'My Fleet'}
-          </h2>
+      <div className="vst-card">
+      <div className="vst-header">
+        <div className="vst-header__left">
+          <div className="vst-header__icon-box">
+            <i className="ri-truck-line" />
+          </div>
+          <div>
+            <h2 className="vst-header__title">{showClientPages ? 'Client Vehicles' : 'My Fleet'}</h2>
+            <span className="vst-header__count">{sortedAll.length} vehicles</span>
+          </div>
         </div>
-        <div style={{ color: '#1565c0', fontSize: 14, background: '#f5f8fa', border: '1.5px solid #2196f3', borderRadius: 6, padding: '4px 12px', fontWeight: 700, display: 'inline-block', marginLeft: 0, boxShadow: '0 1px 4px #21cbf322' }}>
-          Showing {visibleRows.length} of {sortedAll.length} records
+        <div className="vst-header__actions">
+          <span className="vst-record-badge">Showing {visibleRows.length} of {sortedAll.length}</span>
         </div>
       </div>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 16,
-        marginBottom: 18,
-        marginTop: 0,
-        flexWrap: 'wrap',
-        background: '#f5f8fa',
-        borderRadius: 8,
-        padding: '16px 18px 10px 18px',
-        border: '1.5px solid #e3eaf1',
-        boxShadow: '0 1px 4px #21cbf322',
-        position: 'relative',
-        // maxWidth: 1200
-      }}>
-        {/* Controls row: search, filters, right-aligned print/download */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', flex: 1 }}>
-          {/* Vehicle number search styled as number plate */}
+      <div className="vst-toolbar">
+        <div className="vst-toolbar__left">
           <div style={{ width: 350 }}>
             <div className="number-plate-container">
               <div className="number-plate-wrapper">
@@ -963,16 +940,15 @@ export default function MyFleetTable({
               </div>
             </div>
           </div>
-          {/* Expired, urgent, and challan filters as siblings */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {/* Expired records filter */}
             <div style={{ position: 'relative' }} ref={expiredDropdownRef}>
               <button
-                className="filter-select"
-                style={{ minWidth: 180, textAlign: 'left', padding: '16px 15px', border: '1px solid #bcd', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
+                className={`vst-filter-trigger${expiredTypes.length > 0 ? ' vst-filter-trigger--active' : ''}${showExpiredDropdown ? ' vst-filter-trigger--open' : ''}`}
                 onClick={() => setShowExpiredDropdown(v => !v)}
               >
-                {expiredTypes.length === 0 ? 'Select expired records' : expiredTypes.map(t => {
+                <i className="ri-error-warning-line vst-filter-trigger__icon" />
+                {expiredTypes.length === 0 ? 'Expired records' : expiredTypes.map(t => {
                   if (t === 'insurance') return 'Insurance';
                   if (t === 'roadtax') return 'Road Tax';
                   if (t === 'fitness') return 'Fitness';
@@ -982,29 +958,18 @@ export default function MyFleetTable({
                   return t;
                 }).join(', ')}
                 {expiredTypes.length > 0 && (
-                  <span style={{
-                    marginLeft: 8,
-                    padding: '0 6px',
-                    borderRadius: 999,
-                    background: '#e3f2fd',
-                    color: '#1565c0',
-                    fontSize: 11,
-                    fontWeight: 600
-                  }}>
-                    {expiredTypes.length}
-                  </span>
+                  <span className="vst-filter-trigger__badge">{expiredTypes.length}</span>
                 )}
-                <span style={{ float: 'right', fontWeight: 700, fontSize: 16, marginLeft: 8 }}>▼</span>
+                <i className="ri-arrow-down-s-line vst-filter-trigger__chevron" />
               </button>
               {showExpiredDropdown && (
-                <div style={{ position: 'absolute', top: 38, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #bcd', borderRadius: 8, boxShadow: '0 2px 8px #0001', minWidth: 180, padding: 8 }}>
+                <div className="vst-dropdown">
                   {['insurance', 'roadtax', 'fitness', 'pollution', 'np', 'permit'].map(type => (
-                    <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
+                    <label key={type} className="vst-dropdown__option">
                       <input
                         type="checkbox"
                         checked={expiredTypes.includes(type)}
                         onChange={e => {
-                          // When using expired filter, reset other filters
                           setUrgentTypes([]);
                           setChallanTypes([]);
                           if (e.target.checked) setExpiredTypes(prev => [...prev, type]);
@@ -1013,19 +978,9 @@ export default function MyFleetTable({
                       {type === 'insurance' ? 'Insurance' : type === 'roadtax' ? 'Road Tax' : type === 'np' ? 'National Permit' : type === 'permit' ? 'Permit Valid' : type.charAt(0).toUpperCase() + type.slice(1)}
                     </label>
                   ))}
-                  <div style={{ textAlign: 'right', marginTop: 6, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                    <button
-                      style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#fff', cursor: 'pointer' }}
-                      onClick={() => setExpiredTypes([])}
-                    >
-                      Reset
-                    </button>
-                    <button
-                      style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#f5f8fa', cursor: 'pointer' }}
-                      onClick={() => setShowExpiredDropdown(false)}
-                    >
-                      Close
-                    </button>
+                  <div className="vst-dropdown__footer">
+                    <button className="vst-dropdown__footer-btn" onClick={() => setExpiredTypes([])}>Reset</button>
+                    <button className="vst-dropdown__footer-btn" onClick={() => setShowExpiredDropdown(false)}>Close</button>
                   </div>
                 </div>
               )}
@@ -1033,11 +988,11 @@ export default function MyFleetTable({
             {/* Urgent renewals filter */}
             <div style={{ position: 'relative' }} ref={urgentDropdownRef}>
               <button
-                className="filter-select"
-                style={{ minWidth: 180, textAlign: 'left', padding: '16px 15px', border: '1px solid #bcd', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
+                className={`vst-filter-trigger${urgentTypes.length > 0 ? ' vst-filter-trigger--active' : ''}${showUrgentDropdown ? ' vst-filter-trigger--open' : ''}`}
                 onClick={() => setShowUrgentDropdown(v => !v)}
               >
-                {urgentTypes.length === 0 ? 'Select urgent renewals' : urgentTypes.map(t => {
+                <i className="ri-alarm-warning-line vst-filter-trigger__icon" />
+                {urgentTypes.length === 0 ? 'Urgent renewals' : urgentTypes.map(t => {
                   if (t === 'insurance') return 'Insurance';
                   if (t === 'roadtax') return 'Road Tax';
                   if (t === 'fitness') return 'Fitness';
@@ -1047,29 +1002,18 @@ export default function MyFleetTable({
                   return t;
                 }).join(', ')}
                 {urgentTypes.length > 0 && (
-                  <span style={{
-                    marginLeft: 8,
-                    padding: '0 6px',
-                    borderRadius: 999,
-                    background: '#e8f5e9',
-                    color: '#2e7d32',
-                    fontSize: 11,
-                    fontWeight: 600
-                  }}>
-                    {urgentTypes.length}
-                  </span>
+                  <span className="vst-filter-trigger__badge">{urgentTypes.length}</span>
                 )}
-                <span style={{ float: 'right', fontWeight: 700, fontSize: 16, marginLeft: 8 }}>▼</span>
+                <i className="ri-arrow-down-s-line vst-filter-trigger__chevron" />
               </button>
               {showUrgentDropdown && (
-                <div style={{ position: 'absolute', top: 38, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #bcd', borderRadius: 8, boxShadow: '0 2px 8px #0001', minWidth: 220, padding: 8 }}>
+                <div className="vst-dropdown">
                   {['insurance', 'roadtax', 'fitness', 'pollution', 'np', 'permit'].map(type => (
-                    <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
+                    <label key={type} className="vst-dropdown__option">
                       <input
                         type="checkbox"
                         checked={urgentTypes.includes(type)}
                         onChange={e => {
-                          // When using urgent filter, reset other filters
                           setExpiredTypes([]);
                           setChallanTypes([]);
                           if (e.target.checked) setUrgentTypes(prev => [...prev, type]);
@@ -1078,51 +1022,34 @@ export default function MyFleetTable({
                       {type === 'insurance' ? 'Insurance' : type === 'roadtax' ? 'Road Tax' : type === 'np' ? 'National Permit' : type === 'permit' ? 'Permit Valid' : type.charAt(0).toUpperCase() + type.slice(1)}
                     </label>
                   ))}
-                  <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 13 }}>Days:</span>
-                    <input
-                      type="range"
-                      min={1}
-                      max={50}
-                      value={urgentRange}
-                      onChange={e => setUrgentRange(Number(e.target.value))}
-                      style={{ width: 120 }} />
-                    <span style={{ fontSize: 13, minWidth: 28, display: 'inline-block', textAlign: 'center', fontWeight: 600, color: '#1976d2' }}>{urgentRange}</span>
+                  <div className="vst-range-row">
+                    <span>Days:</span>
+                    <input type="range" min={1} max={50} value={urgentRange} onChange={e => setUrgentRange(Number(e.target.value))} />
+                    <span className="vst-range-row__value">{urgentRange}</span>
                   </div>
-                  <div style={{ textAlign: 'right', marginTop: 6, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                    <button
-                      style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#fff', cursor: 'pointer' }}
-                      onClick={() => { setUrgentTypes([]); setUrgentRange(15); } }
-                    >
-                      Reset
-                    </button>
-                    <button
-                      style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#f5f8fa', cursor: 'pointer' }}
-                      onClick={() => setShowUrgentDropdown(false)}
-                    >
-                      Close
-                    </button>
+                  <div className="vst-dropdown__footer">
+                    <button className="vst-dropdown__footer-btn" onClick={() => { setUrgentTypes([]); setUrgentRange(15); }}>Reset</button>
+                    <button className="vst-dropdown__footer-btn" onClick={() => setShowUrgentDropdown(false)}>Close</button>
                   </div>
                 </div>
               )}
             </div>
             {/* Challan status checkboxes (Pending / Disposed) */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+            <div className="vst-checkbox-group">
+              <label className={`vst-checkbox-label${challanTypes.includes('pending') ? ' vst-checkbox-label--checked' : ''}`}>
                 <input
                   type="checkbox"
                   checked={challanTypes.includes('pending')}
                   onChange={e => {
-                    // clicking a status clears other renewal filters
                     setExpiredTypes([]);
                     setUrgentTypes([]);
                     if (e.target.checked) setChallanTypes(prev => Array.from(new Set([...prev, 'pending'])));
                     else setChallanTypes(prev => prev.filter(t => t !== 'pending'));
                   }}
                 />
-                Pending Challan
+                Pending
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <label className={`vst-checkbox-label${challanTypes.includes('disposed') ? ' vst-checkbox-label--checked' : ''}`}>
                 <input
                   type="checkbox"
                   checked={challanTypes.includes('disposed')}
@@ -1133,160 +1060,107 @@ export default function MyFleetTable({
                     else setChallanTypes(prev => prev.filter(t => t !== 'disposed'));
                   }}
                 />
-                Disposed Challan
+                Disposed
               </label>
             </div>
 
             {/* Challan source dropdown (Online / Registered Court / Virtual Court) */}
             <div style={{ position: 'relative' }} ref={challanDropdownRef}>
               <button
-                className="filter-select"
-                style={{ minWidth: 220, textAlign: 'left', padding: '16px 15px', border: '1px solid #bcd', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
+                className={`vst-filter-trigger${challanSources.length > 0 ? ' vst-filter-trigger--active' : ''}${showChallanDropdown ? ' vst-filter-trigger--open' : ''}`}
                 onClick={() => setShowChallanDropdown(v => !v)}
               >
-                {challanSources.length === 0 ? 'Filter by challan source' : challanSources.map(t => t === 'online' ? 'Online' : t === 'registered' ? 'Registered Court' : t === 'virtual' ? 'Virtual Court' : t).join(', ')}
+                <i className="ri-git-branch-line vst-filter-trigger__icon" />
+                {challanSources.length === 0 ? 'Challan source' : challanSources.map(t => t === 'online' ? 'Online' : t === 'registered' ? 'Reg. Court' : t === 'virtual' ? 'Virtual Court' : t).join(', ')}
                 {challanSources.length > 0 && (
-                  <span style={{
-                    marginLeft: 8,
-                    padding: '0 6px',
-                    borderRadius: 999,
-                    background: '#e8f5e9',
-                    color: '#2e7d32',
-                    fontSize: 11,
-                    fontWeight: 600
-                  }}>
-                    {challanSources.length}
-                  </span>
+                  <span className="vst-filter-trigger__badge">{challanSources.length}</span>
                 )}
-                <span style={{ float: 'right', fontWeight: 700, fontSize: 16, marginLeft: 8 }}>▼</span>
+                <i className="ri-arrow-down-s-line vst-filter-trigger__chevron" />
               </button>
               {showChallanDropdown && (
-                <div style={{ position: 'absolute', top: 38, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #bcd', borderRadius: 8, boxShadow: '0 2px 8px #0001', minWidth: 220, padding: 8 }}>
+                <div className="vst-dropdown">
                   {['online', 'registered', 'virtual'].map(type => (
-                    <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
+                    <label key={type} className="vst-dropdown__option">
                       <input
                         type="checkbox"
                         checked={challanSources.includes(type)}
                         onChange={e => {
-                          // When selecting challan source, clear other filters that would conflict
                           if (e.target.checked) setChallanSources(prev => [...prev, type]);
                           else setChallanSources(prev => prev.filter(t => t !== type));
                         }} />
                       {type === 'online' ? 'Online' : type === 'registered' ? 'Registered Court' : 'Virtual Court'}
                     </label>
                   ))}
-                  <div style={{ textAlign: 'right', marginTop: 6, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                    <button
-                      style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#fff', cursor: 'pointer' }}
-                      onClick={() => setChallanSources([])}
-                    >
-                      Reset
-                    </button>
-                    <button
-                      style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#f5f8fa', cursor: 'pointer' }}
-                      onClick={() => setShowChallanDropdown(false)}
-                    >
-                      Close
-                    </button>
+                  <div className="vst-dropdown__footer">
+                    <button className="vst-dropdown__footer-btn" onClick={() => setChallanSources([])}>Reset</button>
+                    <button className="vst-dropdown__footer-btn" onClick={() => setShowChallanDropdown(false)}>Close</button>
                   </div>
                 </div>
               )}
             </div>
           </div>
         </div>
-        {/* Right-aligned Download and Print icon buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
-          <button
-            title="Download"
-            onClick={() => {
-              setDownloadFormat('excel');
-              setShowDownloadModal(true);
-            } }
-            style={{ background: '#e3f2fd', border: '1px solid #bbdefb', borderRadius: 999, cursor: 'pointer', color: '#0d47a1', fontSize: 18, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}
-          >
-            <FiDownloadCloud />
-            <span style={{ fontSize: 13, fontWeight: 600 }}>Download</span>
+        <div className="vst-toolbar__right">
+          <button className="vst-action-btn vst-action-btn--download" title="Download" onClick={() => { setDownloadFormat('excel'); setShowDownloadModal(true); }}>
+            <i className="ri-download-cloud-2-line" /> <span>Download</span>
           </button>
-          <button
-            title="Print Table"
-            onClick={handlePrint}
-            style={{ background: '#f3e5f5', border: '1px solid #e1bee7', borderRadius: 999, cursor: 'pointer', color: '#4a148c', fontSize: 18, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}
-          >
-            <FiPrinter />
-            <span style={{ fontSize: 13, fontWeight: 600 }}>Print</span>
+          <button className="vst-action-btn vst-action-btn--print" title="Print Table" onClick={handlePrint}>
+            <i className="ri-printer-line" /> <span>Print</span>
           </button>
         </div>
       </div>
-      <div className="table-container" id="my-fleet-table-print-area">
-        <table className="latest-table vehicle-summary-table" style={{ width: '100%', marginTop: 8 }}>
+      <div className="vst-table-wrap" id="my-fleet-table-print-area">
+        <table className="vst-table" style={{ width: '100%' }}>
           <thead>
             <tr>
-              <th>#</th>
+              <th className="vst-th--num">#</th>
               <th>Vehicle No.</th>
               <th>Body Type</th>
-              <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('rc_regn_dt')}>
+              <th className={`vst-th--sortable${sortConfig.key === 'rc_regn_dt' ? ' vst-th--sorted' : ''}`} onClick={() => handleSort('rc_regn_dt')}>
                 Registration Date
-                <span style={{ fontSize: 13, marginLeft: 2 }}>{sortConfig.key === 'rc_regn_dt' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+                <em className="vst-sort-icon">{sortConfig.key === 'rc_regn_dt' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
               </th>
               <th
-                style={{
-                  ...(expiredTypes.includes('insurance') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}),
-                  cursor: 'pointer', userSelect: 'none'
-                }}
+                className={`vst-th--sortable${sortConfig.key === 'rc_insurance_upto' ? ' vst-th--sorted' : ''}${expiredTypes.includes('insurance') ? ' vst-th--highlighted' : ''}`}
                 onClick={() => handleSort('rc_insurance_upto')}
               >
                 Insurance Upto
-                <span style={{ fontSize: 13, marginLeft: 2 }}>{sortConfig.key === 'rc_insurance_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+                <em className="vst-sort-icon">{sortConfig.key === 'rc_insurance_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
               </th>
               <th
-                style={{
-                  ...(expiredTypes.includes('roadtax') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}),
-                  cursor: 'pointer', userSelect: 'none'
-                }}
+                className={`vst-th--sortable${sortConfig.key === 'rc_tax_upto' ? ' vst-th--sorted' : ''}${expiredTypes.includes('roadtax') ? ' vst-th--highlighted' : ''}`}
                 onClick={() => handleSort('rc_tax_upto')}
               >
                 Road Tax Upto
-                <span style={{ fontSize: 13, marginLeft: 2 }}>{sortConfig.key === 'rc_tax_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+                <em className="vst-sort-icon">{sortConfig.key === 'rc_tax_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
               </th>
               <th
-                style={{
-                  ...((expiredTypes.includes('np') || urgentTypes.includes('np')) ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}),
-                  cursor: 'pointer', userSelect: 'none'
-                }}
+                className={`vst-th--sortable${sortConfig.key === 'rc_np_upto' ? ' vst-th--sorted' : ''}${(expiredTypes.includes('np') || urgentTypes.includes('np')) ? ' vst-th--highlighted' : ''}`}
                 onClick={() => handleSort('rc_np_upto')}
               >
                 National Permit
-                <span style={{ fontSize: 13, marginLeft: 2 }}>{sortConfig.key === 'rc_np_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+                <em className="vst-sort-icon">{sortConfig.key === 'rc_np_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
               </th>
               <th
-                style={{
-                  ...((expiredTypes.includes('permit') || urgentTypes.includes('permit')) ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}),
-                  cursor: 'pointer', userSelect: 'none'
-                }}
+                className={`vst-th--sortable${sortConfig.key === 'rc_permit_valid_upto' ? ' vst-th--sorted' : ''}${(expiredTypes.includes('permit') || urgentTypes.includes('permit')) ? ' vst-th--highlighted' : ''}`}
                 onClick={() => handleSort('rc_permit_valid_upto')}
               >
                 Permit Valid
-                <span style={{ fontSize: 13, marginLeft: 2 }}>{sortConfig.key === 'rc_permit_valid_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+                <em className="vst-sort-icon">{sortConfig.key === 'rc_permit_valid_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
               </th>
               <th
-                style={{
-                  ...(expiredTypes.includes('fitness') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}),
-                  cursor: 'pointer', userSelect: 'none'
-                }}
+                className={`vst-th--sortable${sortConfig.key === 'rc_fit_upto' ? ' vst-th--sorted' : ''}${expiredTypes.includes('fitness') ? ' vst-th--highlighted' : ''}`}
                 onClick={() => handleSort('rc_fit_upto')}
               >
                 Fitness Upto
-                <span style={{ fontSize: 13, marginLeft: 2 }}>{sortConfig.key === 'rc_fit_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+                <em className="vst-sort-icon">{sortConfig.key === 'rc_fit_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
               </th>
               <th
-                style={{
-                  ...(expiredTypes.includes('pollution') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}),
-                  cursor: 'pointer', userSelect: 'none'
-                }}
+                className={`vst-th--sortable${sortConfig.key === 'rc_pucc_upto' ? ' vst-th--sorted' : ''}${expiredTypes.includes('pollution') ? ' vst-th--highlighted' : ''}`}
                 onClick={() => handleSort('rc_pucc_upto')}
               >
                 Pollution Upto
-                <span style={{ fontSize: 13, marginLeft: 2 }}>{sortConfig.key === 'rc_pucc_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+                <em className="vst-sort-icon">{sortConfig.key === 'rc_pucc_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
               </th>
               <th colSpan={2} className="challans-header">Challans</th>
               <th>View</th>
@@ -1297,20 +1171,20 @@ export default function MyFleetTable({
             <tr>
               <th colSpan={10}></th>
               <th
-                className="challan-sub-header"
-                style={{ color: '#e74c3c', cursor: 'pointer', userSelect: 'none' }}
+                className={`vst-th--sortable vst-th--center${sortConfig.key === 'pending_challan_count' ? ' vst-th--sorted' : ''}`}
+                style={{ color: '#dc2626' }}
                 onClick={() => handleSort('pending_challan_count')}
               >
                 Pending
-                <span style={{ fontSize: 13, marginLeft: 6 }}>{sortConfig.key === 'pending_challan_count' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+                <em className="vst-sort-icon">{sortConfig.key === 'pending_challan_count' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
               </th>
               <th
-                className="challan-sub-header"
-                style={{ color: '#43a047', cursor: 'pointer', userSelect: 'none' }}
+                className={`vst-th--sortable vst-th--center${sortConfig.key === 'disposed_challan_count' ? ' vst-th--sorted' : ''}`}
+                style={{ color: '#16a34a' }}
                 onClick={() => handleSort('disposed_challan_count')}
               >
                 Settled
-                <span style={{ fontSize: 13, marginLeft: 6 }}>{sortConfig.key === 'disposed_challan_count' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+                <em className="vst-sort-icon">{sortConfig.key === 'disposed_challan_count' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
               </th>
               <th></th>
               {import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' && (
@@ -1421,15 +1295,11 @@ export default function MyFleetTable({
                     }
                     return val || 'N/A';
                   })()}</td>
-                  <td className={row.pending_challan_count > 0
-                    ? 'pending-challan-count'
-                    : 'zero-challan-count'} style={{ textAlign: 'center', fontWeight: 600 }}>{row.pending_challan_count ?? 0}</td>
-                  <td className={row.disposed_challan_count > 0
-                    ? 'disposed-challan-count'
-                    : 'zero-challan-count'} style={{ textAlign: 'center', fontWeight: 600 }}>{row.disposed_challan_count ?? 0}</td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button className="action-btn flat-btn" title="View" style={{ fontSize: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => onView(row)}>
-                      <FaEye style={{ fontSize: '1.2em' }} />
+                  <td className="vst-td--center"><span className={`vst-badge ${row.pending_challan_count > 0 ? 'vst-badge--pending' : 'vst-badge--zero'}`}>{row.pending_challan_count ?? 0}</span></td>
+                  <td className="vst-td--center"><span className={`vst-badge ${row.disposed_challan_count > 0 ? 'vst-badge--settled' : 'vst-badge--zero'}`}>{row.disposed_challan_count ?? 0}</span></td>
+                  <td className="vst-td--center">
+                    <button className="vst-view-btn" title="View" onClick={() => onView(row)}>
+                      <i className="ri-eye-line" />
                     </button>
                   </td>
                   {import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' && (
@@ -1453,13 +1323,8 @@ export default function MyFleetTable({
           </tbody>
         </table>
         {/* Show more records control to match VehicleRtoData UI */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, marginLeft: 24 }}>
-          <span style={{
-            color: '#1976d2',
-            fontSize: 15
-          }}>
-            Show more records:
-          </span>
+        <div className="vst-show-more">
+          <span className="vst-show-more__label">Show more records:</span>
           <SelectShowMore
             onShowMoreRecords={val => {
               if (val === 'all') setVisibleCount(sortedAll.length);

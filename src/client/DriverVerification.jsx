@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
 import * as XLSX from 'xlsx';
-import "../RegisterVehicle.css";
 
 export default function DriverVerification() {
   // Show/hide bulk DL verification form

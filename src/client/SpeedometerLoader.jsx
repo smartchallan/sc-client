@@ -1,5 +1,4 @@
 import React from 'react';
-import './SpeedometerLoader.css';
 
 export default function MusicBarsLoader({ size = 80 }) {
   const barWidth = size / 10; // Slightly thinner bars

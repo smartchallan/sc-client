@@ -1,168 +1,202 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./VehicleSummaryTable.css";
-import { FaSyncAlt } from "react-icons/fa";
-import * as XLSX from "xlsx";
 
 export default function VehicleSummaryTable({ data, loading, onRefresh, onView }) {
-  // Local formatExpiry function for date formatting (matches MyFleetTable)
-  const formatExpiry = (dateStr, useColor = false) => {
-    if (!dateStr || dateStr === '-' || dateStr === 'NA' || dateStr === 'N/A') return '-';
+  const navigate = useNavigate();
+
+  /* ── helpers ── */
+  const parseDate = (dateStr) => {
+    if (!dateStr || dateStr === '-' || dateStr === 'NA' || dateStr === 'N/A') return null;
     let d = null;
-    if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(dateStr)) {
-      d = new Date(dateStr.replace(/-/g, ' '));
-    } else if (/\d{2}-\d{2}-\d{4}/.test(dateStr)) {
-      const [day, month, year] = dateStr.split('-');
-      d = new Date(`${year}-${month}-${day}`);
-    } else if (/\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-      d = new Date(dateStr);
-    } else {
-      d = new Date(dateStr);
-    }
-    if (isNaN(d.getTime())) return dateStr;
-    const formatted = d.toLocaleDateString('en-GB', {
-      day: '2-digit', month: 'short', year: 'numeric'
-    }).replace(/ /g, '-');
-    if (!useColor) return formatted;
-    // color logic not used here; return formatted
-    return formatted;
+    if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(dateStr)) d = new Date(dateStr.replace(/-/g, ' '));
+    else if (/\d{2}-\d{2}-\d{4}/.test(dateStr)) { const [day, month, year] = dateStr.split('-'); d = new Date(`${year}-${month}-${day}`); }
+    else if (/\d{4}-\d{2}-\d{2}/.test(dateStr)) d = new Date(dateStr);
+    else d = new Date(dateStr);
+    return isNaN(d?.getTime()) ? null : d;
   };
-  // If API response is { total, vehicles: [...] }, use vehicles array
+
+  const formatDate = (dateStr) => {
+    const d = parseDate(dateStr);
+    if (!d) return '-';
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
+  };
+
+  /** Returns 'expired' | 'expiring' | 'valid' | null */
+  const expiryStatus = (dateStr) => {
+    const d = parseDate(dateStr);
+    if (!d) return null;
+    const now = new Date();
+    if (d < now) return 'expired';
+    const diff = (d - now) / (1000 * 60 * 60 * 24);
+    if (diff <= 30) return 'expiring';
+    return 'valid';
+  };
+
+  const resolveField = (row, ...paths) => {
+    for (const p of paths) {
+      let val = p.split('.').reduce((o, k) => o?.[k], row);
+      if (!val) continue;
+      if (typeof val === 'string' && val.trim().startsWith('{') && val.trim().endsWith('}')) {
+        try { val = JSON.parse(val); } catch { continue; }
+      }
+      if (typeof val === 'object' && val !== null) { val = val.value ?? null; }
+      if (val) return val;
+    }
+    return null;
+  };
+
+  /* ── data ── */
   const vehicles = Array.isArray(data?.vehicles) ? data.vehicles : (Array.isArray(data) ? data : []);
-  // Sort by registered_at DESC
   const sortedAll = [...vehicles].sort((a, b) => new Date(b.registered_at) - new Date(a.registered_at));
-  // Show only first 50 records by default
   const DEFAULT_VISIBLE = 50;
-  const [visibleLimit, setVisibleLimit] = React.useState(DEFAULT_VISIBLE);
+  const [visibleLimit, setVisibleLimit] = useState(DEFAULT_VISIBLE);
   const sorted = sortedAll.slice(0, visibleLimit);
 
-  const navigate = useNavigate();
-  // Handler for View All
-  const handleViewAll = () => {
-    navigate('/myfleet');
+  /* ── columns config ── */
+  const cols = [
+    { key: 'vehicle_number', label: 'Vehicle No.', icon: 'ri-roadster-line' },
+    { key: 'regn', label: 'Regn. Date', icon: 'ri-calendar-check-line' },
+    { key: 'insurance', label: 'Insurance', icon: 'ri-shield-check-line' },
+    { key: 'road_tax', label: 'Road Tax', icon: 'ri-money-rupee-circle-line' },
+    { key: 'np_upto', label: 'Nat. Permit', icon: 'ri-file-paper-2-line' },
+    { key: 'permit_valid', label: 'Permit Valid', icon: 'ri-file-shield-2-line' },
+    { key: 'fitness', label: 'Fitness', icon: 'ri-heart-pulse-line' },
+    { key: 'pollution', label: 'Pollution', icon: 'ri-leaf-line' },
+  ];
+
+  const getCellValue = (row, key) => {
+    switch (key) {
+      case 'vehicle_number': return row.vehicle_number || '-';
+      case 'regn': return row.rc_regn_dt || row.registration_date || row.registered_at || null;
+      case 'insurance': return typeof row.insurance_exp === 'object' ? row.insurance_exp?.value : row.insurance_exp;
+      case 'road_tax': return typeof row.road_tax_exp === 'object' ? row.road_tax_exp?.value : row.road_tax_exp;
+      case 'np_upto': return resolveField(row, 'rc_np_upto', '_raw.rc_np_upto', 'temp_permit.rc_np_upto', '_raw.temp_permit.rc_np_upto');
+      case 'permit_valid': return resolveField(row, 'rc_permit_valid_upto', '_raw.rc_permit_valid_upto', 'temp_permit.rc_permit_valid_upto', '_raw.temp_permit.rc_permit_valid_upto');
+      case 'fitness': return typeof row.fitness_exp === 'object' ? row.fitness_exp?.value : row.fitness_exp;
+      case 'pollution': return typeof row.pollution_exp === 'object' ? row.pollution_exp?.value : row.pollution_exp;
+      default: return '-';
+    }
   };
 
+  const isDateCol = (key) => key !== 'vehicle_number';
+
+  /* ── render helpers ── */
+  const DateCell = ({ value }) => {
+    const formatted = formatDate(value);
+    if (formatted === '-') return <span className="vst-cell--empty">—</span>;
+    const status = expiryStatus(value);
+    return <span className={`vst-date ${status ? `vst-date--${status}` : ''}`}>{formatted}</span>;
+  };
+
+  const ChallanBadge = ({ count, type }) => {
+    const cls = count > 0 ? `vst-badge--${type}` : 'vst-badge--zero';
+    return <span className={`vst-badge ${cls}`}>{count ?? 0}</span>;
+  };
+
+  /* ── skeleton loader ── */
+  const SkeletonRows = () => (
+    Array.from({ length: 6 }).map((_, i) => (
+      <tr key={i} className="vst-skeleton-row">
+        <td><div className="vst-skeleton" style={{ width: 20 }} /></td>
+        {cols.map((c) => <td key={c.key}><div className="vst-skeleton" style={{ width: c.key === 'vehicle_number' ? 100 : 80 }} /></td>)}
+        <td><div className="vst-skeleton" style={{ width: 30 }} /></td>
+        <td><div className="vst-skeleton" style={{ width: 30 }} /></td>
+        <td><div className="vst-skeleton" style={{ width: 28 }} /></td>
+      </tr>
+    ))
+  );
+
   return (
-    <div className="dashboard-latest" style={{
-      background: '#fff',
-      borderRadius: 14,
-      boxShadow: '0 2px 12px 0 rgba(30,136,229,0.07)',
-      border: '1.5px solid #e3eaf1',
-      padding: '0 0 18px 0',
-      marginBottom: 0,
-      minHeight: 340,
-      transition: 'box-shadow 0.2s',
-      position: 'relative',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, padding: '0 24px 0 0', minHeight: 54 }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ width: 4, height: 32, background: 'linear-gradient(135deg, #2196f3 0%, #21cbf3 100%)', borderRadius: 3, marginRight: 14 }} />
-          <h2 style={{
-            margin: 0,
-            fontSize: 19,
-            color: '#1565c0',
-            letterSpacing: '0.01em',
-            lineHeight: 1.2,
-            fontWeight: 700,
-          }}>Vehicle Summary</h2>
+    <div className="vst-card">
+      {/* ── Header ── */}
+      <div className="vst-header">
+        <div className="vst-header__left">
+          <div className="vst-header__icon-box">
+            <i className="ri-truck-line" />
+          </div>
+          <div>
+            <h2 className="vst-header__title">Vehicle Summary</h2>
+            <span className="vst-header__count">{vehicles.length} vehicles</span>
+          </div>
         </div>
+        <div className="vst-header__actions">
           <button
-            className="action-btn"
-            style={{ marginTop: 10 }}
-            onClick={e => {
-              e.preventDefault();
-              if (typeof window !== 'undefined' && window.handleViewAllMyFleet) {
-                window.handleViewAllMyFleet();
-              }
-            }}
+            className="vst-btn vst-btn--outline"
+            onClick={() => navigate('/myfleet')}
           >
-            View All
+            <i className="ri-list-check-2" /> View All
           </button>
+        </div>
       </div>
 
-      <div className="vehicle-summary-table-container table-container" id="vehicle-summary-table-print-area">
-        <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
+      {/* ── Table ── */}
+      <div className="vst-table-wrap" id="vehicle-summary-table-print-area">
+        <table className="vst-table">
           <thead>
             <tr>
-              <th>#</th>
-              <th>Vehicle No.</th>
-              <th>Registration Date</th>
-              <th>Insurance Upto</th>
-              <th>Road Tax Upto</th>
-              <th>National Permit</th>
-              <th>Permit Valid</th>
-              <th>Fitness Upto</th>
-              <th>Pollution Upto</th>
-              <th colSpan={2} className="challans-header">Vehicle Challans</th>
-              <th>View</th>
-            </tr>
-            <tr>
-              <th colSpan={9}></th>
-              <th className="challan-sub-header" style={{color:'#e74c3c'}}>Pending</th>
-              <th className="challan-sub-header" style={{color:'#43a047'}}>Settled</th>
-              <th></th>
+              <th className="vst-th--num">#</th>
+              {cols.map(c => (
+                <th key={c.key}>
+                  <span className="vst-th__inner">
+                    <i className={c.icon} /> {c.label}
+                  </span>
+                </th>
+              ))}
+              <th className="vst-th--center"><span className="vst-th__inner vst-th--pending"><i className="ri-error-warning-line" /> Pending</span></th>
+              <th className="vst-th--center"><span className="vst-th__inner vst-th--settled"><i className="ri-checkbox-circle-line" /> Settled</span></th>
+              <th className="vst-th--center">Action</th>
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr><td colSpan={12}>Loading...</td></tr>
-            ) : sorted.length === 0 ? (
-              <tr><td colSpan={12}>No data found.</td></tr>
-            ) : (
-              sorted.map((row, idx) => (
-                <tr key={row.vehicle_id || idx}>
-                  <td>{idx + 1}</td>
-                  <td>{row.vehicle_number || '-'}</td>
-                  <td>{row.rc_regn_dt || row.registration_date || row.registered_at || '-'}</td>
-                  <td>{typeof row.insurance_exp === 'object' && row.insurance_exp !== null ? (row.insurance_exp.value ?? JSON.stringify(row.insurance_exp)) : (row.insurance_exp || '-')}</td>
-                  <td>{typeof row.road_tax_exp === 'object' && row.road_tax_exp !== null ? (row.road_tax_exp.value ?? JSON.stringify(row.road_tax_exp)) : (row.road_tax_exp || '-')}</td>
-                  <td>{(() => {
-                    let val = row.rc_np_upto ?? row._raw?.rc_np_upto ?? row.temp_permit?.rc_np_upto ?? row._raw?.temp_permit?.rc_np_upto;
-                    if (!val) return '-';
-                    if (typeof val === 'string' && val.trim().startsWith('{') && val.trim().endsWith('}')) {
-                      try { val = JSON.parse(val); } catch (e) { return '-'; }
-                    }
-                    if (typeof val === 'object') {
-                      if ('value' in val && val.value) val = val.value; else return '-';
-                    }
-                    if (!val) return '-';
-                    return formatExpiry(val, false);
-                  })()}</td>
-                  <td>{(() => {
-                    let val = row.rc_permit_valid_upto ?? row._raw?.rc_permit_valid_upto ?? row.temp_permit?.rc_permit_valid_upto ?? row._raw?.temp_permit?.rc_permit_valid_upto;
-                    if (!val) return '-';
-                    if (typeof val === 'string' && val.trim().startsWith('{') && val.trim().endsWith('}')) {
-                      try { val = JSON.parse(val); } catch (e) { return '-'; }
-                    }
-                    if (typeof val === 'object') {
-                      if ('value' in val && val.value) val = val.value; else return '-';
-                    }
-                    if (!val) return '-';
-                    return formatExpiry(val, false);
-                  })()}</td>
-                  <td>{typeof row.fitness_exp === 'object' && row.fitness_exp !== null ? (row.fitness_exp.value ?? JSON.stringify(row.fitness_exp)) : (row.fitness_exp || '-')}</td>
-                  <td>{typeof row.pollution_exp === 'object' && row.pollution_exp !== null ? (row.pollution_exp.value ?? JSON.stringify(row.pollution_exp)) : (row.pollution_exp || '-')}</td>
-                  <td className={
-                    row.pending_challan_count > 0
-                      ? 'pending-challan-count'
-                      : 'zero-challan-count'
-                  } style={{textAlign:'center',fontWeight:600}}>{row.pending_challan_count ?? 0}</td>
-                  <td className={
-                    row.disposed_challan_count > 0
-                      ? 'disposed-challan-count'
-                      : 'zero-challan-count'
-                  } style={{textAlign:'center',fontWeight:600}}>{row.disposed_challan_count ?? 0}</td>
-                  <td style={{textAlign:'center'}}>
-                    <button className="action-btn flat-btn" title="View Vehicle" style={{fontSize:'80%',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={() => onView(row)}>
-                      <i className="ri-eye-line" style={{fontSize:'1.2em'}} />
-                    </button>
+            {loading ? <SkeletonRows /> : sorted.length === 0 ? (
+              <tr>
+                <td colSpan={cols.length + 4} className="vst-empty">
+                  <i className="ri-inbox-2-line" />
+                  <p>No vehicles found</p>
+                </td>
+              </tr>
+            ) : sorted.map((row, idx) => (
+              <tr key={row.vehicle_id || idx} className="vst-row" onClick={() => onView(row)}>
+                <td className="vst-td--num">{idx + 1}</td>
+                {cols.map(c => (
+                  <td key={c.key}>
+                    {c.key === 'vehicle_number' ? (
+                      <span className="vst-vehicle-num">{row.vehicle_number || '-'}</span>
+                    ) : (
+                      <DateCell value={getCellValue(row, c.key)} />
+                    )}
                   </td>
-                </tr>
-              ))
-            )}
+                ))}
+                <td className="vst-td--center"><ChallanBadge count={row.pending_challan_count} type="pending" /></td>
+                <td className="vst-td--center"><ChallanBadge count={row.disposed_challan_count} type="settled" /></td>
+                <td className="vst-td--center">
+                  <button className="vst-view-btn" title="View Vehicle" onClick={e => { e.stopPropagation(); onView(row); }}>
+                    <i className="ri-eye-line" />
+                  </button>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
+
+      {/* ── Footer ── */}
+      {sortedAll.length > DEFAULT_VISIBLE && (
+        <div className="vst-footer">
+          {visibleLimit < sortedAll.length ? (
+            <button className="vst-btn vst-btn--ghost" onClick={() => setVisibleLimit(v => Math.min(v + 50, sortedAll.length))}>
+              <i className="ri-arrow-down-s-line" /> Show more ({Math.min(sortedAll.length - visibleLimit, 50)} remaining)
+            </button>
+          ) : (
+            <button className="vst-btn vst-btn--ghost" onClick={() => setVisibleLimit(DEFAULT_VISIBLE)}>
+              <i className="ri-arrow-up-s-line" /> Show less
+            </button>
+          )}
+          <span className="vst-footer__info">
+            Showing {Math.min(visibleLimit, sortedAll.length)} of {sortedAll.length}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import PayChallans from "./PayChallans";
 import ChallanRequests from "./ChallanRequests";
+import StatCard from "./StatCard";
 import { FaFilePdf } from "react-icons/fa";
 // import { FaFilePdf } from "react-icons/fa"; 
 import { FaFileExcel } from "react-icons/fa";
@@ -69,8 +70,6 @@ console.log('Card Colors:', {
 
 import { FaDownload } from "react-icons/fa";
 import "react-toastify/dist/ReactToastify.css";
-import "./LatestTable.css";
-import "./RightSidebar.css";
 
 // Helper to prettify keys for display
 function prettifyKey(key) {
@@ -602,11 +601,10 @@ function ChallanCard({ challan, color }) {
 }
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import "./LatestTable.css";
 import LatestChallansTable from "./LatestChallansTable";
 import LoadingSkeleton from "./LoadingSkeleton";
 import TrafficLightLoader from "../assets/TrafficLightLoader";
-import QuickActions from "./QuickActions";
+import QuickActionsRibbon from "./QuickActionsRibbon";
 import VehicleRTOdataTable from "./VehicleRTOdata";
 import VehicleSummaryTable from "./VehicleSummaryTable";
 import MyFleetTable from "./MyFleetTable";
@@ -624,7 +622,6 @@ import MyBilling from "./MyBilling";
 import UserSettings from "./UserSettings";
 import CustomModal from "./CustomModal";
 import RightSidebar from "./RightSidebar";
-import "./RightSidebar.css";
 
 // NOTE: do not read `sc_user` at module load time (causes stale user after login)
 // ClientDashboard will read `sc_user` from localStorage when the component mounts.
@@ -2253,754 +2250,667 @@ function ClientDashboard() {
     return (
               <React.Fragment>
     {showHoliAnimation && <HoliAnimation onComplete={handleHoliAnimationComplete} />}
-    <ToastContainer position="top-right" autoClose={2000} />
-  <div className={`dashboard-layout ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
-      {/* Page loader commented out - only using graph loaders now */}
-      {/* {showLoader && (
-        <div className="page-loader-overlay">
-          <TrafficLightLoader />
-        </div>
-      )} */}
+    <ToastContainer 
+      position="top-right" 
+      autoClose={2000}
+      className="!top-4 !right-4 z-[9999]"
+      toastClassName="!bg-white !rounded-lg !shadow-2xl !border !border-slate-200"
+    />
+  
+  {/* Main Dashboard Layout */}
+  <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
+      {/* Mobile Overlay */}
       {sidebarOpen && window.innerWidth <= 900 && (
-        <div className="sidebar-overlay show" onClick={() => setSidebarOpen(false)} />
+        <div 
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-30 lg:hidden" 
+          onClick={() => setSidebarOpen(false)} 
+        />
       )}
-      {sidebarOpen && (
-        <ClientSidebar role={userRole} onMenuClick={handleMenuClick} activeMenu={activeMenu} sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} />
-      )}
-      <main className="main-content admin-home-content" style={{flex: 1, minHeight: '100vh', transition: 'all 0.35s cubic-bezier(.4,1.3,.5,1)', WebkitTransition: 'all 0.35s cubic-bezier(.4,1.3,.5,1)'}}>
-          {/* DEBUG: Show showExpiryBanner and user?.user_options?.show_expiry_banner */}
-          {/* ...existing code... */}
+      
+      {/* Sidebar - Always rendered, just hidden on mobile */}
+      <ClientSidebar 
+        role={userRole} 
+        onMenuClick={handleMenuClick} 
+        activeMenu={activeMenu} 
+        sidebarOpen={sidebarOpen} 
+        onToggleSidebar={toggleSidebar} 
+      />
+      
+      {/* Main Content Area */}
+      <main className={`min-h-screen transition-all duration-300 ${sidebarOpen ? 'ml-[280px]' : 'ml-[72px]'}`}>
           {/* Expiry Banner - fixed, dismissible, modern style */}
           {showExpiryBanner && !expiryBannerDismissed && (
-            <div style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              width: '100vw',
-              display: 'flex',
-              justifyContent: 'center',
-              zIndex: 1200,
-              pointerEvents: 'none',
-            }}>
-              <div style={{
-                background: '#fffbe6',
-                color: '#ad6800',
-                border: '1.5px solid #ffe58f',
-                borderRadius: 12,
-                padding: '14px 32px 14px 20px',
-                margin: '14px 0',
-                fontWeight: 600,
-                fontSize: 16,
-                boxShadow: '0 4px 18px 0 rgba(251, 191, 36, 0.13)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
-                maxWidth: 540,
-                width: 'calc(100vw - 32px)',
-                pointerEvents: 'auto',
-                position: 'relative',
-              }}>
-                <i className="ri-error-warning-line" style={{ fontSize: 24, color: '#faad14', flexShrink: 0 }}></i>
-                <span style={{ flex: 1 }}>{import.meta.env.VITE_EXPIRY_BANNER_MSG || 'Your subscription is expiring soon. Please contact sales team to continue with our Smart services.'}</span>
-                <button
-                  onClick={() => setExpiryBannerDismissed(true)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#ad6800',
-                    fontSize: 22,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    marginLeft: 8,
-                    lineHeight: 1,
-                    borderRadius: 4,
-                    padding: '2px 8px',
-                    transition: 'background 0.15s',
-                  }}
-                  aria-label="Dismiss banner"
-                  title="Dismiss"
-                >
-                  ×
-                </button>
+            <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none px-4 pt-4">
+              <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border-2 border-orange-300 rounded-xl shadow-lg px-6 py-4 max-w-2xl w-full pointer-events-auto animate-slide-down">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                    <i className="ri-error-warning-line text-2xl text-orange-600"></i>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-orange-900 mb-1">Subscription Notice</h4>
+                    <p className="text-sm text-orange-800">
+                      {import.meta.env.VITE_EXPIRY_BANNER_MSG || 'Your subscription is expiring soon. Please contact sales team to continue with our Smart services.'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setExpiryBannerDismissed(true)}
+                    className="flex-shrink-0 p-2 hover:bg-orange-100 rounded-lg transition-colors text-orange-600"
+                    aria-label="Dismiss banner"
+                  >
+                    <i className="ri-close-line text-xl"></i>
+                  </button>
+                </div>
               </div>
             </div>
           )}
-          {/* Add margin to main content if banner is visible */}
-          <style>{`
-            body { overscroll-behavior-y: none; }
-            @media (max-width: 600px) {
-              .main-content.admin-home-content { margin-top: ${showExpiryBanner && !expiryBannerDismissed ? '70px' : '0'} !important; }
-            }
-            @media (min-width: 601px) {
-              .main-content.admin-home-content { margin-top: ${showExpiryBanner && !expiryBannerDismissed ? '60px' : '0'} !important; }
-            }
-          `}</style>
-  <style>{`
-    .sidebar,
-    .main-content,
-    .main-content.admin-home-content {
-      transition: all 0.35s cubic-bezier(.4,1.3,.5,1) !important;
-    }
-  `}</style>
-        <div className="header" style={{marginBottom: 24}}>
-            <div className="header-left" style={{display:'flex',alignItems:'center',gap:16}}>
-            <div className="menu-toggle" style={{fontSize:22,cursor:'pointer'}} onClick={handleHeaderMenuToggle}>
-              <i className="ri-menu-line"></i>
-            </div>
-            <div className="header-title">
-              {activeMenu === 'Dashboard' ? 'Dashboard'
-                : activeMenu === 'Profile' ? 'Profile'
-                : activeMenu === 'Registered Vehicles' ? 'Registered Vehicles'
-                : activeMenu === 'Challans' ? 'Vehicle Challans'
-                : activeMenu === 'Billing' ? 'My Billing'
-                : activeMenu === 'Settings' ? 'Settings'
-                : activeMenu}
-            </div>
-          </div>
-          <div className="header-right" style={{display:'flex',alignItems:'center',gap:18,cursor:'pointer'}} onClick={() => setActiveMenu('Profile')} role="button" aria-label="Open profile">
-            {/* Theme Toggle Button */}
-            <button 
-              className="theme-toggle-btn" 
-              title={isMetallicTheme ? "Switch to Blue Theme" : "Switch to Metallic Theme"} 
-              onClick={(e)=>{ e.stopPropagation(); toggleTheme(); }} 
-              style={{
-                background: isMetallicTheme 
-                  ? 'linear-gradient(145deg, #6fa8dc 0%, #4682b4 50%, #3a6a94 100%)' 
-                  : 'linear-gradient(135deg, #42a5f5 0%, #478ed1 100%)',
-                border: isMetallicTheme ? '2px solid #3a6a94' : '2px solid #1976d2',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                color: '#fff',
-                fontSize: 18,
-                width: 40,
-                height: 40,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                boxShadow: isMetallicTheme 
-                  ? '0 4px 8px rgba(0, 0, 0, 0.15), 0 -2px 6px rgba(255, 255, 255, 0.6) inset'
-                  : '0 4px 8px rgba(66, 165, 245, 0.3)',
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = isMetallicTheme
-                  ? '0 8px 16px rgba(70, 130, 180, 0.4), 0 -4px 8px rgba(255, 255, 255, 0.4) inset'
-                  : '0 6px 12px rgba(66, 165, 245, 0.4)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = isMetallicTheme
-                  ? '0 4px 8px rgba(0, 0, 0, 0.15), 0 -2px 6px rgba(255, 255, 255, 0.6) inset'
-                  : '0 4px 8px rgba(66, 165, 245, 0.3)';
-              }}
-            >
-              <i className={isMetallicTheme ? "ri-palette-line" : "ri-contrast-2-line"}></i>
-            </button>
-            <button className="header-more" title="Hide / Show sidebar" onClick={(e)=>{ e.stopPropagation(); setSidebarOpen(s => !s); }} style={{background:'transparent',border:'none',cursor:'pointer',color:'#333',fontSize:20}}>
-              <i className="ri-more-2-fill" />
-            </button>
-            <div className="header-profile" style={{marginLeft:8}} onClick={(e)=>{ e.stopPropagation(); setActiveMenu('Profile'); }} role="button">
-              <div className="header-avatar" style={{background:'#0072ff',color:'#fff',borderRadius:'50%',width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:600,fontSize:16}}>{headerInitials || 'JS'}</div>
+          
+          {/* Add top padding if banner is visible */}
+          <div className={`${showExpiryBanner && !expiryBannerDismissed ? 'pt-28' : 'pt-0'} transition-all duration-300`}>
+          
+        {/* Header Section */}
+        <div className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-20 shadow-lg shadow-slate-200/50">
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-between">
+              {/* Left: Menu Toggle & Title */}
+              <div className="flex items-center gap-4">
+                <button 
+                  className="lg:hidden p-2.5 rounded-xl hover:bg-slate-100 text-slate-700 transition-all duration-200 hover:shadow-md"
+                  onClick={handleHeaderMenuToggle}
+                >
+                  <i className="ri-menu-line text-2xl"></i>
+                </button>
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent tracking-tight">
+                  {activeMenu === 'Dashboard' ? 'Dashboard'
+                    : activeMenu === 'Profile' ? 'Profile'
+                    : activeMenu === 'Registered Vehicles' ? 'Registered Vehicles'
+                    : activeMenu === 'Challans' ? 'Vehicle Challans'
+                    : activeMenu === 'Billing' ? 'My Billing'
+                    : activeMenu === 'Settings' ? 'Settings'
+                    : activeMenu}
+                </h2>
+              </div>
+              
+              {/* Right: Actions & Profile */}
+              <div className="flex items-center gap-3">
+                {/* Theme Toggle */}
+                <button 
+                  className={`p-2.5 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 ${
+                    isMetallicTheme 
+                      ? 'bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 hover:from-blue-600 hover:via-blue-700 hover:to-indigo-700' 
+                      : 'bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-600 hover:from-indigo-700 hover:via-purple-700 hover:to-blue-700'
+                  }`}
+                  title={isMetallicTheme ? "Switch to Blue Theme" : "Switch to Metallic Theme"} 
+                  onClick={(e)=>{ e.stopPropagation(); toggleTheme(); }}
+                >
+                  <i className={`${isMetallicTheme ? "ri-palette-line" : "ri-contrast-2-line"} text-white text-xl`}></i>
+                </button>
+                
+                {/* Sidebar Toggle */}
+                <button 
+                  className="p-2.5 rounded-xl hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all duration-200 hidden lg:block hover:shadow-md"
+                  title="Toggle sidebar" 
+                  onClick={(e)=>{ e.stopPropagation(); setSidebarOpen(s => !s); }}
+                >
+                  <i className="ri-menu-fold-line text-xl"></i>
+                </button>
+                
+                {/* Profile Avatar */}
+                <button 
+                  className="flex items-center gap-3 p-1.5 rounded-xl hover:bg-slate-100 transition-all duration-200 hover:shadow-md"
+                  onClick={(e)=>{ e.stopPropagation(); setActiveMenu('Profile'); }}
+                >
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg hover:scale-105 transition-transform">
+                    {headerInitials || 'JS'}
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
         </div>
+        
+        {/* Main Content Container */}
+        <div className="p-4">
         {activeMenu === "Dashboard" && (
           <React.Fragment>
-            <div className="dashboard-header" style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative'}}>
-              <div>
-                <h1 className="dashboard-title">Welcome back{user.user && user.user.name ? `, ${user.user.name}` : '123'}!</h1>
-                <p>Here's an overview of your Fleet status</p>
-              </div>
-              {lastDashboardUpdate && (
-                <span style={{
-                  background: '#e3f7d6',
-                  color: '#222',
-                  border: '1.5px solid #4caf50',
-                  borderRadius: 6,
-                  padding: '4px 12px',
-                  fontWeight: 600,
-                  fontSize: 14,
-                  marginLeft: 16,
-                  whiteSpace: 'nowrap',
-                  alignSelf: 'flex-start',
-                  marginTop: 8
-                }}>
-                  Last updated: {lastDashboardUpdate.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                </span>
-              )}
-            </div>
-            <div className="dashboard-stats" style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-              {/* Top row: 4 stat cards if showClientPages, else 2 */}
-              <div style={{ display: 'flex', width: '100%', gap: 16 }}>
-                {!showClientPages && (
-                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0}}>
-                  <div className="stat-card-content">
-                  <i className="ri-car-line" style={{ color: '#1a1a1a', fontSize: '2.5em', filter: 'drop-shadow(1px 1px 2px rgba(255, 255, 255, 0.6)) drop-shadow(-1px -1px 1px rgba(0, 0, 0, 0.5))' }}></i>
-                  <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
-                    <div>Registered Vehicles</div>
-                    <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
-                      {loadingClient ? '...' : (clientData && Array.isArray(clientData.vehicles) ? clientData.vehicles.length : 0)}
-                    </div>
-                  </div>
-                  {/* Show active/inactive/deleted counts as badges */}
-                  <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8 }}>
-                    {(() => {
-                      const counts = { active: 0, inactive: 0, deleted: 0 };
-                      if (clientData && Array.isArray(clientData.vehicles)) {
-                        clientData.vehicles.forEach(v => {
-                          const s = (v.status || '').toLowerCase();
-                          if (s === 'active') counts.active++;
-                          else if (s === 'inactive') counts.inactive++;
-                          else if (s === 'deleted') counts.deleted++;
-                        });
-                      }
-                      return [
-                        <div
-                          key="act"
-                          className={`status-badge`}
-                          style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                          title="View active registered vehicles"
-                          onClick={() => {
-                            checkPermissionAndNavigate('Register Vehicle');
-                            setTimeout(() => {
-                              try {
-                                const section = document.getElementById('registered-vehicles-section');
-                                if (section) {
-                                  const rect = section.getBoundingClientRect();
-                                  const offset = rect.top + window.scrollY - 80; // account for header spacing
-                                  window.scrollTo({ top: offset < 0 ? 0 : offset, behavior: 'smooth' });
-                                }
-                                const select = document.querySelector('#registered-vehicles-section select.form-control');
-                                if (select) {
-                                  select.value = 'ACTIVE';
-                                  select.dispatchEvent(new Event('change', { bubbles: true }));
-                                }
-                              } catch (e) {}
-                            }, 300);
-                          }}
-                        >
-                          <div style={{ color: '#42a5f5', fontWeight: 700 }}>{counts.active}</div>
-                          <div style={{ fontSize: 12, color: '#666' }}>Active</div>
-                        </div>,
-                        <div
-                          key="inact"
-                          className={`status-badge`}
-                          style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                          title="View inactive registered vehicles"
-                          onClick={() => {
-                            checkPermissionAndNavigate('Register Vehicle');
-                            setTimeout(() => {
-                              try {
-                                const section = document.getElementById('registered-vehicles-section');
-                                if (section) {
-                                  const rect = section.getBoundingClientRect();
-                                  const offset = rect.top + window.scrollY - 80;
-                                  window.scrollTo({ top: offset < 0 ? 0 : offset, behavior: 'smooth' });
-                                }
-                                const select = document.querySelector('#registered-vehicles-section select.form-control');
-                                if (select) {
-                                  select.value = 'INACTIVE';
-                                  select.dispatchEvent(new Event('change', { bubbles: true }));
-                                }
-                              } catch (e) {}
-                            }, 300);
-                          }}
-                        >
-                          <div style={{ color: '#ffa726', fontWeight: 700 }}>{counts.inactive}</div>
-                          <div style={{ fontSize: 12, color: '#666' }}>Inactive</div>
-                        </div>,
-                        <div
-                          key="del"
-                          className={`status-badge`}
-                          style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                          title="View deleted vehicles"
-                          onClick={() => {
-                            checkPermissionAndNavigate('Register Vehicle');
-                            let tries = 0;
-                            const maxTries = 10;
-                            const attemptScroll = () => {
-                              try {
-                                const section = document.getElementById('deleted-vehicles-section');
-                                if (section) {
-                                  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                  return;
-                                }
-                              } catch (e) {}
-                              if (tries < maxTries) {
-                                tries += 1;
-                                setTimeout(attemptScroll, 120);
-                              }
-                            };
-                            setTimeout(attemptScroll, 300);
-                          }}
-                        >
-                          <div style={{ color: '#e15759', fontWeight: 700 }}>{counts.deleted}</div>
-                          <div style={{ fontSize: 12, color: '#666' }}>Deleted</div>
-                        </div>
-                      ];
-                    })()}
-                  </div>
-                </div>
-                <div className="stat-chart-container">
-                  <canvas ref={chartRefTotal} style={{display: chartLoading.total || chartErrors.total ? 'none' : 'block'}} />
-                    {chartLoading.total ? (
-                      <div className="default-loader" style={{ zIndex: 10 }}>
-                        <div className="loader-spinner"></div>
-                      </div>
-                    ) : chartErrors.total ? (
-                      <div style={{ textAlign: 'center', padding: '20px' }}>
-                        <div style={{ color: '#666', marginBottom: '8px', fontSize: '13px' }}>Chart failed to load</div>
-                        <button className="action-btn" onClick={retryCharts} style={{ padding: '6px 12px', fontSize: '12px' }}>
-                          <i className="ri-refresh-line" style={{ marginRight: '4px' }}></i>Retry
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-                )}
-                {!showClientPages && (
-                <div className="stat-card" style={{flex: '1 1 0', minWidth: 0}}>
-                  <div className="stat-card-content">
-                  <i className="ri-error-warning-line" style={{ color: '#1a1a1a', fontSize: '2.5em', filter: 'drop-shadow(1px 1px 2px rgba(255, 255, 255, 0.6)) drop-shadow(-1px -1px 1px rgba(0, 0, 0, 0.5))' }}></i>
-                  <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
-                    <div>Challans Fetched</div>
-                    <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
-                      {loadingVehicleChallan ? '...' : dashboardTotalChallans}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8 }}>
-                    <div key="pending" className={`status-badge`} style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                      title="View pending challans"
-                      onClick={() => {
-                        if (typeof window !== 'undefined' && window.handleViewAllChallans) {
-                          window.handleViewAllChallans('pending');
-                        } else {
-                          localStorage.setItem('sc_challan_filter', 'pending');
-                          setActiveMenu('Vehicle Challans');
-                        }
-                      }}>
-                      <div style={{ color: '#e74c3c', fontWeight: 700 }}>{loadingVehicleChallan ? '...' : dashboardPendingCount}</div>
-                      <div style={{ fontSize: 12, color: '#666' }}>Pending</div>
-                    </div>
-                    <div key="disposed" className={`status-badge`} style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                      title="View disposed challans"
-                      onClick={() => {
-                        if (typeof window !== 'undefined' && window.handleViewAllChallans) {
-                          window.handleViewAllChallans('disposed');
-                        } else {
-                          localStorage.setItem('sc_challan_filter', 'disposed');
-                          setActiveMenu('Vehicle Challans');
-                        }
-                      }}>
-                      <div style={{ color: '#66bb6a', fontWeight: 700 }}>{loadingVehicleChallan ? '...' : dashboardDisposedCount}</div>
-                      <div style={{ fontSize: 12, color: '#666' }}>Disposed</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="stat-chart-container">
-                  <canvas ref={chartRefActive} style={{display: chartLoading.active || chartErrors.active ? 'none' : 'block'}} />
-                  {chartLoading.active ? (
-                    <div className="default-loader" style={{ zIndex: 10 }}>
-                      <div className="loader-spinner"></div>
-                    </div>
-                  ) : chartErrors.active ? (
-                    <div style={{ textAlign: 'center', padding: '20px' }}>
-                      <div style={{ color: '#666', marginBottom: '8px', fontSize: '13px' }}>Chart failed to load</div>
-                      <button className="action-btn" onClick={retryCharts} style={{ padding: '6px 12px', fontSize: '12px' }}>
-                        <i className="ri-refresh-line" style={{ marginRight: '4px' }}></i>Retry
-                      </button>
-                    </div>
-                  ) : null}
-                  </div>
-                  </div>
-                )}
-                {/* Network stat cards if showClientPages - render as siblings, not nested */}
-                {showClientPages && (
-                  <React.Fragment>
-                    <div className="stat-card" style={{flex: '1 1 0', minWidth: 0}}>
-                      <div className="stat-card-content">
-                        <i className="ri-briefcase-line"></i>
-                        <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
-                          <div>My Clients</div>
-                          <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
-                            {loadingNetworkStats ? '...' : networkStatsError ? '--' : (networkStats && networkStats.totalClients != null ? networkStats.totalClients : '--')}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8, flexWrap: 'nowrap' }}>
-                          <div
-                            className={`status-badge`}
-                            style={{ cursor: 'pointer', width: 'calc(50% - 6px)', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                            title="Active clients"
-                            onClick={() => {
-                              setActiveMenu('My Clients');
-                              setTimeout(() => {
-                                try {
-                                  const selects = Array.from(document.querySelectorAll('select'));
-                                  for (const s of selects) {
-                                    const opts = Array.from(s.options).map(o => (o.text || o.label || '').toLowerCase());
-                                    if (opts.includes('all status') || opts.includes('all')) {
-                                      s.value = 'active';
-                                      s.dispatchEvent(new Event('change', { bubbles: true }));
-                                      break;
-                                    }
-                                  }
-                                } catch (e) {}
-                              }, 300);
-                            }}
-                          >
-                            <div style={{ color: '#42a5f5', fontWeight: 700 }}>{loadingNetworkStats ? '...' : networkStats && networkStats.clientStatus && networkStats.clientStatus.active != null ? networkStats.clientStatus.active : '--'}</div>
-                            <div style={{ fontSize: 12, color: '#666' }}>Active</div>
-                          </div>
-                          <div
-                            className={`status-badge`}
-                            style={{ cursor: 'pointer', width: 'calc(50% - 6px)', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                            title="Inactive clients"
-                            onClick={() => {
-                              setActiveMenu('My Clients');
-                              setTimeout(() => {
-                                try {
-                                  const selects = Array.from(document.querySelectorAll('select'));
-                                  for (const s of selects) {
-                                    const opts = Array.from(s.options).map(o => (o.text || o.label || '').toLowerCase());
-                                    if (opts.includes('all status') || opts.includes('all')) {
-                                      s.value = 'inactive';
-                                      s.dispatchEvent(new Event('change', { bubbles: true }));
-                                      break;
-                                    }
-                                  }
-                                } catch (e) {}
-                              }, 300);
-                            }}
-                          >
-                            <div style={{ color: '#ffa726', fontWeight: 700 }}>{loadingNetworkStats ? '...' : networkStats && networkStats.clientStatus && networkStats.clientStatus.inactive != null ? networkStats.clientStatus.inactive : '0'}</div>
-                            <div style={{ fontSize: 12, color: '#666' }}>Inactive</div>
-                          </div>
-                        </div>
-                        {/* <div className="stat-chart-container">
-                          <canvas ref={chartRefNetworkClients} style={{height: 80, width: '100%', display: loadingNetworkStats || networkStatsError ? 'none' : 'block'}} />
-                          {loadingNetworkStats ? (
-                            <div className="default-loader" style={{ zIndex: 10 }}>
-                              <div className="loader-spinner"></div>
-                            </div>
-                          ) : networkStatsError ? (
-                            <div style={{ textAlign: 'center', padding: '20px' }}>
-                              <div style={{ color: '#666', marginBottom: '8px', fontSize: '13px' }}>Chart failed to load</div>
-                            </div>
-                          ) : null}
-                        </div> */}
-                      </div>
-                    </div>
-                    <div className="stat-card" style={{flex: '1 1 0', minWidth: 0}}>
-                      <div className="stat-card-content">
-                        <i className="ri-user-3-line"></i>
-                        <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
-                          <div>Client Vehicles</div>
-                          <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
-                            {loadingNetworkStats ? '...' : networkStatsError ? '0' : (networkStats && networkStats.totalVehicles != null ? networkStats.totalVehicles : '--')}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8, flexWrap: 'nowrap' }}>
-                          <div className={`status-badge`} style={{ cursor: 'default', width: 'calc(50% - 6px)', display: 'flex', justifyContent: 'space-between' }} title="Active vehicles">
-                            <div style={{ color: '#42a5f5', fontWeight: 700 }}>{loadingNetworkStats ? '...' : networkStats && networkStats.vehicleStatus && typeof networkStats.vehicleStatus.active !== 'undefined' ? networkStats.vehicleStatus.active : 0}</div>
-                            <div style={{ fontSize: 12, color: '#666' }}>Active</div>
-                          </div>
-                          <div className={`status-badge`} style={{ cursor: 'default', width: 'calc(50% - 6px)', display: 'flex', justifyContent: 'space-between' }} title="Inactive vehicles">
-                            <div style={{ color: '#ffa726', fontWeight: 700 }}>{loadingNetworkStats ? '...' : networkStats && networkStats.vehicleStatus && typeof networkStats.vehicleStatus.inactive !== 'undefined' ? networkStats.vehicleStatus.inactive : 0}</div>
-                            <div style={{ fontSize: 12, color: '#666' }}>Inactive</div>
-                          </div>
-                          <div className={`status-badge`} style={{ cursor: 'default', width: 'calc(50% - 6px)', display: 'flex', justifyContent: 'space-between' }} title="Deleted vehicles">
-                            <div style={{ color: '#e15759', fontWeight: 700 }}>{loadingNetworkStats ? '...' : networkStats && networkStats.vehicleStatus && typeof networkStats.vehicleStatus.deleted !== 'undefined' ? networkStats.vehicleStatus.deleted : 0}</div>
-                            <div style={{ fontSize: 12, color: '#666' }}>Deleted</div>
-                          </div>
-                        </div>
-                        {/* <div className="stat-chart-container">
-                          <canvas ref={chartRefNetworkVehicles} style={{height: 80, width: '100%', display: loadingNetworkStats || networkStatsError ? 'none' : 'block'}} />
-                          {loadingNetworkStats ? (
-                            <div className="default-loader" style={{ zIndex: 10 }}>
-                              <div className="loader-spinner"></div>
-                            </div>
-                          ) : networkStatsError ? (
-                            <div style={{ textAlign: 'center', padding: '20px' }}>
-                              <div style={{ color: '#666', marginBottom: '8px', fontSize: '13px' }}>Chart failed to load</div>
-                            </div>
-                          ) : null}
-                        </div> */}
-                      </div>
-                    </div>
-                  </React.Fragment>
-                )}
-                
-              </div>
+            {/* Dashboard Gradient Banner */}
+            <div style={{
+              background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #3b82f6 100%)',
+              borderRadius: '16px',
+              padding: '28px 28px',
+              marginBottom: '20px',
+              position: 'relative',
+              overflow: 'hidden',
+            }}>
+              <div style={{
+                position: 'absolute',
+                top: '-45px',
+                right: '-45px',
+                width: '220px',
+                height: '220px',
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.07)',
+              }}/>
+              <div style={{
+                position: 'absolute',
+                bottom: '-60px',
+                right: '160px',
+                width: '180px',
+                height: '180px',
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.05)',
+              }}/>
               
-              {/* Second row of network stats cards */}
-              {showClientPages && (
-                <div style={{ display: 'flex', width: '100%', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
-                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280}}>
-                    <div className="stat-card-content">
-                      <i className="ri-error-warning-line"></i>
-                      <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
-                        <div>Total Challans Fetched</div>
-                        <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
-                          {loadingNetworkStats ? '...' : networkStatsError ? '0' : (networkStats && networkStats.totalChallans != null ? networkStats.totalChallans : '0')}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8 }}>
-                        <div className={`status-badge`} style={{ cursor: 'default', width: 'calc(50% - 6px)', display: 'flex', justifyContent: 'space-between' }} title="Pending challans">
-                          <div style={{ color: '#e74c3c', fontWeight: 700 }}>
-                            {loadingNetworkStats ? '...' : networkStats && networkStats.challanStatus && typeof networkStats.challanStatus.pending !== 'undefined' ? networkStats.challanStatus.pending : '0'}
-                          </div>
-                          <div style={{ fontSize: 12, color: '#666' }}>Pending</div>
-                        </div>
-                        <div className={`status-badge`} style={{ cursor: 'default', width: 'calc(50% - 6px)', display: 'flex', justifyContent: 'space-between' }} title="Disposed challans">
-                          <div style={{ color: '#66bb6a', fontWeight: 700 }}>
-                            {loadingNetworkStats ? '...' : networkStats && networkStats.challanStatus && typeof networkStats.challanStatus.disposed !== 'undefined' ? networkStats.challanStatus.disposed : '0'}
-                          </div>
-                          <div style={{ fontSize: 12, color: '#666' }}>Disposed</div>
-                        </div>
-                      </div>
-                    </div>
+              <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', gap: '18px', flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontSize: '24px', fontWeight: 800, color: '#fff' }}>
+                    Welcome back{user.user && user.user.name ? `, ${user.user.name}` : ''}!
                   </div>
-                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280}}>
-                    <div className="stat-card-content">
-                      <i className="ri-alarm-warning-line"></i>
-                      <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
-                        <div>Clients Renewals</div>
-                        <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
-                          {loadingNetworkStats ? '...' : networkStatsError ? '0' : (networkStats && networkStats.totalRenewals != null ? networkStats.totalRenewals : '0')}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: 9, justifyContent: 'flex-start', marginTop: 10, flexWrap: 'wrap' }}>
-                        <div style={{ display: 'flex', gap: 9, width: '100%' }}>
-                          <div className={`status-badge`} style={{ cursor: 'default' }} title="Insurance renewals">
-                            <div style={{ color: '#ff5252', fontWeight: 700 }}>
-                              {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.insurance !== 'undefined' ? networkStats.renewalTypes.insurance : '0'}
-                            </div>
-                            <div style={{ fontSize: 11, color: '#666' }}>Insurance</div>
-                          </div>
-                          <div className={`status-badge`} style={{ cursor: 'default' }} title="Road tax renewals">
-                            <div style={{ color: '#ff8a65', fontWeight: 700 }}>
-                              {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.roadTax !== 'undefined' ? networkStats.renewalTypes.roadTax : '0'}
-                            </div>
-                            <div style={{ fontSize: 11, color: '#666' }}>Road Tax</div>
-                          </div>
-                          <div className={`status-badge`} style={{ cursor: 'default' }} title="Fitness renewals">
-                            <div style={{ color: '#f4b400', fontWeight: 700 }}>
-                              {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.fitness !== 'undefined' ? networkStats.renewalTypes.fitness : '0'}
-                            </div>
-                            <div style={{ fontSize: 11, color: '#666' }}>Fitness</div>
-                          </div>
-                          <div className={`status-badge`} style={{ cursor: 'default' }} title="Pollution renewals">
-                            <div style={{ color: '#42a5f5', fontWeight: 700 }}>
-                              {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.pollution !== 'undefined' ? networkStats.renewalTypes.pollution : '0'}
-                            </div>
-                            <div style={{ fontSize: 11, color: '#666' }}>Pollution</div>
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 9, marginTop: 2 }}>
-                          <div className={`status-badge`} style={{ cursor: 'default' }} title="National permit renewals">
-                            <div style={{ color: '#7e57c2', fontWeight: 700 }}>
-                              {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.nationalPermit !== 'undefined' ? networkStats.renewalTypes.nationalPermit : '0'}
-                            </div>
-                            <div style={{ fontSize: 11, color: '#666' }}>National Permit</div>
-                          </div>
-                          <div className={`status-badge`} style={{ cursor: 'default' }} title="Permit validity renewals">
-                            <div style={{ color: '#26a69a', fontWeight: 700 }}>
-                              {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.permitValid !== 'undefined' ? networkStats.renewalTypes.permitValid : '0'}
-                            </div>
-                            <div style={{ fontSize: 11, color: '#666' }}>Permit Valid</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                  <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.75)', marginTop: '6px' }}>
+                    Manage your fleet, track challans, and monitor RTO compliance in real-time
                   </div>
-                  <div className="stat-card" style={{flex: '1 1 calc(33.333% - 11px)', minWidth: 280}}>
-                    <div className="stat-card-content">
-                      <i className="ri-money-rupee-circle-line"></i>
-                      <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
-                        <div>Total Challan Amount</div>
-                        <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
-                          {loadingNetworkStats ? '...' : networkStatsError ? '₹0' : (networkStats?.challanAmount?.total != null ? `₹${formatBriefAmount(networkStats.challanAmount.total)}` : '₹0')}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start', marginTop: 8 }}>
-                        <div className={`status-badge`} style={{ cursor: 'default', width: 'calc(50% - 6px)', display: 'flex', justifyContent: 'space-between' }} title="Pending challan amount">
-                          <div style={{ fontSize: 12, color: '#666' }}>Pending:</div>
-                          <div style={{ color: '#e74c3c', fontWeight: 700, fontSize: 14 }}>
-                            {loadingNetworkStats ? '...' : (networkStats?.challanAmount?.pending != null ? `₹${formatBriefAmount(networkStats.challanAmount.pending)}` : '₹0')}
-                          </div>
-                        </div>
-                        <div className={`status-badge`} style={{ cursor: 'default', width: 'calc(50% - 6px)', display: 'flex', justifyContent: 'space-between' }} title="Paid challan amount">
-                          <div style={{ fontSize: 12, color: '#666' }}>Paid:</div>
-                          <div style={{ color: '#2d7d2d', fontWeight: 700, fontSize: 14 }}>
-                            {loadingNetworkStats ? '...' : (networkStats?.challanAmount?.paid != null ? `₹${formatBriefAmount(networkStats.challanAmount.paid)}` : '₹0')}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                  <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{
+                      background: 'rgba(255,255,255,0.2)',
+                      color: '#fff',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      padding: '3px 12px',
+                      borderRadius: '20px',
+                    }}>
+                      🚗 Fleet Management
+                    </span>
+                    <span style={{
+                      background: 'rgba(255,255,255,0.2)',
+                      color: '#fff',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      padding: '3px 12px',
+                      borderRadius: '20px',
+                    }}>
+                      📋 RTO Compliance
+                    </span>
+                    <span style={{
+                      background: 'rgba(255,255,255,0.2)',
+                      color: '#fff',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      padding: '3px 12px',
+                      borderRadius: '20px',
+                    }}>
+                      ⚡ Real-time Updates
+                    </span>
                   </div>
                 </div>
-              )}
-             
+                
+                {lastDashboardUpdate && (
+                  <div style={{
+                    background: 'rgba(255,255,255,0.14)',
+                    borderRadius: '14px',
+                    padding: '14px 16px',
+                    minWidth: '200px',
+                    alignSelf: 'flex-start',
+                  }}>
+                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)' }}>Last Updated</div>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff', lineHeight: 1.1, marginTop: '4px' }}>
+                      {lastDashboardUpdate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', marginTop: '4px' }}>
+                      {lastDashboardUpdate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-
-            {/* Second row: 2 cards as before, 50% width each */}
+            
+            {/* Stats Grid — all 4 cards in one row */}
             {!showClientPages && (
-            <div className="dashboard-stats" style={{ display: 'flex', width: '100%', gap: 16, marginTop: 16 }}>
-              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320}}>
-                <div className="stat-card-content">
-                  <i className="ri-alarm-warning-line" style={{ color: '#1a1a1a', fontSize: '2.5em', filter: 'drop-shadow(1px 1px 2px rgba(255, 255, 255, 0.6)) drop-shadow(-1px -1px 1px rgba(0, 0, 0, 0.5))' }}></i>
-                  <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
-                    <div>Vehicle Renewals</div>
-                    {/* <span style={{ color: '#666', fontSize: 12, float: 'left' }}>Expired</span> */}
-                    <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
-                      {loadingVehicleRto ? '...' : vehicleRenewalsTotal}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+              {/* Card 1: Registered Vehicles */}
+              <div className="rounded-xl overflow-hidden border border-slate-200 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 bg-white">
+                <div className="bg-blue-600 px-4 py-4 text-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                      <i className="ri-car-line text-base"></i>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 9, justifyContent: 'flex-start', marginTop: 10, flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', gap: 9, width: '100%' }}>
-                      <div
-                        className={`status-badge`}
-                        style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                        title="Show vehicles with expired insurance"
-                        onClick={() => {
-                          setGoToFleetRenewal('insurance');
-                          setActiveMenu(getFleetMenuName());
-                        }}
-                      >
-                        <div style={{ color: '#ff5252', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.insurance}</div>
-                        <div style={{ fontSize: 12, color: '#666' }}>Insurance</div>
-                      </div>
-                      <div
-                        className={`status-badge`}
-                        style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                        title="Show vehicles with expired road tax"
-                        onClick={() => {
-                          setGoToFleetRenewal('roadTax');
-                          setActiveMenu(getFleetMenuName());
-                        }}
-                      >
-                        <div style={{ color: '#ff8a65', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.roadTax}</div>
-                        <div style={{ fontSize: 12, color: '#666' }}>Road Tax</div>
-                      </div>
-                      <div
-                        className={`status-badge`}
-                        style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                        title="Show vehicles with expired fitness certificate"
-                        onClick={() => {
-                          setGoToFleetRenewal('fitness');
-                          setActiveMenu(getFleetMenuName());
-                        }}
-                      >
-                        <div style={{ color: '#f4b400', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.fitness}</div>
-                        <div style={{ fontSize: 12, color: '#666' }}>Fitness</div>
-                      </div>
-                      <div
-                        className={`status-badge`}
-                        style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                        title="Show vehicles with expired pollution certificate"
-                        onClick={() => {
-                          setGoToFleetRenewal('pollution');
-                          setActiveMenu(getFleetMenuName());
-                        }}
-                      >
-                        <div style={{ color: '#42a5f5', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.pollution}</div>
-                        <div style={{ fontSize: 12, color: '#666' }}>Pollution</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 9, marginTop: 8, width: '100%' }}>
-                      <div
-                        className={`status-badge`}
-                        style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                        title="Show vehicles with expired national permit"
-                        onClick={() => {
-                          setGoToFleetRenewal('nationalPermit');
-                          setActiveMenu(getFleetMenuName());
-                        }}
-                      >
-                        <div style={{ color: '#7e57c2', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.nationalPermit}</div>
-                        <div style={{ fontSize: 12, color: '#666' }}>National Permit</div>
-                      </div>
-                      <div
-                        className={`status-badge`}
-                        style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}
-                        title="Show vehicles with expired permit validity"
-                        onClick={() => {
-                          setGoToFleetRenewal('permitValid');
-                          setActiveMenu(getFleetMenuName());
-                        }}
-                      >
-                        <div style={{ color: '#26a69a', fontWeight: 700 }}>{loadingVehicleRto ? '...' : expiryCounts.permitValid}</div>
-                        <div style={{ fontSize: 12, color: '#666' }}>Permit Valid</div>
-                      </div>
-                    </div>
+                  <div className="text-2xl font-bold leading-none">
+                    {loadingClient ? '...' : (clientData && Array.isArray(clientData.vehicles) ? clientData.vehicles.length : 0)}
                   </div>
+                  <div className="text-[11px] font-medium text-white/80 mt-1">Registered Vehicles</div>
                 </div>
-                {/* Info line (threshold) intentionally hidden to save vertical space */}
-                <div className="stat-chart-container">
-                  <canvas ref={chartRefPaid} style={{display: chartLoading.paid || chartErrors.paid ? 'none' : 'block'}} />
-                  {chartLoading.paid ? (
-                    <div className="default-loader" style={{ zIndex: 10 }}>
-                      <div className="loader-spinner"></div>
-                    </div>
-                  ) : chartErrors.paid ? (
-                    <div style={{ textAlign: 'center', padding: '20px' }}>
-                      <div style={{ color: '#666', marginBottom: '8px', fontSize: '13px' }}>Chart failed to load</div>
-                      <button className="action-btn" onClick={retryCharts} style={{ padding: '6px 12px', fontSize: '12px' }}>
-                        <i className="ri-refresh-line" style={{ marginRight: '4px' }}></i>Retry
-                      </button>
-                    </div>
-                  ) : null}
+                <div className="px-3 py-2.5 flex gap-1">
+                  {(() => {
+                    const counts = { active: 0, inactive: 0, deleted: 0 };
+                    if (clientData && Array.isArray(clientData.vehicles)) {
+                      clientData.vehicles.forEach(v => {
+                        const s = (v.status || '').toLowerCase();
+                        if (s === 'active') counts.active++;
+                        else if (s === 'inactive') counts.inactive++;
+                        else if (s === 'deleted') counts.deleted++;
+                      });
+                    }
+                    return [
+                      <div
+                        key="act"
+                        className="flex-1 text-center py-1.5 rounded-md cursor-pointer hover:bg-blue-50 transition-colors"
+                        title="View active registered vehicles"
+                        onClick={() => {
+                          checkPermissionAndNavigate('Register Vehicle');
+                          setTimeout(() => {
+                            try {
+                              const section = document.getElementById('registered-vehicles-section');
+                              if (section) {
+                                const rect = section.getBoundingClientRect();
+                                const offset = rect.top + window.scrollY - 80;
+                                window.scrollTo({ top: offset < 0 ? 0 : offset, behavior: 'smooth' });
+                              }
+                              const select = document.querySelector('#registered-vehicles-section select.form-control');
+                              if (select) {
+                                select.value = 'ACTIVE';
+                                select.dispatchEvent(new Event('change', { bubbles: true }));
+                              }
+                            } catch (e) {}
+                          }, 300);
+                        }}
+                      >
+                        <div className="text-sm font-bold text-blue-600">{counts.active}</div>
+                        <div className="text-[9px] text-slate-400">Active</div>
+                      </div>,
+                      <div
+                        key="inact"
+                        className="flex-1 text-center py-1.5 rounded-md cursor-pointer hover:bg-amber-50 transition-colors"
+                        title="View inactive registered vehicles"
+                        onClick={() => {
+                          checkPermissionAndNavigate('Register Vehicle');
+                          setTimeout(() => {
+                            try {
+                              const section = document.getElementById('registered-vehicles-section');
+                              if (section) {
+                                const rect = section.getBoundingClientRect();
+                                const offset = rect.top + window.scrollY - 80;
+                                window.scrollTo({ top: offset < 0 ? 0 : offset, behavior: 'smooth' });
+                              }
+                              const select = document.querySelector('#registered-vehicles-section select.form-control');
+                              if (select) {
+                                select.value = 'INACTIVE';
+                                select.dispatchEvent(new Event('change', { bubbles: true }));
+                              }
+                            } catch (e) {}
+                          }, 300);
+                        }}
+                      >
+                        <div className="text-sm font-bold text-amber-600">{counts.inactive}</div>
+                        <div className="text-[9px] text-slate-400">Inactive</div>
+                      </div>,
+                      <div
+                        key="del"
+                        className="flex-1 text-center py-1.5 rounded-md cursor-pointer hover:bg-red-50 transition-colors"
+                        title="View deleted vehicles"
+                        onClick={() => {
+                          checkPermissionAndNavigate('Register Vehicle');
+                          let tries = 0;
+                          const maxTries = 10;
+                          const attemptScroll = () => {
+                            try {
+                              const section = document.getElementById('deleted-vehicles-section');
+                              if (section) {
+                                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                return;
+                              }
+                            } catch (e) {}
+                            if (tries < maxTries) {
+                              tries += 1;
+                              setTimeout(attemptScroll, 120);
+                            }
+                          };
+                          setTimeout(attemptScroll, 300);
+                        }}
+                      >
+                        <div className="text-sm font-bold text-red-500">{counts.deleted}</div>
+                        <div className="text-[9px] text-slate-400">Deleted</div>
+                      </div>
+                    ];
+                  })()}
                 </div>
               </div>
-              <div className="stat-card" style={{flex: '1 1 50%', minWidth: 320}}>
-                <div className="stat-card-content">
-                  <i className="ri-money-rupee-circle-line" style={{ color: '#1a1a1a', fontSize: '2.5em', filter: 'drop-shadow(1px 1px 2px rgba(255, 255, 255, 0.6)) drop-shadow(-1px -1px 1px rgba(0, 0, 0, 0.5))' }}></i>
-                  <div style={{display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-start'}}>
-                    <div>Challan Amount</div>
-                    <div className="stat-value" style={{ display: 'inline-block', marginLeft: 6, color: '#f0f0f0' }}>
-                      {loadingVehicleChallan ? '...' : `₹${formatBriefAmount(totalFineAmount)}`}
+
+              {/* Card 2: Challans Fetched */}
+              <div className="rounded-xl overflow-hidden border border-slate-200 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 bg-white">
+                <div className="bg-rose-500 px-4 py-4 text-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                      <i className="ri-error-warning-line text-base"></i>
                     </div>
                   </div>
-                  <div className="stat-value" style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 12, color: '#f0f0f0' }}>
-                    {loadingVehicleChallan
-                      ? '...'
-                      : <React.Fragment>
-                          <span style={{color: '#e74c3c', fontWeight: 600, fontSize: '0.75em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}
-                            title="Show pending challans"
-                            onClick={() => { if (typeof window !== 'undefined' && window.handleViewAllChallans) { window.handleViewAllChallans('pending'); } else { localStorage.setItem('sc_challan_filter','pending'); setActiveMenu('Vehicle Challans'); } }}>
-                            Pending: ₹{formatBriefAmount(pendingFineTotal)}
-                          </span>
-                          <span style={{color: '#2d7d2d', fontWeight: 600, fontSize: '0.65em', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}
-                            title="Show paid challans"
-                            onClick={() => { if (typeof window !== 'undefined' && window.handleViewAllChallans) { window.handleViewAllChallans('disposed'); } else { localStorage.setItem('sc_challan_filter','disposed'); setActiveMenu('Vehicle Challans'); } }}>
-                            Paid: ₹{formatBriefAmount(disposedFineTotal)}
-                          </span>
-                        </React.Fragment>
-                    }
+                  <div className="text-2xl font-bold leading-none">
+                    {loadingVehicleChallan ? '...' : dashboardTotalChallans}
+                  </div>
+                  <div className="text-[11px] font-medium text-white/80 mt-1">Challans Fetched</div>
+                </div>
+                <div className="px-3 py-2.5 flex gap-1">
+                  <div
+                    className="flex-1 text-center py-1.5 rounded-md cursor-pointer hover:bg-red-50 transition-colors"
+                    title="View pending challans"
+                    onClick={() => {
+                      if (typeof window !== 'undefined' && window.handleViewAllChallans) {
+                        window.handleViewAllChallans('pending');
+                      } else {
+                        localStorage.setItem('sc_challan_filter', 'pending');
+                        setActiveMenu('Vehicle Challans');
+                      }
+                    }}
+                  >
+                    <div className="text-sm font-bold text-red-500">{loadingVehicleChallan ? '...' : dashboardPendingCount}</div>
+                    <div className="text-[9px] text-slate-400">Pending</div>
+                  </div>
+                  <div
+                    className="flex-1 text-center py-1.5 rounded-md cursor-pointer hover:bg-emerald-50 transition-colors"
+                    title="View disposed challans"
+                    onClick={() => {
+                      if (typeof window !== 'undefined' && window.handleViewAllChallans) {
+                        window.handleViewAllChallans('disposed');
+                      } else {
+                        localStorage.setItem('sc_challan_filter', 'disposed');
+                        setActiveMenu('Vehicle Challans');
+                      }
+                    }}
+                  >
+                    <div className="text-sm font-bold text-emerald-600">{loadingVehicleChallan ? '...' : dashboardDisposedCount}</div>
+                    <div className="text-[9px] text-slate-400">Disposed</div>
                   </div>
                 </div>
-                <div className="stat-chart-container">
-                  <canvas ref={chartRefAmount} style={{display: chartLoading.amount || chartErrors.amount ? 'none' : 'block'}} />
-  
-                  {chartLoading.amount ? (
-                    <div className="default-loader" style={{ zIndex: 10 }}>
-                      <div className="loader-spinner"></div>
+              </div>
+
+              {/* Card 3: Vehicle Renewals */}
+              <div className="rounded-xl overflow-hidden border border-slate-200 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 bg-white">
+                <div className="bg-amber-500 px-4 py-4 text-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                      <i className="ri-alarm-warning-line text-base"></i>
                     </div>
-                  ) : chartErrors.amount ? (
-                    <div style={{ textAlign: 'center', padding: '20px' }}>
-                      <div style={{ color: '#666', marginBottom: '8px', fontSize: '13px' }}>Chart failed to load</div>
-                      <button className="action-btn" onClick={retryCharts} style={{ padding: '6px 12px', fontSize: '12px' }}>
-                        <i className="ri-refresh-line" style={{ marginRight: '4px' }}></i>Retry
-                      </button>
+                  </div>
+                  <div className="text-2xl font-bold leading-none">
+                    {loadingVehicleRto ? '...' : vehicleRenewalsTotal}
+                  </div>
+                  <div className="text-[11px] font-medium text-white/80 mt-1">Vehicle Renewals</div>
+                </div>
+                <div className="px-3 py-2.5 grid grid-cols-3 gap-0.5">
+                  <div className="text-center py-1 rounded cursor-pointer hover:bg-red-50 transition-colors" title="Expired insurance" onClick={() => { setGoToFleetRenewal('insurance'); setActiveMenu(getFleetMenuName()); }}>
+                    <div className="text-sm font-bold text-red-500">{loadingVehicleRto ? '...' : expiryCounts.insurance}</div>
+                    <div className="text-[9px] text-slate-400">Insurance</div>
+                  </div>
+                  <div className="text-center py-1 rounded cursor-pointer hover:bg-orange-50 transition-colors" title="Expired road tax" onClick={() => { setGoToFleetRenewal('roadTax'); setActiveMenu(getFleetMenuName()); }}>
+                    <div className="text-sm font-bold text-orange-500">{loadingVehicleRto ? '...' : expiryCounts.roadTax}</div>
+                    <div className="text-[9px] text-slate-400">Road Tax</div>
+                  </div>
+                  <div className="text-center py-1 rounded cursor-pointer hover:bg-yellow-50 transition-colors" title="Expired fitness" onClick={() => { setGoToFleetRenewal('fitness'); setActiveMenu(getFleetMenuName()); }}>
+                    <div className="text-sm font-bold text-yellow-600">{loadingVehicleRto ? '...' : expiryCounts.fitness}</div>
+                    <div className="text-[9px] text-slate-400">Fitness</div>
+                  </div>
+                  <div className="text-center py-1 rounded cursor-pointer hover:bg-blue-50 transition-colors" title="Expired pollution" onClick={() => { setGoToFleetRenewal('pollution'); setActiveMenu(getFleetMenuName()); }}>
+                    <div className="text-sm font-bold text-blue-500">{loadingVehicleRto ? '...' : expiryCounts.pollution}</div>
+                    <div className="text-[9px] text-slate-400">Pollution</div>
+                  </div>
+                  <div className="text-center py-1 rounded cursor-pointer hover:bg-purple-50 transition-colors" title="Expired national permit" onClick={() => { setGoToFleetRenewal('nationalPermit'); setActiveMenu(getFleetMenuName()); }}>
+                    <div className="text-sm font-bold text-purple-500">{loadingVehicleRto ? '...' : expiryCounts.nationalPermit}</div>
+                    <div className="text-[9px] text-slate-400">Permit</div>
+                  </div>
+                  <div className="text-center py-1 rounded cursor-pointer hover:bg-teal-50 transition-colors" title="Expired permit validity" onClick={() => { setGoToFleetRenewal('permitValid'); setActiveMenu(getFleetMenuName()); }}>
+                    <div className="text-sm font-bold text-teal-500">{loadingVehicleRto ? '...' : expiryCounts.permitValid}</div>
+                    <div className="text-[9px] text-slate-400">Validity</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 4: Challan Amount */}
+              <div className="rounded-xl overflow-hidden border border-slate-200 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 bg-white">
+                <div className="bg-emerald-600 px-4 py-4 text-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                      <i className="ri-money-rupee-circle-line text-base"></i>
                     </div>
-                  ) : null}
+                  </div>
+                  <div className="text-2xl font-bold leading-none">
+                    {loadingVehicleChallan ? '...' : `₹${formatBriefAmount(totalFineAmount)}`}
+                  </div>
+                  <div className="text-[11px] font-medium text-white/80 mt-1">Challan Amount</div>
+                </div>
+                <div className="px-3 py-2.5 flex gap-1">
+                  {loadingVehicleChallan
+                    ? <span className="text-xs text-slate-400 py-1.5">Loading...</span>
+                    : <React.Fragment>
+                        <div
+                          className="flex-1 text-center py-1.5 rounded-md cursor-pointer hover:bg-red-50 transition-colors"
+                          title="Show pending challans"
+                          onClick={() => { if (typeof window !== 'undefined' && window.handleViewAllChallans) { window.handleViewAllChallans('pending'); } else { localStorage.setItem('sc_challan_filter','pending'); setActiveMenu('Vehicle Challans'); } }}
+                        >
+                          <div className="text-sm font-bold text-red-500">₹{formatBriefAmount(pendingFineTotal)}</div>
+                          <div className="text-[9px] text-slate-400">Pending</div>
+                        </div>
+                        <div
+                          className="flex-1 text-center py-1.5 rounded-md cursor-pointer hover:bg-emerald-50 transition-colors"
+                          title="Show paid challans"
+                          onClick={() => { if (typeof window !== 'undefined' && window.handleViewAllChallans) { window.handleViewAllChallans('disposed'); } else { localStorage.setItem('sc_challan_filter','disposed'); setActiveMenu('Vehicle Challans'); } }}
+                        >
+                          <div className="text-sm font-bold text-emerald-600">₹{formatBriefAmount(disposedFineTotal)}</div>
+                          <div className="text-[9px] text-slate-400">Paid</div>
+                        </div>
+                      </React.Fragment>
+                  }
                 </div>
               </div>
 
             </div>
             )}
-            <div style={{marginBottom:24}}>
+                {/* Network stat cards if showClientPages - render as siblings, not nested */}
+                {showClientPages && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow p-6">
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="w-14 h-14 bg-purple-50 rounded-xl flex items-center justify-center">
+                          <i className="ri-briefcase-line text-purple-600 text-3xl"></i>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm text-slate-600 mb-1">My Clients</p>
+                          <p className="text-3xl font-bold text-slate-900">
+                            {loadingNetworkStats ? '...' : networkStatsError ? '--' : (networkStats && networkStats.totalClients != null ? networkStats.totalClients : '--')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <div
+                          className="flex-1 bg-blue-50 rounded-lg p-3 cursor-pointer hover:bg-blue-100 transition-colors border border-blue-100"
+                          title="Active clients"
+                          onClick={() => {
+                            setActiveMenu('My Clients');
+                            setTimeout(() => {
+                              try {
+                                const selects = Array.from(document.querySelectorAll('select'));
+                                for (const s of selects) {
+                                  const opts = Array.from(s.options).map(o => (o.text || o.label || '').toLowerCase());
+                                  if (opts.includes('all status') || opts.includes('all')) {
+                                    s.value = 'active';
+                                    s.dispatchEvent(new Event('change', { bubbles: true }));
+                                    break;
+                                  }
+                                }
+                              } catch (e) {}
+                            }, 300);
+                          }}
+                        >
+                          <div className="text-2xl font-bold text-blue-600">{loadingNetworkStats ? '...' : networkStats && networkStats.clientStatus && networkStats.clientStatus.active != null ? networkStats.clientStatus.active : '--'}</div>
+                          <div className="text-xs text-slate-600 mt-1">Active</div>
+                        </div>
+                        <div
+                          className="flex-1 bg-orange-50 rounded-lg p-3 cursor-pointer hover:bg-orange-100 transition-colors border border-orange-100"
+                          title="Inactive clients"
+                          onClick={() => {
+                            setActiveMenu('My Clients');
+                            setTimeout(() => {
+                              try {
+                                const selects = Array.from(document.querySelectorAll('select'));
+                                for (const s of selects) {
+                                  const opts = Array.from(s.options).map(o => (o.text || o.label || '').toLowerCase());
+                                  if (opts.includes('all status') || opts.includes('all')) {
+                                    s.value = 'inactive';
+                                    s.dispatchEvent(new Event('change', { bubbles: true }));
+                                    break;
+                                  }
+                                }
+                              } catch (e) {}
+                            }, 300);
+                          }}
+                        >
+                          <div className="text-2xl font-bold text-orange-600">{loadingNetworkStats ? '...' : networkStats && networkStats.clientStatus && networkStats.clientStatus.inactive != null ? networkStats.clientStatus.inactive : '0'}</div>
+                          <div className="text-xs text-slate-600 mt-1">Inactive</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow p-6">
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="w-14 h-14 bg-indigo-50 rounded-xl flex items-center justify-center">
+                          <i className="ri-user-3-line text-indigo-600 text-3xl"></i>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm text-slate-600 mb-1">Client Vehicles</p>
+                          <p className="text-3xl font-bold text-slate-900">
+                            {loadingNetworkStats ? '...' : networkStatsError ? '0' : (networkStats && networkStats.totalVehicles != null ? networkStats.totalVehicles : '--')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="flex-1 bg-blue-50 rounded-lg p-3 border border-blue-100" title="Active vehicles">
+                          <div className="text-2xl font-bold text-blue-600">{loadingNetworkStats ? '...' : networkStats && networkStats.vehicleStatus && typeof networkStats.vehicleStatus.active !== 'undefined' ? networkStats.vehicleStatus.active : 0}</div>
+                          <div className="text-xs text-slate-600 mt-1">Active</div>
+                        </div>
+                        <div className="flex-1 bg-orange-50 rounded-lg p-3 border border-orange-100" title="Inactive vehicles">
+                          <div className="text-2xl font-bold text-orange-600">{loadingNetworkStats ? '...' : networkStats && networkStats.vehicleStatus && typeof networkStats.vehicleStatus.inactive !== 'undefined' ? networkStats.vehicleStatus.inactive : 0}</div>
+                          <div className="text-xs text-slate-600 mt-1">Inactive</div>
+                        </div>
+                        <div className="flex-1 bg-red-50 rounded-lg p-3 border border-red-100" title="Deleted vehicles">
+                          <div className="text-2xl font-bold text-red-600">{loadingNetworkStats ? '...' : networkStats && networkStats.vehicleStatus && typeof networkStats.vehicleStatus.deleted !== 'undefined' ? networkStats.vehicleStatus.deleted : 0}</div>
+                          <div className="text-xs text-slate-600 mt-1">Deleted</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+              
+              {/* Second row of network stats cards */}
+              {showClientPages && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow p-6">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-14 h-14 bg-red-50 rounded-xl flex items-center justify-center">
+                        <i className="ri-error-warning-line text-red-600 text-3xl"></i>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-slate-600 mb-1">Total Challans Fetched</p>
+                        <p className="text-3xl font-bold text-slate-900">
+                          {loadingNetworkStats ? '...' : networkStatsError ? '0' : (networkStats && networkStats.totalChallans != null ? networkStats.totalChallans : '0')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="flex-1 bg-red-50 rounded-lg p-3 border border-red-100" title="Pending challans">
+                        <div className="text-2xl font-bold text-red-600">
+                          {loadingNetworkStats ? '...' : networkStats && networkStats.challanStatus && typeof networkStats.challanStatus.pending !== 'undefined' ? networkStats.challanStatus.pending : '0'}
+                        </div>
+                        <div className="text-xs text-slate-600 mt-1">Pending</div>
+                      </div>
+                      <div className="flex-1 bg-green-50 rounded-lg p-3 border border-green-100" title="Disposed challans">
+                        <div className="text-2xl font-bold text-green-600">
+                          {loadingNetworkStats ? '...' : networkStats && networkStats.challanStatus && typeof networkStats.challanStatus.disposed !== 'undefined' ? networkStats.challanStatus.disposed : '0'}
+                        </div>
+                        <div className="text-xs text-slate-600 mt-1">Disposed</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow p-6">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-14 h-14 bg-amber-50 rounded-xl flex items-center justify-center">
+                        <i className="ri-alarm-warning-line text-amber-600 text-3xl"></i>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-slate-600 mb-1">Clients Renewals</p>
+                        <p className="text-3xl font-bold text-slate-900">
+                          {loadingNetworkStats ? '...' : networkStatsError ? '0' : (networkStats && networkStats.totalRenewals != null ? networkStats.totalRenewals : '0')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-red-50 rounded-lg p-2 border border-red-100" title="Insurance renewals">
+                        <div className="text-lg font-bold text-red-600">
+                          {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.insurance !== 'undefined' ? networkStats.renewalTypes.insurance : '0'}
+                        </div>
+                        <div className="text-xs text-slate-600 mt-1">Insurance</div>
+                      </div>
+                      <div className="bg-orange-50 rounded-lg p-2 border border-orange-100" title="Road tax renewals">
+                        <div className="text-lg font-bold text-orange-600">
+                          {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.roadTax !== 'undefined' ? networkStats.renewalTypes.roadTax : '0'}
+                        </div>
+                        <div className="text-xs text-slate-600 mt-1">Road Tax</div>
+                      </div>
+                      <div className="bg-yellow-50 rounded-lg p-2 border border-yellow-100" title="Fitness renewals">
+                        <div className="text-lg font-bold text-yellow-600">
+                          {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.fitness !== 'undefined' ? networkStats.renewalTypes.fitness : '0'}
+                        </div>
+                        <div className="text-xs text-slate-600 mt-1">Fitness</div>
+                      </div>
+                      <div className="bg-blue-50 rounded-lg p-2 border border-blue-100" title="Pollution renewals">
+                        <div className="text-lg font-bold text-blue-600">
+                          {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.pollution !== 'undefined' ? networkStats.renewalTypes.pollution : '0'}
+                        </div>
+                        <div className="text-xs text-slate-600 mt-1">Pollution</div>
+                      </div>
+                      <div className="bg-purple-50 rounded-lg p-2 border border-purple-100" title="National permit renewals">
+                        <div className="text-lg font-bold text-purple-600">
+                          {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.nationalPermit !== 'undefined' ? networkStats.renewalTypes.nationalPermit : '0'}
+                        </div>
+                        <div className="text-xs text-slate-600 mt-1">Nat'l Permit</div>
+                      </div>
+                      <div className="bg-teal-50 rounded-lg p-2 border border-teal-100" title="Permit validity renewals">
+                        <div className="text-lg font-bold text-teal-600">
+                          {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.permitValid !== 'undefined' ? networkStats.renewalTypes.permitValid : '0'}
+                        </div>
+                        <div className="text-xs text-slate-600 mt-1">Permit Valid</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow p-6">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-14 h-14 bg-emerald-50 rounded-xl flex items-center justify-center">
+                        <i className="ri-money-rupee-circle-line text-emerald-600 text-3xl"></i>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-slate-600 mb-1">Total Challan Amount</p>
+                        <p className="text-3xl font-bold text-slate-900">
+                          {loadingNetworkStats ? '...' : networkStatsError ? '₹0' : (networkStats?.challanAmount?.total != null ? `₹${formatBriefAmount(networkStats.challanAmount.total)}` : '₹0')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="flex-1 bg-red-50 rounded-lg p-3 border border-red-100" title="Pending challan amount">
+                        <div className="text-xs text-slate-600 mb-1">Pending:</div>
+                        <div className="text-lg font-bold text-red-600">
+                          {loadingNetworkStats ? '...' : (networkStats?.challanAmount?.pending != null ? `₹${formatBriefAmount(networkStats.challanAmount.pending)}` : '₹0')}
+                        </div>
+                      </div>
+                      <div className="flex-1 bg-green-50 rounded-lg p-3 border border-green-100" title="Paid challan amount">
+                        <div className="text-xs text-slate-600 mb-1">Paid:</div>
+                        <div className="text-lg font-bold text-green-700">
+                          {loadingNetworkStats ? '...' : (networkStats?.challanAmount?.paid != null ? `₹${formatBriefAmount(networkStats.challanAmount.paid)}` : '₹0')}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            {/* Vehicle Summary Table Section */}
+            <div className="mb-6">
               {!showClientPages ? (
                 <VehicleSummaryTable
                   data={vehicleSummary}
@@ -3378,8 +3288,8 @@ function ClientDashboard() {
 
             {/* Hide Latest Challans and RTO Tables when hasClient flag is true */}
             {!showClientPages && (
-              <div className="dashboard-two-column-row">
-                <div className="dashboard-two-column-card">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+                <div className="bg-white rounded-lg shadow-sm shadow-slate-200/50 border border-slate-200/60 overflow-hidden">
                   <LatestChallansTable
                     latestChallanRows={latestChallanRows.slice(0, 5)}
                     loadingVehicleChallan={loadingVehicleChallan}
@@ -3388,7 +3298,7 @@ function ClientDashboard() {
                     limit={5}
                   />
                 </div>
-                <div className="dashboard-two-column-card">
+                <div className="bg-white rounded-lg shadow-sm shadow-slate-200/50 border border-slate-200/60 overflow-hidden">
                   <LatestRTOTable
                     vehicleData={vehicleRtoData.slice(0, 5)}
                     loading={loadingVehicleRto}
@@ -3410,9 +3320,9 @@ function ClientDashboard() {
                 title={`Vehicle #${selectedVehicle.vehicle_number} Report`}
               >
                 {selectedVehicleReport === null ? (
-                  <div style={{padding:24, textAlign:'center'}}>
-                    <span className="loader-spinner" style={{display:'inline-block',marginBottom:8}}></span>
-                    <div>Loading vehicle report...</div>
+                  <div className="flex flex-col items-center justify-center p-8 text-center">
+                    <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-3"></div>
+                    <div className="text-slate-600">Loading vehicle report...</div>
                   </div>
                 ) : (
                   <SidebarVehicleReport vehicleChallanData={selectedVehicleReport} />
@@ -3536,38 +3446,21 @@ function ClientDashboard() {
             <LazyVehicleFastag />
           </Suspense>
         )}
-      {/* Shared quick actions bar available on every page except Vehicle Challans and when user has clients */}
-      {!(selectedChallan || selectedRtoData) && activeMenu !== "Vehicle Challans" && !showClientPages && (
-        <div className="main-quick-actions-wrapper" style={{ padding: '0 30px 30px 30px' }}>
-          <QuickActions
-            title="Quick Actions"
-            sticky={true}
-            onAddVehicle={() => checkPermissionAndNavigate('Register Vehicle')}
-            onBulkUpload={() => {
-              if (checkPermissionAndNavigate('Register Vehicle')) {
-                setTimeout(() => {
-                  try {
-                    const el = document.querySelector('input[type=file][accept*=".xlsx"]');
-                    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); try { el.focus(); } catch(e){} }
-                  } catch (e) {}
-                  try {
-                    const card = document.querySelector('.upload-card');
-                    if (card) {
-                      card.classList.remove('highlight-upload');
-                      void card.offsetWidth;
-                      card.classList.add('highlight-upload');
-                      setTimeout(() => card.classList.remove('highlight-upload'), 2600);
-                    }
-                  } catch (e) {}
-                }, 300);
-              }
-            }}
-            onPay={() => handleMenuClick('Pay Challans')}
-            onReports={() => setReportsModal({ open: true })}
-            onContact={() => setSupportModal(true)}
-          />
-        </div>
+      {/* Quick Actions Ribbon Pull - visible on every page */}
+      {!(selectedChallan || selectedRtoData) && !showClientPages && (
+        <QuickActionsRibbon
+          onRegister={() => checkPermissionAndNavigate('Register Vehicle')}
+          onChallans={() => setActiveMenu('Vehicle Challans')}
+          onRTO={() => setActiveMenu('Vehicle RTO Data')}
+          onClients={() => setActiveMenu('My Clients')}
+        />
       )}
+      </div>
+      {/* End Main Content Container */}
+      
+      </div>
+      {/* End conditional padding wrapper */}
+      
       <CustomModal
         open={settlementComingSoonModal}
         title="Coming soon"
@@ -3650,7 +3543,6 @@ function ClientDashboard() {
           );
         })()}
       </CustomModal>
-      </main>
       <CustomModal
         open={infoModal.open}
         title={infoModal.message}
@@ -3845,6 +3737,7 @@ function ClientDashboard() {
         onCancel={() => setPermissionDeniedModal({ open: false, message: '' })}
         cancelText=""
       />
+      </main>
     </div>
     </React.Fragment>
   );

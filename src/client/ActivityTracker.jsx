@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
 import LoadingSkeleton from './LoadingSkeleton';
-import "./LatestTable.css";
 
 const API_ROOT = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 

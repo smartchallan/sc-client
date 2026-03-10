@@ -14,7 +14,6 @@ const CUSTOM_LOGO_URL = resolvePerHostEnv(CURRENT_HOSTNAME, 'LOGO_URL') || impor
 const resolvedCustomLogo = (IS_WHITELABEL && CUSTOM_LOGO_URL && (CUSTOM_LOGO_URL.startsWith('/') || CUSTOM_LOGO_URL.startsWith('http'))) ? CUSTOM_LOGO_URL : null;
 import { getInitials } from "../utils/getInitials";
 import CustomModal from "./CustomModal";
-import "../shared/CommonDashboard.css";
 
 function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }) {
   const [logoutOpen, setLogoutOpen] = useState(false);
@@ -81,7 +80,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
   const challanSettlementLive = import.meta.env.VITE_CHALLAN_SETTLEMENT_LIVE === "true";
 
   const challanChildren = [
-    { icon: "ri-file-list-3-line", label: "Vehicle Challans" },
+    { icon: "ri-file-warning-line", label: "Vehicle Challans" },
     { icon: "ri-wallet-3-line", label: "Pay Challans" },
   ];
 
@@ -91,26 +90,26 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
 
   // Base menu; we'll insert Client Management below Dashboard when appropriate
   const baseMenu = [
-    { icon: "ri-home-4-line", label: "Dashboard" },
+    { icon: "ri-dashboard-3-line", label: "Dashboard" },
     { icon: "ri-truck-line", label: showClientPages ? "Client Vehicles" : "My Fleet" },
     {
-      icon: "ri-file-list-3-line",
+      icon: "ri-folder-warning-line",
       label: "Challan Management",
       group: true,
       children: challanChildren,
     },
     // Conditionally include RTO Details, DL Details, and Fastag Details only when showClientPages is false
     ...(!showClientPages ? [
-      { icon: "ri-car-line", label: "RTO Details" },
+      { icon: "ri-shield-check-line", label: "RTO Details" },
       { icon: "ri-id-card-line", label: "DL Details" },
-      { icon: "ri-bank-card-line", label: "Fastag Details" },
+      { icon: "ri-bank-card-2-line", label: "Fastag Details" },
     ] : []),
-    { icon: "ri-car-line", label: "Register Vehicle" },
+    { icon: "ri-add-circle-line", label: "Register Vehicle" },
     // { icon: "ri-money-rupee-circle-line", label: "My Billing" },
-    { icon: "ri-user-3-line", label: "Profile" },
+    { icon: "ri-user-settings-line", label: "Profile" },
     // Conditionally include Activity Tracker only when showClientPages is true
     ...(showClientPages ? [
-      { icon: "ri-history-line", label: "Activity Tracker" },
+      { icon: "ri-time-line", label: "Activity Tracker" },
     ] : []),
   ];
 
@@ -125,7 +124,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
   
   // Add "My Clients" only if user has clients or is parent account
   if (showClientPages) {
-    clientMenuItems.push({ icon: "ri-group-line", label: "My Clients" });
+    clientMenuItems.push({ icon: "ri-team-line", label: "My Clients" });
   }
   
   // Insert client menu items at position 1 (after Dashboard)
@@ -208,59 +207,77 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
   };
 
   return (
-    <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`} style={{minWidth: '270px', left: 0}}>
-      <div className="logo-container">
-        <div className="logo">
-          <img src={resolvedCustomLogo || scLogo} alt="Smart Challan" className="logo-img" />
-          {/* <span className="logo-text">Smart Challan</span> */}
+    <aside className={`fixed top-0 left-0 h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-r border-slate-700/50 transition-all duration-300 ease-in-out z-40 flex flex-col ${sidebarOpen ? 'w-[280px]' : 'w-[72px]'} shadow-2xl`}>
+      {/* Logo & Toggle Button - White Background */}
+      <div className="h-[72px] flex items-center justify-between px-4 border-b border-slate-700/50 bg-white relative">
+        <div className={`flex items-center gap-3 transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0'}`}>
+          <img 
+            src={resolvedCustomLogo || scLogo} 
+            alt="Smart Challan" 
+            className="h-11 w-auto object-contain"
+          />
         </div>
-        <button className="sidebar-collapse-btn" onClick={onToggleSidebar} aria-label="Toggle sidebar" style={{marginLeft: 'auto', background:'transparent', border:'none', color:'#0f5a7a', cursor:'pointer'}}>
-          <i className="ri-menu-3-line" />
+        <button 
+          className={`p-2.5 rounded-xl hover:bg-slate-100 transition-all duration-200 text-slate-700 hover:text-slate-900 ${!sidebarOpen && 'mx-auto'}`}
+          onClick={onToggleSidebar} 
+          aria-label="Toggle sidebar"
+        >
+          <i className={`${sidebarOpen ? 'ri-menu-fold-line' : 'ri-menu-unfold-line'} text-xl`} />
         </button>
       </div>
-      
 
-      <div className="nav-menu">
+      {/* Navigation Menu */}
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-6 px-3 scrollbar-thin">
         {menu.map((item) => {
-          // All icons dark green except logout
           if (item.logout) {
             return (
-              <div className="nav-item" key={item.label} onClick={handleLogout} style={{color: '#ff5252', cursor: 'pointer'}}>
-                <i className={item.icon} style={{ color: '#ff5252' }}></i>
-                <span>{item.label}</span>
-              </div>
+              <button
+                key={item.label}
+                className={`w-full flex items-center gap-3.5 px-3.5 py-3.5 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all duration-200 rounded-xl mb-1 ${!sidebarOpen && 'justify-center'}`}
+                onClick={handleLogout}
+                title={!sidebarOpen ? item.label : ''}
+              >
+                <i className={`${item.icon} text-[21px]`}></i>
+                {sidebarOpen && <span className="font-semibold text-[14px] tracking-wide">{item.label}</span>}
+              </button>
             );
           } else if (item.group && item.children) {
             const isChildActive = item.children.some((child) => activeMenu === child.label);
             const isOpen = openGroups[item.label] || isChildActive;
             return (
-              <div key={item.label}>
-                <div
-                  className={`nav-item${isChildActive ? " active" : ""}`}
-                  style={{ cursor: 'pointer' }}
+              <div key={item.label} className="mb-1">
+                <button
+                  className={`w-full flex items-center gap-3.5 px-3.5 py-3.5 transition-all duration-200 rounded-xl ${
+                    isChildActive 
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30 border-l-4 border-blue-300' 
+                      : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                  } ${!sidebarOpen && 'justify-center'}`}
                   onClick={() => setOpenGroups(prev => ({ ...prev, [item.label]: !prev[item.label] }))}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setOpenGroups(prev => ({ ...prev, [item.label]: !prev[item.label] })); }}
+                  title={!sidebarOpen ? item.label : ''}
                 >
-                  <i className={item.icon} style={{ color: import.meta.env.VITE_MENU_ICON_COLOR }}></i>
-                  <span style={{ flex: 1 }}>{item.label}</span>
-                  <i
-                    className={isOpen ? "ri-arrow-up-s-line" : "ri-arrow-down-s-line"}
-                    style={{ marginLeft: 8, fontSize: 18 }}
-                  />
-                </div>
-                {isOpen && (
-                  <div className="nav-submenu">
+                  <i className={`${item.icon} text-[21px]`}></i>
+                  {sidebarOpen && (
+                    <>
+                      <span className="flex-1 font-semibold text-[14px] tracking-wide text-left">{item.label}</span>
+                      <i className={`${isOpen ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'} text-[19px]`} />
+                    </>
+                  )}
+                </button>
+                {isOpen && sidebarOpen && (
+                  <div className="mt-1 mb-2 bg-slate-800/50 rounded-xl border border-slate-700/30 backdrop-blur-sm overflow-hidden">
                     {item.children.map((child) => (
-                      <div
+                      <button
                         key={child.label}
-                        className={`nav-subitem${activeMenu === child.label ? " active" : ""}`}
+                        className={`w-full flex items-center gap-3.5 pl-14 pr-3.5 py-3.5 text-[13px] transition-all duration-200 ${
+                          activeMenu === child.label 
+                            ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold shadow-md' 
+                            : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                        }`}
                         onClick={() => handleMenuClick(child.label)}
                       >
-                        <i className={child.icon}></i>
-                        <span>{child.label}</span>
-                      </div>
+                        <i className={`${child.icon} text-[19px]`}></i>
+                        <span className="tracking-wide font-medium">{child.label}</span>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -268,27 +285,33 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
             );
           } else {
             return (
-              <div
-                className={`nav-item${activeMenu === item.label ? " active" : ""}`}
+              <button
                 key={item.label}
+                className={`w-full flex items-center gap-3.5 px-3.5 py-3.5 transition-all duration-200 rounded-xl mb-1 ${
+                  activeMenu === item.label 
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30 border-l-4 border-blue-300 font-semibold' 
+                    : 'text-slate-300 hover:bg-white/10 hover:text-white font-medium'
+                } ${!sidebarOpen && 'justify-center'}`}
                 onClick={() => handleMenuClick(item.label)}
-                style={{cursor: 'pointer'}}
+                title={!sidebarOpen ? item.label : ''}
               >
-                <i className={item.icon} style={{ color: import.meta.env.VITE_MENU_ICON_COLOR }}></i>
-                <span>{item.label}</span>
-              </div>
+                <i className={`${item.icon} text-[21px]`}></i>
+                {sidebarOpen && <span className="font-semibold text-[14px] tracking-wide">{item.label}</span>}
+              </button>
             );
           }
         })}
 
-        {/* Client management is now a submenu inserted into the main menu when applicable */}
-
-        {/* Logout stays last */}
-        <div className="nav-item" onClick={handleLogout} style={{color: '#ff5252', cursor: 'pointer'}}>
-          <i className="ri-logout-box-r-line" style={{ color: '#ff5252' }}></i>
-          <span>Logout</span>
-        </div>
-      </div>
+        {/* Logout Button */}
+        <button
+          className={`w-full flex items-center gap-3.5 px-3.5 py-3.5 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all duration-200 mt-4 rounded-xl border border-red-500/30 ${!sidebarOpen && 'justify-center'}`}
+          onClick={handleLogout}
+          title={!sidebarOpen ? 'Logout' : ''}
+        >
+          <i className="ri-logout-box-r-line text-[21px]"></i>
+          {sidebarOpen && <span className="font-semibold text-[14px] tracking-wide">Logout</span>}
+        </button>
+      </nav>
       
       <CustomModal open={logoutOpen} title="Confirm logout" description="You will be signed out of Smart Challan and returned to the login page." icon="ri-logout-box-r-line" onConfirm={confirmLogout} onCancel={cancelLogout} confirmText="Logout" cancelText="Stay">
       </CustomModal>

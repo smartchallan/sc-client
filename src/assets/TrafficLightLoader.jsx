@@ -1,5 +1,4 @@
 import React from "react";
-import "./TrafficLightLoader.css";
 
 const TrafficLightLoader = () => (
   <div className="traffic-light-loader">

@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import { getInitials } from "../utils/getInitials";
-import "./ClientProfile.css";
 import CustomModal from "./CustomModal";
 
 export default function ClientProfile() {

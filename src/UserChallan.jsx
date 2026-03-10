@@ -1,16 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import "./UserChallan.css";
-import CustomModal from "./client/CustomModal";
-import { resolvePerHostEnv, getWhitelabelHosts } from "./utils/whitelabel";
 
-const WHITELABEL_HOSTS = getWhitelabelHosts();
-const CURRENT_HOSTNAME = (typeof window !== 'undefined' && window.location && window.location.hostname) ? window.location.hostname : '';
-const DEFAULT_HOST = 'app.smartchallan.com';
-const IS_DEFAULT_DOMAIN = CURRENT_HOSTNAME === DEFAULT_HOST;
-const IS_WHITELABEL = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME) && !IS_DEFAULT_DOMAIN;
 
 export default function UserChallan() {
-  const [supportModal, setSupportModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState('All');
   const didSetFromStorage = useRef(false);
   useEffect(() => {
@@ -82,33 +73,25 @@ export default function UserChallan() {
         <div className="latest-header">
           <h2>Vehicle Challans</h2>
         </div>
-        <div style={{ textAlign: 'left', marginTop: 8, marginBottom: 8 }}>
-          <span style={{ fontWeight: 600, marginRight: 12, color: '#1976d2', fontSize: 15 }}>Show more records:</span>
-          <select
-            style={{
-              padding: '7px 16px',
-              borderRadius: 6,
-              border: '1.5px solid #1976d2',
-              fontSize: 15,
-              fontWeight: 600,
-              color: '#1976d2',
-              background: '#f5faff',
-              outline: 'none',
-              marginRight: 8
-            }}
-            value={0}
-            onChange={e => {
-              const val = e.target.value;
-              if (val === 'all') setPendingToShow(pendingChallans.length);
-              else setPendingToShow(prev => Math.min(prev + Number(val), pendingChallans.length));
-            }}
-          >
-            <option value={0} disabled>Select</option>
-            <option value={2}>2 more</option>
-            <option value={4}>4 more</option>
-            <option value={10}>10 more</option>
-            <option value="all">All records</option>
-          </select>
+        <div className="vst-show-more">
+          <span className="vst-show-more__label">Show more records:</span>
+          <div className="show-more-control">
+            <select
+              className="show-more-select"
+              value={0}
+              onChange={e => {
+                const val = e.target.value;
+                if (val === 'all') setPendingToShow(pendingChallans.length);
+                else setPendingToShow(prev => Math.min(prev + Number(val), pendingChallans.length));
+              }}
+            >
+              <option value={0} disabled>Load more…</option>
+              <option value={2}>2 more</option>
+              <option value={4}>4 more</option>
+              <option value={10}>10 more</option>
+              <option value="all">All records</option>
+            </select>
+          </div>
         </div>
         <table className="latest-table">
           <thead>
@@ -155,33 +138,25 @@ export default function UserChallan() {
         <div className="latest-header">
           {/* <h2>Disposed Challans</h2> */}
         </div>
-        <div style={{ textAlign: 'left', marginTop: 8, marginBottom: 8 }}>
-          <span style={{ fontWeight: 600, marginRight: 12, color: '#1976d2', fontSize: 15 }}>Show more records:</span>
-          <select
-            style={{
-              padding: '7px 16px',
-              borderRadius: 6,
-              border: '1.5px solid #1976d2',
-              fontSize: 15,
-              fontWeight: 600,
-              color: '#1976d2',
-              background: '#f5faff',
-              outline: 'none',
-              marginRight: 8
-            }}
-            value={0}
-            onChange={e => {
-              const val = e.target.value;
-              if (val === 'all') setDisposedToShow(disposedChallans.length);
-              else setDisposedToShow(prev => Math.min(prev + Number(val), disposedChallans.length));
-            }}
-          >
-            <option value={0} disabled>Select</option>
-            <option value={2}>2 more</option>
-            <option value={4}>4 more</option>
-            <option value={10}>10 more</option>
-            <option value="all">All records</option>
-          </select>
+        <div className="vst-show-more">
+          <span className="vst-show-more__label">Show more records:</span>
+          <div className="show-more-control">
+            <select
+              className="show-more-select"
+              value={0}
+              onChange={e => {
+                const val = e.target.value;
+                if (val === 'all') setDisposedToShow(disposedChallans.length);
+                else setDisposedToShow(prev => Math.min(prev + Number(val), disposedChallans.length));
+              }}
+            >
+              <option value={0} disabled>Load more…</option>
+              <option value={2}>2 more</option>
+              <option value={4}>4 more</option>
+              <option value={10}>10 more</option>
+              <option value="all">All records</option>
+            </select>
+          </div>
         </div>
         <table className="latest-table">
           <thead>
@@ -215,39 +190,7 @@ export default function UserChallan() {
         </table>
       </div>
 
-      {/* Quick Actions */}
-      <div className="dashboard-actions">
-        <h2>Quick Actions</h2>
-        <div className="actions-list">
-          <button className="action-btn"><i className="ri-add-circle-line"></i> Add New Vehicle</button>
-          <button className="action-btn"><i className="ri-wallet-3-line"></i> Pay Challans</button>
-          <button className="action-btn"><i className="ri-bar-chart-2-line"></i> Generate Reports</button>
-          <button className="action-btn" onClick={() => setSupportModal(true)}><i className="ri-customer-service-2-line"></i> Contact Support</button>
-          <CustomModal
-            open={supportModal}
-            title="Contact Support"
-            onConfirm={() => setSupportModal(false)}
-            onCancel={() => setSupportModal(false)}
-            confirmText="OK"
-            cancelText={null}
-          >
-              {(() => {
-                const perEmail = resolvePerHostEnv(CURRENT_HOSTNAME, 'SUPPORT_EMAIL');
-                const perPhone = resolvePerHostEnv(CURRENT_HOSTNAME, 'SUPPORT_PHONE');
-                const email = (IS_WHITELABEL && perEmail) ? perEmail : (import.meta.env.VITE_SUPPORT_EMAIL || 'support@smartchallan.com');
-                const phone = (IS_WHITELABEL && perPhone) ? perPhone : (import.meta.env.VITE_SUPPORT_PHONE || '+91-1234-567-890');
-                return (
-                  <div style={{ lineHeight: 1.7, fontSize: 15 }}>
-                    <div><b>Email:</b> <a href={`mailto:${email}`}>{email}</a></div>
-                    <div><b>Phone:</b> <a href={`tel:${phone}`}>{phone}</a></div>
-                    <div style={{ marginTop: 10 }}><b>Support Hours:</b> Mon - Sat, 9 AM to 6 PM</div>
-                    <div style={{ color: '#b77', marginTop: 4 }}>Public holidays: Team is not available. Next working day we will contact you.</div>
-                  </div>
-                );
-              })()}
-          </CustomModal>
-        </div>
-      </div>
+
 
       {/* Challans Due */}
       <div className="dashboard-due">

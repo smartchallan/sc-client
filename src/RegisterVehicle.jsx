@@ -4,7 +4,6 @@ import "react-toastify/dist/ReactToastify.css";
 import CustomModal from "./client/CustomModal";
 import SelectShowMore from "./client/SelectShowMore";
 import { saveUserActivity } from "./utils/activityTracker";
-import "./RegisterVehicle.css";
 
 const FIELD_OPTIONS = [
   { value: "vehicle_number", label: "Vehicle Number" },
@@ -417,112 +416,165 @@ export default function RegisterVehicle() {
   };
 
   return (
-    <div className="register-vehicle-content">
+    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
       <ToastContainer position="top-right" autoClose={2000} />
-      {/* <h1 className="page-title">Register New Vehicle</h1> */}
-      <p className="page-subtitle">
-        You can register your vehicle using <b>any one</b> of the following details: <b>Vehicle Number</b>, <b>Engine Number</b>, or <b>chassis Number</b>.
-      </p>
-      <div className="modern-form-card">
-        <form className="vehicle-form" onSubmit={handleSubmit} style={{display: 'flex', flexWrap: 'wrap', gap: 16}}>
-          <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '50%'}}>
-            <label htmlFor="select_field">Select Field to Register By</label>
-            <select
-              id="select_field"
-              className="form-control"
-              value={registerField}
-              onChange={e => {
-                setRegisterField(e.target.value);
-                setRegisterValue("");
-              }}
-            >
-              <option value="">Select Field</option>
-              {FIELD_OPTIONS.map(opt => (
-                <option
-                  key={opt.value}
-                  value={opt.value}
-                  disabled={opt.value !== 'vehicle_number'}
-                  style={opt.value !== 'vehicle_number' ? { color: '#999' } : {}}
-                >
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          {registerField && (
-            <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '50%'}}>
-              <label htmlFor="field_value">{FIELD_OPTIONS.find(f => f.value === registerField)?.label}</label>
-              {registerField === 'vehicle_number' ? (
-                <div className="number-plate-container">
-                  <div className={"number-plate-wrapper" + (registerError ? ' input-invalid' : (registerValue.length >= 5 ? ' input-valid' : ''))}>
-                    <div className="number-plate-badge">IND</div>
-                    <div className="tricolor-strip">
-                      <div className="saffron"></div>
-                      <div className="white"></div>
-                      <div className="green"></div>
-                    </div>
-                    <input
-                      type="text"
-                      id="field_value"
-                      name="field_value"
-                      className={"number-plate-input" + (registerError ? ' input-invalid' : (registerValue.length >= 5 ? ' input-valid' : ''))}
-                      value={registerValue}
-                      onChange={e => {
-                        const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                        setRegisterValue(v);
-                        // validate vehicle number format
-                        if (v.length > 11) {
-                          setRegisterError('Vehicle number cannot exceed 11 characters.');
-                        } else if (v.length > 0 && v.length < 5) {
-                          setRegisterError('Vehicle number must be at least 5 characters long.');
-                        } else {
-                          setRegisterError('');
-                        }
-                      }}
-                      placeholder="Enter vehicle number"
-                      maxLength={11}
-                    />
-                  </div>
-                  <div className="security-features">
-                    <div className="hologram"></div>
-                    <div className="chakra">⚙</div>
-                  </div>
-                </div>
-              ) : (
-                <input
-                  type="text"
-                  id="field_value"
-                  name="field_value"
-                  className="form-control"
-                  value={registerValue}
-                  onChange={e => {
-                    setRegisterValue(e.target.value.toUpperCase());
-                    setRegisterError('');
-                  }}
-                  style={{textTransform: 'uppercase'}}
-                  placeholder={`Enter ${FIELD_OPTIONS.find(f => f.value === registerField)?.label?.toLowerCase()}`}
-                />
-              )}
-              {registerField === 'vehicle_number' && registerError && (
-                <div style={{color: 'red', marginTop: 6, fontSize: 13}}>{registerError}</div>
-              )}
-            </div>
-          )}
-          <div className="button-group" style={{width: '100%'}}>
-            <button type="submit" className="btn btn-primary" disabled={loading || !!registerError}>{loading ? "Adding..." : "Add New Vehicle"}</button>
-          </div>
-        </form>
+      
+      {/* Page Header */}
+      <div className="page-header" style={{ marginBottom: '24px' }}>
+        <div>
+          <h1 className="page-title" style={{ fontSize: '28px', fontWeight: 700, color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '32px' }}>🚗</span>
+            Register New Vehicle
+          </h1>
+          <p className="page-subtitle" style={{ fontSize: '14px', color: '#64748b', marginTop: '6px', marginBottom: 0 }}>
+            Register vehicles using <b>Vehicle Number</b>, <b>Engine Number</b>, or <b>Chassis Number</b>
+          </p>
+        </div>
       </div>
+      
+      {/* Registration Form Card */}
+      <div className="card" style={{ marginBottom: '24px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '2px', border: 'none' }}>
+        <div style={{ background: '#fff', borderRadius: '11px', padding: '28px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1e293b', margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '20px' }}>➕</span>
+            Add Single Vehicle
+          </h2>
+          <form className="vehicle-form" onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+            <div className="form-group">
+              <label htmlFor="select_field" style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>
+                Select Registration Field *
+              </label>
+              <select
+                id="select_field"
+                className="form-control"
+                value={registerField}
+                onChange={e => {
+                  setRegisterField(e.target.value);
+                  setRegisterValue("");
+                }}
+                style={{ width: '100%' }}
+              >
+                <option value="">Choose field...</option>
+                {FIELD_OPTIONS.map(opt => (
+                  <option
+                    key={opt.value}
+                    value={opt.value}
+                    disabled={opt.value !== 'vehicle_number'}
+                    style={opt.value !== 'vehicle_number' ? { color: '#999' } : {}}
+                  >
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {registerField && (
+              <div className="form-group">
+                <label htmlFor="field_value" style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>
+                  {FIELD_OPTIONS.find(f => f.value === registerField)?.label} *
+                </label>
+                {registerField === 'vehicle_number' ? (
+                  <div className="number-plate-container">
+                    <div className={"number-plate-wrapper" + (registerError ? ' input-invalid' : (registerValue.length >= 5 ? ' input-valid' : ''))}>
+                      <div className="number-plate-badge">IND</div>
+                      <div className="tricolor-strip">
+                        <div className="saffron"></div>
+                        <div className="white"></div>
+                        <div className="green"></div>
+                      </div>
+                      <input
+                        type="text"
+                        id="field_value"
+                        name="field_value"
+                        className={"number-plate-input" + (registerError ? ' input-invalid' : (registerValue.length >= 5 ? ' input-valid' : ''))}
+                        value={registerValue}
+                        onChange={e => {
+                          const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                          setRegisterValue(v);
+                          if (v.length > 11) {
+                            setRegisterError('Vehicle number cannot exceed 11 characters.');
+                          } else if (v.length > 0 && v.length < 5) {
+                            setRegisterError('Vehicle number must be at least 5 characters long.');
+                          } else {
+                            setRegisterError('');
+                          }
+                        }}
+                        placeholder="Enter vehicle number"
+                        maxLength={11}
+                      />
+                    </div>
+                    <div className="security-features">
+                      <div className="hologram"></div>
+                      <div className="chakra">⚙</div>
+                    </div>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    id="field_value"
+                    name="field_value"
+                    className="form-control"
+                    value={registerValue}
+                    onChange={e => {
+                      setRegisterValue(e.target.value.toUpperCase());
+                      setRegisterError('');
+                    }}
+                    style={{ textTransform: 'uppercase' }}
+                    placeholder={`Enter ${FIELD_OPTIONS.find(f => f.value === registerField)?.label?.toLowerCase()}`}
+                  />
+                )}
+                {registerField === 'vehicle_number' && registerError && (
+                  <div className="alert alert-danger" style={{ marginTop: '8px', padding: '8px 12px', fontSize: '12px' }}>
+                    {registerError}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px' }}>
+              <button 
+                type="submit" 
+                className="btn btn-primary" 
+                disabled={loading || !!registerError}
+                style={{ 
+                  flex: 1,
+                  padding: '12px 24px',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                {loading ? (
+                  <>
+                    <span className="loading-spinner"></span>
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <span>➕</span>
+                    Add Vehicle
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      
   {/* Upload Vehicles by Excel (collapsible) */}
-  <div className="modern-form-card upload-card" style={{ marginTop: 18 }}>
-    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 500, fontSize: 16, marginBottom: bulkUploadEnabled ? 12 : 0 }}>
+  <div className="card" style={{ marginBottom: '24px' }}>
+    <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 600, fontSize: 16, marginBottom: bulkUploadEnabled ? 20 : 0, cursor: 'pointer' }}>
       <input
         type="checkbox"
         checked={bulkUploadEnabled}
         onChange={e => setBulkUploadEnabled(e.target.checked)}
-        style={{ width: 18, height: 18 }}
+        style={{ width: 20, height: 20 }}
       />
-      Enable bulk vehicle upload
+      <span style={{ fontSize: '18px' }}>📊</span>
+      <span>Bulk Upload Vehicles via Excel</span>
     </label>
     {bulkUploadEnabled && (
       <div>
@@ -720,72 +772,97 @@ export default function RegisterVehicle() {
       </div>
     )}
   </div>
-      {/* Vehicle table below form */}
-
-  <div id="registered-vehicles-section" className="dashboard-latest modern-form-card">
-          <div style={{marginTop: 32}}>
-          <h2 style={{fontSize: '1.2rem', marginBottom: 12}}>Active & Inactive Vehicles {vehicles && vehicles.filter(v => (v.status || '').toUpperCase() !== 'DELETED').length ? `(${vehicles.filter(v => (v.status || '').toUpperCase() !== 'DELETED').length})` : ''}</h2>
-          {/* Search and status filter controls */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div className="number-plate-container" style={{ minWidth: 200, maxWidth: 330 }}>
-              <div className="number-plate-wrapper">
-                <div className="number-plate-badge">IND</div>
-                <div className="tricolor-strip">
-                  <div className="saffron"></div>
-                  <div className="white"></div>
-                  <div className="green"></div>
-                </div>
-                <input
-                  type="text"
-                  className="number-plate-input"
-                  placeholder="Search by Vehicle No, Engine No or chassis No"
-                  value={searchValue}
-                  onChange={e => setSearchValue(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                  maxLength={20}
-                />
+      {/* Registered Vehicles Section */}
+      <div id="registered-vehicles-section" className="card">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
+          <div>
+            <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '24px' }}>🚙</span>
+              Registered Vehicles
+              {vehicles && vehicles.filter(v => (v.status || '').toUpperCase() !== 'DELETED').length > 0 && (
+                <span className="badge badge-info" style={{ fontSize: '12px', marginLeft: '8px' }}>
+                  {vehicles.filter(v => (v.status || '').toUpperCase() !== 'DELETED').length} total
+                </span>
+              )}
+            </h2>
+            <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>View and manage all your registered vehicles</p>
+          </div>
+        </div>
+        
+        {/* Search and Filter Controls */}
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="number-plate-container" style={{ flex: '1', minWidth: '280px', maxWidth: '400px' }}>
+            <div className="number-plate-wrapper">
+              <div className="number-plate-badge">IND</div>
+              <div className="tricolor-strip">
+                <div className="saffron"></div>
+                <div className="white"></div>
+                <div className="green"></div>
               </div>
-              <div className="security-features">
-                <div className="hologram"></div>
-                <div className="chakra">⚙</div>
-              </div>
+              <input
+                type="text"
+                className="number-plate-input"
+                placeholder="Search by Vehicle/Engine/Chassis No"
+                value={searchValue}
+                onChange={e => setSearchValue(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                maxLength={20}
+              />
             </div>
+            <div className="security-features">
+              <div className="hologram"></div>
+              <div className="chakra">⚙</div>
+            </div>
+          </div>
+          
+          <div style={{ minWidth: '180px' }}>
             <select
               className="form-control"
-              style={{ minWidth: 200, maxWidth: 300, textTransform: 'uppercase' }}
+              style={{ textTransform: 'uppercase' }}
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
             >
-              <option value="">Status</option>
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
+              <option value="">All Status</option>
+              <option value="ACTIVE">✅ Active</option>
+              <option value="INACTIVE">⏸️ Inactive</option>
             </select>
           </div>
-          {/* Table logic with search/filter/sort */}
-          {fetchingVehicles ? (
-            <div>Loading vehicles...</div>
-          ) : vehicles.filter(v => (v.status || '').toUpperCase() !== 'DELETED').length === 0 ? (
-            <div style={{color: '#888'}}>No active or inactive vehicles found.</div>
-          ) : (
-            <div className="table-container" id="registered-vehicles-table-print-area">
-              <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'center' }}>S. No.</th>
-                    <th style={{ textAlign: 'center' }}>Vehicle Number</th>
-                    <th style={{ textAlign: 'center' }}>Engine Number</th>
-                    <th style={{ textAlign: 'center' }}>chassis Number</th>
-                    <th style={{ textAlign: 'center' }}>Status</th>
-                    <th style={{ textAlign: 'center' }}>
+        </div>
+        
+        {/* Table */}
+        {fetchingVehicles ? (
+          <div className="empty-state" style={{ padding: '40px' }}>
+            <div className="loading-spinner" style={{ margin: '0 auto 16px', width: '40px', height: '40px', borderWidth: '4px' }}></div>
+            <p style={{ color: '#64748b', fontSize: '14px' }}>Loading vehicles...</p>
+          </div>
+        ) : vehicles.filter(v => (v.status || '').toUpperCase() !== 'DELETED').length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-icon">🚗</div>
+            <div className="empty-state-title">No Vehicles Registered</div>
+            <div className="empty-state-description">Get started by registering your first vehicle using the form above</div>
+          </div>
+        ) : (
+          <div className="table-container" id="registered-vehicles-table-print-area">
+            <table className="latest-table" style={{ width: '100%' }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'center', width: '60px' }}>S.No.</th>
+                  <th style={{ textAlign: 'left' }}>Vehicle Number</th>
+                  <th style={{ textAlign: 'left' }}>Engine Number</th>
+                  <th style={{ textAlign: 'left' }}>Chassis Number</th>
+                  <th style={{ textAlign: 'center', width: '120px' }}>Status</th>
+                  <th style={{ textAlign: 'left', width: '180px' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       Registered At
-                      <span style={{marginLeft:6, cursor:'pointer', fontSize:16}} onClick={() => setSortDesc(s => !s)}>
-                        {sortDesc ? <i className="ri-arrow-down-s-line" title="Sort: Newest First"></i> : <i className="ri-arrow-up-s-line" title="Sort: Oldest First"></i>}
+                      <span style={{ cursor: 'pointer', fontSize: '18px', display: 'inline-flex', alignItems: 'center' }} onClick={() => setSortDesc(s => !s)}>
+                        {sortDesc ? '⬇️' : '⬆️'}
                       </span>
-                    </th>
-                    <th style={{ textAlign: 'center' }}>Data</th>
-                    <th style={{ textAlign: 'center' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
+                    </span>
+                  </th>
+                  <th style={{ textAlign: 'center', width: '100px' }}>Data</th>
+                  <th style={{ textAlign: 'center', width: '120px' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
                 {vehicles
                   .filter(v => {
                     // Exclude deleted vehicles from main table
@@ -810,43 +887,23 @@ export default function RegisterVehicle() {
                   .slice(0, activeVehiclesLimit)
                   .map((v, idx) => {
                     let status = (v.status || 'Not Available').toUpperCase();
-                    let statusColor = '#888';
-                    if (status === 'ACTIVE') statusColor = 'green';
-                    else if (status === 'INACTIVE') statusColor = 'orange';
-                    else if (status === 'DELETED') statusColor = 'red';
                     const handleInactivate = () => setModal({ open: true, action: 'inactivate', vehicle: v });
                     const handleActivate = () => setModal({ open: true, action: 'activate', vehicle: v });
                     const handleDelete = () => setModal({ open: true, action: 'delete', vehicle: v });
-                    // Remove setInfoModal and RTO/Challan actions
+                    
                     return (
                       <tr key={v.id || v._id || idx}>
-                        <td>{idx + 1}</td>
+                        <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 500 }}>{idx + 1}</td>
                         <td>
                           <span
-                            // style={{
-                            //   fontWeight: 700,
-                            //   cursor: 'pointer',
-                            //   background: 'linear-gradient(90deg, #ffe082 0%, #f8b500 100%)',
-                            //   color: '#7c5700',
-                            //   padding: '3px 14px',
-                            //   borderRadius: '18px',
-                            //   fontSize: '1.08em',
-                            //   boxShadow: '0 2px 8px #f8b50022',
-                            //   border: '1.5px solid #ffe082',
-                            //   letterSpacing: 0.5,
-                            //   transition: 'box-shadow 0.2s, background 0.2s, color 0.2s',
-                            //   display: 'inline-block',
-                            //   textShadow: '0 1px 0 #fff, 0 2px 8px #f8b50022',
-                            // }}
-                            onMouseOver={e => {
-                              e.currentTarget.style.background='linear-gradient(90deg, #ffe082 0%, #ffd54f 100%)';
-                              e.currentTarget.style.color='#a67c00';
-                              e.currentTarget.style.boxShadow='0 4px 16px #f8b50033';
-                            }}
-                            onMouseOut={e => {
-                              e.currentTarget.style.background='linear-gradient(90deg, #ffe082 0%, #f8b500 100%)';
-                              e.currentTarget.style.color='#7c5700';
-                              e.currentTarget.style.boxShadow='0 2px 8px #f8b50022';
+                            style={{
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              color: '#1e40af',
+                              textDecoration: 'underline',
+                              textDecorationStyle: 'dotted',
+                              textDecorationThickness: '1px',
+                              textUnderlineOffset: '3px',
                             }}
                             onClick={() => setSidebarVehicle(v)}
                             title="View vehicle details"
@@ -854,154 +911,87 @@ export default function RegisterVehicle() {
                             {v.vehicle_number || 'Not Available'}
                           </span>
                         </td>
-                        <td>{v.engine_number || 'Not Available'}</td>
-                        <td>{v.chassis_number || 'Not Available'}</td>
-                        <td style={{ color: statusColor, fontWeight: 600, letterSpacing: 1 }}>{status}</td>
-                        <td>{v.registered_at ? new Date(v.registered_at).toLocaleString() : 'Not Available'}</td>
-                        <td>
+                        <td style={{ color: '#475569', fontSize: '13px' }}>{v.engine_number || 'Not Available'}</td>
+                        <td style={{ color: '#475569', fontSize: '13px' }}>{v.chassis_number || 'Not Available'}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          {status === 'ACTIVE' ? (
+                            <span className="status-pill status-pill-success">✅ Active</span>
+                          ) : status === 'INACTIVE' ? (
+                            <span className="status-pill status-pill-warning">⏸️ Inactive</span>
+                          ) : status === 'DELETED' ? (
+                            <span className="status-pill status-pill-danger">🗑️ Deleted</span>
+                          ) : (
+                            <span className="status-pill">{status}</span>
+                          )}
+                        </td>
+                        <td style={{ color: '#64748b', fontSize: '13px' }}>
+                          {v.registered_at ? new Date(v.registered_at).toLocaleString('en-IN', { 
+                            day: '2-digit', 
+                            month: 'short', 
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          }) : 'Not Available'}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
                           {status === 'DELETED' ? (
-                            <span style={{ color: '#999' }}>—</span>
+                            <span style={{ color: '#cbd5e1' }}>—</span>
                           ) : (
                             <button
-                              className="action-btn"
+                              className="btn-sm btn-outline"
                               disabled={dataLoadingId === v.vehicle_number}
                               onClick={() => handleGetVehicleData(v.vehicle_number)}
+                              style={{ fontSize: '12px' }}
                             >
-                              {dataLoadingId === v.vehicle_number ? 'Getting Data...' : 'Vehicle Data'}
+                              {dataLoadingId === v.vehicle_number ? (
+                                <>
+                                  <span className="loading-spinner" style={{ width: '12px', height: '12px', borderWidth: '2px', marginRight: '6px' }}></span>
+                                  Loading...
+                                </>
+                              ) : (
+                                <>📊 Get Data</>
+                              )}
                             </button>
                           )}
                         </td>
-                        <td>
+                        <td style={{ textAlign: 'center' }}>
                           {status === 'DELETED' ? (
-                            <span style={{ color: '#999' }}>—</span>
+                            <span style={{ color: '#cbd5e1' }}>—</span>
                           ) : (
-                            <>
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
                               {status === 'INACTIVE' ? (
-                                <span
-                                  title="Activate Vehicle"
-                                  style={{ cursor: 'pointer', marginRight: 12, fontSize: 18, color: 'green' }}
+                                <button
+                                  className="btn-sm btn-success"
                                   onClick={handleActivate}
-                                  role="button"
-                                  aria-label="Activate Vehicle"
+                                  title="Activate Vehicle"
+                                  style={{ fontSize: '12px', padding: '4px 10px' }}
                                 >
                                   ✅
-                                </span>
+                                </button>
                               ) : (
-                                <span
-                                  title="Inactivate Vehicle"
-                                  style={{ cursor: 'pointer', marginRight: 12, fontSize: 18 }}
+                                <button
+                                  className="btn-sm"
                                   onClick={handleInactivate}
-                                  role="button"
-                                  aria-label="Inactivate Vehicle"
+                                  title="Inactivate Vehicle"
+                                  style={{ fontSize: '12px', padding: '4px 10px', background: '#f59e0b', color: 'white', border: 'none' }}
                                 >
                                   🚫
-                                </span>
+                                </button>
                               )}
-                              <span
-                                title="Delete Vehicle"
-                                style={{ cursor: 'pointer', color: 'red', fontSize: 18 }}
+                              <button
+                                className="btn-sm btn-danger"
                                 onClick={handleDelete}
-                                role="button"
-                                aria-label="Delete Vehicle"
+                                title="Delete Vehicle"
+                                style={{ fontSize: '12px', padding: '4px 10px' }}
                               >
                                 🗑️
-                              </span>
-                            </>
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>
                     );
-      {/* Right Sidebar for Vehicle Details */}
-      {sidebarVehicle && (
-        <div style={{position:'fixed',top:0,right:0,height:'100vh',width:'370px',minWidth:260,maxWidth:'90vw',background:'#f8fafc',borderLeft:'2px solid #e3e8ee',boxShadow:'-2px 0 16px #0001',zIndex:1000,padding:'24px 18px 12px 18px',overflowY:'auto'}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
-            <span style={{fontWeight:700,fontSize:'1.1rem',color:'#1976d2'}}>Vehicle Details</span>
-            <button onClick={()=>setSidebarVehicle(null)} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#888',fontWeight:700}} title="Close">×</button>
-          </div>
-          {/* RTO Data Card */}
-          <div style={{marginBottom:18,background:'#fff',border:'1.5px solid #b3e5fc',borderRadius:8,padding:'12px 12px 8px 12px',boxShadow:'0 1px 6px #00bcd41a',position:'relative'}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
-              <div style={{fontWeight:600,fontSize:15,color:'#0288d1'}}>Vehicle RTO Data</div>
-              <button onClick={()=>setSidebarVehicle(s => s ? {...s, showRTO:false} : s)} style={{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#888',fontWeight:700}} title="Close">×</button>
-            </div>
-            {(sidebarVehicle.showRTO !== false) && (
-              <div>
-                <div><b>Owner:</b> John Doe</div>
-                <div><b>Vehicle No:</b> {sidebarVehicle.vehicle_number || '-'}</div>
-                <div><b>Engine No:</b> {sidebarVehicle.engine_number || '-'}</div>
-                <div><b>chassis No:</b> {sidebarVehicle.chassis_number || '-'}</div>
-                <div><b>Type:</b> Car</div>
-                <div><b>Fuel:</b> Petrol</div>
-                <div><b>Reg Date:</b> 2022-01-15</div>
-                <div><b>Status:</b> Active</div>
-              </div>
-            )}
-          </div>
-          {/* Challan Data Card */}
-          <div style={{marginBottom:0,background:'#fff',border:'1.5px solid #ffe082',borderRadius:8,padding:'12px 12px 8px 12px',boxShadow:'0 1px 6px #ffb3001a',position:'relative'}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
-              <div style={{fontWeight:600,fontSize:15,color:'#ff9800'}}>Vehicle Challans</div>
-              <button onClick={()=>setSidebarVehicle(s => s ? {...s, showChallan:false} : s)} style={{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#888',fontWeight:700}} title="Close">×</button>
-            </div>
-            {(sidebarVehicle.showChallan !== false) && (
-              <div>
-                <div><b>Total Challans:</b> 2</div>
-                <div><b>Last Challan Date:</b> 2025-10-12</div>
-                <div><b>Amount Due:</b> ₹1500</div>
-                <div><b>Status:</b> Pending</div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
                   })}
-                {/* Custom Modal for confirmation */}
-                <CustomModal
-                  open={modal.open}
-                  title={
-                    modal.action === 'inactivate' && modal.vehicle ? `Inactivate Vehicle ${modal.vehicle.vehicle_number}?`
-                    : modal.action === 'activate' && modal.vehicle ? `Activate Vehicle ${modal.vehicle.vehicle_number}?`
-                    : modal.action === 'delete' && modal.vehicle ? `Delete Vehicle ${modal.vehicle.vehicle_number}?`
-                    : ''
-                  }
-                  onConfirm={async () => {
-                    if (!modal.vehicle) return setModal({ open: false, action: null, vehicle: null });
-                    setModal({ open: false, action: null, vehicle: null });
-                    let status = '';
-                    if (modal.action === 'inactivate') status = 'inactive';
-                    else if (modal.action === 'activate') status = 'active';
-                    else if (modal.action === 'delete') status = 'delete';
-                    try {
-                      const res = await fetch(`${API_ROOT}/updatevehiclestatus`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ vehicle_id: modal.vehicle.id || modal.vehicle._id, status })
-                      });
-                      if (res.ok) {
-                        toast.success('Vehicle status updated successfully');
-                        const { client_id } = getUserIds();
-                        if (client_id) fetchVehicles(client_id);
-                      } else {
-                        const data = await res.json();
-                        toast.error(data.message || 'Failed to update vehicle status');
-                      }
-                    } catch (err) {
-                      toast.error('API call failed');
-                    }
-                    setModal({ open: false, action: null, vehicle: null });
-                  }}
-                  onCancel={() => setModal({ open: false, action: null, vehicle: null })}
-                  confirmText={modal.action === 'delete' ? 'Delete' : modal.action === 'activate' ? 'Activate' : modal.action === 'inactivate' ? 'Inactivate' : 'Yes'}
-                  cancelText={'Cancel'}
-                >
-                  {modal.action === 'delete' && modal.vehicle && (
-                    <span style={{color:'red', fontWeight:600}}>
-                      Are you sure you want to delete vehicle <b>{modal.vehicle.vehicle_number}</b>?<br/>
-                      This action is non-reversible.<br/>
-                      Your vehicle and all related data will be deleted permanently.
-                    </span>
-                  )}
-                </CustomModal>
               </tbody>
               </table>
             </div>
@@ -1024,8 +1014,20 @@ export default function RegisterVehicle() {
             });
             if (filteredActiveVehicles.length > activeVehiclesLimit) {
               return (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16 }}>
-                  <span style={{ fontWeight: 600, color: '#1976d2', fontSize: 15 }}>Show more records:</span>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  gap: '12px', 
+                  marginTop: '20px',
+                  padding: '16px',
+                  background: '#f8fafc',
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  <span style={{ fontWeight: 600, color: '#475569', fontSize: '14px' }}>
+                    📊 Showing {activeVehiclesLimit} of {filteredActiveVehicles.length} vehicles
+                  </span>
                   <SelectShowMore
                     onShowMoreRecords={val => {
                       if (val === 'all') setActiveVehiclesLimit(filteredActiveVehicles.length);
@@ -1047,24 +1049,34 @@ export default function RegisterVehicle() {
           if (deletedVehicles.length === 0) return null;
           
           return (
-            <div id="deleted-vehicles-section" className="deleted-vehicles-section">
-              <h2>Deleted Vehicles ({deletedVehicles.length})</h2>
+            <div id="deleted-vehicles-section" className="card" style={{ marginTop: '24px', borderColor: '#fee2e2' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#dc2626', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '24px' }}>🗑️</span>
+                  Deleted Vehicles
+                  <span className="badge badge-danger" style={{ fontSize: '12px', marginLeft: '8px' }}>
+                    {deletedVehicles.length} deleted
+                  </span>
+                </h2>
+              </div>
               <div className="table-container" id="deleted-vehicles-table-print-area">
-                <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
+                <table className="latest-table" style={{ width: '100%' }}>
                   <thead>
                     <tr>
-                      <th>S. No.</th>
-                      <th>Vehicle Number</th>
-                      <th>Engine Number</th>
-                      <th>chassis Number</th>
-                      <th>Status</th>
-                      <th>
-                        Registered At
-                        <span style={{marginLeft:6, cursor:'pointer', fontSize:16}} onClick={() => setSortDesc(s => !s)}>
-                          {sortDesc ? <i className="ri-arrow-down-s-line" title="Sort: Newest First"></i> : <i className="ri-arrow-up-s-line" title="Sort: Oldest First"></i>}
+                      <th style={{ textAlign: 'center', width: '60px' }}>S.No.</th>
+                      <th style={{ textAlign: 'left' }}>Vehicle Number</th>
+                      <th style={{ textAlign: 'left' }}>Engine Number</th>
+                      <th style={{ textAlign: 'left' }}>Chassis Number</th>
+                      <th style={{ textAlign: 'center', width: '120px' }}>Status</th>
+                      <th style={{ textAlign: 'left', width: '180px' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          Registered At
+                          <span style={{ cursor: 'pointer', fontSize: '18px', display: 'inline-flex', alignItems: 'center' }} onClick={() => setSortDesc(s => !s)}>
+                            {sortDesc ? '⬇️' : '⬆️'}
+                          </span>
                         </span>
                       </th>
-                      <th>Actions</th>
+                      <th style={{ textAlign: 'center', width: '120px' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1079,23 +1091,32 @@ export default function RegisterVehicle() {
                       const handleReactivate = () => setModal({ open: true, action: 'activate', vehicle: v });
                       
                       return (
-                        <tr key={v.id || v._id || idx}>
-                          <td>{idx + 1}</td>
-                          <td>{v.vehicle_number || 'Not Available'}</td>
-                          <td>{v.engine_number || 'Not Available'}</td>
-                          <td>{v.chassis_number || 'Not Available'}</td>
-                          <td style={{ color: '#dc2626', fontWeight: 600, letterSpacing: 1 }}>DELETED</td>
-                          <td>{v.registered_at ? new Date(v.registered_at).toLocaleString() : 'Not Available'}</td>
-                          <td>
-                            <span
-                              title="Reactivate Vehicle"
-                              style={{ cursor: 'pointer', fontSize: 18, color: '#16a34a' }}
+                        <tr key={v.id || v._id || idx} style={{ opacity: 0.7 }}>
+                          <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 500 }}>{idx + 1}</td>
+                          <td style={{ color: '#475569', fontSize: '13px', textDecoration: 'line-through' }}>{v.vehicle_number || 'Not Available'}</td>
+                          <td style={{ color: '#475569', fontSize: '13px' }}>{v.engine_number || 'Not Available'}</td>
+                          <td style={{ color: '#475569', fontSize: '13px' }}>{v.chassis_number || 'Not Available'}</td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span className="status-pill status-pill-danger">🗑️ Deleted</span>
+                          </td>
+                          <td style={{ color: '#64748b', fontSize: '13px' }}>
+                            {v.registered_at ? new Date(v.registered_at).toLocaleString('en-IN', { 
+                              day: '2-digit', 
+                              month: 'short', 
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : 'Not Available'}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <button
+                              className="btn-sm btn-success"
                               onClick={handleReactivate}
-                              role="button"
-                              aria-label="Reactivate Vehicle"
+                              title="Reactivate Vehicle"
+                              style={{ fontSize: '12px', padding: '4px 10px' }}
                             >
-                              ♻️
-                            </span>
+                              ♻️ Restore
+                            </button>
                           </td>
                         </tr>
                       );
@@ -1106,8 +1127,20 @@ export default function RegisterVehicle() {
 
               {/* Load More / Show more control for Deleted Vehicles */}
               {deletedVehicles.length > deletedVehiclesLimit && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16 }}>
-                  <span style={{ fontWeight: 600, color: '#b91c1c', fontSize: 15 }}>Show more deleted records:</span>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  gap: '12px', 
+                  marginTop: '20px',
+                  padding: '16px',
+                  background: '#fef2f2',
+                  borderRadius: '8px',
+                  border: '1px solid #fecaca'
+                }}>
+                  <span style={{ fontWeight: 600, color: '#dc2626', fontSize: '14px' }}>
+                    📊 Showing {deletedVehiclesLimit} of {deletedVehicles.length} deleted vehicles
+                  </span>
                   <SelectShowMore
                     onShowMoreRecords={val => {
                       if (val === 'all') setDeletedVehiclesLimit(deletedVehicles.length);
@@ -1121,7 +1154,7 @@ export default function RegisterVehicle() {
             </div>
           );
         })()}
-      </div>
+
       <CustomModal
         open={uploadModal.open}
         title={`Upload Vehicles — Confirm (${uploadModal.count} valid)`}
@@ -1133,17 +1166,17 @@ export default function RegisterVehicle() {
         <div style={{ lineHeight: 1.6 }}>
           <div>We found <b>{uploadModal.count}</b> valid vehicle number{uploadModal.count === 1 ? '' : 's'} in the uploaded file.</div>
           {Array.isArray(uploadModal.invalids) && uploadModal.invalids.length > 0 && (
-            <div style={{ marginTop: 10 }}>
-              <div style={{ color: '#b33', fontWeight: 700 }}>The following {uploadModal.invalids.length} entries failed validation (they will be skipped):</div>
-              <div style={{ marginTop: 8, maxHeight: 140, overflow: 'auto', padding: 8, background: '#fff7f7', borderRadius: 6, border: '1px solid #f2dede' }}>
-                <ul style={{ margin: 0, paddingLeft: 18 }}>
-                  {uploadModal.invalids.map((v, i) => (
-                    <li key={i} style={{ color: '#b33' }}>{v}</li>
-                  ))}
-                </ul>
+            <>
+              <div style={{ marginTop: 10 }}>
+                <div style={{ color: '#b33', fontWeight: 700 }}>The following {uploadModal.invalids.length} entries failed validation (they will be skipped):</div>
+                <div style={{ marginTop: 8, maxHeight: 140, overflow: 'auto', padding: 8, background: '#fff7f7', borderRadius: 6, border: '1px solid #f2dede' }}>
+                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+                    {uploadModal.invalids.map((v, i) => <li key={i} style={{ color: '#b33' }}>{v}</li>)}
+                  </ul>
+                </div>
+                <div style={{ marginTop: 8, color: '#666' }}>Only valid vehicle numbers will be registered. Please correct and re-upload if you need those entries processed.</div>
               </div>
-              <div style={{ marginTop: 8, color: '#666' }}>Only valid vehicle numbers will be registered. Please correct and re-upload if you need those entries processed.</div>
-            </div>
+            </>
           )}
           <div style={{ marginTop: 8, color: '#666' }}>Click <b>Confirm and Upload</b> to start registering valid numbers one-by-one. Each response will be shown as a toast.</div>
         </div>

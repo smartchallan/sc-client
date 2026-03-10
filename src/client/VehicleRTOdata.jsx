@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import SelectShowMore from "./SelectShowMore";
-import { FaDownload, FaPrint, FaEye } from "react-icons/fa";
+
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
@@ -14,11 +14,8 @@ const DEFAULT_HOST = 'app.smartchallan.com';
 const IS_DEFAULT_DOMAIN = CURRENT_HOSTNAME === DEFAULT_HOST;
 const IS_WHITELABEL = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME) && !IS_DEFAULT_DOMAIN;
 const BRAND_LOGO = (IS_WHITELABEL && resolvePerHostEnv(CURRENT_HOSTNAME, 'LOGO_URL')) || import.meta.env.VITE_CUSTOM_LOGO_URL || scLogo;
-import "../shared/CommonDashboard.css";
 import CustomModal from "./CustomModal";
 import RightSidebar from "./RightSidebar";
-import "./RightSidebar.css";
-import "../RegisterVehicle.css";
 
 // Build a printable / exportable version of the RTO table HTML (used by print and PDF)
 const buildPrintableRtoTableHtml = () => {
@@ -490,34 +487,22 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
   }, []);
 
   return (
-    <div className="dashboard-latest">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, padding: '0 24px 0 0', minHeight: 54 }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ width: 4, height: 32, background: 'linear-gradient(135deg, #2196f3 0%, #21cbf3 100%)', borderRadius: 3, marginRight: 14 }} />
-          <h2 style={{ margin: 0, fontSize: 19, color: '#1565c0', letterSpacing: '0.01em', fontFamily: 'Segoe UI, Arial, sans-serif', lineHeight: 1.2, fontWeight: 700 }}>Vehicle RTO Data</h2>
+    <div className="vst-card">
+      <div className="vst-header">
+        <div className="vst-header__left">
+          <span className="vst-header__icon-box" style={{ background: 'linear-gradient(135deg,#2196f3,#21cbf3)' }}>
+            <i className="ri-file-text-line"></i>
+          </span>
+          <h2 className="vst-header__title">Vehicle RTO Data</h2>
         </div>
-        <div style={{ color: '#1565c0', fontSize: 14, background: '#f5f8fa', border: '1.5px solid #2196f3', borderRadius: 6, padding: '4px 12px', fontWeight: 700, display: 'inline-block', marginLeft: 16, boxShadow: '0 1px 4px #21cbf322' }}>
+        <span className="vst-record-badge">
           Showing {displayed.length} of {filtered.length} records
-        </div>
+        </span>
       </div>
       {/* Controls section, separated from table, matching My Fleet */}
       {!hideSearchSortFilter && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 16,
-          marginBottom: 18,
-          marginTop: 0,
-          flexWrap: 'wrap',
-          background: '#f5f8fa',
-          borderRadius: 8,
-          padding: '16px 18px 10px 18px',
-          border: '1.5px solid #e3eaf1',
-          boxShadow: '0 1px 4px #21cbf322',
-          position: 'relative'
-        }}>
-          {/* Left side: number plate search + filters */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', flex: 1 }}>
+        <div className="vst-toolbar">
+          <div className="vst-toolbar__left">
             <div className="number-plate-container" style={{ width: 330 }}>
               <div className="number-plate-wrapper">
                 <div className="number-plate-badge">IND</div>
@@ -543,15 +528,15 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
             {/* Expired records filter */}
             <div style={{ position: 'relative' }} ref={expiredDropdownRef}>
               <button
-                className="filter-select"
-                style={{ minWidth: 180, textAlign: 'left', padding: '16px 15px', border: '1px solid #bcd', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
+                className={`vst-filter-trigger${expiredTypes.length ? ' vst-filter-trigger--active' : ''}${showExpiredDropdown ? ' vst-filter-trigger--open' : ''}`}
                 onClick={() => {
                   const next = !showExpiredDropdown;
                   setShowExpiredDropdown(next);
                   if (next) setShowUrgentDropdown(false);
                 }}
               >
-                {expiredTypes.length === 0 ? 'Select expired records' : expiredTypes.map(t => {
+                <i className="ri-error-warning-line vst-filter-trigger__icon"></i>
+                {expiredTypes.length === 0 ? 'Expired records' : expiredTypes.map(t => {
                   if (t === 'insurance') return 'Insurance';
                   if (t === 'roadtax') return 'Road Tax';
                   if (t === 'fitness') return 'Fitness';
@@ -559,29 +544,18 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
                   return t;
                 }).join(', ')}
                 {expiredTypes.length > 0 && (
-                  <span style={{
-                    marginLeft: 8,
-                    padding: '0 6px',
-                    borderRadius: 999,
-                    background: '#e3f2fd',
-                    color: '#1565c0',
-                    fontSize: 11,
-                    fontWeight: 600
-                  }}>
-                    {expiredTypes.length}
-                  </span>
+                  <span className="vst-filter-trigger__badge">{expiredTypes.length}</span>
                 )}
-                <span style={{ float: 'right', fontWeight: 700, fontSize: 16, marginLeft: 8 }}>▼</span>
+                <i className="ri-arrow-down-s-line vst-filter-trigger__chevron"></i>
               </button>
               {showExpiredDropdown && (
-                <div style={{ position: 'absolute', top: 38, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #bcd', borderRadius: 8, boxShadow: '0 2px 8px #0001', minWidth: 180, padding: 8 }}>
+                <div className="vst-dropdown">
                   {['insurance', 'roadtax', 'fitness', 'pollution', 'national_permit', 'permit_valid'].map(type => (
-                    <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
+                    <label key={type} className="vst-dropdown__option">
                       <input
                         type="checkbox"
                         checked={expiredTypes.includes(type)}
                         onChange={e => {
-                          // only one filter (expired or urgent) active at a time
                           setUrgentTypes([]);
                           if (e.target.checked) setExpiredTypes(prev => [...prev, type]);
                           else setExpiredTypes(prev => prev.filter(t => t !== type));
@@ -594,19 +568,9 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
                         : type.charAt(0).toUpperCase() + type.slice(1)}
                     </label>
                   ))}
-                  <div style={{ textAlign: 'right', marginTop: 6, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                    <button
-                      style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#fff', cursor: 'pointer' }}
-                      onClick={() => setExpiredTypes([])}
-                    >
-                      Reset
-                    </button>
-                    <button
-                      style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#f5f8fa', cursor: 'pointer' }}
-                      onClick={() => setShowExpiredDropdown(false)}
-                    >
-                      Close
-                    </button>
+                  <div className="vst-dropdown__footer">
+                    <button className="vst-dropdown__footer-btn" onClick={() => setExpiredTypes([])}>Reset</button>
+                    <button className="vst-dropdown__footer-btn" onClick={() => setShowExpiredDropdown(false)}>Close</button>
                   </div>
                 </div>
               )}
@@ -614,15 +578,15 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
             {/* Urgent renewals filter */}
             <div style={{ position: 'relative' }} ref={urgentDropdownRef}>
               <button
-                className="filter-select"
-                style={{ minWidth: 180, textAlign: 'left', padding: '16px 15px', border: '1px solid #bcd', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
+                className={`vst-filter-trigger${urgentTypes.length ? ' vst-filter-trigger--active' : ''}${showUrgentDropdown ? ' vst-filter-trigger--open' : ''}`}
                 onClick={() => {
                   const next = !showUrgentDropdown;
                   setShowUrgentDropdown(next);
                   if (next) setShowExpiredDropdown(false);
                 }}
               >
-                {urgentTypes.length === 0 ? 'Select urgent renewals' : urgentTypes.map(t => {
+                <i className="ri-alarm-warning-line vst-filter-trigger__icon"></i>
+                {urgentTypes.length === 0 ? 'Urgent renewals' : urgentTypes.map(t => {
                   if (t === 'insurance') return 'Insurance';
                   if (t === 'roadtax') return 'Road Tax';
                   if (t === 'fitness') return 'Fitness';
@@ -630,29 +594,18 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
                   return t;
                 }).join(', ')}
                 {urgentTypes.length > 0 && (
-                  <span style={{
-                    marginLeft: 8,
-                    padding: '0 6px',
-                    borderRadius: 999,
-                    background: '#e8f5e9',
-                    color: '#2e7d32',
-                    fontSize: 11,
-                    fontWeight: 600
-                  }}>
-                    {urgentTypes.length}
-                  </span>
+                  <span className="vst-filter-trigger__badge">{urgentTypes.length}</span>
                 )}
-                <span style={{ float: 'right', fontWeight: 700, fontSize: 16, marginLeft: 8 }}>▼</span>
+                <i className="ri-arrow-down-s-line vst-filter-trigger__chevron"></i>
               </button>
               {showUrgentDropdown && (
-                <div style={{ position: 'absolute', top: 38, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #bcd', borderRadius: 8, boxShadow: '0 2px 8px #0001', minWidth: 220, padding: 8 }}>
+                <div className="vst-dropdown">
                   {['insurance', 'roadtax', 'fitness', 'pollution', 'national_permit', 'permit_valid'].map(type => (
-                    <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' }}>
+                    <label key={type} className="vst-dropdown__option">
                       <input
                         type="checkbox"
                         checked={urgentTypes.includes(type)}
                         onChange={e => {
-                          // only one filter (expired or urgent) active at a time
                           setExpiredTypes([]);
                           if (e.target.checked) setUrgentTypes(prev => [...prev, type]);
                           else setUrgentTypes(prev => prev.filter(t => t !== type));
@@ -665,128 +618,86 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
                         : type.charAt(0).toUpperCase() + type.slice(1)}
                     </label>
                   ))}
-                  <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 13 }}>Days:</span>
+                  <div className="vst-range-row">
+                    <span>Days:</span>
                     <input
                       type="range"
                       min={1}
                       max={50}
                       value={urgentRange}
                       onChange={e => setUrgentRange(Number(e.target.value))}
-                      style={{ width: 120 }}
                     />
-                    <span style={{ fontSize: 13, minWidth: 28, display: 'inline-block', textAlign: 'center', fontWeight: 600, color: '#1976d2' }}>{urgentRange}</span>
-                    <span style={{ fontSize: 13 }}>(1-50)</span>
+                    <span className="vst-range-row__value">{urgentRange}</span>
+                    <span>(1-50)</span>
                   </div>
-                  <div style={{ textAlign: 'right', marginTop: 6, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                    <button
-                      style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#fff', cursor: 'pointer' }}
-                      onClick={() => { setUrgentTypes([]); setUrgentRange(15); }}
-                    >
-                      Reset
-                    </button>
-                    <button
-                      style={{ fontSize: 13, padding: '2px 10px', borderRadius: 5, border: '1px solid #bcd', background: '#f5f8fa', cursor: 'pointer' }}
-                      onClick={() => setShowUrgentDropdown(false)}
-                    >
-                      Close
-                    </button>
+                  <div className="vst-dropdown__footer">
+                    <button className="vst-dropdown__footer-btn" onClick={() => { setUrgentTypes([]); setUrgentRange(15); }}>Reset</button>
+                    <button className="vst-dropdown__footer-btn" onClick={() => setShowUrgentDropdown(false)}>Close</button>
                   </div>
                 </div>
               )}
             </div>
           </div>
-          {/* Right-aligned Download and Print buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
+          <div className="vst-toolbar__right">
             <button
+              className="vst-action-btn vst-action-btn--download"
               title="Download"
               onClick={() => {
                 setDownloadFormat('excel');
                 setShowDownloadModal(true);
               }}
-              style={{ background: '#e3f2fd', border: '1px solid #bbdefb', borderRadius: 999, cursor: 'pointer', color: '#0d47a1', fontSize: 18, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}
             >
-              <FaDownload />
-              <span style={{ fontSize: 13, fontWeight: 600 }}>Download</span>
+              <i className="ri-download-cloud-2-line"></i>
+              <span>Download</span>
             </button>
             <button
+              className="vst-action-btn vst-action-btn--print"
               title="Print Table"
               onClick={handleRtoPrint}
-              style={{ background: '#f3e5f5', border: '1px solid #e1bee7', borderRadius: 999, cursor: 'pointer', color: '#4a148c', fontSize: 18, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}
             >
-              <FaPrint />
-              <span style={{ fontSize: 13, fontWeight: 600 }}>Print</span>
+              <i className="ri-printer-line"></i>
+              <span>Print</span>
             </button>
           </div>
         </div>
       )}
-      <div className="table-container" id="vehicle-rto-table-print-area">
-        <table className="latest-table" style={{ width: '100%', minWidth: 900, marginTop: 8 }}>
+      <div className="vst-table-wrap" id="vehicle-rto-table-print-area">
+        <table className="vst-table">
           <thead>
             <tr>
               <th>#</th>
               <th>Vehicle No.</th>
               {!hideSearchSortFilter && (
-                <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('rc_regn_dt')}>
+                <th className={`vst-th--sortable${sortConfig.key === 'rc_regn_dt' ? ' vst-th--sorted' : ''}`} onClick={() => handleSort('rc_regn_dt')}>
                   Registration Date
-                  <span style={{fontSize:13,marginLeft:2}}>{sortConfig.key === 'rc_regn_dt' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+                  <em className="vst-sort-icon">{sortConfig.key === 'rc_regn_dt' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
                 </th>
               )}
-              <th
-                style={{
-                  ...(expiredTypes.includes('insurance') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}),
-                  cursor: 'pointer', userSelect: 'none'
-                }}
-                onClick={() => handleSort('insurance_exp')}
-              >
+              <th className={`vst-th--sortable${sortConfig.key === 'insurance_exp' ? ' vst-th--sorted' : ''}${expiredTypes.includes('insurance') ? ' vst-th--highlighted' : ''}`} onClick={() => handleSort('insurance_exp')}>
                 Insurance Exp
-                <span style={{fontSize:13,marginLeft:2}}>{sortConfig.key === 'insurance_exp' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+                <em className="vst-sort-icon">{sortConfig.key === 'insurance_exp' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
               </th>
-              <th
-                style={{
-                  ...(expiredTypes.includes('roadtax') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}),
-                  cursor: 'pointer', userSelect: 'none'
-                }}
-                onClick={() => handleSort('road_tax_exp')}
-              >
+              <th className={`vst-th--sortable${sortConfig.key === 'road_tax_exp' ? ' vst-th--sorted' : ''}${expiredTypes.includes('roadtax') ? ' vst-th--highlighted' : ''}`} onClick={() => handleSort('road_tax_exp')}>
                 Road Tax Exp
-                <span style={{fontSize:13,marginLeft:2}}>{sortConfig.key === 'road_tax_exp' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+                <em className="vst-sort-icon">{sortConfig.key === 'road_tax_exp' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
               </th>
-              <th
-                style={{ cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => handleSort('rc_np_upto')}
-              >
+              <th className={`vst-th--sortable${sortConfig.key === 'rc_np_upto' ? ' vst-th--sorted' : ''}`} onClick={() => handleSort('rc_np_upto')}>
                 National Permit
-                <span style={{fontSize:13,marginLeft:2}}>{sortConfig.key === 'rc_np_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+                <em className="vst-sort-icon">{sortConfig.key === 'rc_np_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
               </th>
-              <th
-                style={{ cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => handleSort('rc_permit_valid_upto')}
-              >
+              <th className={`vst-th--sortable${sortConfig.key === 'rc_permit_valid_upto' ? ' vst-th--sorted' : ''}`} onClick={() => handleSort('rc_permit_valid_upto')}>
                 Permit Valid
-                <span style={{fontSize:13,marginLeft:2}}>{sortConfig.key === 'rc_permit_valid_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+                <em className="vst-sort-icon">{sortConfig.key === 'rc_permit_valid_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
               </th>
-              <th
-                style={{
-                  ...(expiredTypes.includes('fitness') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}),
-                  cursor: 'pointer', userSelect: 'none'
-                }}
-                onClick={() => handleSort('fitness_exp')}
-              >
+              <th className={`vst-th--sortable${sortConfig.key === 'fitness_exp' ? ' vst-th--sorted' : ''}${expiredTypes.includes('fitness') ? ' vst-th--highlighted' : ''}`} onClick={() => handleSort('fitness_exp')}>
                 Fitness Exp
-                <span style={{fontSize:13,marginLeft:2}}>{sortConfig.key === 'fitness_exp' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+                <em className="vst-sort-icon">{sortConfig.key === 'fitness_exp' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
               </th>
-              <th
-                style={{
-                  ...(expiredTypes.includes('pollution') ? { background: '#e3f2fd', color: '#1976d2', fontWeight: 700 } : {}),
-                  cursor: 'pointer', userSelect: 'none'
-                }}
-                onClick={() => handleSort('pollution_exp')}
-              >
+              <th className={`vst-th--sortable${sortConfig.key === 'pollution_exp' ? ' vst-th--sorted' : ''}${expiredTypes.includes('pollution') ? ' vst-th--highlighted' : ''}`} onClick={() => handleSort('pollution_exp')}>
                 Pollution Exp
-                <span style={{fontSize:13,marginLeft:2}}>{sortConfig.key === 'pollution_exp' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</span>
+                <em className="vst-sort-icon">{sortConfig.key === 'pollution_exp' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
               </th>
-              <th className="print-hide" style={{color:'#1565c0',fontWeight:700,fontSize:15,textAlign:'center'}}>Action</th>
+              <th className="print-hide vst-th--center">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -829,13 +740,12 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
                   <td
                     style={expiredTypes.includes('pollution') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
                   >{formatExpiry(v.pollution_exp || v.rc_pucc_upto, true)}</td>
-                  <td className="print-hide" style={{textAlign:'center'}}>
-                    <button className="action-btn flat-btn" title="View Vehicle" style={{fontSize:'80%',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={() => {
-                      // Always set the latest vehicle data from the full vehicleData array
+                  <td className="print-hide vst-td--center">
+                    <button className="vst-view-btn" title="View Vehicle" onClick={() => {
                       const found = vehicleData.find(item => item.rc_regn_no === v.rc_regn_no);
                       setSelectedRtoData(found || v);
                     }}>
-                      <i className="ri-eye-line" style={{fontSize:'1.2em'}} />
+                      <i className="ri-eye-line" />
                     </button>
                   </td>
                 </tr>
@@ -846,8 +756,8 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
       </div>
 
       {filtered.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, marginLeft: 24 }}>
-          <span style={{ color: '#1976d2', fontSize: 15 }}>Show more records:</span>
+        <div className="vst-show-more">
+          <span className="vst-show-more__label">Show more records:</span>
           <SelectShowMore
             onShowMoreRecords={val => {
               if (val === 'all') setVisibleCount(filtered.length);
@@ -945,7 +855,7 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
       </CustomModal>
 
     <div style={{marginTop:16, textAlign:'right'}}>
-      <button onClick={handleViewAllClick} style={{padding:'8px 18px', borderRadius:8, background:'#1976d2', color:'#fff', fontWeight:700, border:'none', cursor:'pointer'}}>View All</button>
+      <button className="vst-btn" onClick={handleViewAllClick}>View All</button>
     </div>
     </div>
   );

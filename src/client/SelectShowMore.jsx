@@ -12,38 +12,30 @@ export default function SelectShowMore({ onShowMoreRecords, onResetRecords, maxC
     options.push(maxCount);
   }
   return (
-    <>
+    <div className="show-more-control">
       <select
-        style={{
-          padding: '7px 16px',
-          borderRadius: 6,
-          border: '1.5px solid #1976d2',
-          fontSize: 15,
-          fontWeight: 600,
-          color: '#1976d2',
-          background: '#f5faff',
-          outline: 'none',
-          marginRight: 8
-        }}
+        className="show-more-select"
         value={selectValue}
         onChange={e => {
           const val = e.target.value;
-          setSelectValue(0); // Reset to default after selection
+          setSelectValue(0);
           if (typeof onShowMoreRecords === 'function') onShowMoreRecords(val);
         }}
       >
-        <option value={0} disabled>Select</option>
+        <option value={0} disabled>Load more…</option>
         {options.map(n => (
           <option key={n} value={n}>{n} records</option>
         ))}
         <option value="all">All records</option>
       </select>
       {typeof onResetRecords === 'function' && (
-        <button className="action-btn flat-btn" onClick={() => {
+        <button className="show-more-reset" onClick={() => {
           onResetRecords();
           window.scrollTo({ top: 0, behavior: 'smooth' });
-        }} style={{ padding: '6px 10px' }}>Reset</button>
+        }}>
+          <i className="ri-refresh-line"></i> Reset
+        </button>
       )}
-    </>
+    </div>
   );
 }

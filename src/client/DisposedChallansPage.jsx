@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import RightSidebar from "./RightSidebar";
-import QuickActions from "./QuickActions";
 import SelectShowMore from "./SelectShowMore";
 import CustomModal from "./CustomModal";
-import { FiDownloadCloud, FiPrinter } from "react-icons/fi";
+
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
@@ -17,9 +16,6 @@ const DEFAULT_HOST = 'app.smartchallan.com';
 const IS_DEFAULT_DOMAIN = CURRENT_HOSTNAME === DEFAULT_HOST;
 const IS_WHITELABEL = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME) && !IS_DEFAULT_DOMAIN;
 const BRAND_LOGO = (IS_WHITELABEL && resolvePerHostEnv(CURRENT_HOSTNAME, 'LOGO_URL')) || import.meta.env.VITE_CUSTOM_LOGO_URL || scLogo;
-import "./LatestTable.css";
-import "./RightSidebar.css";
-import "../RegisterVehicle.css";
 // Reuse ChallanTableV2 pattern from MyChallans.jsx
 
 function formatDate(dateStr) {
@@ -107,29 +103,28 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
       }, 0)
     : 0;
   return (
-    <div className="dashboard-latest" style={{ background: '#fff', borderRadius: 14, boxShadow: '0 2px 12px 0 rgba(30,136,229,0.07)', border: '1.5px solid #e3eaf1', padding: '0 0 18px 0', marginBottom: 0, minHeight: 340, transition: 'box-shadow 0.2s', position: 'relative', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, padding: '0 24px 0 0', minHeight: 54 }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ width: 4, height: 32, background: 'linear-gradient(135deg, #2196f3 0%, #21cbf3 100%)', borderRadius: 3, marginRight: 14 }} />
-          <h2 style={{ margin: 0, fontSize: 19, color: '#1565c0', letterSpacing: '0.01em', fontFamily: 'Segoe UI, Arial, sans-serif', lineHeight: 1.2, fontWeight: 700 }}>{title}</h2>
+    <div className="vst-card">
+      <div className="vst-header">
+        <div className="vst-header__left">
+          <span className="vst-header__icon-box" style={{ background: 'linear-gradient(135deg,#2196f3,#21cbf3)' }}>
+            <i className="ri-check-double-line"></i>
+          </span>
+          <h2 className="vst-header__title">{title}</h2>
         </div>
         {filteredData.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 16 }}>
-            <div style={{ color: '#1565c0', fontSize: 14, background: '#f5f8fa', border: '1.5px solid #2196f3', borderRadius: 6, padding: '4px 12px', fontWeight: 700, boxShadow: '0 1px 4px #21cbf322' }}>
+          <div className="vst-header__actions">
+            <span className="vst-record-badge">
               Showing {Math.min(filteredData.length, effectiveVisible)} of {filteredData.length} records
-            </div>
-            <div style={{ color: '#1b5e20', fontSize: 14, background: '#e8f5e9', border: '1.5px solid #a5d6a7', borderRadius: 6, padding: '4px 12px', fontWeight: 700, boxShadow: '0 1px 4px #a5d6a722' }}>
+            </span>
+            <span className="vst-total-badge vst-total-badge--success">
               Total Challan Paid:
-              <span style={{ marginLeft: 4 }}>
-                {"₹"}
-                {totalPaid.toLocaleString('en-IN')}
-              </span>
-            </div>
+              <span style={{ marginLeft: 4 }}>{'₹'}{totalPaid.toLocaleString('en-IN')}</span>
+            </span>
           </div>
         )}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 24px 8px 24px', borderTop: '1px solid #e3eaf1', borderBottom: '1px solid #e3eaf1', background: '#f7f9fc' }}>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <div className="vst-toolbar">
+        <div className="vst-toolbar__left">
           <div className="number-plate-container" style={{ minWidth: 220, maxWidth: 330 }}>
             <div className="number-plate-wrapper">
               <div className="number-plate-badge">IND</div>
@@ -187,79 +182,65 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
             );
           })()}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="vst-toolbar__right">
           <button
+            className="vst-action-btn vst-action-btn--download"
             title="Download"
             onClick={() => { if (typeof onClickDownload === 'function') onClickDownload(filteredData); }}
-            style={{ background: '#e3f2fd', border: '1px solid #bbdefb', borderRadius: 999, cursor: 'pointer', color: '#0d47a1', fontSize: 18, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}
           >
-            <FiDownloadCloud />
-            <span style={{ fontSize: 13, fontWeight: 600 }}>Download</span>
+            <i className="ri-download-cloud-2-line"></i>
+            <span>Download</span>
           </button>
           <button
+            className="vst-action-btn vst-action-btn--print"
             title="Print Table"
             onClick={() => { if (typeof onClickPrint === 'function') onClickPrint(filteredData); }}
-            style={{ background: '#f3e5f5', border: '1px solid #e1bee7', borderRadius: 999, cursor: 'pointer', color: '#4a148c', fontSize: 18, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}
           >
-            <FiPrinter />
-            <span style={{ fontSize: 13, fontWeight: 600 }}>Print</span>
+            <i className="ri-printer-line"></i>
+            <span>Print</span>
           </button>
         </div>
       </div>
-      <div className="table-container" id="disposed-challans-table-print-area">
-        <table className="latest-table" style={{ width: '100%', marginTop: 8 }}>
+      <div className="vst-table-wrap" id="disposed-challans-table-print-area">
+        <table className="vst-table">
           <thead>
             <tr>
               <th>#</th>
               <th>Vehicle No.</th>
               <th>Challan No</th>
               <th
-                style={{ cursor: 'pointer', userSelect: 'none' }}
+                className={`vst-th--sortable${sortConfig.key === 'date' ? ' vst-th--sorted' : ''}`}
                 onClick={() =>
                   setSortConfig((prev) => {
                     if (prev.key === 'date') {
-                      return {
-                        key: 'date',
-                        direction: prev.direction === 'asc' ? 'desc' : 'asc',
-                      };
+                      return { key: 'date', direction: prev.direction === 'asc' ? 'desc' : 'asc' };
                     }
                     return { key: 'date', direction: 'asc' };
                   })
                 }
               >
                 Date/Time
-                <span style={{ fontSize: 13, marginLeft: 2 }}>
-                  {sortConfig.key === 'date'
-                    ? sortConfig.direction === 'asc'
-                      ? '▲'
-                      : '▼'
-                    : '▲▼'}
-                </span>
+                <em className="vst-sort-icon">
+                  {sortConfig.key === 'date' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}
+                </em>
               </th>
               <th>Location</th>
               <th>Fine Imposed</th>
               <th
-                style={{ cursor: 'pointer', userSelect: 'none' }}
+                className={`vst-th--sortable${sortConfig.key === 'paid' ? ' vst-th--sorted' : ''}`}
                 onClick={() =>
                   setSortConfig((prev) => {
                     if (prev.key === 'paid') {
-                      return {
-                        key: 'paid',
-                        direction: prev.direction === 'asc' ? 'desc' : 'asc',
-                      };
+                      return { key: 'paid', direction: prev.direction === 'asc' ? 'desc' : 'asc' };
                     }
                     return { key: 'paid', direction: 'asc' };
                   })
                 }
               >
                 Fine Paid
-                <span style={{ fontSize: 13, marginLeft: 2 }}>
-                  {sortConfig.key === 'paid'
-                    ? sortConfig.direction === 'asc'
-                      ? '▲'
-                      : '▼'
-                    : '▲▼'}
-                </span>
+                <em className="vst-sort-icon">
+                  {sortConfig.key === 'paid' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}
+                </em>
               </th>
               <th>Status</th>
               <th>Offence Details</th>
@@ -281,10 +262,7 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
                       const loc = c.challan_place || c.location || c.challan_location || c.address || c.owner_address;
                       if (loc && typeof loc === 'string' && loc.trim()) {
                         return (
-                          <span
-                            title={loc}
-                            style={{ cursor: 'default', color: '#4285F4', fontSize: 20, verticalAlign: 'middle' }}
-                          >
+                          <span title={loc} className="vst-map-pin">
                             <i className="ri-map-pin-2-fill" />
                           </span>
                         );
@@ -295,20 +273,18 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
                   <td>{c.fine_imposed ?? '-'}</td>
                   <td>{c.received_amount ?? '-'}</td>
                   <td>
-                    <span className={`modern-table-status ${c.challan_status === 'Pending' ? 'pending' : c.challan_status === 'Disposed' ? 'paid' : ''}`}>{c.challan_status}</span>
+                    <span className={`vst-status-pill ${c.challan_status === 'Pending' ? 'vst-status-pill--pending' : c.challan_status === 'Disposed' ? 'vst-status-pill--disposed' : 'vst-status-pill--default'}`}>{c.challan_status}</span>
                   </td>
                   <td>
-                    <ul className="modern-table-offence-list">
+                    <ul className="vst-offence-list">
                       {Array.isArray(c.offence_details) && c.offence_details.map((o, i) => (
                         <li key={i} className="cell-ellipsis" title={o.name}>{o.name}</li>
                       ))}
                     </ul>
                   </td>
                   <td>
-                    <button
-                      className="action-btn flat-btn"
-                      onClick={() => onView(c)}>
-                      <i className="ri-eye-line" style={{fontSize:20}}></i>
+                    <button className="vst-view-btn" onClick={() => onView(c)}>
+                      <i className="ri-eye-line"></i>
                     </button>
                   </td>
                 </tr>
@@ -318,10 +294,8 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
         </table>
       </div>
       {filteredData.length > 30 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, marginLeft: 24 }}>
-          <span style={{ color: '#1976d2', fontSize: 15 }}>
-            Show more records:
-          </span>
+        <div className="vst-show-more">
+          <span className="vst-show-more__label">Show more records:</span>
           <SelectShowMore
             onShowMoreRecords={onShowMore}
             onResetRecords={onReset}
@@ -555,19 +529,6 @@ export default function DisposedChallansPage() {
     <div className="my-challans-content">
       {/* <h2 className="page-title">Disposed Challans</h2> */}
       <p className="page-subtitle">View and manage your Disposed challans</p>
-      {!sidebarOpen && (
-        <div className="main-quick-actions-wrapper">
-          <QuickActions
-            title="Quick Actions"
-            sticky={true}
-            onAddVehicle={() => {}}
-            onBulkUpload={() => {}}
-            onPay={() => {}}
-            onReports={() => {}}
-            onContact={() => {}}
-          />
-        </div>
-      )}
       <div style={{marginTop: '18px'}}>
         {isLoading ? (
           <div

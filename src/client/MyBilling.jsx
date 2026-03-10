@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { FaDownload, FaPrint } from "react-icons/fa";
 import * as XLSX from "xlsx";
-import "../shared/CommonDashboard.css";
 
 export default function MyBilling({ clientId }) {
   // Download as Excel

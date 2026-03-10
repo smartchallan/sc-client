@@ -259,127 +259,38 @@ export function ChallanTableV2({
   }, [showChallanTypeDropdown]);
 
   return (
-    <div
-      className="dashboard-latest"
-      style={{
-        background: "#fff",
-        borderRadius: 14,
-        boxShadow: "0 2px 12px 0 rgba(30,136,229,0.07)",
-        border: "1.5px solid #e3eaf1",
-        padding: "0 0 18px 0",
-        marginBottom: 0,
-        minHeight: 340,
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      {/* Table header with title, matching other dashboard tables */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-    // together in the Vehicle Challans table with status filters.
-          padding: "0 24px 0 0",
-          minHeight: 54,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <div
-            style={{
-              width: 4,
-              height: 32,
-              background:
-                "linear-gradient(135deg, #f7971e 0%, #ffd200 100%)",
-              borderRadius: 3,
-              marginRight: 14,
-            }}
-          />
-          <h2
-            style={{
-              margin: 0,
-              fontSize: 19,
-              color: "#b26a00",
-              letterSpacing: "0.01em",
-              fontFamily: "Segoe UI, Arial, sans-serif",
-              lineHeight: 1.2,
-              fontWeight: 700,
-            }}
-          >
-            {title}
-          </h2>
+    <div className="vst-card">
+      {/* Table header with title */}
+      <div className="vst-header">
+        <div className="vst-header__left">
+          <span className="vst-header__icon-box" style={{ background: 'linear-gradient(135deg,#f7971e,#ffd200)' }}>
+            <i className="ri-file-warning-line"></i>
+          </span>
+          <h2 className="vst-header__title">{title}</h2>
         </div>
         {filteredData.length > 0 && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginLeft: 16,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', marginRight: 8 }}>
-              <div style={{
-                fontSize: 16,
-                fontWeight: 800,
-                padding: '6px 10px',
-                borderRadius: 8,
-                color: (statusFilter.disposed && !statusFilter.pending) ? '#1b5e20' : '#b71c1c',
-                background: (statusFilter.disposed && !statusFilter.pending) ? '#e8f5e9' : '#ffebee',
-                border: (statusFilter.disposed && !statusFilter.pending) ? '1.5px solid #a5d6a7' : '1.5px solid #ef9a9a'
-              }}>
-                {(statusFilter.disposed && !statusFilter.pending) ? 'Total Fine Paid:' : 'Total Challan Value:'}
-                <span style={{ marginLeft: 6 }}>
-                  {'₹'}{((statusFilter.disposed && !statusFilter.pending) ? totalPaid : totalFine).toLocaleString('en-IN')}
-                </span>
-              </div>
-            </div>
-            <div
-              style={{
-                color: "#1565c0",
-                fontSize: 14,
-                background: "#f5f8fa",
-                border: "1.5px solid #2196f3",
-                borderRadius: 6,
-                padding: "4px 12px",
-                fontWeight: 700,
-                boxShadow: "0 1px 4px #21cbf322",
-              }}
-            >
+          <div className="vst-header__actions">
+            <span className={`vst-total-badge ${(statusFilter.disposed && !statusFilter.pending) ? 'vst-total-badge--success' : 'vst-total-badge--danger'}`}>
+              {(statusFilter.disposed && !statusFilter.pending) ? 'Total Fine Paid:' : 'Total Challan Value:'}
+              <span style={{ marginLeft: 6 }}>
+                {'₹'}{((statusFilter.disposed && !statusFilter.pending) ? totalPaid : totalFine).toLocaleString('en-IN')}
+              </span>
+            </span>
+            <span className="vst-record-badge">
               Showing {Math.min(filteredData.length, limitedData.length)} of {filteredData.length} records
-            </div>
+            </span>
             {title && (title.toLowerCase().includes("pending") || title.toLowerCase().includes("disposed") || title.toLowerCase().includes("challan settlement")) && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 14,
-                    borderRadius: 6,
-                    padding: "4px 12px",
-                    fontWeight: 700,
-                    boxShadow: "0 1px 4px #00000022",
-                    color: title.toLowerCase().includes("disposed") ? "#1b5e20" : "#b71c1c",
-                    background: title.toLowerCase().includes("disposed") ? "#e8f5e9" : "#ffebee",
-                    border: title.toLowerCase().includes("disposed") ? "1.5px solid #a5d6a7" : "1.5px solid #ef9a9a",
-                  }}
-                >
-                  {title.toLowerCase().includes("disposed")
-                    ? "Total Fine Paid: "
-                    : "Total Challan Value: "}
+              <>
+                <span className={`vst-total-badge ${title.toLowerCase().includes('disposed') ? 'vst-total-badge--success' : 'vst-total-badge--danger'}`}>
+                  {title.toLowerCase().includes("disposed") ? "Total Fine Paid: " : "Total Challan Value: "}
                   <span style={{ marginLeft: 4 }}>
-                    {"₹"}
-                    {(title.toLowerCase().includes("disposed") ? totalPaid : totalFine).toLocaleString("en-IN")}
+                    {'₹'}{(title.toLowerCase().includes('disposed') ? totalPaid : totalFine).toLocaleString('en-IN')}
                   </span>
-                </div>
+                </span>
                 {settlementMode && Array.isArray(cart) && (
                   <button
                     type="button"
-                    className="action-btn flat-btn"
+                    className="vst-view-btn"
                     disabled={cart.length === 0}
                     title={cart.length === 0 ? "No challans in cart" : "View challan cart"}
                     onClick={() => {
@@ -388,63 +299,22 @@ export function ChallanTableV2({
                         window.dispatchEvent(ev);
                       }
                     }}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      padding: "4px 10px",
-                      fontSize: 13,
-                      opacity: cart.length === 0 ? 0.55 : 1,
-                    }}
+                    style={{ opacity: cart.length === 0 ? 0.55 : 1 }}
                   >
-                    <i className="ri-shopping-cart-2-line" style={{ fontSize: 18 }} />
+                    <i className="ri-shopping-cart-2-line" />
                     {cart.length > 0 && (
-                      <span
-                        style={{
-                          minWidth: 18,
-                          height: 18,
-                          borderRadius: 999,
-                          background: "#e53935",
-                          color: "#fff",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 11,
-                          fontWeight: 600,
-                          padding: "0 4px",
-                        }}
-                      >
-                        {cart.length}
-                      </span>
+                      <span className="vst-filter-trigger__badge">{cart.length}</span>
                     )}
                   </button>
                 )}
-              </div>
+              </>
             )}
           </div>
         )}
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "8px 24px 8px 24px",
-          borderTop: "1px solid #e3eaf1",
-          borderBottom: "1px solid #e3eaf1",
-          background: "#f7f9fc",
-        }}
-      >
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap",
-          }}
-        >
+      <div className="vst-toolbar">
+        <div className="vst-toolbar__left">
           <div
             className="number-plate-container"
             style={{ minWidth: 220, maxWidth: 330 }}
@@ -528,189 +398,44 @@ export function ChallanTableV2({
           >
             <button
               type="button"
-              className="filter-select"
-              style={{
-                minWidth: 180,
-                textAlign: "left",
-                padding: "16px 15px",
-                border: "1px solid #bcd",
-                borderRadius: 6,
-                background: "#fff",
-                cursor: "pointer",
-              }}
+              className={`vst-filter-trigger${(challanTypeFilter.online || challanTypeFilter.regCourt || challanTypeFilter.virtualCourt) ? ' vst-filter-trigger--active' : ''}${showChallanTypeDropdown ? ' vst-filter-trigger--open' : ''}`}
               onClick={() => setShowChallanTypeDropdown((v) => !v)}
             >
+              <i className="ri-git-branch-line vst-filter-trigger__icon"></i>
               {(!challanTypeFilter.online &&
               !challanTypeFilter.regCourt &&
               !challanTypeFilter.virtualCourt)
-                ? "Select challan type"
+                ? "Challan type"
                 : [
-                    challanTypeFilter.online
-                      ? "Online"
-                      : null,
-                    challanTypeFilter.regCourt
-                      ? "Registered court"
-                      : null,
-                    challanTypeFilter.virtualCourt
-                      ? "Virtual court"
-                      : null,
-                  ]
-                    .filter(Boolean)
-                    .join(", ")}
-              {(challanTypeFilter.online ||
-                challanTypeFilter.regCourt ||
-                challanTypeFilter.virtualCourt) && (
-                <span
-                  style={{
-                    marginLeft: 8,
-                    padding: "0 6px",
-                    borderRadius: 999,
-                    background: "#fff3e0",
-                    color: "#ef6c00",
-                    fontSize: 11,
-                    fontWeight: 600,
-                  }}
-                >
-                  {Number(!!challanTypeFilter.online) +
-                    Number(!!challanTypeFilter.regCourt) +
-                    Number(!!challanTypeFilter.virtualCourt)}
+                    challanTypeFilter.online ? "Online" : null,
+                    challanTypeFilter.regCourt ? "Registered court" : null,
+                    challanTypeFilter.virtualCourt ? "Virtual court" : null,
+                  ].filter(Boolean).join(", ")}
+              {(challanTypeFilter.online || challanTypeFilter.regCourt || challanTypeFilter.virtualCourt) && (
+                <span className="vst-filter-trigger__badge">
+                  {Number(!!challanTypeFilter.online) + Number(!!challanTypeFilter.regCourt) + Number(!!challanTypeFilter.virtualCourt)}
                 </span>
               )}
-              <span
-                style={{
-                  float: "right",
-                  fontWeight: 700,
-                  fontSize: 16,
-                  marginLeft: 8,
-                }}
-              >
-                ▼
-              </span>
+              <i className="ri-arrow-down-s-line vst-filter-trigger__chevron"></i>
             </button>
             {showChallanTypeDropdown && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: 38,
-                  left: 0,
-                  zIndex: 10,
-                  background: "#fff",
-                  border: "1.5px solid #bcd",
-                  borderRadius: 8,
-                  boxShadow: "0 2px 8px #0001",
-                  minWidth: 190,
-                  padding: 8,
-                }}
-              >
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "4px 0",
-                    cursor: "pointer",
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={challanTypeFilter.online}
-                    onChange={(e) =>
-                      setChallanTypeFilter((prev) => ({
-                        ...prev,
-                        online: e.target.checked,
-                      }))
-                    }
-                  />
+              <div className="vst-dropdown">
+                <label className="vst-dropdown__option">
+                  <input type="checkbox" checked={challanTypeFilter.online} onChange={(e) => setChallanTypeFilter((prev) => ({ ...prev, online: e.target.checked }))} />
                   Online
                 </label>
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "4px 0",
-                    cursor: "pointer",
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={challanTypeFilter.regCourt}
-                    onChange={(e) =>
-                      setChallanTypeFilter((prev) => ({
-                        ...prev,
-                        regCourt: e.target.checked,
-                      }))
-                    }
-                  />
+                <label className="vst-dropdown__option">
+                  <input type="checkbox" checked={challanTypeFilter.regCourt} onChange={(e) => setChallanTypeFilter((prev) => ({ ...prev, regCourt: e.target.checked }))} />
                   Registered court
                 </label>
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "4px 0",
-                    cursor: "pointer",
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={challanTypeFilter.virtualCourt}
-                    onChange={(e) =>
-                      setChallanTypeFilter((prev) => ({
-                        ...prev,
-                        virtualCourt: e.target.checked,
-                      }))
-                    }
-                  />
+                <label className="vst-dropdown__option">
+                  <input type="checkbox" checked={challanTypeFilter.virtualCourt} onChange={(e) => setChallanTypeFilter((prev) => ({ ...prev, virtualCourt: e.target.checked }))} />
                   Virtual court
                 </label>
-                {(challanTypeFilter.online ||
-                  challanTypeFilter.regCourt ||
-                  challanTypeFilter.virtualCourt) && (
-                  <div
-                    style={{
-                      textAlign: "right",
-                      marginTop: 6,
-                      display: "flex",
-                      justifyContent: "flex-end",
-                      gap: 8,
-                    }}
-                  >
-                    <button
-                      type="button"
-                      style={{
-                        fontSize: 13,
-                        padding: "2px 10px",
-                        borderRadius: 5,
-                        border: "1px solid #bcd",
-                        background: "#fff",
-                        cursor: "pointer",
-                      }}
-                      onClick={() =>
-                        setChallanTypeFilter({
-                          online: false,
-                          regCourt: false,
-                          virtualCourt: false,
-                        })
-                      }
-                    >
-                      Reset
-                    </button>
-                    <button
-                      type="button"
-                      style={{
-                        fontSize: 13,
-                        padding: "2px 10px",
-                        borderRadius: 5,
-                        border: "1px solid #bcd",
-                        background: "#f5f8fa",
-                        cursor: "pointer",
-                      }}
-                      onClick={() => setShowChallanTypeDropdown(false)}
-                    >
-                      Close
-                    </button>
+                {(challanTypeFilter.online || challanTypeFilter.regCourt || challanTypeFilter.virtualCourt) && (
+                  <div className="vst-dropdown__footer">
+                    <button className="vst-dropdown__footer-btn" onClick={() => setChallanTypeFilter({ online: false, regCourt: false, virtualCourt: false })}>Reset</button>
+                    <button className="vst-dropdown__footer-btn" onClick={() => setShowChallanTypeDropdown(false)}>Close</button>
                   </div>
                 )}
               </div>
@@ -718,78 +443,39 @@ export function ChallanTableV2({
           </div>
 
           {/* Status filter: Pending / Disposed toggles */}
-          <div className="challan-status-filter-wrapper">
-            <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <input
-                type="checkbox"
-                checked={statusFilter.pending}
-                onChange={() =>
-                  setStatusFilter((prev) => ({ ...prev, pending: !prev.pending }))
-                }
-              />
+          <div className="vst-checkbox-group">
+            <label className={`vst-checkbox-label${statusFilter.pending ? ' vst-checkbox-label--checked' : ''}`}>
+              <input type="checkbox" checked={statusFilter.pending} onChange={() => setStatusFilter((prev) => ({ ...prev, pending: !prev.pending }))} />
               <span>Pending</span>
             </label>
-            <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <input
-                type="checkbox"
-                checked={statusFilter.disposed}
-                onChange={() =>
-                  setStatusFilter((prev) => ({ ...prev, disposed: !prev.disposed }))
-                }
-              />
+            <label className={`vst-checkbox-label${statusFilter.disposed ? ' vst-checkbox-label--checked' : ''}`}>
+              <input type="checkbox" checked={statusFilter.disposed} onChange={() => setStatusFilter((prev) => ({ ...prev, disposed: !prev.disposed }))} />
               <span>Disposed</span>
             </label>
           </div>
         </div>
-        <div
-          style={{ display: "flex", alignItems: "center", gap: 10 }}
-        >
+        <div className="vst-toolbar__right">
           <button
+            className="vst-action-btn vst-action-btn--download"
             title="Download"
             onClick={() => { if (typeof onClickDownload === 'function') onClickDownload(filteredData); }}
-            style={{
-              background: "#e3f2fd",
-              border: "1px solid #bbdefb",
-              borderRadius: 999,
-              cursor: "pointer",
-              color: "#0d47a1",
-              fontSize: 18,
-              padding: "6px 10px",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-            }}
           >
-            <FiDownloadCloud />
-            <span style={{ fontSize: 13, fontWeight: 600 }}>Download</span>
+            <i className="ri-download-cloud-2-line"></i>
+            <span>Download</span>
           </button>
           <button
+            className="vst-action-btn vst-action-btn--print"
             title="Print Table"
             onClick={() => { if (typeof onClickPrint === 'function') onClickPrint(filteredData); }}
-            style={{
-              background: "#f3e5f5",
-              border: "1px solid #e1bee7",
-              borderRadius: 999,
-              cursor: "pointer",
-              color: "#4a148c",
-              fontSize: 18,
-              padding: "6px 10px",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-            }}
           >
-            <FiPrinter />
-            <span style={{ fontSize: 13, fontWeight: 600 }}>Print</span>
+            <i className="ri-printer-line"></i>
+            <span>Print</span>
           </button>
         </div>
       </div>
 
-      <div className="table-container" id="my-challans-table-print-area">
-        <table
-          className="latest-table"
-          style={{ width: "100%", marginTop: 8 }}
-        >
+      <div className="vst-table-wrap" id="my-challans-table-print-area">
+        <table className="vst-table">
           <thead>
             <tr>
               {settlementMode && <th></th>}
@@ -797,33 +483,25 @@ export function ChallanTableV2({
               <th>Vehicle No.</th>
               <th>Challan No</th>
               <th
-                style={{ cursor: "pointer", userSelect: "none" }}
+                className={`vst-th--sortable${sortConfig.key === 'date' ? ' vst-th--sorted' : ''}`}
                 onClick={() => handleSort("date")}
               >
                 Date/Time
-                <span style={{ fontSize: 13, marginLeft: 2 }}>
-                  {sortConfig.key === "date"
-                    ? sortConfig.direction === "asc"
-                      ? "▲"
-                      : "▼"
-                    : "▲▼"}
-                </span>
+                <em className="vst-sort-icon">
+                  {sortConfig.key === "date" ? (sortConfig.direction === "asc" ? "▲" : "▼") : "▲▼"}
+                </em>
               </th>
               <th>Location</th>
               <th>RTO District</th>
               <th>Challan Type</th>
               <th
-                style={{ cursor: "pointer", userSelect: "none" }}
+                className={`vst-th--sortable${sortConfig.key === 'fine' ? ' vst-th--sorted' : ''}`}
                 onClick={() => handleSort("fine")}
               >
                 Fine Imposed
-                <span style={{ fontSize: 13, marginLeft: 2 }}>
-                  {sortConfig.key === "fine"
-                    ? sortConfig.direction === "asc"
-                      ? "▲"
-                      : "▼"
-                    : "▲▼"}
-                </span>
+                <em className="vst-sort-icon">
+                  {sortConfig.key === "fine" ? (sortConfig.direction === "asc" ? "▲" : "▼") : "▲▼"}
+                </em>
               </th>
               {title.toLowerCase().includes("disposed") && <th>Fine Paid</th>}
               <th>Status</th>
@@ -885,15 +563,8 @@ export function ChallanTableV2({
                         return (
                           <span
                             title={loc}
-                            onClick={() =>
-                              setMapModal({ open: true, location: loc })
-                            }
-                            style={{
-                              cursor: "pointer",
-                              color: "#4285F4",
-                              fontSize: 20,
-                              verticalAlign: "middle",
-                            }}
+                            onClick={() => setMapModal({ open: true, location: loc })}
+                            className="vst-map-pin"
                           >
                             <i className="ri-map-pin-2-fill" />
                           </span>
@@ -923,20 +594,12 @@ export function ChallanTableV2({
                     <td>{c.received_amount ?? "-"}</td>
                   )}
                   <td>
-                    <span
-                      className={`modern-table-status ${
-                        c.challan_status === "Pending"
-                          ? "pending"
-                          : c.challan_status === "Disposed"
-                          ? "paid"
-                          : ""
-                      }`}
-                    >
+                    <span className={`vst-status-pill ${c.challan_status === 'Pending' ? 'vst-status-pill--pending' : c.challan_status === 'Disposed' ? 'vst-status-pill--disposed' : 'vst-status-pill--default'}`}>
                       {c.challan_status}
                     </span>
                   </td>
                   <td>
-                    <ul className="modern-table-offence-list">
+                    <ul className="vst-offence-list">
                       {Array.isArray(c.offence_details) &&
                         c.offence_details.map((o, i) => (
                           <li
@@ -950,14 +613,8 @@ export function ChallanTableV2({
                     </ul>
                   </td>
                   <td>
-                    <button
-                      className="action-btn flat-btn"
-                      onClick={() => onView(c)}
-                    >
-                      <i
-                        className="ri-eye-line"
-                        style={{ fontSize: 20 }}
-                      ></i>
+                    <button className="vst-view-btn" onClick={() => onView(c)}>
+                      <i className="ri-eye-line"></i>
                     </button>
                   </td>
                 </tr>
@@ -968,18 +625,8 @@ export function ChallanTableV2({
       </div>
 
       {filteredData.length > DEFAULT_LIMIT && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            marginTop: 12,
-            marginLeft: 24,
-          }}
-        >
-          <span style={{ color: "#1976d2", fontSize: 15 }}>
-            Show more records:
-          </span>
+        <div className="vst-show-more">
+          <span className="vst-show-more__label">Show more records:</span>
           <SelectShowMore
             onShowMoreRecords={(val) => {
               if (val === "all") setVisibleCount(filteredData.length);
@@ -1015,12 +662,10 @@ export function ChallanTableV2({
     </div>
   );
 }
-import "./LatestTable.css";
 
 import React, { useState, useEffect, useRef } from "react";
 import CustomModal from "./CustomModal";
 import RightSidebar from "./RightSidebar";
-import QuickActions from "./QuickActions";
 import SelectShowMore from "./SelectShowMore";
 import { FiDownloadCloud, FiPrinter } from "react-icons/fi";
 import * as XLSX from "xlsx";
@@ -1036,8 +681,6 @@ const DEFAULT_HOST = 'app.smartchallan.com';
 const IS_DEFAULT_DOMAIN = CURRENT_HOSTNAME === DEFAULT_HOST;
 const IS_WHITELABEL = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME) && !IS_DEFAULT_DOMAIN;
 const BRAND_LOGO = (IS_WHITELABEL && resolvePerHostEnv(CURRENT_HOSTNAME, 'LOGO_URL')) || import.meta.env.VITE_CUSTOM_LOGO_URL || scLogo;
-import "./RightSidebar.css";
-import "../RegisterVehicle.css";
 
 // Build a printable / exportable version of the challan table HTML (used by print and PDF)
 const buildPrintableChallanTableHtml = () => {
@@ -1810,19 +1453,6 @@ export default function MyChallans({ initialFilter = null, showClientPages = fal
         </div>
       )}
       
-      {!sidebarOpen && (
-        <div className="main-quick-actions-wrapper">
-          <QuickActions
-            title="Quick Actions"
-            sticky={true}
-            onAddVehicle={() => {}}
-            onBulkUpload={() => {}}
-            onPay={() => {}}
-            onReports={() => {}}
-            onContact={() => {}}
-          />
-        </div>
-      )}
       <div style={{marginTop: '18px'}}>
         {showClientPages && !selectedClientId ? (
           <div

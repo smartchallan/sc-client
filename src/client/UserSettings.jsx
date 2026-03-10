@@ -1,5 +1,4 @@
 import React from "react";
-import "../shared/CommonDashboard.css";
 
 export default function UserSettings({ users = [] }) {
   return (

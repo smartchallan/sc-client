@@ -26,11 +26,11 @@ import { HashRouter as Router, Routes, Route, useNavigate } from 'react-router-d
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ClientDashboard from './client/ClientDashboard';
+import TrafficChallanAnimation from './components/TrafficChallanAnimation';
+import { FaEye, FaEyeSlash, FaSpinner } from 'react-icons/fa';
 // import AdminDashboard from './admin/AdminDashboard';
 // import SuperDashboard from './super/SuperDashboard';
 // import DealerDashboard from './dealer/DealerDashboard';
-import './App.css';
-import './LoginPage.css';
 
 const API_ROOT = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 const LOGIN_ENDPOINT = "/auth/login";
@@ -42,7 +42,6 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -111,87 +110,156 @@ export function LoginPage() {
   };
 
   return (
-    <div className="login-app-container">
-      <ToastContainer position="top-right" autoClose={2000} hideProgressBar={false} newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover />
-            
-      {/* Mobile Navigation Overlay */}
-      {/* <div 
-        className={`nav-overlay ${mobileMenuOpen ? 'active' : ''}`}
-        onClick={() => setMobileMenuOpen(false)}
-      ></div>
+    <div className="min-h-screen w-full flex flex-col lg:flex-row">
+      <ToastContainer 
+        position="top-right"
+        autoClose={3000} 
+        hideProgressBar={false} 
+        newestOnTop 
+        closeOnClick 
+        pauseOnFocusLoss 
+        draggable 
+        pauseOnHover
+        theme="light"
+        className="!top-4 !right-4 z-[9999]"
+        toastClassName="!bg-white !rounded-lg !shadow-2xl !border !border-slate-200"
+      />
       
-      {/* Mobile Navigation Menu */}
-      {/* <nav className={`mobile-nav ${mobileMenuOpen ? 'active' : ''}`}>
-        <ul>
-          <li><a href="https://www.smartchallan.com/" onClick={() => setMobileMenuOpen(false)}>Home</a></li>
-          <li><a href="#services" onClick={() => setMobileMenuOpen(false)}>Services</a></li>
-          <li><a href="#" onClick={() => setMobileMenuOpen(false)}>About Us</a></li>
-          <li><a href="#" onClick={() => setMobileMenuOpen(false)}>Contact</a></li>
-          <li><a href="#" style={{ color: '#0072ff' }} onClick={() => setMobileMenuOpen(false)}>Login</a></li>
-        </ul>
-      </nav> */}
+      {/* Left Side - Traffic Challan Animation */}
+      <div className="hidden lg:flex lg:w-1/2 xl:w-3/5">
+        <TrafficChallanAnimation />
+      </div>
       
-      <main>
-        {/* <section className="hero">
-          <div className="container">
-            <h1>Login to your account</h1>
-            <p>Enter your credentials to access your SmartChallan account.</p>
-          </div>
-        </section> */}
-        <section className="registration-section" style={{ padding: '60px 0' }}>
-          <div className="container">
-            <div className="form-container">
-              <div className="form-header">
-                <div style={{textAlign:'center', marginBottom:16}}>
-                  <img src={(IS_WHITELABEL && CUSTOM_LOGO_URL) ? CUSTOM_LOGO_URL : scLogo} alt="App Logo" style={{height:70, marginBottom:8}} />
-                </div>
-                <h2>Login to your account</h2>
-              </div>
-              <form className="register-form" onSubmit={handleSubmit}>
-                <div className="form-group">
-                  <label htmlFor="email">Email Address</label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    className="form-control"
-                    placeholder="Enter your email address"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="password">Password</label>
-                  <div className="password-container">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      id="password"
-                      name="password"
-                      className="form-control"
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      required
-                    />
-                    <span style={{ position: 'absolute', right: 15, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#777', background: 'none', border: 'none', padding: 0 }} onClick={() => setShowPassword(!showPassword)}>
-                      <i className={showPassword ? 'ri-eye-off-line' : 'ri-eye-line'}></i>
-                    </span>
-                  </div>
-                </div>
-                <button type="submit" className="btn" disabled={loading}>
-                  {loading ? 'Logging in...' : 'Login'}
-                </button>
-              </form>
+      {/* Right Side - Login Form */}
+      <div className="w-full lg:w-1/2 xl:w-2/5 flex items-center justify-center p-6 sm:p-8 lg:p-12 bg-white">
+        <div className="w-full max-w-md">
+          {/* Logo and Title */}
+          <div className="text-center mb-8 animate-fade-in">
+            <div className="flex justify-center mb-6">
+              <img 
+                src={(IS_WHITELABEL && CUSTOM_LOGO_URL) ? CUSTOM_LOGO_URL : scLogo} 
+                alt="App Logo" 
+                className="h-16 w-auto object-contain"
+              />
             </div>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">
+              Welcome Back
+            </h1>
+            <p className="text-slate-600">
+              Sign in to access your dashboard
+            </p>
           </div>
-        </section>
-      </main>
-      <footer>
-        <div className="container">
-          <p>{(IS_WHITELABEL && CUSTOM_COPYRIGHT) ? CUSTOM_COPYRIGHT : '© 2025 SmartChallan. All rights reserved.'}</p>
+
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-6 animate-slide-up">
+            {/* Email Field */}
+            <div>
+              <label 
+                htmlFor="email" 
+                className="block text-sm font-medium text-slate-700 mb-2"
+              >
+                Email Address
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-200 text-slate-900 placeholder:text-slate-400"
+                placeholder="you@example.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                disabled={loading}
+              />
+            </div>
+
+            {/* Password Field */}
+            <div>
+              <label 
+                htmlFor="password" 
+                className="block text-sm font-medium text-slate-700 mb-2"
+              >
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  name="password"
+                  className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-200 text-slate-900 placeholder:text-slate-400 pr-12"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                  disabled={loading}
+                >
+                  {showPassword ? (
+                    <FaEyeSlash className="w-5 h-5" />
+                  ) : (
+                    <FaEye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Forgot Password Link */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
+                  disabled={loading}
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-700">
+                  Remember me
+                </label>
+              </div>
+              <a href="#" className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors">
+                Forgot password?
+              </a>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-lg flex items-center justify-center space-x-2"
+            >
+              {loading ? (
+                <>
+                  <FaSpinner className="w-5 h-5 animate-spin" />
+                  <span>Signing in...</span>
+                </>
+              ) : (
+                <span>Sign In</span>
+              )}
+            </button>
+          </form>
+
+          {/* Footer */}
+          <div className="mt-8 text-center">
+            <p className="text-sm text-slate-600">
+              Don't have an account?{' '}
+              <a href="#" className="font-medium text-blue-600 hover:text-blue-700 transition-colors">
+                Contact Admin
+              </a>
+            </p>
+          </div>
+
+          {/* Copyright */}
+          <div className="mt-8 text-center text-xs text-slate-500">
+            {(IS_WHITELABEL && CUSTOM_COPYRIGHT) ? CUSTOM_COPYRIGHT : '© 2025 SmartChallan. All rights reserved.'}
+          </div>
         </div>
-      </footer>
+      </div>
     </div>
   );
 }

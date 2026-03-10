@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import "../RegisterVehicle.css";
 
 // Add CSS animations for spinner and number plate effects
 const keyframes = `

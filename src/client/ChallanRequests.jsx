@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import RightSidebar from "./RightSidebar";
-import "./LatestTable.css";
 
 function formatDateTime(value) {
   if (!value) return "-";
@@ -76,78 +75,16 @@ export default function ChallanRequests() {
     <div className="my-challans-content">
       <p className="page-subtitle">View and track your challan settlement requests</p>
 
-      <div
-        className="dashboard-latest"
-        style={{
-          background: "#fff",
-          borderRadius: 14,
-          boxShadow: "0 2px 12px 0 rgba(30,136,229,0.07)",
-          border: "1.5px solid #e3eaf1",
-          padding: "0 0 18px 0",
-          marginTop: 18,
-          minHeight: 260,
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 0,
-            padding: "0 24px 0 0",
-            minHeight: 54,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <div
-              style={{
-                width: 4,
-                height: 32,
-                background: "linear-gradient(135deg, #2196f3 0%, #21cbf3 100%)",
-                borderRadius: 3,
-                marginRight: 14,
-              }}
-            />
-            <h2
-              style={{
-                margin: 0,
-                fontSize: 19,
-                color: "#1565c0",
-                letterSpacing: "0.01em",
-                fontFamily: "Segoe UI, Arial, sans-serif",
-                lineHeight: 1.2,
-                fontWeight: 700,
-              }}
-            >
-              Challan Requests
-            </h2>
+      <div className="vst-card" style={{ marginTop: 18 }}>
+        <div className="vst-header">
+          <div className="vst-header__left">
+            <span className="vst-header__icon-box" style={{ background: 'linear-gradient(135deg,#2196f3,#21cbf3)' }}>
+              <i className="ri-file-list-3-line"></i>
+            </span>
+            <h2 className="vst-header__title">Challan Requests</h2>
           </div>
           {Array.isArray(requests) && requests.length > 0 && !isLoading && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                marginLeft: 16,
-              }}
-            >
-              <div
-                style={{
-                  color: "#1565c0",
-                  fontSize: 14,
-                  background: "#f5f8fa",
-                  border: "1.5px solid #2196f3",
-                  borderRadius: 6,
-                  padding: "4px 12px",
-                  fontWeight: 700,
-                  boxShadow: "0 1px 4px #21cbf322",
-                }}
-              >
-                Total requests: {requests.length}
-              </div>
-            </div>
+            <span className="vst-record-badge">Total requests: {requests.length}</span>
           )}
         </div>
 
@@ -256,8 +193,8 @@ export default function ChallanRequests() {
               </div>
             </div>
           ) : (
-            <div className="table-container">
-              <table className="latest-table" style={{ width: "100%", marginTop: 8 }}>
+            <div className="vst-table-wrap">
+              <table className="vst-table">
                 <thead>
                   <tr>
                     <th>#</th>
@@ -279,15 +216,7 @@ export default function ChallanRequests() {
                       <td>{req.id ?? "-"}</td>
                       <td>{formatDateTime(req.created_at)}</td>
                       <td>
-                        <span
-                          className={`modern-table-status ${
-                            req.status === "pending"
-                              ? "pending"
-                              : req.status === "completed" || req.status === "success"
-                              ? "paid"
-                              : ""
-                          }`}
-                        >
+                        <span className={`vst-status-pill ${req.status === 'pending' ? 'vst-status-pill--pending' : (req.status === 'completed' || req.status === 'success') ? 'vst-status-pill--disposed' : 'vst-status-pill--default'}`}>
                           {req.status || "-"}
                         </span>
                       </td>
@@ -297,25 +226,23 @@ export default function ChallanRequests() {
                       <td>
                         <button
                           type="button"
-                          className="action-btn flat-btn"
+                          className="vst-view-btn"
                           title="View challan request details"
-                          style={{ cursor: "pointer" }}
                           onClick={() => {
                             setSelectedRequest(req);
                             setSidebarOpen(true);
                           }}
                         >
-                          <i className="ri-eye-line" style={{ fontSize: 18 }} />
+                          <i className="ri-eye-line" />
                         </button>
                       </td>
                       <td>
                         <button
                           type="button"
-                          className="action-btn flat-btn"
+                          className="vst-view-btn"
                           title="Open challan request actions"
-                          style={{ cursor: "pointer" }}
                         >
-                          <i className="ri-more-2-fill" style={{ fontSize: 18 }} />
+                          <i className="ri-more-2-fill" />
                         </button>
                       </td>
                     </tr>

@@ -6,7 +6,6 @@ import React, { useState, useEffect } from "react";
 import { FaDownload, FaPrint } from "react-icons/fa";
 import * as XLSX from "xlsx";
 import { toast } from 'react-toastify';
-import "./VehicleTableOnly.css";
 import CustomModal from "./CustomModal";
 
 export default function VehicleTableOnly() {
@@ -128,7 +127,7 @@ export default function VehicleTableOnly() {
             <FaPrint size={18} />
           </button>
         </div>
-        <div id="vehicle-tableonly-print-area">
+        <div className="table-container" id="vehicle-tableonly-print-area">
         <table className="vehicle-challan-table">
           <thead>
             <tr>

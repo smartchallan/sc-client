@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { FaDownload, FaPrint } from "react-icons/fa";
+
 import * as XLSX from "xlsx";
 
 export default function LatestRTOTable({ vehicleData = [], loading, error, setSelectedRtoData, totalCount }) {
@@ -19,55 +19,28 @@ export default function LatestRTOTable({ vehicleData = [], loading, error, setSe
     return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
   };
   return (
-    <div className="dashboard-latest" style={{
-      background: '#fff',
-      borderRadius: 14,
-      boxShadow: '0 2px 12px 0 rgba(30,136,229,0.07)',
-      border: '1.5px solid #e3eaf1',
-      padding: '0 0 18px 0',
-      marginBottom: 0,
-      minHeight: 340,
-      transition: 'box-shadow 0.2s',
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, padding: '0 24px 0 0', minHeight: 54 }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ width: 4, height: 32, background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', borderRadius: 3, marginRight: 14 }} />
-          <h2 style={{
-            margin: 0,
-            fontSize: 19,
-            color: '#256029',
-            letterSpacing: '0.01em',
-            fontFamily: 'Segoe UI, Arial, sans-serif',
-            lineHeight: 1.2,
-            fontWeight: 700,
-          }}>RTO Details</h2>
+    <div className="vst-card">
+      <div className="vst-header">
+        <div className="vst-header__left">
+          <span className="vst-header__icon-box">
+            <i className="ri-file-text-line"></i>
+          </span>
+          <div>
+            <h2 className="vst-header__title">RTO Details</h2>
+            <span className="vst-header__count">{vehicleData.length} of {totalCount ?? vehicleData.length} records</span>
+          </div>
         </div>
-        <div
-          style={{
-            color: '#256029',
-            fontSize: 14,
-            background: '#f5f8fa',
-            border: '1.5px solid #43e97b',
-            borderRadius: 6,
-            padding: '4px 12px',
-            fontWeight: 700,
-            display: 'inline-block',
-            marginLeft: 16,
-            boxShadow: '0 1px 4px #38f9d722',
-          }}
-        >
-          Showing {vehicleData.length} of {totalCount ?? vehicleData.length} records
-        </div>
+        <span className="vst-record-badge">
+          Showing {vehicleData.length} of {totalCount ?? vehicleData.length}
+        </span>
       </div>
       {loading && <div>Loading vehicle data...</div>}
       {error && <div style={{color:'red'}}>{error}</div>}
       {/* Caption row removed, now next to title */}
       
       {vehicleData.length === 0 ? (
-        <div className="table-container" id="latest-rto-table-print-area">
-          <table className="latest-table" style={{ width: '100%' }}>
+        <div className="vst-table-wrap" id="latest-rto-table-print-area">
+          <table className="vst-table">
             <thead>
                 <tr>
                   <th>#</th>
@@ -88,8 +61,8 @@ export default function LatestRTOTable({ vehicleData = [], loading, error, setSe
         </div>
       ) : (
         <div>
-          <div className="table-container" id="latest-rto-table-print-area">
-            <table className="latest-table" style={{ width: '100%' }}>
+          <div className="vst-table-wrap" id="latest-rto-table-print-area">
+            <table className="vst-table">
               <thead>
                 <tr>
                   <th>#</th>
@@ -122,9 +95,9 @@ export default function LatestRTOTable({ vehicleData = [], loading, error, setSe
                     })()}</td>
                     <td>{v.fitness_exp || v.rc_fit_upto || '-'}</td>
                     <td>{v.pollution_exp || v.rc_pucc_upto || '-'}</td>
-                    <td className="print-hide" style={{textAlign:'center'}}>
-                      <button className="action-btn flat-btn" style={{fontSize:'80%',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={() => setSelectedRtoData && setSelectedRtoData(v)} title="View Vehicle">
-                        <i className="ri-eye-line" style={{fontSize: '1.2em'}} />
+                    <td className="print-hide vst-td--center">
+                      <button className="vst-view-btn" onClick={() => setSelectedRtoData && setSelectedRtoData(v)} title="View Vehicle">
+                        <i className="ri-eye-line" />
                       </button>
                     </td>
                   </tr>
@@ -132,9 +105,10 @@ export default function LatestRTOTable({ vehicleData = [], loading, error, setSe
               </tbody>
             </table>
           </div>
-          <div style={{ textAlign: 'right', marginTop: 12, marginLeft: 20}}>
+          <div style={{ textAlign: 'right', padding: '12px 20px' }}>
             <button
-              className="action-btn"
+              className="vst-btn vst-btn--outline"
+              style={{ background: '#fff', color: '#3b82f6', border: '1.5px solid #bfdbfe' }}
               onClick={e => {
                 e.preventDefault();
                 if (typeof window !== 'undefined' && window.handleViewAllRtoData) {
