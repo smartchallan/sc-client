@@ -303,7 +303,7 @@ export default function AddClient() {
                 <input className="form-control" placeholder="Company name" value={company} onChange={e => setCompany(e.target.value)} />
               </div>
               <div className="form-col">
-                <label className="form-label">GTIN</label>
+                <label className="form-label">GSTIN</label>
                 <input className="form-control" placeholder="GTIN number" value={gtin} onChange={e => setGtin(e.target.value)} />
               </div>
             </div>

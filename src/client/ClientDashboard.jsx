@@ -70,6 +70,7 @@ console.log('Card Colors:', {
 
 import { FaDownload } from "react-icons/fa";
 import "react-toastify/dist/ReactToastify.css";
+import "../theme-dark.css";
 
 // Helper to prettify keys for display
 function prettifyKey(key) {
@@ -770,51 +771,54 @@ function ClientDashboard() {
     sessionStorage.setItem('holi_animation_shown', 'true');
   };
   
-  // Theme toggle state (default: false for blue theme, true for metallic theme)
-  const [isMetallicTheme, setIsMetallicTheme] = useState(() => {
-    // Check user_options.default_theme first
+  // Theme state (blue | metallic | dark)
+  const themeOptions = ['blue', 'metallic', 'dark'];
+  const [theme, setTheme] = useState(() => {
     try {
       const scUser = JSON.parse(localStorage.getItem('sc_user') || '{}');
-      // Merge user_options from both locations
       const topLevelOptions = scUser.user_options || {};
       const nestedOptions = (scUser.user && scUser.user.user_options) || {};
       const userOptions = { ...topLevelOptions, ...nestedOptions };
-      if (userOptions.default_theme) {
-        return userOptions.default_theme === 'metallic';
+      if (userOptions.default_theme && themeOptions.includes(userOptions.default_theme)) {
+        return userOptions.default_theme;
       }
     } catch (e) {
       // ignore
     }
-    // Fall back to old sc_theme localStorage key
     const saved = localStorage.getItem('sc_theme');
-    return saved === 'metallic';
+    if (saved && themeOptions.includes(saved)) return saved;
+    return 'blue';
   });
-  
-  // Apply/remove theme class on body element
+
+  // Apply theme class on body element
   useEffect(() => {
-    const themeValue = isMetallicTheme ? 'metallic' : 'blue';
-    if (isMetallicTheme) {
-      document.body.classList.add('theme-metallic');
+    document.body.classList.remove('theme-blue', 'theme-metallic', 'theme-dark');
+    document.body.classList.add(`theme-${theme}`);
+    
+    // Apply dark-theme class to root element for professional dark theme
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark-theme');
+      root.classList.remove('light-theme');
     } else {
-      document.body.classList.remove('theme-metallic');
+      root.classList.remove('dark-theme');
+      root.classList.add('light-theme');
     }
-    // Update both localStorage keys
-    localStorage.setItem('sc_theme', themeValue);
+
+    localStorage.setItem('sc_theme', theme);
     try {
       const scUser = JSON.parse(localStorage.getItem('sc_user') || '{}');
-      // Merge user_options from both locations to preserve all settings
       const topLevelOptions = scUser.user_options || {};
       const nestedOptions = (scUser.user && scUser.user.user_options) || {};
       const userOptions = { ...topLevelOptions, ...nestedOptions };
-      userOptions.default_theme = themeValue;
-      // Update both locations to keep them in sync
+      userOptions.default_theme = theme;
       scUser.user_options = userOptions;
       scUser.user = { ...scUser.user, user_options: userOptions };
       localStorage.setItem('sc_user', JSON.stringify(scUser));
     } catch (e) {
       // ignore
     }
-  }, [isMetallicTheme]);
+  }, [theme]);
   
   // Cleanup theme class on unmount
   useEffect(() => {
@@ -901,9 +905,12 @@ function ClientDashboard() {
     }
   };
   
-  // Toggle theme function
+  // Toggle theme function (cycle through blue, metallic, dark)
   const toggleTheme = () => {
-    setIsMetallicTheme(prev => !prev);
+    const options = themeOptions;
+    const index = options.indexOf(theme);
+    const nextIndex = (index + 1) % options.length;
+    setTheme(options[nextIndex]);
   };
   // const [vehicleChallanData, setVehicleChallanData] = useState(null);
   // const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -2335,14 +2342,20 @@ function ClientDashboard() {
                 {/* Theme Toggle */}
                 <button 
                   className={`p-2.5 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 ${
-                    isMetallicTheme 
+                    theme === 'metallic' 
                       ? 'bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 hover:from-blue-600 hover:via-blue-700 hover:to-indigo-700' 
-                      : 'bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-600 hover:from-indigo-700 hover:via-purple-700 hover:to-blue-700'
+                      : theme === 'dark'
+                        ? 'bg-gradient-to-br from-slate-700 via-slate-800 to-black text-white hover:from-slate-800 hover:via-slate-900 hover:to-black' 
+                        : 'bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-600 hover:from-indigo-700 hover:via-purple-700 hover:to-blue-700'
                   }`}
-                  title={isMetallicTheme ? "Switch to Blue Theme" : "Switch to Metallic Theme"} 
+                  title={
+                    theme === 'blue' ? 'Switch to Metallic Theme' : theme === 'metallic' ? 'Switch to Dark Theme' : 'Switch to Blue Theme'
+                  } 
                   onClick={(e)=>{ e.stopPropagation(); toggleTheme(); }}
                 >
-                  <i className={`${isMetallicTheme ? "ri-palette-line" : "ri-contrast-2-line"} text-white text-xl`}></i>
+                  <i className={`text-white text-xl ${
+                    theme === 'metallic' ? 'ri-palette-line' : theme === 'dark' ? 'ri-moon-line' : 'ri-contrast-2-line'
+                  }`}></i>
                 </button>
                 
                 {/* Sidebar Toggle */}
@@ -2938,6 +2951,7 @@ function ClientDashboard() {
                       }
                     }, 0);
                   }}
+                  onViewAll={() => setActiveMenu('My Fleet')}
                 />
               ) : (
                 <>

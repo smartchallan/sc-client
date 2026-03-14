@@ -1,8 +1,6 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 
-export default function VehicleSummaryTable({ data, loading, onRefresh, onView }) {
-  const navigate = useNavigate();
+export default function VehicleSummaryTable({ data, loading, onRefresh, onView, onViewAll }) {
 
   /* ── helpers ── */
   const parseDate = (dateStr) => {
@@ -48,9 +46,22 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView }
   /* ── data ── */
   const vehicles = Array.isArray(data?.vehicles) ? data.vehicles : (Array.isArray(data) ? data : []);
   const sortedAll = [...vehicles].sort((a, b) => new Date(b.registered_at) - new Date(a.registered_at));
-  const DEFAULT_VISIBLE = 50;
+  const DEFAULT_VISIBLE = 10;
   const [visibleLimit, setVisibleLimit] = useState(DEFAULT_VISIBLE);
   const sorted = sortedAll.slice(0, visibleLimit);
+
+  const getRcStatus = (row) => {
+    const status = resolveField(row, 'rc_status', 'rcStatus', '_raw.rc_status', '_raw.rcStatus');
+    return status ? String(status).trim().toLowerCase() : null;
+  };
+
+  const RegnDateCell = ({ value, rcStatus }) => {
+    const formatted = formatDate(value);
+    if (formatted === '-') return <span className="vst-cell--empty">—</span>;
+    const isActive = rcStatus === 'active';
+    const className = `vst-date ${isActive ? 'vst-date--valid' : 'vst-date--expired'}`;
+    return <span className={className}>{formatted}</span>;
+  };
 
   /* ── columns config ── */
   const cols = [
@@ -122,7 +133,7 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView }
         <div className="vst-header__actions">
           <button
             className="vst-btn vst-btn--outline"
-            onClick={() => navigate('/myfleet')}
+            onClick={() => onViewAll?.()}
           >
             <i className="ri-list-check-2" /> View All
           </button>
@@ -162,6 +173,11 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView }
                   <td key={c.key}>
                     {c.key === 'vehicle_number' ? (
                       <span className="vst-vehicle-num">{row.vehicle_number || '-'}</span>
+                    ) : c.key === 'regn' ? (
+                      <RegnDateCell
+                        value={getCellValue(row, c.key)}
+                        rcStatus={getRcStatus(row)}
+                      />
                     ) : (
                       <DateCell value={getCellValue(row, c.key)} />
                     )}
@@ -184,8 +200,8 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView }
       {sortedAll.length > DEFAULT_VISIBLE && (
         <div className="vst-footer">
           {visibleLimit < sortedAll.length ? (
-            <button className="vst-btn vst-btn--ghost" onClick={() => setVisibleLimit(v => Math.min(v + 50, sortedAll.length))}>
-              <i className="ri-arrow-down-s-line" /> Show more ({Math.min(sortedAll.length - visibleLimit, 50)} remaining)
+            <button className="vst-btn vst-btn--ghost" onClick={() => setVisibleLimit(v => Math.min(v + 10, sortedAll.length))}>
+              <i className="ri-arrow-down-s-line" /> Show more ({Math.min(sortedAll.length - visibleLimit, 10)} remaining)
             </button>
           ) : (
             <button className="vst-btn vst-btn--ghost" onClick={() => setVisibleLimit(DEFAULT_VISIBLE)}>

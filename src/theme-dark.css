@@ -1,0 +1,546 @@
+/* Dark Theme - Professional & Sleek */
+
+:root.dark-theme {
+  /* Core backgrounds */
+  --bg-primary: #0f1419;
+  --bg-secondary: #1a1f26;
+  --bg-tertiary: #252d38;
+  --bg-quaternary: #2f3847;
+  
+  /* Text colors */
+  --text-primary: #f5f7fa;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  --text-disabled: #64748b;
+  
+  /* Brand colors */
+  --brand-primary: #3b82f6;
+  --brand-secondary: #0ea5e9;
+  --brand-accent: #06b6d4;
+  
+  /* Semantic colors */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
+  
+  /* Border and dividers */
+  --border-color: #334155;
+  --border-light: #475569;
+  --divider-color: #1e293b;
+  
+  /* Interactive elements */
+  --hover-bg: #334155;
+  --active-bg: #475569;
+  --focus-ring: rgba(59, 130, 246, 0.5);
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.6);
+}
+
+/* Root and main container */
+.dark-theme body,
+.dark-theme {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.dark-theme,
+.dark-theme * {
+  --tw-bg-opacity: 1;
+  --tw-text-opacity: 1;
+}
+
+/* Dashboard container */
+.dark-theme .register-vehicle-content,
+.dark-theme .client-dashboard,
+.dark-theme main {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Cards */
+.dark-theme .card,
+.dark-theme .modal-content,
+.dark-theme .panel {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.dark-theme .card:hover {
+  border-color: var(--border-light);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Headings */
+.dark-theme h1,
+.dark-theme h2,
+.dark-theme h3,
+.dark-theme h4,
+.dark-theme h5,
+.dark-theme h6 {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Forms */
+.dark-theme .form-control,
+.dark-theme .form-input,
+.dark-theme input[type="text"],
+.dark-theme input[type="email"],
+.dark-theme input[type="password"],
+.dark-theme input[type="number"],
+.dark-theme textarea,
+.dark-theme select {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.dark-theme .form-control:hover,
+.dark-theme .form-input:hover,
+.dark-theme input[type="text"]:hover,
+.dark-theme input[type="email"]:hover,
+.dark-theme input[type="password"]:hover,
+.dark-theme input[type="number"]:hover,
+.dark-theme textarea:hover,
+.dark-theme select:hover {
+  border-color: var(--border-light);
+  background-color: var(--bg-quaternary);
+}
+
+.dark-theme .form-control:focus,
+.dark-theme .form-input:focus,
+.dark-theme input[type="text"]:focus,
+.dark-theme input[type="email"]:focus,
+.dark-theme input[type="password"]:focus,
+.dark-theme input[type="number"]:focus,
+.dark-theme textarea:focus,
+.dark-theme select:focus {
+  outline: none;
+  border-color: var(--brand-primary);
+  background-color: var(--bg-quaternary);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.dark-theme .simple-search-input {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.dark-theme .simple-search-input:focus {
+  background-color: var(--bg-quaternary);
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* Labels */
+.dark-theme label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Buttons */
+.dark-theme .btn,
+.dark-theme button {
+  transition: all 0.2s ease;
+}
+
+.dark-theme .btn-primary,
+.dark-theme button[type="submit"] {
+  background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+  color: #ffffff;
+  border: none;
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+}
+
+.dark-theme .btn-primary:hover,
+.dark-theme button[type="submit"]:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.dark-theme .btn-primary:active,
+.dark-theme button[type="submit"]:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-md);
+}
+
+.dark-theme .btn-secondary {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.dark-theme .btn-secondary:hover {
+  background-color: var(--bg-quaternary);
+  border-color: var(--border-light);
+}
+
+/* Tables */
+.dark-theme table,
+.dark-theme .table {
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+}
+
+.dark-theme thead,
+.dark-theme .table-header {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-weight: 600;
+  border-bottom: 2px solid var(--border-light);
+}
+
+.dark-theme tbody tr {
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.2s ease;
+}
+
+.dark-theme tbody tr:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.dark-theme td,
+.dark-theme th {
+  color: var(--text-primary);
+  padding: 12px 16px;
+}
+
+/* Navigation & Sidebars */
+.dark-theme .sidebar,
+.dark-theme .navbar,
+.dark-theme nav {
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.dark-theme .sidebar-item,
+.dark-theme .nav-item {
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.dark-theme .sidebar-item:hover,
+.dark-theme .nav-item:hover,
+.dark-theme .sidebar-item.active,
+.dark-theme .nav-item.active {
+  color: var(--brand-primary);
+  background-color: var(--bg-tertiary);
+}
+
+/* Modals */
+.dark-theme .modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.dark-theme .modal-content,
+.dark-theme .modal-dialog {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* Alerts & Notifications */
+.dark-theme .alert,
+.dark-theme .notification {
+  border-radius: 8px;
+  border-left: 4px solid transparent;
+}
+
+.dark-theme .alert-success {
+  background-color: rgba(16, 185, 129, 0.15);
+  border-left-color: var(--success);
+  color: #a7f3d0;
+}
+
+.dark-theme .alert-warning {
+  background-color: rgba(245, 158, 11, 0.15);
+  border-left-color: var(--warning);
+  color: #fcd34d;
+}
+
+.dark-theme .alert-error,
+.dark-theme .alert-danger {
+  background-color: rgba(239, 68, 68, 0.15);
+  border-left-color: var(--error);
+  color: #fca5a5;
+}
+
+.dark-theme .alert-info {
+  background-color: rgba(59, 130, 246, 0.15);
+  border-left-color: var(--info);
+  color: #93c5fd;
+}
+
+/* Status pills and badges */
+.dark-theme .status-pill,
+.dark-theme .badge {
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 6px 12px;
+  display: inline-block;
+}
+
+.dark-theme .status-active {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.dark-theme .status-inactive {
+  background-color: rgba(148, 163, 184, 0.2);
+  color: var(--text-tertiary);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.dark-theme .status-pending {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.dark-theme .status-error {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Scrollbar */
+.dark-theme ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark-theme ::-webkit-scrollbar-track {
+  background-color: var(--bg-secondary);
+}
+
+.dark-theme ::-webkit-scrollbar-thumb {
+  background-color: var(--border-light);
+  border-radius: 4px;
+}
+
+.dark-theme ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--border-color);
+}
+
+/* Dropdown menus */
+.dark-theme .dropdown,
+.dark-theme .dropdown-menu {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+}
+
+.dark-theme .dropdown-item {
+  color: var(--text-secondary);
+  padding: 10px 16px;
+  transition: all 0.2s ease;
+}
+
+.dark-theme .dropdown-item:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.dark-theme .dropdown-item.active {
+  background-color: var(--brand-primary);
+  color: #ffffff;
+}
+
+/* Calendar & Date picker */
+.dark-theme .date-picker,
+.dark-theme .datepicker,
+.dark-theme .calendar {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.dark-theme .date-picker-container {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+/* Charts */
+.dark-theme .chart,
+.dark-theme .apex-charts {
+  color: var(--text-primary);
+}
+
+/* Spinner & loading */
+.dark-theme .spinner,
+.dark-theme .loading-skeleton {
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+/* Pagination */
+.dark-theme .pagination,
+.dark-theme .paginate {
+  color: var(--text-primary);
+}
+
+.dark-theme .pagination-item,
+.dark-theme .page-link {
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.dark-theme .pagination-item:hover,
+.dark-theme .page-link:hover {
+  background-color: var(--bg-quaternary);
+  border-color: var(--border-light);
+}
+
+.dark-theme .pagination-item.active,
+.dark-theme .page-link.active {
+  background-color: var(--brand-primary);
+  color: #ffffff;
+  border-color: var(--brand-primary);
+}
+
+/* Links */
+.dark-theme a {
+  color: var(--brand-secondary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.dark-theme a:hover {
+  color: var(--brand-primary);
+  text-decoration: underline;
+}
+
+/* Icons */
+.dark-theme i,
+.dark-theme svg {
+  color: inherit;
+  transition: color 0.2s ease;
+}
+
+/* Highlight and emphasis */
+.dark-theme .highlight,
+.dark-theme .emphasized {
+  color: var(--brand-primary);
+  font-weight: 600;
+}
+
+/* Input placeholders */
+.dark-theme input::placeholder,
+.dark-theme textarea::placeholder,
+.dark-theme select::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* Checkboxes and Radio buttons */
+.dark-theme input[type="checkbox"],
+.dark-theme input[type="radio"] {
+  accent-color: var(--brand-primary);
+}
+
+/* Custom scrollbar for Firefox */
+.dark-theme {
+  scrollbar-color: var(--border-light) var(--bg-secondary);
+  scrollbar-width: thin;
+}
+
+/* Smooth transitions across the theme */
+.dark-theme * {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Specific component overrides */
+.dark-theme .register-vehicle-form {
+  background-color: var(--bg-secondary);
+}
+
+.dark-theme .button-group {
+  background-color: transparent;
+}
+
+.dark-theme .security-features {
+  border-color: var(--border-color);
+}
+
+.dark-theme .number-plate-container {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+.dark-theme .hologram {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(6, 182, 212, 0.1));
+}
+
+/* Ensure text is readable on all backgrounds */
+.dark-theme strong,
+.dark-theme b {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+/* Empty states */
+.dark-theme .empty-state {
+  color: var(--text-tertiary);
+}
+
+.dark-theme .empty-state-icon {
+  color: var(--border-light);
+}
+
+/* Dividers */
+.dark-theme hr,
+.dark-theme .divider {
+  border-color: var(--border-color);
+}
+
+/* Read-only inputs */
+.dark-theme input:disabled,
+.dark-theme textarea:disabled,
+.dark-theme select:disabled,
+.dark-theme .form-control:disabled {
+  background-color: var(--bg-tertiary);
+  color: var(--text-disabled);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Success and validation states */
+.dark-theme input.is-valid,
+.dark-theme input.is-success {
+  border-color: var(--success);
+}
+
+.dark-theme input.is-invalid,
+.dark-theme input.is-error {
+  border-color: var(--error);
+}
+
+/* Gradient accents */
+.dark-theme .gradient-accent {
+  background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Media queries for dark theme specific adjustments */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) {
+    color-scheme: dark;
+  }
+}

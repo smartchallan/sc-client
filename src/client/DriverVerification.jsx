@@ -99,6 +99,39 @@ export default function DriverVerification() {
   const [selectedDate, setSelectedDate] = useState({ day: '', month: '', year: '' });
   const [openUpwards, setOpenUpwards] = useState(false);
   const datePickerRef = useRef(null);
+  const [fetchingDrivers, setFetchingDrivers] = useState(true);
+
+  // Fetch drivers on component mount
+  useEffect(() => {
+    const fetchDriversOnLoad = async () => {
+      try {
+        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+        let client_id = '';
+        try {
+          const scUser = JSON.parse(localStorage.getItem('sc_user'));
+          if (scUser && scUser.user) {
+            client_id = scUser.user.client_id || scUser.user.id || scUser.user._id || '';
+          }
+        } catch {}
+        
+        if (client_id) {
+          const res = await fetch(`${apiBaseUrl}/fetchdriver?client_id=${encodeURIComponent(client_id)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data.drivers)) setDrivers(data.drivers);
+            else if (Array.isArray(data.data)) setDrivers(data.data);
+            else if (Array.isArray(data)) setDrivers(data);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching drivers on load:', err);
+      } finally {
+        setFetchingDrivers(false);
+      }
+    };
+
+    fetchDriversOnLoad();
+  }, []);
 
   const handleChange = e => {
     let value = e.target.value;
@@ -202,17 +235,76 @@ export default function DriverVerification() {
     setSaving(true);
     setError("");
 
-    // No API call. Optionally, mark as saved locally or show a message.
-    setTimeout(() => {
+    try {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      let client_id = '';
+      try {
+        const scUser = JSON.parse(localStorage.getItem('sc_user'));
+        if (scUser && scUser.user) {
+          client_id = scUser.user.client_id || scUser.user.id || scUser.user._id || '';
+        }
+      } catch {}
+
+      const payload = {
+        client_id,
+        licenseNo: driverDetails.dlobj?.dlLicno?.trim() || form.licenseNo,
+        dob: driverDetails.bioObj?.bioDob || form.dob,
+        details: {
+          name: driverDetails.bioObj?.bioFullName || '',
+          fatherName: driverDetails.bioObj?.bioSwdFullName || '',
+          gender: driverDetails.bioObj?.bioGenderDesc || '',
+          status: driverDetails.dlobj?.dlStatus || '',
+          issueDate: driverDetails.dlobj?.dlIssuedt || '',
+          address: {
+            permanent: [
+              driverDetails.bioObj?.bioPermAdd1,
+              driverDetails.bioObj?.bioPermAdd2,
+              driverDetails.bioObj?.bioPermAdd3,
+              driverDetails.bioObj?.bioPermDistName,
+              driverDetails.bioObj?.bioPermPin
+            ].filter(Boolean).join(', '),
+            temporary: [
+              driverDetails.bioObj?.bioTempAdd1,
+              driverDetails.bioObj?.bioTempAdd2,
+              driverDetails.bioObj?.bioTempAdd3,
+              driverDetails.bioObj?.bioTempDistName,
+              driverDetails.bioObj?.bioTempPin
+            ].filter(Boolean).join(', ')
+          },
+          rawDetails: driverDetails
+        }
+      };
+
+      const saveResponse = await fetch(`${apiBaseUrl}/savedrivedata`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('sc_token')}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const saveData = await saveResponse.json();
+      if (!saveResponse.ok) {
+        throw new Error(saveData.message || 'Failed to save driver details');
+      }
+
       setSaveSuccess(true);
-      const updatedDrivers = drivers.map(driver => 
-        driver.licenseNo === form.licenseNo && driver.dob === form.dob
+      const updatedDrivers = drivers.map(driver =>
+        (driver.licenseNo === form.licenseNo && driver.dob === form.dob) ||
+        (driver.details?.dlobj?.dlLicno === driverDetails.dlobj?.dlLicno)
           ? { ...driver, saved: true }
           : driver
       );
       setDrivers(updatedDrivers);
+
+    } catch (err) {
+      console.error('Save driver error:', err);
+      setError(err.message || 'Failed to save driver details');
+      setSaveSuccess(false);
+    } finally {
       setSaving(false);
-    }, 500);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -455,73 +547,85 @@ export default function DriverVerification() {
         `}
       </style>
       <div className="register-vehicle-content">
-      <h2 style={{ marginBottom: 18 }}>Registered Drivers</h2>
-      <div className="dashboard-latest">
-        <table className="latest-table" style={{ width: "100%", marginBottom: 32 }}>
-          <thead>
-            <tr>
-              <th>License No.</th>
-              <th>DOB</th>
-              <th>Name</th>
-              <th>Gender</th>
-              <th>Status</th>
-              <th>Address</th>
-              <th>Created At</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Array.isArray(drivers) && drivers.length > 0 ? (
-              drivers.map((d, idx) => (
-                <tr key={idx}>
-                  <td style={{ padding: "8px", borderBottom: "1px solid #f5f5f5" }}>{d.license_no || d.licenseNo || '-'}</td>
-                  <td style={{ padding: "8px", borderBottom: "1px solid #f5f5f5" }}>{d.dob || '-'}</td>
-                  <td style={{ padding: "8px", borderBottom: "1px solid #f5f5f5" }}>{d.details?.name || ''}</td>
-                  <td style={{ padding: "8px", borderBottom: "1px solid #f5f5f5" }}>{d.details?.gender || ''}</td>
-                  <td style={{ padding: "8px", borderBottom: "1px solid #f5f5f5" }}>{d.details?.status || ''}</td>
-                  <td style={{ padding: "8px", borderBottom: "1px solid #f5f5f5" }}>
-                    <div><strong>Permanent:</strong> {d.details?.address?.permanent || ''}</div>
-                    <div><strong>Temporary:</strong> {d.details?.address?.temporary || ''}</div>
-                  </td>
-                  <td style={{ padding: "8px", borderBottom: "1px solid #f5f5f5" }}>{d.created_at ? new Date(d.created_at).toLocaleString() : ''}</td>
+      {/* <h2 style={{ marginBottom: 18 }}>Registered Drivers</h2> */}
+      <div className="vst-card">
+        <div className="vst-header">
+          <div className="vst-header__left">
+            <span className="vst-header__icon-box">
+              <i className="ri-id-card-line"></i>
+            </span>
+            <div>
+              <h2 className="vst-header__title">Driver License Details</h2>
+              <span className="vst-header__count">{Array.isArray(drivers) ? drivers.length : 0} drivers registered</span>
+            </div>
+          </div>
+          <span className="vst-record-badge">
+            Showing {Array.isArray(drivers) ? drivers.length : 0} drivers
+          </span>
+        </div>
+        {fetchingDrivers ? (
+          <div style={{ padding: '20px', color: '#666' }}>Loading drivers...</div>
+        ) : (
+          <div className="vst-table-wrap">
+            <table className="vst-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>License No.</th>
+                  <th>DOB</th>
+                  <th>Name</th>
+                  <th>Gender</th>
+                  <th>Status</th>
+                  <th>Address</th>
+                  <th>Created At</th>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={7} style={{ color: "#888", padding: "8px" }}>No drivers found.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {Array.isArray(drivers) && drivers.length > 0 ? (
+                  drivers.map((d, idx) => (
+                    <tr key={idx}>
+                      <td>{idx + 1}</td>
+                      <td>{d.license_no || d.licenseNo || '-'}</td>
+                      <td>{d.dob || '-'}</td>
+                      <td>{d.details?.name || d.details?.bioObj?.bioFullName || '-'}</td>
+                      <td>{d.details?.gender || d.details?.bioObj?.bioGenderDesc || '-'}</td>
+                      <td>{d.details?.status || d.details?.dlobj?.dlStatus || '-'}</td>
+                      <td>
+                        <div><strong>Permanent:</strong> {d.details?.address?.permanent || '-'}</div>
+                        <div><strong>Temporary:</strong> {d.details?.address?.temporary || '-'}</div>
+                      </td>
+                      <td>{d.created_at ? new Date(d.created_at).toLocaleString() : '-'}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={8} style={{ color: "#888", padding: "12px" }}>No drivers found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
       <h3 style={{ marginBottom: 12 }}>Verify Driver License</h3>
       <div className="card" style={{background: 'linear-gradient(180deg, #f8fafc 0%, #e0e7ef 100%)', boxShadow: '0 4px 24px rgba(30, 64, 175, 0.06)', borderRadius: 14, padding: 28, marginBottom: 24}}>
         <form className="register-vehicle-form" onSubmit={handleSubmit} style={{display: 'flex', flexWrap: 'wrap', gap: 16}} autoComplete="off">
           <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '50%'}}>
             <label htmlFor="licenseNo" style={{fontSize: 14, fontWeight: 500, marginBottom: 8, display: 'block'}}>License Number</label>
-            <div className="number-plate-container">
-              <div className="number-plate-wrapper">
-                <div className="number-plate-badge">IND</div>
-                <div className="tricolor-strip">
-                  <div className="saffron"></div>
-                  <div className="white"></div>
-                  <div className="green"></div>
-                </div>
-                <input
-                  type="text"
-                  id="licenseNo"
-                  name="licenseNo"
-                  className="number-plate-input"
-                  value={form.licenseNo}
-                  onChange={handleChange}
-                  placeholder="Enter driving license number"
-                  disabled={loading}
-                  maxLength={15}
-                />
-              </div>
-              <div className="security-features">
-                <div className="hologram"></div>
-                <div className="chakra">⚙</div>
-              </div>
+            <input
+              type="text"
+              id="licenseNo"
+              name="licenseNo"
+              className="simple-search-input"
+              value={form.licenseNo}
+              onChange={handleChange}
+              placeholder="Enter driving license number"
+              disabled={loading}
+              maxLength={15}
+              style={{ width: '100%' }}
+            />
+            <div className="security-features">
+              <div className="hologram"></div>
             </div>
             <small style={{fontSize: 12, color: '#6c757d', marginTop: 4, display: 'block'}}>
               Format: GJ0420120005008 (State + Office + Year + Serial)

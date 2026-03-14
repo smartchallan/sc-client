@@ -207,9 +207,87 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
   };
 
   return (
-    <aside className={`fixed top-0 left-0 h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-r border-slate-700/50 transition-all duration-300 ease-in-out z-40 flex flex-col ${sidebarOpen ? 'w-[280px]' : 'w-[72px]'} shadow-2xl`}>
-      {/* Logo & Toggle Button - White Background */}
-      <div className="h-[72px] flex items-center justify-between px-4 border-b border-slate-700/50 bg-white relative">
+    <aside className={`fixed top-0 left-0 h-screen border-r border-blue-700 transition-all duration-300 ease-in-out z-40 flex flex-col ${sidebarOpen ? 'w-[280px]' : 'w-[72px]'}`} style={{
+      background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #1d4ed8 100%)',
+      overflow: 'hidden'
+    }}>
+      {/* Decorative gradient circle - top right */}
+      <div style={{
+        position: 'absolute',
+        top: '-50%',
+        right: '-20%',
+        width: '300px',
+        height: '300px',
+        background: 'radial-gradient(circle, rgba(59,130,246,0.25) 0%, transparent 70%)',
+        pointerEvents: 'none',
+        zIndex: 0
+      }}></div>
+
+      {/* Decorative outline circle - left side */}
+      <div style={{
+        position: 'absolute',
+        top: '30%',
+        left: '-80px',
+        width: '200px',
+        height: '200px',
+        border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: '50%',
+        pointerEvents: 'none',
+        zIndex: 0
+      }}></div>
+
+      {/* Decorative outline circle - bottom right */}
+      <div style={{
+        position: 'absolute',
+        bottom: '-60px',
+        right: '-60px',
+        width: '250px',
+        height: '250px',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '50%',
+        pointerEvents: 'none',
+        zIndex: 0
+      }}></div>
+
+      {/* Vertical accent line */}
+      <div style={{
+        position: 'absolute',
+        left: '50%',
+        top: '100px',
+        bottom: '100px',
+        width: '1px',
+        background: 'linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(59,130,246,0.3) 50%, rgba(255,255,255,0) 100%)',
+        pointerEvents: 'none',
+        zIndex: 0
+      }}></div>
+      
+      {/* Shimmer line at bottom */}
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '2px',
+        background: 'linear-gradient(90deg, #3b82f6, #60a5fa, #0ea5e9, #3b82f6)',
+        backgroundSize: '300% 100%',
+        animation: 'shimmer 4s ease infinite',
+        zIndex: 1
+      }}></div>
+      
+      <style>{`
+        @keyframes shimmer {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+      `}</style>
+      
+      {/* Logo & Toggle Button */}
+      <div className="h-[72px] flex items-center justify-between px-4 border-b border-blue-600 relative" style={{ 
+        backgroundColor: 'rgba(30, 58, 138, 0.3)',
+        backdropFilter: 'blur(10px)',
+        zIndex: 10 
+      }}>
         <div className={`flex items-center gap-3 transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0'}`}>
           <img 
             src={resolvedCustomLogo || scLogo} 
@@ -218,7 +296,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
           />
         </div>
         <button 
-          className={`p-2.5 rounded-xl hover:bg-slate-100 transition-all duration-200 text-slate-700 hover:text-slate-900 ${!sidebarOpen && 'mx-auto'}`}
+          className={`p-2.5 rounded-lg hover:bg-blue-600 transition-all duration-200 text-white hover:text-white ${!sidebarOpen && 'mx-auto'}`}
           onClick={onToggleSidebar} 
           aria-label="Toggle sidebar"
         >
@@ -227,18 +305,18 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-6 px-3 scrollbar-thin">
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-6 px-3 scrollbar-thin scrollbar-thumb-blue-400 scrollbar-track-transparent" style={{ position: 'relative', zIndex: 10 }}>
         {menu.map((item) => {
           if (item.logout) {
             return (
               <button
                 key={item.label}
-                className={`w-full flex items-center gap-3.5 px-3.5 py-3.5 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all duration-200 rounded-xl mb-1 ${!sidebarOpen && 'justify-center'}`}
+                className={`w-full flex items-center gap-3.5 px-3.5 py-3.5 text-red-300 hover:bg-red-600/30 hover:text-red-100 transition-all duration-200 rounded-lg mb-1 ${!sidebarOpen && 'justify-center'}`}
                 onClick={handleLogout}
                 title={!sidebarOpen ? item.label : ''}
               >
                 <i className={`${item.icon} text-[21px]`}></i>
-                {sidebarOpen && <span className="font-semibold text-[14px] tracking-wide">{item.label}</span>}
+                {sidebarOpen && <span className="font-medium text-[14px]">{item.label}</span>}
               </button>
             );
           } else if (item.group && item.children) {
@@ -247,10 +325,10 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
             return (
               <div key={item.label} className="mb-1">
                 <button
-                  className={`w-full flex items-center gap-3.5 px-3.5 py-3.5 transition-all duration-200 rounded-xl ${
+                  className={`w-full flex items-center gap-3.5 px-3.5 py-3.5 transition-all duration-200 rounded-lg ${
                     isChildActive 
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30 border-l-4 border-blue-300' 
-                      : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                      ? 'bg-blue-600 text-white font-medium border-l-2 border-white shadow-sm' 
+                      : 'text-white hover:bg-blue-600 hover:text-white'
                   } ${!sidebarOpen && 'justify-center'}`}
                   onClick={() => setOpenGroups(prev => ({ ...prev, [item.label]: !prev[item.label] }))}
                   title={!sidebarOpen ? item.label : ''}
@@ -258,25 +336,25 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
                   <i className={`${item.icon} text-[21px]`}></i>
                   {sidebarOpen && (
                     <>
-                      <span className="flex-1 font-semibold text-[14px] tracking-wide text-left">{item.label}</span>
+                      <span className="flex-1 font-medium text-[14px] text-left">{item.label}</span>
                       <i className={`${isOpen ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'} text-[19px]`} />
                     </>
                   )}
                 </button>
                 {isOpen && sidebarOpen && (
-                  <div className="mt-1 mb-2 bg-slate-800/50 rounded-xl border border-slate-700/30 backdrop-blur-sm overflow-hidden">
+                  <div className="mt-1 mb-2 bg-blue-600/20 rounded-lg border border-blue-400 overflow-hidden">
                     {item.children.map((child) => (
                       <button
                         key={child.label}
-                        className={`w-full flex items-center gap-3.5 pl-14 pr-3.5 py-3.5 text-[13px] transition-all duration-200 ${
+                        className={`w-full flex items-center gap-3.5 pl-14 pr-3.5 py-3 text-[13px] transition-all duration-200 ${
                           activeMenu === child.label 
-                            ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold shadow-md' 
-                            : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                            ? 'bg-blue-600 text-white font-semibold' 
+                            : 'text-white/80 hover:bg-blue-600 hover:text-white'
                         }`}
                         onClick={() => handleMenuClick(child.label)}
                       >
                         <i className={`${child.icon} text-[19px]`}></i>
-                        <span className="tracking-wide font-medium">{child.label}</span>
+                        <span className="font-medium">{child.label}</span>
                       </button>
                     ))}
                   </div>
@@ -287,16 +365,16 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
             return (
               <button
                 key={item.label}
-                className={`w-full flex items-center gap-3.5 px-3.5 py-3.5 transition-all duration-200 rounded-xl mb-1 ${
+                className={`w-full flex items-center gap-3.5 px-3.5 py-3.5 transition-all duration-200 rounded-lg mb-1 ${
                   activeMenu === item.label 
-                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30 border-l-4 border-blue-300 font-semibold' 
-                    : 'text-slate-300 hover:bg-white/10 hover:text-white font-medium'
+                    ? 'bg-blue-600 text-white font-medium border-l-2 border-white shadow-sm' 
+                    : 'text-white hover:bg-blue-600 hover:text-white font-medium'
                 } ${!sidebarOpen && 'justify-center'}`}
                 onClick={() => handleMenuClick(item.label)}
                 title={!sidebarOpen ? item.label : ''}
               >
                 <i className={`${item.icon} text-[21px]`}></i>
-                {sidebarOpen && <span className="font-semibold text-[14px] tracking-wide">{item.label}</span>}
+                {sidebarOpen && <span className="font-medium text-[14px]">{item.label}</span>}
               </button>
             );
           }
@@ -304,12 +382,12 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
 
         {/* Logout Button */}
         <button
-          className={`w-full flex items-center gap-3.5 px-3.5 py-3.5 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all duration-200 mt-4 rounded-xl border border-red-500/30 ${!sidebarOpen && 'justify-center'}`}
+          className={`w-full flex items-center gap-3.5 px-3.5 py-3.5 text-red-300 hover:bg-red-600/30 hover:text-red-100 transition-all duration-200 mt-4 rounded-lg border border-red-600/50 ${!sidebarOpen && 'justify-center'}`}
           onClick={handleLogout}
           title={!sidebarOpen ? 'Logout' : ''}
         >
           <i className="ri-logout-box-r-line text-[21px]"></i>
-          {sidebarOpen && <span className="font-semibold text-[14px] tracking-wide">Logout</span>}
+          {sidebarOpen && <span className="font-medium text-[14px]">Logout</span>}
         </button>
       </nav>
       

@@ -505,7 +505,6 @@ export default function RegisterVehicle() {
                     </div>
                     <div className="security-features">
                       <div className="hologram"></div>
-                      <div className="chakra">⚙</div>
                     </div>
                   </div>
                 ) : (
@@ -791,28 +790,15 @@ export default function RegisterVehicle() {
         
         {/* Search and Filter Controls */}
         <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div className="number-plate-container" style={{ flex: '1', minWidth: '280px', maxWidth: '400px' }}>
-            <div className="number-plate-wrapper">
-              <div className="number-plate-badge">IND</div>
-              <div className="tricolor-strip">
-                <div className="saffron"></div>
-                <div className="white"></div>
-                <div className="green"></div>
-              </div>
-              <input
-                type="text"
-                className="number-plate-input"
-                placeholder="Search by Vehicle/Engine/Chassis No"
-                value={searchValue}
-                onChange={e => setSearchValue(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                maxLength={20}
-              />
-            </div>
-            <div className="security-features">
-              <div className="hologram"></div>
-              <div className="chakra">⚙</div>
-            </div>
-          </div>
+          <input
+            type="text"
+            placeholder="Search by Vehicle/Engine/Chassis No"
+            value={searchValue}
+            onChange={e => setSearchValue(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+            maxLength={20}
+            className="simple-search-input"
+            style={{ flex: '1', minWidth: '280px', maxWidth: '400px' }}
+          />
           
           <div style={{ minWidth: '180px' }}>
             <select

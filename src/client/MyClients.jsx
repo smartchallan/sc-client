@@ -582,7 +582,7 @@ export default function MyClients() {
                   <div>{(selectedClient.user_meta || selectedClient.userMeta)?.company || (selectedClient.user_meta || selectedClient.userMeta)?.company_name || '-'}</div>
                 </div>
                 <div className="sidebar-detail-item">
-                  <label>GTIN</label>
+                  <label>GSTIN</label>
                   <div>{(selectedClient.user_meta || selectedClient.userMeta)?.gtin || (selectedClient.user_meta || selectedClient.userMeta)?.gstin || '-'}</div>
                 </div>
                 <div className="sidebar-detail-item">

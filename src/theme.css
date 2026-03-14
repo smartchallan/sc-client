@@ -1,0 +1,86 @@
+.theme-blue {
+  --page-bg: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  --text-color: #0f172a;
+  --surface-bg: #ffffff;
+  --surface-border: #e2e8f0;
+  --header-bg: rgba(255, 255, 255, 0.95);
+  --card-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.theme-metallic {
+  --page-bg: linear-gradient(135deg, #1e293b 0%, #111827 100%);
+  --text-color: #e2e8f0;
+  --surface-bg: #1f2937;
+  --surface-border: #334155;
+  --header-bg: rgba(30, 41, 59, 0.9);
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+}
+
+.theme-dark {
+  --page-bg: #0b0f19;
+  --text-color: #e2e8f0;
+  --surface-bg: #111827;
+  --surface-border: #334155;
+  --header-bg: rgba(15, 23, 42, 0.92);
+  --card-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+body.theme-blue,
+body.theme-metallic,
+body.theme-dark {
+  background: var(--page-bg);
+  color: var(--text-color);
+}
+
+body.theme-blue h2,
+body.theme-metallic h2,
+body.theme-dark h2,
+body.theme-blue h3,
+body.theme-metallic h3,
+body.theme-dark h3,
+body.theme-blue p,
+body.theme-metallic p,
+body.theme-dark p,
+body.theme-blue label,
+body.theme-metallic label,
+body.theme-dark label {
+  color: var(--text-color);
+}
+
+body.theme-blue .card,
+body.theme-metallic .card,
+body.theme-dark .card,
+body.theme-blue .register-vehicle-content,
+body.theme-metallic .register-vehicle-content,
+body.theme-dark .register-vehicle-content {
+  background: var(--surface-bg);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--card-shadow);
+}
+
+body.theme-dark .table-container table,
+body.theme-metallic .table-container table,
+body.theme-blue .table-container table {
+  background: var(--surface-bg);
+}
+
+body.theme-dark .form-control,
+body.theme-metallic .form-control,
+body.theme-blue .form-control,
+body.theme-dark .form-group .form-control,
+body.theme-metallic .form-group .form-control,
+body.theme-blue .form-group .form-control {
+  background: #1e293b;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+}
+
+body.theme-dark .btn,
+body.theme-metallic .btn,
+body.theme-blue .btn {
+  border-color: #374151;
+}
+
+body.theme-dark .bg-white\/95 {
+  background-color: rgba(15, 23, 42, 0.95) !important;
+}

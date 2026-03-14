@@ -26,7 +26,6 @@ import { FaSyncAlt, FaEye, FaUpload } from "react-icons/fa";
 import { FiDownloadCloud, FiPrinter } from "react-icons/fi";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
-import BlueTickIcon from "./BlueTickIcon";
 import CustomModal from "./CustomModal";
 import scLogo from "../assets/sc-logo.png";
 import { resolvePerHostEnv, getWhitelabelHosts } from "../utils/whitelabel";
@@ -918,26 +917,15 @@ export default function MyFleetTable({
       <div className="vst-toolbar">
         <div className="vst-toolbar__left">
           <div style={{ width: 350 }}>
-            <div className="number-plate-container">
-              <div className="number-plate-wrapper">
-              <div className="number-plate-badge">IND</div>
-                <div className="tricolor-strip">
-                  <div className="saffron"></div>
-                  <div className="white"></div>
-                  <div className="green"></div>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search Vehicle Number"
-                  value={vehicleNumberSearch}
-                  onChange={e => setVehicleNumberSearch(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                  className="number-plate-input"
-                  maxLength={12} />
-              </div>
-              <div className="security-features">
-                <div className="hologram"></div>
-                <div className="chakra">⚙</div>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="text"
+                placeholder="Search Vehicle Number"
+                value={vehicleNumberSearch}
+                onChange={e => setVehicleNumberSearch(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                className="number-plate-input"
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid #cbd5e1', background: '#fff', transition: 'all 0.2s' }}
+                maxLength={12} />
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1064,14 +1052,14 @@ export default function MyFleetTable({
               </label>
             </div>
 
-            {/* Challan source dropdown (Online / Registered Court / Virtual Court) */}
+            {/* Challan type dropdown (Online / Registered Court / Virtual Court) */}
             <div style={{ position: 'relative' }} ref={challanDropdownRef}>
               <button
                 className={`vst-filter-trigger${challanSources.length > 0 ? ' vst-filter-trigger--active' : ''}${showChallanDropdown ? ' vst-filter-trigger--open' : ''}`}
                 onClick={() => setShowChallanDropdown(v => !v)}
               >
                 <i className="ri-git-branch-line vst-filter-trigger__icon" />
-                {challanSources.length === 0 ? 'Challan source' : challanSources.map(t => t === 'online' ? 'Online' : t === 'registered' ? 'Reg. Court' : t === 'virtual' ? 'Virtual Court' : t).join(', ')}
+                {challanSources.length === 0 ? 'Challan type' : challanSources.map(t => t === 'online' ? 'Online' : t === 'registered' ? 'Reg. Court' : t === 'virtual' ? 'Virtual Court' : t).join(', ')}
                 {challanSources.length > 0 && (
                   <span className="vst-filter-trigger__badge">{challanSources.length}</span>
                 )}
@@ -1215,7 +1203,6 @@ export default function MyFleetTable({
                       </span>
                     )}
                     {row.vehicle_number || '-'}
-                    {isAllFit(row) && <BlueTickIcon />}
                   </td>
                   <td>{row.rc_body_type_desc || row.body_type_desc || row.body_type || row._raw?.rto_data?.VehicleDetails?.rc_body_type_desc || row.rto_data?.VehicleDetails?.rc_body_type_desc || '-'}</td>
                   <td>{(row.rc_regn_dt || row.registration_date || row.registered_at) ?? 'N/A'}</td>

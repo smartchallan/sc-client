@@ -483,6 +483,24 @@
     color: #94a3b8;
     cursor: not-allowed;
   }
+
+  /* Remove browser autofill styling on inputs */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px white inset !important;
+    box-shadow: 0 0 0 30px white inset !important;
+  }
+
+  input:-webkit-autofill {
+    -webkit-text-fill-color: #1e293b !important;
+  }
+
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #1e293b !important;
+    border-color: var(--primary-light) !important;
+  }
   
   /* Button Styles */
   .btn,
@@ -651,6 +669,27 @@
   font-size: 14px;
   color: var(--text-medium);
   margin-top: 4px;
+  margin-bottom: 20px;
+}
+
+/* Main Content Area - ensure proper content flow */
+main {
+  overflow-x: auto;
+  overflow-y: visible;
+  position: relative;
+  box-sizing: border-box;
+  min-height: 100vh;
+  max-width: 100%;
+}
+
+main > * {
+  box-sizing: border-box;
+}
+
+/* Container elements within main */
+main > div {
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 /* Utility Classes */
@@ -929,15 +968,17 @@
 }
 
 .vst-btn--outline {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
-  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+  color: #ffffff;
+  border: 1.5px solid #2563eb;
   backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 .vst-btn--outline:hover {
-  background: rgba(255, 255, 255, 0.25);
-  border-color: rgba(255, 255, 255, 0.5);
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, #2563eb 0%, #0284c7 100%);
+  border-color: #1d4ed8;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
 .vst-btn--ghost {
@@ -1242,6 +1283,23 @@ select.vst-filter-trigger {
 
 input.vst-filter-trigger {
   flex: 0 0 auto;
+}
+
+.simple-search-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 14px;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.simple-search-input:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 .vst-toolbar__right {

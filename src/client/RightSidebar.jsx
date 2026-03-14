@@ -6,20 +6,20 @@ export default function RightSidebar({ open, onClose, title, children }) {
       {/* Overlay */}
       {open && (
         <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-300"
+          className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity duration-300"
           onClick={onClose}
         />
       )}
       
       {/* Sidebar */}
-      <div className={`fixed top-0 right-0 h-screen w-full sm:w-[480px] bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${
+      <div className={`fixed top-0 right-0 h-screen w-full sm:w-[480px] bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${
         open ? 'translate-x-0' : 'translate-x-full'
       }`}>
         {/* Header */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-200 bg-gradient-to-r from-blue-600 to-blue-700">
-          <h3 className="text-lg font-semibold text-white">{title}</h3>
+        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-200 bg-white">
+          <h3 className="text-lg font-semibold text-slate-800">{title}</h3>
           <button 
-            className="p-2 rounded-lg hover:bg-white/10 text-white transition-colors"
+            className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-800 transition-colors"
             onClick={onClose}
             aria-label="Close sidebar"
           >

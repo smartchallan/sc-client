@@ -315,81 +315,22 @@ export function ChallanTableV2({
 
       <div className="vst-toolbar">
         <div className="vst-toolbar__left">
-          <div
-            className="number-plate-container"
+          <input
+            type="text"
+            placeholder="Vehicle No. / Challan no."
+            value={searchTerm}
+            onChange={(e) =>
+              setSearchTerm(
+                e.target.value
+                  .toUpperCase()
+                  .replace(/[^A-Z0-9]/g, "")
+              )
+            }
+            maxLength={20}
+            className="simple-search-input"
             style={{ minWidth: 220, maxWidth: 330 }}
-          >
-            <div className="number-plate-wrapper">
-              <div className="number-plate-badge">IND</div>
-              <div className="tricolor-strip">
-                <div className="saffron"></div>
-                <div className="white"></div>
-                <div className="green"></div>
-              </div>
-              <input
-                type="text"
-                className="number-plate-input"
-                placeholder="Vechicle No. / Challan no."
-                value={searchTerm}
-                onChange={(e) =>
-                  setSearchTerm(
-                    e.target.value
-                      .toUpperCase()
-                      .replace(/[^A-Z0-9]/g, "")
-                  )
-                }
-                maxLength={20}
-              />
-            </div>
-            <div className="security-features">
-              <div className="hologram"></div>
-              <div className="chakra">⚙</div>
-            </div>
-          </div>
+          />
 
-          {Array.isArray(data) && data.length > 0 && (() => {
-            const fines = data
-              .map((c) => {
-                const v = c.fine_imposed;
-                if (v === null || v === undefined || v === "") return NaN;
-                const num = parseFloat(String(v).replace(/[,₹\s]/g, ""));
-                return Number.isNaN(num) ? NaN : num;
-              })
-              .filter((v) => !Number.isNaN(v));
-            if (fines.length === 0) return null;
-            const maxFine = Math.max(...fines);
-            const minFine = Math.min(...fines);
-            const effectiveMax =
-              maxFineFilter === null ? maxFine : maxFineFilter;
-            return (
-              <div className="fine-filter-card">
-                <span className="fine-filter-label">Fine up to</span>
-                <input
-                  type="range"
-                  min={minFine}
-                  max={maxFine}
-                  step={1}
-                  value={effectiveMax}
-                  onChange={(e) =>
-                    setMaxFineFilter(Number(e.target.value))
-                  }
-                  className="fine-filter-range"
-                />
-                <span className="fine-filter-value">
-                  ₹{Math.round(effectiveMax)}
-                </span>
-                {maxFineFilter !== null && (
-                  <button
-                    type="button"
-                    onClick={() => setMaxFineFilter(null)}
-                    className="fine-filter-reset-btn"
-                  >
-                    Reset
-                  </button>
-                )}
-              </div>
-            );
-          })()}
 
           <div
             style={{ position: "relative" }}
@@ -453,6 +394,50 @@ export function ChallanTableV2({
               <span>Disposed</span>
             </label>
           </div>
+
+          {Array.isArray(data) && data.length > 0 && (() => {
+            const fines = data
+              .map((c) => {
+                const v = c.fine_imposed;
+                if (v === null || v === undefined || v === "") return NaN;
+                const num = parseFloat(String(v).replace(/[,₹\s]/g, ""));
+                return Number.isNaN(num) ? NaN : num;
+              })
+              .filter((v) => !Number.isNaN(v));
+            if (fines.length === 0) return null;
+            const maxFine = Math.max(...fines);
+            const minFine = Math.min(...fines);
+            const effectiveMax =
+              maxFineFilter === null ? maxFine : maxFineFilter;
+            return (
+              <div className="fine-filter-card">
+                <span className="fine-filter-label">Fine up to</span>
+                <input
+                  type="range"
+                  min={minFine}
+                  max={maxFine}
+                  step={1}
+                  value={effectiveMax}
+                  onChange={(e) =>
+                    setMaxFineFilter(Number(e.target.value))
+                  }
+                  className="fine-filter-range"
+                />
+                <span className="fine-filter-value">
+                  ₹{Math.round(effectiveMax)}
+                </span>
+                {maxFineFilter !== null && (
+                  <button
+                    type="button"
+                    onClick={() => setMaxFineFilter(null)}
+                    className="fine-filter-reset-btn"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            );
+          })()}
         </div>
         <div className="vst-toolbar__right">
           <button

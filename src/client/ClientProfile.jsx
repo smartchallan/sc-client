@@ -165,8 +165,22 @@ export default function ClientProfile() {
     }
   }, [emailNotification, smsNotification, marketingNotification]);
 
-  // mark themeDirty when theme changes
+  // apply theme class globally as user selects theme
   React.useEffect(() => {
+    document.body.classList.remove('theme-blue', 'theme-metallic', 'theme-dark');
+    document.body.classList.add(`theme-${selectedTheme}`);
+    localStorage.setItem('sc_theme', selectedTheme);
+    try {
+      const scUser = JSON.parse(localStorage.getItem('sc_user') || '{}');
+      const topLevelOptions = scUser.user_options || {};
+      const nestedOptions = (scUser.user && scUser.user.user_options) || {};
+      const userOptions = { ...topLevelOptions, ...nestedOptions, default_theme: selectedTheme };
+      scUser.user_options = userOptions;
+      scUser.user = { ...scUser.user, user_options: userOptions };
+      localStorage.setItem('sc_user', JSON.stringify(scUser));
+    } catch (e) {
+      // ignore
+    }
     setThemeDirty(selectedTheme !== initialThemeRef.current);
   }, [selectedTheme]);
 
@@ -621,7 +635,7 @@ export default function ClientProfile() {
               </div>
               <div className="form-col">
                 <div className="form-group">
-                  <label className="form-label">GTIN</label>
+                  <label className="form-label">GSTIN</label>
                     <input className="form-control" type="text" value={gtin} readOnly />
                 </div>
               </div>
@@ -659,6 +673,7 @@ export default function ClientProfile() {
                   >
                     <option value="blue">Blue</option>
                     <option value="metallic">Metallic</option>
+                    <option value="dark">Dark</option>
                   </select>
                 </div>
               </div>

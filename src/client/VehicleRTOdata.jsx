@@ -503,28 +503,15 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
       {!hideSearchSortFilter && (
         <div className="vst-toolbar">
           <div className="vst-toolbar__left">
-            <div className="number-plate-container" style={{ width: 330 }}>
-              <div className="number-plate-wrapper">
-                <div className="number-plate-badge">IND</div>
-                <div className="tricolor-strip">
-                  <div className="saffron"></div>
-                  <div className="white"></div>
-                  <div className="green"></div>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search Vehicle Number"
-                  value={search}
-                  onChange={e => setSearch(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                  className="number-plate-input"
-                  maxLength={12}
-                />
-              </div>
-              <div className="security-features">
-                <div className="hologram"></div>
-                <div className="chakra">⚙</div>
-              </div>
-            </div>
+            <input
+              type="text"
+              placeholder="Search Vehicle Number"
+              value={search}
+              onChange={e => setSearch(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+              className="simple-search-input"
+              style={{ width: 330 }}
+              maxLength={12}
+            />
             {/* Expired records filter */}
             <div style={{ position: 'relative' }} ref={expiredDropdownRef}>
               <button

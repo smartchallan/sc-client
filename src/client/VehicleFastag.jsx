@@ -185,48 +185,39 @@ export default function VehicleFastag() {
         <form className="register-vehicle-form" onSubmit={handleSubmit} style={{display: 'flex', flexWrap: 'wrap', gap: 16}}>
           <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '30%'}}>
             <label htmlFor="vehicleNumber" style={{fontSize: 14, fontWeight: 500, marginBottom: 8, display: 'block'}}>Vehicle Number</label>
-            <div className="number-plate-container">
-              <div className="number-plate-wrapper" ref={wrapperRef} style={{ position: 'relative' }}>
-                <div className="number-plate-badge">IND</div>
-                <div className="tricolor-strip">
-                  <div className="saffron"></div>
-                  <div className="white"></div>
-                  <div className="green"></div>
-                </div>
-                <input
-                  type="text"
-                  id="vehicleNumber"
-                  name="vehicleNumber"
-                  className="number-plate-input"
-                  value={vehicleNumber}
-                  onChange={e => {
-                    setVehicleNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''));
-                    setShowDropdown(true);
-                  }}
-                  placeholder={loadingVehicles ? "Loading registered vehicles..." : "Select or type vehicle number"}
-                  disabled={loading}
-                  maxLength={12}
-                  autoComplete="off"
-                  onFocus={() => setShowDropdown(true)}
-                />
-                {showDropdown && filteredVehicles.length > 0 && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      right: 0,
-                      marginTop: 4,
-                      maxHeight: 260,
-                      overflowY: 'auto',
-                      background: '#fff',
-                      border: '1px solid #bcd',
-                      borderRadius: 6,
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                      zIndex: 20,
-                    }}
-                  >
-                    {filteredVehicles.map(v => {
+            <input
+              type="text"
+              id="vehicleNumber"
+              name="vehicleNumber"
+              className="simple-search-input"
+              value={vehicleNumber}
+              onChange={e => {
+                setVehicleNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''));
+                setShowDropdown(true);
+              }}
+              placeholder={loadingVehicles ? "Loading registered vehicles..." : "Select or type vehicle number"}
+              disabled={loading}
+              maxLength={12}
+              autoComplete="off"
+              onFocus={() => setShowDropdown(true)}
+              style={{ width: '100%' }}
+            />
+            {showDropdown && filteredVehicles.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                marginTop: 4,
+                maxHeight: 260,
+                overflowY: 'auto',
+                background: '#fff',
+                border: '1px solid #bcd',
+                borderRadius: 6,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                zIndex: 20,
+              }}>
+                {filteredVehicles.map(v => {
                       const vn = (v.vehicle_number || '').toUpperCase();
                       return (
                         <div
@@ -263,16 +254,13 @@ export default function VehicleFastag() {
                     })}
                   </div>
                 )}
-              </div>
               <div className="security-features">
                 <div className="hologram"></div>
-                <div className="chakra">⚙</div>
               </div>
             </div>
             <small style={{fontSize: 12, color: '#6c757d', marginTop: 4, display: 'block'}}>
               Enter vehicle registration number (e.g., GJ18AZ1990) • Commercial vehicles only
             </small>
-          </div>
           <div className="button-group" style={{width: '100%'}}>
             <button type="submit" className="btn btn-primary" disabled={loading || !vehicleNumber.trim()}>
               <i className={loading ? "ri-loader-4-line" : "ri-search-line"} style={{

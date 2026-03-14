@@ -125,28 +125,15 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
       </div>
       <div className="vst-toolbar">
         <div className="vst-toolbar__left">
-          <div className="number-plate-container" style={{ minWidth: 220, maxWidth: 330 }}>
-            <div className="number-plate-wrapper">
-              <div className="number-plate-badge">IND</div>
-              <div className="tricolor-strip">
-                <div className="saffron"></div>
-                <div className="white"></div>
-                <div className="green"></div>
-              </div>
-              <input
-                type="text"
-                className="number-plate-input"
-                placeholder="Vechicle No. / Challan no."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                maxLength={20}
-              />
-            </div>
-            <div className="security-features">
-              <div className="hologram"></div>
-              <div className="chakra">⚙</div>
-            </div>
-          </div>
+          <input
+            type="text"
+            placeholder="Vehicle No. / Challan no."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+            maxLength={20}
+            className="simple-search-input"
+            style={{ minWidth: 220, maxWidth: 330 }}
+          />
 
           {Array.isArray(data) && data.length > 0 && (() => {
             const fines = data
