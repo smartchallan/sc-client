@@ -167,7 +167,7 @@ export default function ClientProfile() {
 
   // apply theme class globally as user selects theme
   React.useEffect(() => {
-    document.body.classList.remove('theme-blue', 'theme-metallic', 'theme-dark');
+    document.body.classList.remove('theme-blue', 'theme-metallic');
     document.body.classList.add(`theme-${selectedTheme}`);
     localStorage.setItem('sc_theme', selectedTheme);
     try {

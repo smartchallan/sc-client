@@ -419,18 +419,8 @@ export default function RegisterVehicle() {
     <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
       <ToastContainer position="top-right" autoClose={2000} />
       
-      {/* Page Header */}
-      <div className="page-header" style={{ marginBottom: '24px' }}>
-        <div>
-          <h1 className="page-title" style={{ fontSize: '28px', fontWeight: 700, color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '32px' }}>🚗</span>
-            Register New Vehicle
-          </h1>
-          <p className="page-subtitle" style={{ fontSize: '14px', color: '#64748b', marginTop: '6px', marginBottom: 0 }}>
-            Register vehicles using <b>Vehicle Number</b>, <b>Engine Number</b>, or <b>Chassis Number</b>
-          </p>
-        </div>
-      </div>
+      <h1 className="page-title">🚗 Register New Vehicle</h1>
+      <p className="page-subtitle">Register vehicles using <b>Vehicle Number</b>, <b>Engine Number</b>, or <b>Chassis Number</b></p>
       
       {/* Registration Form Card */}
       <div className="card" style={{ marginBottom: '24px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '2px', border: 'none' }}>

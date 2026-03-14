@@ -70,7 +70,6 @@ console.log('Card Colors:', {
 
 import { FaDownload } from "react-icons/fa";
 import "react-toastify/dist/ReactToastify.css";
-import "../theme-dark.css";
 
 // Helper to prettify keys for display
 function prettifyKey(key) {
@@ -794,16 +793,6 @@ function ClientDashboard() {
   useEffect(() => {
     document.body.classList.remove('theme-blue', 'theme-metallic', 'theme-dark');
     document.body.classList.add(`theme-${theme}`);
-    
-    // Apply dark-theme class to root element for professional dark theme
-    const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark-theme');
-      root.classList.remove('light-theme');
-    } else {
-      root.classList.remove('dark-theme');
-      root.classList.add('light-theme');
-    }
 
     localStorage.setItem('sc_theme', theme);
     try {
