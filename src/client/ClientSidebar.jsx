@@ -283,9 +283,8 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
       `}</style>
       
       {/* Logo & Toggle Button */}
-      <div className="h-[72px] flex items-center justify-between px-4 border-b border-blue-600 relative" style={{ 
-        backgroundColor: 'rgba(30, 58, 138, 0.3)',
-        backdropFilter: 'blur(10px)',
+      <div className="h-[72px] flex items-center justify-between px-4 border-b border-gray-200 relative" style={{ 
+        backgroundColor: '#fff',
         zIndex: 10 
       }}>
         <div className={`flex items-center gap-3 transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0'}`}>
@@ -296,7 +295,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
           />
         </div>
         <button 
-          className={`p-2.5 rounded-lg hover:bg-blue-600 transition-all duration-200 text-white hover:text-white ${!sidebarOpen && 'mx-auto'}`}
+          className={`p-2.5 rounded-lg hover:bg-gray-100 transition-all duration-200 text-gray-700 hover:text-gray-900 ${!sidebarOpen && 'mx-auto'}`}
           onClick={onToggleSidebar} 
           aria-label="Toggle sidebar"
         >
