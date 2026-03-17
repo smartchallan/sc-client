@@ -5,16 +5,17 @@ export default function CustomModal({ open, title, description, icon, onConfirm,
   if (!open) return null;
 
   const modal = (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all animate-slide-up">
-        {/* Close button */}
-        <button 
-          className="absolute top-4 right-4 p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-          onClick={onCancel} 
-          aria-label="Close modal"
-        >
-          <i className="ri-close-line text-xl"></i>
-        </button>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all animate-slide-up relative">
+        <div className="flex flex-col items-center px-8 py-8">
+          {/* Close button */}
+          <button 
+            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+            onClick={onCancel} 
+            aria-label="Close modal"
+          >
+            <i className="ri-close-line text-xl"></i>
+          </button>
         
         {/* Icon */}
         {icon && (
@@ -26,40 +27,38 @@ export default function CustomModal({ open, title, description, icon, onConfirm,
         )}
         
         {/* Title */}
-        <h3 className="text-xl font-semibold text-slate-900 text-center px-6 mb-3">
+        <h3 className="text-2xl font-bold text-slate-900 text-center mb-2 w-full">
           {title}
         </h3>
-        
         {/* Description */}
         {description && (
-          <p className="text-slate-600 text-center px-6 mb-6">
+          <p className="text-slate-600 text-center mb-5 w-full">
             {description}
           </p>
         )}
-        
         {/* Custom content */}
         {children && (
-          <div className="px-6 mb-6">
+          <div className="mb-6 w-full flex flex-col items-center">
             {children}
           </div>
         )}
-        
         {/* Action buttons */}
-        <div className="flex gap-3 px-6 pb-6">
+        <div className="flex justify-center items-center gap-4 w-full mt-2">
           <button 
-            className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-200"
+            className="min-w-[150px] px-7 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-200 text-center"
             onClick={onConfirm}
           >
-            {confirmText}
+            <span className="block w-full text-center">{confirmText}</span>
           </button>
           {cancelText && (
             <button 
-              className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition-colors duration-200"
+              className="min-w-[150px] px-7 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition-colors duration-200 text-center"
               onClick={onCancel}
             >
-              {cancelText}
+              <span className="block w-full text-center">{cancelText}</span>
             </button>
           )}
+        </div>
         </div>
       </div>
     </div>

@@ -3456,6 +3456,7 @@ function ClientDashboard() {
           onChallans={() => setActiveMenu('Vehicle Challans')}
           onRTO={() => setActiveMenu('Vehicle RTO Data')}
           onClients={() => setActiveMenu('My Clients')}
+          onReports={() => setReportsModal({ open: true })}
         />
       )}
       </div>
@@ -3587,10 +3588,10 @@ function ClientDashboard() {
         confirmText="Close"
         cancelText={null}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ color: '#333' }}>Select a report to generate and download:</div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button className="action-btn" onClick={generateRtoReport} title="Generate RTO Data Report" disabled={exporting.rto}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center', padding: '0 10px' }}>
+          <div style={{ color: '#333', textAlign: 'center' }}>Select a report to generate and download:</div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
+            <button className="action-btn" style={{ minWidth: 220 }} onClick={generateRtoReport} title="Generate RTO Data Report" disabled={exporting.rto}>
               {exporting.rto ? 'Generating RTO...' : 'Generate RTO Data Report'}
             </button>
             <button className="action-btn" onClick={generateChallanReport} title="Generate Challan Data Report" disabled={exporting.challan}>

@@ -17,9 +17,9 @@ const TrafficChallanAnimation = () => {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl mb-6 shadow-2xl">
             <RiTrafficLightLine className="w-12 h-12 text-white" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+          {/* <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
             SmartChallan
-          </h1>
+          </h1> */}
           <p className="text-blue-100 text-lg md:text-xl max-w-md mx-auto">
             Intelligent Traffic Violation Management System
           </p>

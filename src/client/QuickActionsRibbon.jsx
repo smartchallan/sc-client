@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export default function QuickActionsRibbon({ onRegister, onChallans, onRTO, onClients }) {
+export default function QuickActionsRibbon({ onRegister, onChallans, onRTO, onClients, onReports }) {
   const [open, setOpen] = useState(false);
 
   const actions = [
@@ -8,6 +8,7 @@ export default function QuickActionsRibbon({ onRegister, onChallans, onRTO, onCl
     { label: 'View Challans', action: onChallans, icon: 'ri-file-list-3-line', color: '#ef4444' },
     { label: 'RTO Details', action: onRTO, icon: 'ri-clipboard-line', color: '#10b981' },
     { label: 'My Clients', action: onClients, icon: 'ri-group-line', color: '#f59e0b' },
+    { label: 'Generate Reports', action: onReports, icon: 'ri-bar-chart-2-line', color: '#8b5cf6' },
   ];
 
   return (
