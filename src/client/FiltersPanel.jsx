@@ -14,14 +14,17 @@ export default function FiltersPanel({
 }) {
   return (
     <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
-      <input
-        type="text"
-        className="form-control"
-        placeholder="Search by Vehicle No"
-        value={vehicleSearchText}
-        onChange={e => onSearchChange(e.target.value)}
-        style={{ minWidth: 200, maxWidth: 300, textTransform: 'uppercase' }}
-      />
+      <div className="vst-search-wrap">
+        <i className="ri-search-line vst-search-wrap__icon" />
+        <input
+          type="text"
+          className="vst-search-input"
+          placeholder="Search vehicle number…"
+          value={vehicleSearchText}
+          onChange={e => onSearchChange(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+          style={{ textTransform: 'uppercase' }}
+        />
+      </div>
       <select className="form-control" value={fleetChallanFilter} onChange={e => setFleetChallanFilter(e.target.value)} style={{ minWidth: 160 }}>
         <option value="all">All Vehicles</option>
         <option value="pending">With Pending Challans</option>

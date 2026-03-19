@@ -246,18 +246,27 @@ export default function MyClients() {
 
   const handleToggleStatus = async () => {
     const { client, action } = statusModal;
+    const newStatus = action === 'enable' ? 'active' : 'inactive';
+    const clientId = client.id || client._id;
     try {
       const res = await fetch(`${API_ROOT}/userprofile/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: client.id || client._id,
-          status: action === 'enable' ? 'active' : 'inactive'
-        })
+        body: JSON.stringify({ user_id: clientId, status: newStatus })
       });
       if (res.ok) {
         toast.success(`Client ${action}d successfully`);
         setStatusModal({ open: false, client: null, action: '' });
+        // Bulk-update all vehicles for this client to match the new status
+        try {
+          await fetch(`${API_ROOT}/updatevehiclestatusbyclient`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ client_id: clientId, status: newStatus })
+          });
+        } catch {
+          // Silently ignore — client status was already updated successfully
+        }
         fetchClients(true);
       } else {
         toast.error(`Failed to ${action} client`);

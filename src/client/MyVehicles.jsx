@@ -11,15 +11,17 @@ export default function MyVehicles({ searchText = '', setSearchText = null }) {
       {/* Search input placed here per request; props passed from ClientDashboard when rendering MyVehicles */}
       { (setSearchText || searchText) ? (
         <div style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'center' }}>
-          <input
-            type="text"
-            placeholder="Search by Vehicle No."
-            value={searchText || ''}
-            onChange={e => setSearchText && setSearchText(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-            className="simple-search-input"
-            maxLength={12}
-            style={{ minWidth: 200, maxWidth: 330 }}
-          />
+          <div className="vst-search-wrap">
+            <i className="ri-search-line vst-search-wrap__icon" />
+            <input
+              type="text"
+              placeholder="Search vehicle number…"
+              value={searchText || ''}
+              onChange={e => setSearchText && setSearchText(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+              className="vst-search-input"
+              maxLength={12}
+            />
+          </div>
         </div>
       ) : null}
   <VehicleTableOnly />

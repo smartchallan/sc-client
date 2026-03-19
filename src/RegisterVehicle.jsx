@@ -1064,7 +1064,7 @@ export default function RegisterVehicle() {
                     })
                     .slice(0, deletedVehiclesLimit)
                     .map((v, idx) => {
-                      const handleReactivate = () => setModal({ open: true, action: 'activate', vehicle: v });
+                      const handleReactivate = () => setModal({ open: true, action: 'restore-info', vehicle: v });
                       
                       return (
                         <tr key={v.id || v._id || idx} style={{ opacity: 0.7 }}>
@@ -1200,6 +1200,57 @@ export default function RegisterVehicle() {
         </div>
       </CustomModal>
       
+      {/* Confirmation Modal for Vehicle Status Actions (Inactivate / Activate / Delete) */}
+      <CustomModal
+        open={modal.open}
+        title={
+          modal.action === 'inactivate' ? 'Inactivate Vehicle?'
+          : modal.action === 'activate' ? 'Activate Vehicle?'
+          : modal.action === 'delete' ? 'Delete Vehicle?'
+          : modal.action === 'restore-info' ? 'Cannot Restore Vehicle'
+          : ''
+        }
+        onConfirm={async () => {
+          if (modal.action === 'restore-info') {
+            setModal({ open: false, action: null, vehicle: null });
+            return;
+          }
+          if (!modal.vehicle) return setModal({ open: false, action: null, vehicle: null });
+          let status = '';
+          if (modal.action === 'inactivate') status = 'inactive';
+          else if (modal.action === 'activate') status = 'active';
+          else if (modal.action === 'delete') status = 'delete';
+          try {
+            const res = await fetch(`${API_ROOT}/updatevehiclestatus`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ vehicle_id: modal.vehicle.id || modal.vehicle._id, status })
+            });
+            if (res.ok) {
+              toast.success('Vehicle status updated successfully');
+              const { client_id } = getUserIds();
+              fetchVehicles(client_id);
+            } else {
+              const data = await res.json().catch(() => ({}));
+              toast.error(data.message || 'Failed to update vehicle status');
+            }
+          } catch {
+            toast.error('API call failed');
+          }
+          setModal({ open: false, action: null, vehicle: null });
+        }}
+        onCancel={() => setModal({ open: false, action: null, vehicle: null })}
+        confirmText={modal.action === 'delete' ? 'Delete' : modal.action === 'activate' ? 'Activate' : modal.action === 'restore-info' ? 'OK' : 'Inactivate'}
+        cancelText={modal.action === 'restore-info' ? null : 'Cancel'}
+      >
+        {modal.action === 'delete' && (
+          <span style={{ color: 'red', fontWeight: 600 }}>This action is non-reversible.<br />Your vehicle and all related data will be deleted permanently.</span>
+        )}
+        {modal.action === 'restore-info' && (
+          <span style={{ color: '#475569' }}>Deleted vehicles cannot be restored from here.<br />Please contact your dealer to restore this vehicle.</span>
+        )}
+      </CustomModal>
+
       {/* Confirmation Modal for Adding Vehicle */}
       <CustomModal
         open={confirmModal}

@@ -1007,7 +1007,7 @@ main > div {
   min-width: 900px;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .vst-table thead {
@@ -1017,10 +1017,10 @@ main > div {
 }
 
 .vst-table th {
-  padding: 12px 14px;
-  font-size: 11px;
+  padding: 13px 16px;
+  font-size: 12px;
   font-weight: 700;
-  color: #334155;
+  color: #1e3a5f;
   text-transform: uppercase;
   letter-spacing: 0.07em;
   background: linear-gradient(135deg, #e0e7ff 0%, #eff6ff 100%);
@@ -1057,11 +1057,17 @@ main > div {
 
 /* ── Rows ── */
 .vst-table td {
-  padding: 12px 14px;
-  border-bottom: 1px solid #f1f5f9;
-  color: #334155;
+  padding: 13px 16px;
+  border-bottom: 1px solid #e8edf5;
+  color: #1e293b;
   vertical-align: middle;
   white-space: nowrap;
+  font-size: 14px;
+}
+
+/* Zebra striping for readability */
+.vst-table tbody tr:nth-child(even) {
+  background: #f8faff;
 }
 
 .vst-td--num {
@@ -1073,51 +1079,82 @@ main > div {
 
 .vst-td--center { text-align: center; }
 
+/* ── Clickable vehicle number cell ── */
+.vst-td--vehicle {
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 10px 16px !important;
+}
+
 .vst-row {
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .vst-row:hover {
-  background: linear-gradient(90deg, #eef2ff 0%, #f0f7ff 50%, #fff 100%);
+  background: #f1f5ff;
 }
 
-.vst-row:hover .vst-vehicle-num {
-  color: #4338ca;
-}
-
-/* ── Vehicle number ── */
+/* ── Vehicle number badge ── */
 .vst-vehicle-num {
-  font-weight: 700;
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 800;
   color: #1e293b;
-  letter-spacing: 0.03em;
-  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-  transition: color 0.15s;
+  letter-spacing: 0.08em;
+  font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
+  background: #f1f5f9;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 5px 12px;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.vst-td--vehicle:hover .vst-vehicle-num {
+  background: #ede9fe;
+  border-color: #a78bfa;
+  color: #4c1d95;
+}
+
+.vst-vehicle-num__icon {
+  font-size: 14px;
+  color: #7c3aed;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.vst-td--vehicle:hover .vst-vehicle-num__icon {
+  opacity: 1;
 }
 
 /* ── Date cells with status ── */
 .vst-date {
-  font-size: 12.5px;
-  font-weight: 500;
-  padding: 3px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 10px;
   border-radius: 6px;
   display: inline-block;
+  letter-spacing: 0.01em;
 }
 
 .vst-date--expired {
   background: #fef2f2;
-  color: #dc2626;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
 .vst-date--expiring {
   background: #fffbeb;
-  color: #d97706;
+  color: #b45309;
+  border: 1px solid #fde68a;
 }
 
 .vst-date--valid {
   background: #f0fdf4;
-  color: #16a34a;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
 }
 
 .vst-cell--empty {
@@ -1285,21 +1322,78 @@ input.vst-filter-trigger {
   flex: 0 0 auto;
 }
 
-.simple-search-input {
+/* ── Toolbar search: icon wrapper + input ── */
+.vst-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 300px;
+  flex-shrink: 0;
+}
+
+.vst-search-wrap__icon {
+  position: absolute;
+  left: 12px;
+  font-size: 18px;
+  color: #475569;
+  pointer-events: none;
+  transition: color 0.2s ease;
+  z-index: 1;
+}
+
+.vst-search-wrap:focus-within .vst-search-wrap__icon {
+  color: #4f46e5;
+}
+
+.vst-search-input {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #cbd5e1;
+  padding: 11px 14px 11px 40px;
+  border: 1.5px solid #94a3b8;
   border-radius: 10px;
   background: #fff;
   font-size: 14px;
+  font-weight: 500;
   color: #0f172a;
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.vst-search-input::placeholder {
+  color: #64748b !important;
+  font-weight: 400;
+  opacity: 1;
+}
+
+.vst-search-input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+/* ── Form / standalone inputs (license, vehicle no. fields) ── */
+.simple-search-input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid #94a3b8;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.simple-search-input::placeholder {
+  color: #64748b !important;
+  font-weight: 400;
+  opacity: 1;
 }
 
 .simple-search-input:focus {
-  border-color: #60a5fa;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
 
 .vst-toolbar__right {
@@ -1313,19 +1407,19 @@ input.vst-filter-trigger {
 .vst-filter-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
+  gap: 7px;
+  padding: 9px 16px;
   background: #fff;
-  border: 1.5px solid #e0e7ff;
+  border: 1.5px solid #c7d2fe;
   border-radius: 10px;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
   min-width: 0;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .vst-filter-trigger:hover {
@@ -1345,8 +1439,8 @@ input.vst-filter-trigger {
 }
 
 .vst-filter-trigger__icon {
-  font-size: 15px;
-  opacity: 0.7;
+  font-size: 16px;
+  opacity: 0.85;
 }
 
 .vst-filter-trigger--active .vst-filter-trigger__icon {
@@ -1354,9 +1448,9 @@ input.vst-filter-trigger {
 }
 
 .vst-filter-trigger__chevron {
-  font-size: 10px;
+  font-size: 14px;
   margin-left: 2px;
-  opacity: 0.5;
+  opacity: 0.7;
   transition: transform 0.2s;
 }
 
@@ -1404,12 +1498,12 @@ input.vst-filter-trigger {
 .vst-dropdown__option {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 10px;
+  padding: 10px 14px;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 13px;
-  color: #334155;
+  font-size: 14px;
+  color: #1e293b;
   transition: all 0.12s ease;
   font-weight: 500;
 }
@@ -1422,8 +1516,9 @@ input.vst-filter-trigger {
 .vst-dropdown__option input[type="checkbox"],
 .vst-dropdown__option input[type="radio"] {
   accent-color: #3b82f6;
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
 }
 
 .vst-dropdown__divider {
@@ -1442,15 +1537,15 @@ input.vst-filter-trigger {
 }
 
 .vst-dropdown__footer-btn {
-  padding: 4px 12px;
+  padding: 6px 14px;
   border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.12s;
   border: 1px solid #e2e8f0;
   background: #fff;
-  color: #64748b;
+  color: #475569;
 }
 
 .vst-dropdown__footer-btn:hover {
@@ -1501,17 +1596,17 @@ input.vst-filter-trigger {
 .vst-checkbox-label {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12.5px;
+  gap: 7px;
+  font-size: 13px;
   font-weight: 600;
-  color: #475569;
+  color: #374151;
   cursor: pointer;
-  padding: 7px 14px;
+  padding: 9px 16px;
   border-radius: 10px;
-  border: 1.5px solid #e0e7ff;
+  border: 1.5px solid #c7d2fe;
   background: #fff;
   transition: all 0.18s ease;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
 
 .vst-checkbox-label:hover {
@@ -1530,18 +1625,19 @@ input.vst-filter-trigger {
 
 .vst-checkbox-label input[type="checkbox"] {
   accent-color: #6366f1;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 /* ── Action icon buttons (Download / Print) ── */
 .vst-action-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
+  gap: 7px;
+  padding: 9px 18px;
   border-radius: 10px;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1551,7 +1647,7 @@ input.vst-filter-trigger {
 }
 
 .vst-action-btn i {
-  font-size: 16px;
+  font-size: 17px;
 }
 
 .vst-action-btn--download {
@@ -1629,16 +1725,17 @@ input.vst-filter-trigger {
 
 .vst-sort-icon {
   display: inline-block;
-  margin-left: 4px;
-  font-size: 11px;
-  opacity: 0.5;
+  margin-left: 5px;
+  font-size: 12px;
+  opacity: 0.65;
   font-style: normal;
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .vst-th--sorted .vst-sort-icon {
   opacity: 1;
   color: #4f46e5;
+  font-weight: 900;
 }
 
 .vst-th--highlighted {
@@ -1651,9 +1748,9 @@ input.vst-filter-trigger {
 .vst-status-pill {
   display: inline-flex;
   align-items: center;
-  padding: 4px 12px;
+  padding: 5px 13px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -2045,14 +2142,17 @@ input.vst-filter-trigger {
   .vst-header { padding: 14px 16px; flex-wrap: wrap; gap: 8px; }
   .vst-header__title { font-size: 14px; }
   .vst-header__icon-box { width: 36px; height: 36px; font-size: 16px; }
-  .vst-table { font-size: 12px; }
-  .vst-table th, .vst-table td { padding: 8px 10px; }
-  .vst-date { font-size: 11px; padding: 2px 6px; }
+  .vst-table { font-size: 13px; }
+  .vst-table th, .vst-table td { padding: 9px 11px; }
+  .vst-date { font-size: 12px; padding: 3px 7px; }
   .vst-toolbar { padding: 10px 14px; gap: 8px; }
-  .vst-filter-trigger { padding: 6px 10px; font-size: 12px; }
-  .vst-action-btn { padding: 6px 10px; font-size: 12px; }
+  .vst-filter-trigger { padding: 7px 11px; font-size: 12.5px; }
+  .vst-action-btn { padding: 7px 11px; font-size: 12.5px; }
   .vst-action-btn span { display: none; }
-  .vst-checkbox-label { padding: 5px 8px; font-size: 12px; }
+  .vst-checkbox-label { padding: 7px 10px; font-size: 12.5px; }
+  .vst-search-wrap { width: 100%; }
+  .vst-search-input { font-size: 13px; }
+  .vst-vehicle-num { font-size: 13px; }
 }
 
 /* Responsive Tables */

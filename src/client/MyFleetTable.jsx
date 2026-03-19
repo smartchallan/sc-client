@@ -680,6 +680,27 @@ export default function MyFleetTable({
   const selectedClient = clientList.find(c => (c.id || c._id) === selectedClientId);
   const selectedClientName = selectedClient?.name || 'Client';
 
+  // Helper to extract a plain string from a date field (string or { value } object)
+  const extractDateVal = (field) => {
+    if (field === null || field === undefined) return null;
+    if (typeof field === 'object') return field.value || null;
+    return field || null;
+  };
+
+  // Render a date cell with color coding: red=expired, amber=expiring within 30d, green=valid
+  const renderDateCell = (val) => {
+    if (!val || val === 'N/A' || val === '-') return <span style={{ color: '#94a3b8' }}>—</span>;
+    const d = parseFlexibleDate(val);
+    let cls = 'vst-date';
+    if (d) {
+      const daysLeft = (d - new Date()) / (1000 * 60 * 60 * 24);
+      if (daysLeft < 0) cls += ' vst-date--expired';
+      else if (daysLeft <= 30) cls += ' vst-date--expiring';
+      else cls += ' vst-date--valid';
+    }
+    return <span className={cls}>{val}</span>;
+  };
+
   return (
     <>
       {/* CSS for spinner animation */}
@@ -916,17 +937,16 @@ export default function MyFleetTable({
       </div>
       <div className="vst-toolbar">
         <div className="vst-toolbar__left">
-          <div style={{ width: 350 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input
-                type="text"
-                placeholder="Search Vehicle Number"
-                value={vehicleNumberSearch}
-                onChange={e => setVehicleNumberSearch(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                className="number-plate-input"
-                style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid #cbd5e1', background: '#fff', transition: 'all 0.2s' }}
-                maxLength={12} />
-            </div>
+          <div className="vst-search-wrap">
+            <i className="ri-search-line vst-search-wrap__icon" />
+            <input
+              type="text"
+              placeholder="Search vehicle number…"
+              value={vehicleNumberSearch}
+              onChange={e => setVehicleNumberSearch(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+              className="vst-search-input"
+              maxLength={12}
+            />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {/* Expired records filter */}
@@ -1189,9 +1209,9 @@ export default function MyFleetTable({
               <tr><td colSpan={import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' ? 14 : 13}>No data found.</td></tr>
             ) : (
               visibleRows.map((row, idx) => (
-                <tr key={row.vehicle_id || idx}>
+                <tr key={row.vehicle_id || idx} className="vst-row">
                   <td>{idx + 1}</td>
-                  <td>
+                  <td className="vst-td--vehicle" onClick={() => onView(row)} title="Click to view details">
                     {( (
                       row._isFallback || !row.rc_owner_name || row.rc_owner_name === '-' || !row.rc_chasi_no || row.rc_chasi_no === '-'
                     ) && (
@@ -1202,86 +1222,51 @@ export default function MyFleetTable({
                         <i className="ri-error-warning-line"></i>
                       </span>
                     )}
-                    {row.vehicle_number || '-'}
+                    <span className="vst-vehicle-num">
+                      {row.vehicle_number || '-'}
+                      <i className="ri-external-link-line vst-vehicle-num__icon" />
+                    </span>
                   </td>
                   <td>{row.rc_body_type_desc || row.body_type_desc || row.body_type || row._raw?.rto_data?.VehicleDetails?.rc_body_type_desc || row.rto_data?.VehicleDetails?.rc_body_type_desc || '-'}</td>
                   <td>{(row.rc_regn_dt || row.registration_date || row.registered_at) ?? 'N/A'}</td>
                   <td
                     style={expiredTypes.includes('insurance') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
-                  >{(() => {
-                    const val = row.rc_insurance_upto || row.insurance_exp;
-                    if (val === null || val === undefined) return 'N/A';
-                    if (typeof val === 'object') {
-                      if (val.value === null || val.value === undefined) return 'N/A';
-                      return val.value;
-                    }
-                    return val || 'N/A';
-                  })()}</td>
+                  >{renderDateCell(extractDateVal(row.rc_insurance_upto || row.insurance_exp))}</td>
                   <td
                     style={expiredTypes.includes('roadtax') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
-                  >{(() => {
-                    const val = row.rc_tax_upto || row.road_tax_exp;
-                    if (val === null || val === undefined) return 'N/A';
-                    if (typeof val === 'object') {
-                      if (val.value === null || val.value === undefined) return 'N/A';
-                      return val.value;
-                    }
-                    return val || 'N/A';
-                  })()}</td>
+                  >{renderDateCell(extractDateVal(row.rc_tax_upto || row.road_tax_exp))}</td>
                   <td style={(expiredTypes.includes('np') || urgentTypes.includes('np')) ? { background: '#e3f2fd', fontWeight: 600 } : {}}>{(() => {
-                    // Always extract .value if object or stringified object, else show '-'
                     let val = row.rc_np_upto ?? row._raw?.rc_np_upto ?? row.temp_permit?.rc_np_upto ?? row._raw?.temp_permit?.rc_np_upto;
-                    if (!val) return '-';
+                    if (!val) return renderDateCell(null);
                     if (typeof val === 'string' && val.trim().startsWith('{') && val.trim().endsWith('}')) {
-                      try {
-                        val = JSON.parse(val);
-                      } catch (e) { return '-'; }
+                      try { val = JSON.parse(val); } catch (e) { return renderDateCell(null); }
                     }
                     if (typeof val === 'object') {
                       if ('value' in val && val.value) val = val.value;
-                      else return '-';
+                      else return renderDateCell(null);
                     }
-                    if (!val || typeof val !== 'string') return '-';
-                    return formatExpiry(val, true);
+                    if (!val || typeof val !== 'string') return renderDateCell(null);
+                    return renderDateCell(formatExpiry(val, false));
                   })()}</td>
                   <td style={(expiredTypes.includes('permit') || urgentTypes.includes('permit')) ? { background: '#e3f2fd', fontWeight: 600 } : {}}>{(() => {
-                    // Always extract .value if object or stringified object, else show '-'
                     let val = row.rc_permit_valid_upto ?? row._raw?.rc_permit_valid_upto ?? row.temp_permit?.rc_permit_valid_upto ?? row._raw?.temp_permit?.rc_permit_valid_upto;
-                    if (!val) return '-';
+                    if (!val) return renderDateCell(null);
                     if (typeof val === 'string' && val.trim().startsWith('{') && val.trim().endsWith('}')) {
-                      try {
-                        val = JSON.parse(val);
-                      } catch (e) { return '-'; }
+                      try { val = JSON.parse(val); } catch (e) { return renderDateCell(null); }
                     }
                     if (typeof val === 'object') {
                       if ('value' in val && val.value) val = val.value;
-                      else return '-';
+                      else return renderDateCell(null);
                     }
-                    if (!val || typeof val !== 'string') return '-';
-                    return formatExpiry(val, true);
+                    if (!val || typeof val !== 'string') return renderDateCell(null);
+                    return renderDateCell(formatExpiry(val, false));
                   })()}</td>
                   <td
                     style={expiredTypes.includes('fitness') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
-                  >{(() => {
-                    const val = row.rc_fit_upto || row.fitness_exp;
-                    if (val === null || val === undefined) return 'N/A';
-                    if (typeof val === 'object') {
-                      if (val.value === null || val.value === undefined) return 'N/A';
-                      return val.value;
-                    }
-                    return val || 'N/A';
-                  })()}</td>
+                  >{renderDateCell(extractDateVal(row.rc_fit_upto || row.fitness_exp))}</td>
                   <td
                     style={expiredTypes.includes('pollution') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
-                  >{(() => {
-                    const val = row.rc_pucc_upto || row.pollution_exp;
-                    if (val === null || val === undefined) return 'N/A';
-                    if (typeof val === 'object') {
-                      if (val.value === null || val.value === undefined) return 'N/A';
-                      return val.value;
-                    }
-                    return val || 'N/A';
-                  })()}</td>
+                  >{renderDateCell(extractDateVal(row.rc_pucc_upto || row.pollution_exp))}</td>
                   <td className="vst-td--center"><span className={`vst-badge ${row.pending_challan_count > 0 ? 'vst-badge--pending' : 'vst-badge--zero'}`}>{row.pending_challan_count ?? 0}</span></td>
                   <td className="vst-td--center"><span className={`vst-badge ${row.disposed_challan_count > 0 ? 'vst-badge--settled' : 'vst-badge--zero'}`}>{row.disposed_challan_count ?? 0}</span></td>
                   <td className="vst-td--center">

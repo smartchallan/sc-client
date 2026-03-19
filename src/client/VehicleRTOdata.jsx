@@ -235,6 +235,26 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
     else fontWeight = 'normal';
     return <span style={{color, fontWeight}}>{formatted}</span>;
   };
+  // Render a date value with color-coded vst-date badge (expired/expiring/valid)
+  const renderDateBadge = (dateStr) => {
+    if (!dateStr || dateStr === '-' || dateStr === 'NA' || dateStr === 'N/A') return <span style={{ color: '#94a3b8' }}>—</span>;
+    const valStr = parseFlexibleDateValue(dateStr) || dateStr;
+    const formatted = formatExpiry(valStr, false);
+    if (!formatted || formatted === '-') return <span style={{ color: '#94a3b8' }}>—</span>;
+    let d = null;
+    if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(valStr)) d = new Date(valStr.replace(/-/g, ' '));
+    else if (/\d{2}-\d{2}-\d{4}/.test(valStr)) { const [day, mo, yr] = valStr.split('-'); d = new Date(`${yr}-${mo}-${day}`); }
+    else d = new Date(valStr);
+    let cls = 'vst-date';
+    if (d && !isNaN(d.getTime())) {
+      const days = Math.ceil((d - new Date()) / (1000 * 60 * 60 * 24));
+      if (days < 0) cls += ' vst-date--expired';
+      else if (days <= 30) cls += ' vst-date--expiring';
+      else cls += ' vst-date--valid';
+    }
+    return <span className={cls}>{formatted}</span>;
+  };
+
   const [vehicleData, setVehicleData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -503,15 +523,17 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
       {!hideSearchSortFilter && (
         <div className="vst-toolbar">
           <div className="vst-toolbar__left">
-            <input
-              type="text"
-              placeholder="Search Vehicle Number"
-              value={search}
-              onChange={e => setSearch(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-              className="simple-search-input"
-              style={{ width: 330 }}
-              maxLength={12}
-            />
+            <div className="vst-search-wrap">
+              <i className="ri-search-line vst-search-wrap__icon" />
+              <input
+                type="text"
+                placeholder="Search vehicle number…"
+                value={search}
+                onChange={e => setSearch(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                className="vst-search-input"
+                maxLength={12}
+              />
+            </div>
             {/* Expired records filter */}
             <div style={{ position: 'relative' }} ref={expiredDropdownRef}>
               <button
@@ -692,9 +714,12 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
               <tr><td colSpan={hideSearchSortFilter ? 7 : 8}>No vehicle data found.</td></tr>
             ) : (
               displayed.map((v, idx) => (
-                <tr key={v.rc_regn_no || idx}>
+                <tr key={v.rc_regn_no || idx} className="vst-row">
                   <td>{idx + 1}</td>
-                  <td>
+                  <td className="vst-td--vehicle" title="Click to view details" onClick={() => {
+                    const found = vehicleData.find(item => item.rc_regn_no === v.rc_regn_no);
+                    setSelectedRtoData(found || v);
+                  }}>
                     {(
                       (v._isFallback || !v.rc_owner_name || v.rc_owner_name === '-') &&
                       v._statusMessage && typeof v._statusMessage === 'string' &&
@@ -704,29 +729,32 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
                         <i className="ri-error-warning-line"></i>
                       </span>
                     )}
-                    {v.rc_regn_no || '-'}
+                    <span className="vst-vehicle-num">
+                      {v.rc_regn_no || '-'}
+                      <i className="ri-external-link-line vst-vehicle-num__icon" />
+                    </span>
                   </td>
                   {!hideSearchSortFilter && <td>{formatExpiry(v.rc_regn_dt, false)}</td>}
                   <td
                     style={expiredTypes.includes('insurance') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
-                  >{formatExpiry(v.insurance_exp || v.rc_insurance_upto, true)}</td>
+                  >{renderDateBadge(v.insurance_exp || v.rc_insurance_upto)}</td>
                   <td
                     style={expiredTypes.includes('roadtax') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
-                  >{formatExpiry(v.road_tax_exp || v.rc_tax_upto, true)}</td>
-                  <td>{v.rc_np_upto ? formatExpiry(v.rc_np_upto, true) : 'NA'}</td>
+                  >{renderDateBadge(v.road_tax_exp || v.rc_tax_upto)}</td>
+                  <td>{v.rc_np_upto ? renderDateBadge(v.rc_np_upto) : <span style={{ color: '#94a3b8' }}>—</span>}</td>
                   <td>{
                     v.rc_permit_valid_upto
-                      ? formatExpiry(v.rc_permit_valid_upto, true)
+                      ? renderDateBadge(v.rc_permit_valid_upto)
                       : (v.temp_permit && v.temp_permit.rc_permit_valid_upto
-                          ? formatExpiry(v.temp_permit.rc_permit_valid_upto, true)
-                          : 'NA')
+                          ? renderDateBadge(v.temp_permit.rc_permit_valid_upto)
+                          : <span style={{ color: '#94a3b8' }}>—</span>)
                   }</td>
                   <td
                     style={expiredTypes.includes('fitness') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
-                  >{formatExpiry(v.fitness_exp || v.rc_fit_upto, true)}</td>
+                  >{renderDateBadge(v.fitness_exp || v.rc_fit_upto)}</td>
                   <td
                     style={expiredTypes.includes('pollution') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
-                  >{formatExpiry(v.pollution_exp || v.rc_pucc_upto, true)}</td>
+                  >{renderDateBadge(v.pollution_exp || v.rc_pucc_upto)}</td>
                   <td className="print-hide vst-td--center">
                     <button className="vst-view-btn" title="View Vehicle" onClick={() => {
                       const found = vehicleData.find(item => item.rc_regn_no === v.rc_regn_no);

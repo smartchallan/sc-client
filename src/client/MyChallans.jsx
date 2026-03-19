@@ -315,21 +315,23 @@ export function ChallanTableV2({
 
       <div className="vst-toolbar">
         <div className="vst-toolbar__left">
-          <input
-            type="text"
-            placeholder="Vehicle No. / Challan no."
-            value={searchTerm}
-            onChange={(e) =>
-              setSearchTerm(
-                e.target.value
-                  .toUpperCase()
-                  .replace(/[^A-Z0-9]/g, "")
-              )
-            }
-            maxLength={20}
-            className="simple-search-input"
-            style={{ minWidth: 220, maxWidth: 330 }}
-          />
+          <div className="vst-search-wrap">
+            <i className="ri-search-line vst-search-wrap__icon" />
+            <input
+              type="text"
+              placeholder="Search vehicle / challan no…"
+              value={searchTerm}
+              onChange={(e) =>
+                setSearchTerm(
+                  e.target.value
+                    .toUpperCase()
+                    .replace(/[^A-Z0-9]/g, "")
+                )
+              }
+              maxLength={20}
+              className="vst-search-input"
+            />
+          </div>
 
 
           <div
@@ -508,7 +510,7 @@ export function ChallanTableV2({
               </tr>
             ) : (
               limitedData.map((c, idx) => (
-                <tr key={c.challan_no || idx}>
+                <tr key={c.challan_no || idx} className="vst-row">
                   {settlementMode && (
                     <td>
                       <input
@@ -529,7 +531,12 @@ export function ChallanTableV2({
                     </td>
                   )}
                   <td>{idx + 1}</td>
-                  <td>{c.vehicle_number || "-"}</td>
+                  <td className="vst-td--vehicle" title="Click to view details" onClick={() => onView(c)}>
+                    <span className="vst-vehicle-num">
+                      {c.vehicle_number || "-"}
+                      <i className="ri-external-link-line vst-vehicle-num__icon" />
+                    </span>
+                  </td>
                   <td>{c.challan_no || "-"}</td>
                   <td>{c.challan_date_time || '-'}</td>
                   <td>

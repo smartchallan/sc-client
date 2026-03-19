@@ -74,14 +74,17 @@ export default function VehicleTableOnly() {
     <div className="dashboard-latest">
       <h2 style={{ fontSize: '1.2rem', marginBottom: 12 }}>Registered Vehicles</h2>
       <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
-        <input
-          type="text"
-          className="form-control"
-          style={{ minWidth: 200, maxWidth: 300, textTransform: 'uppercase' }}
-          placeholder="Search by Vehicle No, Engine No or chassis No"
-          value={search}
-          onChange={e => setSearch(e.target.value.toUpperCase())}
-        />
+        <div className="vst-search-wrap">
+          <i className="ri-search-line vst-search-wrap__icon" />
+          <input
+            type="text"
+            className="vst-search-input"
+            style={{ textTransform: 'uppercase', minWidth: 280 }}
+            placeholder="Search vehicle no, engine no, chassis no…"
+            value={search}
+            onChange={e => setSearch(e.target.value.toUpperCase())}
+          />
+        </div>
         <select
           className="form-control"
           style={{ minWidth: 160, maxWidth: 200 }}

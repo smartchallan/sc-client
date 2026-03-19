@@ -125,15 +125,17 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
       </div>
       <div className="vst-toolbar">
         <div className="vst-toolbar__left">
-          <input
-            type="text"
-            placeholder="Vehicle No. / Challan no."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-            maxLength={20}
-            className="simple-search-input"
-            style={{ minWidth: 220, maxWidth: 330 }}
-          />
+          <div className="vst-search-wrap">
+            <i className="ri-search-line vst-search-wrap__icon" />
+            <input
+              type="text"
+              placeholder="Search vehicle / challan no…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+              maxLength={20}
+              className="vst-search-input"
+            />
+          </div>
 
           {Array.isArray(data) && data.length > 0 && (() => {
             const fines = data

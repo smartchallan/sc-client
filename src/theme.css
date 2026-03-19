@@ -7,14 +7,14 @@
   --card-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
 }
 
-.theme-metallic {
-  --page-bg: linear-gradient(135deg, #1e293b 0%, #111827 100%);
-  --text-color: #e2e8f0;
+/* .theme-metallic {
+  /* --page-bg: linear-gradient(135deg, #1e293b 0%, #111827 100%); */
+  /* --text-color: #e2e8f0; */
   --surface-bg: #1f2937;
   --surface-border: #334155;
   --header-bg: rgba(30, 41, 59, 0.9);
   --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
-}
+/* } */
 
 body.theme-blue,
 body.theme-metallic {
@@ -47,14 +47,14 @@ body.theme-blue .table-container table {
   background: var(--surface-bg);
 }
 
-body.theme-metallic .form-control,
+/* body.theme-metallic .form-control,
 body.theme-blue .form-control,
 body.theme-metallic .form-group .form-control,
 body.theme-blue .form-group .form-control {
   background: #1e293b;
   color: #e2e8f0;
   border: 1px solid #334155;
-}
+} */
 
 body.theme-metallic .btn,
 body.theme-blue .btn {

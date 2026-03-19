@@ -246,7 +246,7 @@ export default function AddClient() {
             <div className="form-row">
               <div className="form-col">
                 <label className="form-label">Phone <span style={{color:'#ef4444'}}>*</span></label>
-                <input className={`form-control ${errors.phone ? 'input-error' : ''}`} placeholder="10-digit number" value={phone} onChange={e => { const digits = e.target.value.replace(/\D/g, ''); setPhone(digits.slice(0,10)); setErrors(s => ({ ...s, phone: (!/^\d{10}$/.test(digits) ? 'Enter 10 digit phone' : null) })); }} />
+                <input className={`form-control ${errors.phone ? 'input-error' : ''}`} placeholder="Enter 10-digit phone number" value={phone} onChange={e => { setPhone(e.target.value); setErrors(s => ({ ...s, phone: null })); }} />
                 {errors.phone && <div style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>{errors.phone}</div>}
               </div>
               <div className="form-col">
