@@ -102,6 +102,17 @@ export default function RegisterVehicle() {
   const API_ROOT = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
   const REGISTER_ENDPOINT = "/uservehicle/register";
 
+  // Fire-and-forget stakeholder notification via the generic /sendemail endpoint.
+  // Never throws — email failure must not affect the main registration flow.
+  const notifyStakeholders = (subject, body) => {
+    fetch(`${API_ROOT}/sendemail`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // No "to" — server defaults to STAKEHOLDER_EMAILS env var
+      body: JSON.stringify({ subject, body }),
+    }).catch(err => console.error('[notifyStakeholders] failed:', err));
+  };
+
   // Helper to get user/client/dealer/admin ids
   const getUserIds = () => {
     const userObj = JSON.parse(localStorage.getItem("sc_user"));
@@ -281,6 +292,21 @@ export default function RegisterVehicle() {
           // Don't show error to user, activity tracking failure shouldn't affect the main flow
         }
         
+        // Notify stakeholders (isolated — must never affect the main flow)
+        try {
+          const _su = JSON.parse(localStorage.getItem('sc_user')) || {};
+          const userName = _su.user?.name || 'Unknown User';
+          const vehicleLabel = registerField === 'vehicle_number' ? registerValue
+            : registerField === 'engine_number' ? `Engine: ${registerValue}`
+            : `Chassis: ${registerValue}`;
+          notifyStakeholders(
+            `New Vehicle Registered: ${vehicleLabel.toUpperCase()}`,
+            `A new vehicle has been registered on SmartChallan.\n\nVehicle: ${vehicleLabel.toUpperCase()}\nRegistered by: ${userName}\nTime: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`
+          );
+        } catch (_e) {
+          console.error('[notifyStakeholders] single vehicle:', _e);
+        }
+
         setRegisterValue("");
         setRegisterField("");
         // Reset modal states
@@ -407,6 +433,21 @@ export default function RegisterVehicle() {
       }
       // Refresh list after bulk add
       if (ids.client_id) fetchVehicles(ids.client_id);
+
+      // Notify stakeholders about bulk upload completion (isolated)
+      try {
+        const _su = JSON.parse(localStorage.getItem('sc_user')) || {};
+        const userName = _su.user?.name || 'Unknown User';
+        const failureLines = failures.length > 0
+          ? '\n\nFailed vehicles:\n' + failures.map(f => `  • ${f.vehicle}: ${f.reason}`).join('\n')
+          : '';
+        notifyStakeholders(
+          `Bulk Vehicle Upload Complete — ${successCount} registered`,
+          `Bulk vehicle upload completed on SmartChallan.\n\nUploaded by: ${userName}\nTotal attempted: ${parsedVehicles.length}\nSuccessfully registered: ${successCount}\nFailed: ${failures.length}\nTime: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}${failureLines}`
+        );
+      } catch (_e) {
+        console.error('[notifyStakeholders] bulk upload:', _e);
+      }
     } finally {
       setUploadingExcel(false);
       setParsedVehicles([]);
