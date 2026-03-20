@@ -187,11 +187,12 @@
     border-bottom: none;
   }
   
-  /* Table container with horizontal scroll */
+  /* Table container with scroll and sticky header */
   .table-container {
     border-radius: 12px;
     overflow-x: auto;
-    overflow-y: visible;
+    overflow-y: auto;
+    max-height: calc(100vh - 280px);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     -webkit-overflow-scrolling: touch;
     max-width: 100%;
@@ -993,13 +994,43 @@ main > div {
 /* ── Table container ── */
 .vst-table-wrap {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 280px);
   -webkit-overflow-scrolling: touch;
 }
 
-.vst-table-wrap::-webkit-scrollbar { height: 6px; }
+.vst-table-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
 .vst-table-wrap::-webkit-scrollbar-track { background: #f8fafc; }
 .vst-table-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 .vst-table-wrap::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ── Challan table container (MyChallans page) ── */
+.modern-table-container {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 320px);
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+}
+
+.modern-table-container::-webkit-scrollbar { width: 6px; height: 6px; }
+.modern-table-container::-webkit-scrollbar-track { background: #f8fafc; }
+.modern-table-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+.modern-table-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ── Activity / generic table wrapper ── */
+.table-wrapper {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 280px);
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+}
+
+.table-wrapper::-webkit-scrollbar { width: 6px; height: 6px; }
+.table-wrapper::-webkit-scrollbar-track { background: #f8fafc; }
+.table-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+.table-wrapper::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 /* ── Table ── */
 .vst-table {
@@ -1013,7 +1044,7 @@ main > div {
 .vst-table thead {
   position: sticky;
   top: 0;
-  z-index: 5;
+  z-index: 10;
 }
 
 .vst-table th {
@@ -2175,14 +2206,23 @@ input.vst-filter-trigger {
   .print-hide {
     display: none !important;
   }
-  
+
   body {
     background: white;
   }
-  
+
   .card {
     box-shadow: none;
     border: 1px solid #ddd;
+  }
+
+  /* Remove scroll constraints so full table prints */
+  .vst-table-wrap,
+  .modern-table-container,
+  .table-wrapper,
+  .table-container {
+    max-height: none !important;
+    overflow: visible !important;
   }
 }
 
