@@ -260,8 +260,8 @@ export default function RegisterVehicle() {
         const errorMessage = data.message || "Failed to register vehicle";
         toast.error(errorMessage);
       } else {
-        toast.success(data.message);
-        
+        toast.success(data.message || 'Vehicle registered successfully');
+
         // Track activity for vehicle addition
         try {
           const ipResponse = await fetch('https://api.ipify.org?format=json');
@@ -504,64 +504,40 @@ export default function RegisterVehicle() {
                 <label htmlFor="field_value" style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>
                   {FIELD_OPTIONS.find(f => f.value === registerField)?.label} *
                 </label>
-                {registerField === 'vehicle_number' ? (
-                  <div className="number-plate-container">
-                    <div className={"number-plate-wrapper" + (registerError ? ' input-invalid' : (registerValue.length >= 5 ? ' input-valid' : ''))}>
-                      <div className="number-plate-badge">IND</div>
-                      <div className="tricolor-strip">
-                        <div className="saffron"></div>
-                        <div className="white"></div>
-                        <div className="green"></div>
-                      </div>
-                      <input
-                        type="text"
-                        id="field_value"
-                        name="field_value"
-                        className={"number-plate-input" + (registerError ? ' input-invalid' : (registerValue.length >= 5 ? ' input-valid' : ''))}
-                        value={registerValue}
-                        onChange={e => {
-                          const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                          setRegisterValue(v);
-                          if (v.length > 11) {
-                            setRegisterError('Vehicle number cannot exceed 11 characters.');
-                          } else if (v.length > 0 && v.length < 5) {
-                            setRegisterError('Vehicle number must be at least 5 characters long.');
-                          } else {
-                            setRegisterError('');
-                          }
-                        }}
-                        placeholder="Enter vehicle number"
-                        maxLength={11}
-                      />
-                    </div>
-                    <div className="security-features">
-                      <div className="hologram"></div>
-                    </div>
-                  </div>
-                ) : (
-                  <input
-                    type="text"
-                    id="field_value"
-                    name="field_value"
-                    className="form-control"
-                    value={registerValue}
-                    onChange={e => {
-                      setRegisterValue(e.target.value.toUpperCase());
+                <input
+                  type="text"
+                  id="field_value"
+                  name="field_value"
+                  className={`form-control${registerError ? ' input-error' : ''}`}
+                  value={registerValue}
+                  onChange={e => {
+                    const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                    setRegisterValue(v);
+                    if (registerField === 'vehicle_number') {
+                      if (v.length > 11) {
+                        setRegisterError('Vehicle number cannot exceed 11 characters.');
+                      } else if (v.length > 0 && v.length < 5) {
+                        setRegisterError('Vehicle number must be at least 5 characters long.');
+                      } else {
+                        setRegisterError('');
+                      }
+                    } else {
                       setRegisterError('');
-                    }}
-                    style={{ textTransform: 'uppercase' }}
-                    placeholder={`Enter ${FIELD_OPTIONS.find(f => f.value === registerField)?.label?.toLowerCase()}`}
-                  />
-                )}
-                {registerField === 'vehicle_number' && registerError && (
-                  <div className="alert alert-danger" style={{ marginTop: '8px', padding: '8px 12px', fontSize: '12px' }}>
+                    }
+                  }}
+                  placeholder={`Enter ${FIELD_OPTIONS.find(f => f.value === registerField)?.label?.toLowerCase()}`}
+                  maxLength={registerField === 'vehicle_number' ? 11 : 50}
+                  style={{ width: '100%' }}
+                />
+                {registerError && (
+                  <div style={{ marginTop: '6px', fontSize: '12px', color: '#ef4444' }}>
                     {registerError}
                   </div>
                 )}
               </div>
             )}
             
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px' }}>
+            <div className="form-group" style={{ display: 'flex', alignItems: 'flex-end', gap: '12px' }}>
               <button 
                 type="submit" 
                 className="btn btn-primary" 

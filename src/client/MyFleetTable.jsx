@@ -261,6 +261,9 @@ export default function MyFleetTable({
   goToFleetRenewal = null,
   onConsumeFleetRenewal,
   showClientPages = false,
+  initialClientId = null,
+  initialVehicleSearch = null,
+  onConsumeJump,
 }) {
   // Client selection state for Client Vehicles mode
   const [selectedClientId, setSelectedClientId] = useState(null);
@@ -429,6 +432,15 @@ export default function MyFleetTable({
   };
   // Vehicle number search state
   const [vehicleNumberSearch, setVehicleNumberSearch] = useState("");
+
+  // Auto-select client and pre-fill vehicle search when initialClientId/initialVehicleSearch are provided (master search jump)
+  useEffect(() => {
+    if (!showClientPages || !initialClientId) return;
+    setSelectedClientId(String(initialClientId));
+    if (initialVehicleSearch) setVehicleNumberSearch(initialVehicleSearch);
+    if (onConsumeJump) onConsumeJump();
+  }, [initialClientId, initialVehicleSearch]);
+
   // Expired filter: multiple types (insurance, roadtax, fitness, pollution)
   const [expiredTypes, setExpiredTypes] = useState([]); // e.g. ['insurance', 'roadtax']
   const [showExpiredDropdown, setShowExpiredDropdown] = useState(false);
@@ -677,7 +689,7 @@ export default function MyFleetTable({
     );
   };
   // Get selected client name for loader
-  const selectedClient = clientList.find(c => (c.id || c._id) === selectedClientId);
+  const selectedClient = clientList.find(c => String(c.id || c._id) === String(selectedClientId));
   const selectedClientName = selectedClient?.name || 'Client';
 
   // Helper to extract a plain string from a date field (string or { value } object)
@@ -891,11 +903,11 @@ export default function MyFleetTable({
                         padding: '14px 18px',
                         cursor: 'pointer',
                         borderBottom: '1px solid #e8f4fd',
-                        background: (client.id || client._id) === selectedClientId ? '#e3f2fd' : '#fff',
+                        background: String(client.id || client._id) === String(selectedClientId) ? '#e3f2fd' : '#fff',
                         transition: 'all 0.15s ease'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = (client.id || client._id) === selectedClientId ? '#bbdefb' : '#f5f9fc'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = (client.id || client._id) === selectedClientId ? '#e3f2fd' : '#fff'}
+                      onMouseEnter={(e) => e.currentTarget.style.background = String(client.id || client._id) === String(selectedClientId) ? '#bbdefb' : '#f5f9fc'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = String(client.id || client._id) === String(selectedClientId) ? '#e3f2fd' : '#fff'}
                     >
                       <div style={{ 
                         fontWeight: 600, 

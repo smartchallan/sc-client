@@ -58,6 +58,8 @@ export function ChallanTableV2({
   const challanTypeDropdownRef = React.useRef(null);
   const [sortConfig, setSortConfig] = React.useState({ key: null, direction: "desc" });
   const [mapModal, setMapModal] = React.useState({ open: false, location: null });
+  const [dateFrom, setDateFrom] = React.useState('');
+  const [dateTo, setDateTo] = React.useState('');
 
   // Auto-check Pending/Disposed checkbox if initialFilter prop provided or sc_challan_filter is set
   React.useEffect(() => {
@@ -200,8 +202,20 @@ export function ChallanTableV2({
       return sorted;
     }
 
+    // Date range filter
+    if (dateFrom || dateTo) {
+      result = result.filter(c => {
+        const ts = getChallanTimestamp(c.challan_date_time);
+        if (!ts) return true; // no date → don't hide
+        const itemDate = new Date(ts).toISOString().slice(0, 10);
+        if (dateFrom && itemDate < dateFrom) return false;
+        if (dateTo && itemDate > dateTo) return false;
+        return true;
+      });
+    }
+
     return result;
-  }, [data, searchTerm, maxFineFilter, challanTypeFilter, sortConfig, statusFilter]);
+  }, [data, searchTerm, maxFineFilter, challanTypeFilter, sortConfig, statusFilter, dateFrom, dateTo]);
 
   const limitedData = React.useMemo(
     () => filteredData.slice(0, visibleCount),
@@ -395,6 +409,35 @@ export function ChallanTableV2({
               <input type="checkbox" checked={statusFilter.disposed} onChange={() => setStatusFilter((prev) => ({ ...prev, disposed: !prev.disposed }))} />
               <span>Disposed</span>
             </label>
+          </div>
+
+          {/* Date range filter */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <i className="ri-calendar-line" style={{ color: '#64748b', fontSize: 15 }} />
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={e => { setDateFrom(e.target.value); setVisibleCount(DEFAULT_LIMIT); }}
+              title="From date"
+              style={{ fontSize: 12, padding: '5px 8px', borderRadius: 6, border: '1px solid #e2e8f0', color: '#334155', background: '#fff', cursor: 'pointer' }}
+            />
+            <span style={{ color: '#94a3b8', fontSize: 12 }}>–</span>
+            <input
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={e => { setDateTo(e.target.value); setVisibleCount(DEFAULT_LIMIT); }}
+              title="To date"
+              style={{ fontSize: 12, padding: '5px 8px', borderRadius: 6, border: '1px solid #e2e8f0', color: '#334155', background: '#fff', cursor: 'pointer' }}
+            />
+            {(dateFrom || dateTo) && (
+              <button
+                type="button"
+                onClick={() => { setDateFrom(''); setDateTo(''); }}
+                title="Clear date filter"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 14, padding: '2px 4px' }}
+              >✕</button>
+            )}
           </div>
 
           {Array.isArray(data) && data.length > 0 && (() => {

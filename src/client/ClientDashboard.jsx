@@ -20,6 +20,7 @@ import { resolvePerHostEnv, getWhitelabelHosts } from "../utils/whitelabel";
 import AddClient from './AddClient';
 import MyClients from './MyClients';
 import ActivityTracker from './ActivityTracker';
+import NotificationCenter from './NotificationCenter';
 import HoliAnimation from './HoliAnimation';
 // Auto-logout on inactivity
 function useAutoLogout() {
@@ -1014,6 +1015,117 @@ function ClientDashboard() {
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, []);
+
+  // Client notification bell state
+  const [notifUnread, setNotifUnread] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const notifDropdownRef = useRef(null);
+
+  // Notification bell: fetch unread count for clients (not dealers)
+  const notifRecipientId = user?.user?.id || user?.user?.client_id || null;
+  const API_ROOT_NOTIF = import.meta.env.VITE_API_BASE_URL || '';
+  useEffect(() => {
+    if (showClientPages || !notifRecipientId) return;
+    fetch(`${API_ROOT_NOTIF}/notifications/unread-count?recipient_id=${notifRecipientId}`)
+      .then(r => r.json())
+      .then(d => setNotifUnread(d.unread || 0))
+      .catch(() => {});
+    const interval = setInterval(() => {
+      fetch(`${API_ROOT_NOTIF}/notifications/unread-count?recipient_id=${notifRecipientId}`)
+        .then(r => r.json())
+        .then(d => setNotifUnread(d.unread || 0))
+        .catch(() => {});
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [showClientPages, notifRecipientId]);
+
+  const openNotifications = async () => {
+    if (showClientPages || !notifRecipientId) return;
+    setNotifOpen(o => !o);
+    if (!notifOpen) {
+      setNotifLoading(true);
+      try {
+        const r = await fetch(`${API_ROOT_NOTIF}/notifications?recipient_id=${notifRecipientId}`);
+        const d = await r.json();
+        setNotifications(d.notifications || []);
+      } catch {}
+      setNotifLoading(false);
+    }
+  };
+
+  const markNotifRead = async (id) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+    setNotifUnread(c => Math.max(0, c - 1));
+    await fetch(`${API_ROOT_NOTIF}/notifications/${id}/read`, { method: 'PUT' }).catch(() => {});
+  };
+
+  const markAllNotifRead = async () => {
+    if (!notifRecipientId) return;
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    setNotifUnread(0);
+    await fetch(`${API_ROOT_NOTIF}/notifications/read-all?recipient_id=${notifRecipientId}`, { method: 'PUT' }).catch(() => {});
+  };
+
+  // Close notif dropdown on outside click
+  useEffect(() => {
+    if (!notifOpen) return;
+    const handler = e => {
+      if (notifDropdownRef.current && !notifDropdownRef.current.contains(e.target)) {
+        setNotifOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [notifOpen]);
+
+  // Master search state (dealers only)
+  const [masterSearch, setMasterSearch] = useState('');
+  const [masterSearchResults, setMasterSearchResults] = useState(null);
+  const [masterSearchLoading, setMasterSearchLoading] = useState(false);
+  const [masterSearchOpen, setMasterSearchOpen] = useState(false);
+  const masterSearchRef = useRef(null);
+
+  // Debounced master search effect
+  const dealerId = user?.user?.id;
+  const API_BASE_SEARCH = import.meta.env.VITE_API_BASE_URL || '';
+  useEffect(() => {
+    if (!showClientPages || !masterSearch.trim() || masterSearch.trim().length < 2) {
+      setMasterSearchResults(null);
+      setMasterSearchOpen(false);
+      return;
+    }
+    setMasterSearchLoading(true);
+    const tid = setTimeout(async () => {
+      try {
+        const r = await fetch(`${API_BASE_SEARCH}/master-search?query=${encodeURIComponent(masterSearch.trim())}&dealer_id=${dealerId}`);
+        const d = await r.json();
+        setMasterSearchResults(d);
+        setMasterSearchOpen(true);
+      } catch {}
+      setMasterSearchLoading(false);
+    }, 350);
+    return () => clearTimeout(tid);
+  }, [masterSearch, showClientPages, dealerId]);
+
+  // Close master search dropdown on outside click
+  useEffect(() => {
+    if (!masterSearchOpen) return;
+    const handler = e => {
+      if (masterSearchRef.current && !masterSearchRef.current.contains(e.target)) {
+        setMasterSearchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [masterSearchOpen]);
+
+  // Notification detail modal (clients only)
+  const [notifModalItem, setNotifModalItem] = useState(null);
+
+  // Fleet jump-to: when dealer clicks a vehicle/challan in master search, auto-select client + search vehicle
+  const [fleetJumpTo, setFleetJumpTo] = useState(null); // { client_id, vehicle_number }
 
   // Fetch vehicle summary whenever the user object changes (e.g., after login)
   // Fetch fleet data (pagination-aware)
@@ -2322,6 +2434,7 @@ function ClientDashboard() {
                     : activeMenu === 'Challans' ? 'Vehicle Challans'
                     : activeMenu === 'Billing' ? 'My Billing'
                     : activeMenu === 'Settings' ? 'Settings'
+                    : activeMenu === 'Notifications' ? 'Notification Center'
                     : activeMenu}
                 </h2>
               </div>
@@ -2329,7 +2442,7 @@ function ClientDashboard() {
               {/* Right: Actions & Profile */}
               <div className="flex items-center gap-3">
                 {/* Theme Toggle */}
-                <button 
+                {/* <button 
                   className={`p-2.5 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 ${
                     theme === 'metallic' 
                       ? 'bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 hover:from-blue-600 hover:via-blue-700 hover:to-indigo-700' 
@@ -2345,19 +2458,245 @@ function ClientDashboard() {
                   <i className={`text-white text-xl ${
                     theme === 'metallic' ? 'ri-palette-line' : theme === 'dark' ? 'ri-moon-line' : 'ri-contrast-2-line'
                   }`}></i>
-                </button>
+                </button> */}
                 
                 {/* Sidebar Toggle */}
-                <button 
+                {/* <button 
                   className="p-2.5 rounded-xl hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all duration-200 hidden lg:block hover:shadow-md"
                   title="Toggle sidebar" 
                   onClick={(e)=>{ e.stopPropagation(); setSidebarOpen(s => !s); }}
                 >
                   <i className="ri-menu-fold-line text-xl"></i>
-                </button>
+                </button> */}
                 
+                {/* Master Search (dealers only) */}
+                {showClientPages && (
+                  <div ref={masterSearchRef} style={{ position: 'relative' }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center',
+                      background: '#f1f5f9', borderRadius: 10,
+                      padding: '7px 12px', gap: 8,
+                      border: masterSearchOpen ? '1.5px solid #3b82f6' : '1.5px solid transparent',
+                      transition: 'border-color 0.2s', minWidth: 240
+                    }}>
+                      <i className="ri-search-line" style={{ color: masterSearchLoading ? '#3b82f6' : '#94a3b8', fontSize: 16, flexShrink: 0, transition: 'color 0.2s' }}></i>
+                      <input
+                        type="text"
+                        placeholder="Search vehicles, challans, clients..."
+                        value={masterSearch}
+                        onChange={e => {
+                          setMasterSearch(e.target.value);
+                          if (!e.target.value.trim()) { setMasterSearchResults(null); setMasterSearchOpen(false); }
+                        }}
+                        onFocus={() => { if (masterSearchResults) setMasterSearchOpen(true); }}
+                        style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 13, color: '#1e293b', width: 196, minWidth: 0 }}
+                      />
+                      {masterSearchLoading && (
+                        <div style={{ width: 14, height: 14, border: '2px solid #e2e8f0', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }}></div>
+                      )}
+                      {masterSearch && !masterSearchLoading && (
+                        <button
+                          onClick={() => { setMasterSearch(''); setMasterSearchResults(null); setMasterSearchOpen(false); }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0, display: 'flex', alignItems: 'center' }}
+                        >
+                          <i className="ri-close-line" style={{ fontSize: 15 }}></i>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Results dropdown */}
+                    {masterSearchOpen && masterSearchResults && (
+                      <div style={{
+                        position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 300,
+                        background: '#fff', border: '1.5px solid #e2e8f0',
+                        borderRadius: 14, boxShadow: '0 8px 36px rgba(0,0,0,0.13)',
+                        width: 390, maxHeight: 460, overflowY: 'auto'
+                      }}>
+                        {masterSearchResults.vehicles.length === 0 && masterSearchResults.challans.length === 0 && masterSearchResults.clients.length === 0 ? (
+                          <div style={{ padding: 28, textAlign: 'center', color: '#94a3b8' }}>
+                            <i className="ri-search-line" style={{ fontSize: 30, display: 'block', marginBottom: 8 }}></i>
+                            <div style={{ fontSize: 13 }}>No results for <strong>"{masterSearch}"</strong></div>
+                          </div>
+                        ) : (
+                          <>
+                            {masterSearchResults.vehicles.length > 0 && (
+                              <div>
+                                <div style={{ padding: '10px 16px 5px', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1.2 }}>
+                                  Vehicles · {masterSearchResults.vehicles.length}
+                                </div>
+                                {masterSearchResults.vehicles.map(v => (
+                                  <div
+                                    key={`v-${v.id}`}
+                                    onClick={() => { setFleetJumpTo({ client_id: v.client_id, vehicle_number: v.vehicle_number }); setActiveMenu('Client Vehicles'); setMasterSearchOpen(false); setMasterSearch(''); }}
+                                    style={{ padding: '9px 16px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                                    onMouseLeave={e => e.currentTarget.style.background = ''}
+                                  >
+                                    <div style={{ width: 34, height: 34, borderRadius: 8, background: 'linear-gradient(135deg,#eff6ff,#dbeafe)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                      <i className="ri-car-line" style={{ color: '#3b82f6', fontSize: 16 }}></i>
+                                    </div>
+                                    <div>
+                                      <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', fontFamily: 'monospace', letterSpacing: 0.5 }}>{v.vehicle_number}</div>
+                                      <div style={{ fontSize: 11, color: '#94a3b8' }}>{v.client_name || 'Vehicle record'}</div>
+                                    </div>
+                                    <i className="ri-arrow-right-s-line" style={{ marginLeft: 'auto', color: '#cbd5e1', fontSize: 18 }}></i>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {masterSearchResults.challans.length > 0 && (
+                              <div>
+                                <div style={{ padding: '10px 16px 5px', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1.2 }}>
+                                  Challans · {masterSearchResults.challans.length}
+                                </div>
+                                {masterSearchResults.challans.map(c => (
+                                  <div
+                                    key={`ch-${c.id}`}
+                                    onClick={() => { setFleetJumpTo({ client_id: c.client_id, vehicle_number: c.vehicle_number }); setActiveMenu('Client Vehicles'); setMasterSearchOpen(false); setMasterSearch(''); }}
+                                    style={{ padding: '9px 16px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                                    onMouseLeave={e => e.currentTarget.style.background = ''}
+                                  >
+                                    <div style={{ width: 34, height: 34, borderRadius: 8, background: 'linear-gradient(135deg,#fff7ed,#fed7aa)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                      <i className="ri-file-warning-line" style={{ color: '#f97316', fontSize: 16 }}></i>
+                                    </div>
+                                    <div>
+                                      <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', fontFamily: 'monospace', letterSpacing: 0.5 }}>{c.vehicle_number}</div>
+                                      <div style={{ fontSize: 11, color: '#94a3b8' }}>Challan · {c.client_name || ''}</div>
+                                    </div>
+                                    <i className="ri-arrow-right-s-line" style={{ marginLeft: 'auto', color: '#cbd5e1', fontSize: 18 }}></i>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {masterSearchResults.clients.length > 0 && (
+                              <div>
+                                <div style={{ padding: '10px 16px 5px', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1.2 }}>
+                                  Clients · {masterSearchResults.clients.length}
+                                </div>
+                                {masterSearchResults.clients.map(c => (
+                                  <div
+                                    key={`cl-${c.id}`}
+                                    onClick={() => { setActiveMenu('My Clients'); setMasterSearchOpen(false); setMasterSearch(''); }}
+                                    style={{ padding: '9px 16px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                                    onMouseLeave={e => e.currentTarget.style.background = ''}
+                                  >
+                                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                      <span style={{ fontWeight: 800, fontSize: 13, color: '#4f46e5' }}>{c.name?.[0]?.toUpperCase() || '?'}</span>
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
+                                      <div style={{ fontSize: 11, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.company_name || c.email}</div>
+                                    </div>
+                                    <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 5, background: c.status === 'active' ? '#dcfce7' : '#fee2e2', color: c.status === 'active' ? '#16a34a' : '#dc2626', fontWeight: 700, flexShrink: 0 }}>
+                                      {c.status}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Notification Bell (clients only) */}
+                {!showClientPages && notifRecipientId && (
+                  <div style={{ position: 'relative' }} ref={notifDropdownRef}>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openNotifications(); }}
+                      className="p-2.5 rounded-xl hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all duration-200 hover:shadow-md"
+                      title="Notifications"
+                      style={{ position: 'relative' }}
+                    >
+                      <i className="ri-notification-3-line text-xl"></i>
+                      {notifUnread > 0 && (
+                        <span style={{
+                          position: 'absolute', top: 4, right: 4,
+                          background: '#ef4444', color: '#fff',
+                          borderRadius: '50%', width: 18, height: 18,
+                          fontSize: 11, fontWeight: 700,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          lineHeight: 1,
+                        }}>
+                          {notifUnread > 9 ? '9+' : notifUnread}
+                        </span>
+                      )}
+                    </button>
+
+                    {notifOpen && (
+                      <div style={{
+                        position: 'absolute', top: '110%', right: 0, zIndex: 200,
+                        background: '#fff', border: '1.5px solid #e2e8f0',
+                        borderRadius: 14, boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
+                        width: 380, maxHeight: 480, display: 'flex', flexDirection: 'column',
+                        overflow: 'hidden',
+                      }}>
+                        <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontWeight: 700, fontSize: 15, color: '#1e293b' }}>Notifications</span>
+                          {notifications.some(n => !n.is_read) && (
+                            <button
+                              onClick={markAllNotifRead}
+                              style={{ fontSize: 12, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                            >
+                              Mark all as read
+                            </button>
+                          )}
+                        </div>
+                        <div style={{ overflowY: 'auto', flex: 1 }}>
+                          {notifLoading ? (
+                            <div style={{ padding: 24, textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>Loading...</div>
+                          ) : notifications.length === 0 ? (
+                            <div style={{ padding: 24, textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>
+                              <i className="ri-notification-off-line" style={{ fontSize: 32, display: 'block', marginBottom: 8 }} />
+                              No notifications yet
+                            </div>
+                          ) : notifications.map(n => (
+                            <div
+                              key={n.id}
+                              onClick={() => { setNotifModalItem(n); setNotifOpen(false); }}
+                              style={{
+                                padding: '14px 18px',
+                                borderBottom: '1px solid #f1f5f9',
+                                background: n.is_read ? '#fff' : '#eff6ff',
+                                cursor: 'pointer',
+                                transition: 'background 0.15s',
+                                display: 'flex', gap: 12, alignItems: 'flex-start',
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.background = n.is_read ? '#f8fafc' : '#e0f2fe'}
+                              onMouseLeave={e => e.currentTarget.style.background = n.is_read ? '#fff' : '#eff6ff'}
+                            >
+                              <div style={{ flexShrink: 0, paddingTop: 3 }}>
+                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: n.is_read ? '#e2e8f0' : '#3b82f6' }} />
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 3 }}>
+                                  <span style={{ fontWeight: n.is_read ? 500 : 700, fontSize: 13, color: '#1e293b' }}>{n.subject}</span>
+                                  <i className="ri-arrow-right-s-line" style={{ color: '#cbd5e1', fontSize: 16, flexShrink: 0 }} />
+                                </div>
+                                <div style={{ fontSize: 12, color: '#475569', marginBottom: 4, lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                                  {n.message}
+                                </div>
+                                <div style={{ fontSize: 11, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <span>{n.sender_name}</span>
+                                  <span>·</span>
+                                  <span>{new Date(n.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                                  {!n.is_read && <span style={{ background: '#dbeafe', color: '#1d4ed8', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 20 }}>NEW</span>}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Profile Avatar */}
-                <button 
+                <button
                   className="flex items-center gap-3 p-1.5 rounded-xl hover:bg-slate-100 transition-all duration-200 hover:shadow-md"
                   onClick={(e)=>{ e.stopPropagation(); setActiveMenu('Profile'); }}
                 >
@@ -2656,11 +2995,11 @@ function ClientDashboard() {
                   </div>
                   <div className="text-center py-1 rounded cursor-pointer hover:bg-purple-50 transition-colors" title="Expired national permit" onClick={() => { setGoToFleetRenewal('nationalPermit'); setActiveMenu(getFleetMenuName()); }}>
                     <div className="text-sm font-bold text-purple-500">{loadingVehicleRto ? '...' : expiryCounts.nationalPermit}</div>
-                    <div className="text-[9px] text-slate-400">Permit</div>
+                    <div className="text-[9px] text-slate-400">National Permit</div>
                   </div>
                   <div className="text-center py-1 rounded cursor-pointer hover:bg-teal-50 transition-colors" title="Expired permit validity" onClick={() => { setGoToFleetRenewal('permitValid'); setActiveMenu(getFleetMenuName()); }}>
                     <div className="text-sm font-bold text-teal-500">{loadingVehicleRto ? '...' : expiryCounts.permitValid}</div>
-                    <div className="text-[9px] text-slate-400">Validity</div>
+                    <div className="text-[9px] text-slate-400">State Permit</div>
                   </div>
                 </div>
               </div>
@@ -3346,6 +3685,7 @@ function ClientDashboard() {
         {activeMenu === "Add Client" && <AddClient />}
         {activeMenu === "My Clients" && <MyClients />}
         {activeMenu === "Activity Tracker" && <ActivityTracker />}
+        {activeMenu === "Notifications" && <NotificationCenter />}
 
         {activeMenu === "Register Vehicle" && <RegisterVehicle />}
         {(activeMenu === "My Fleet" || activeMenu === "Client Vehicles") && (
@@ -3356,6 +3696,9 @@ function ClientDashboard() {
                 data={vehicleSummary}
                 loading={loadingVehicleSummary}
                 showClientPages={showClientPages}
+                initialClientId={fleetJumpTo?.client_id}
+                initialVehicleSearch={fleetJumpTo?.vehicle_number}
+                onConsumeJump={() => setFleetJumpTo(null)}
                 onRefresh={row => {}}
                 onView={async row => {
                   setSelectedVehicle(row);
@@ -3741,6 +4084,103 @@ function ClientDashboard() {
         onCancel={() => setPermissionDeniedModal({ open: false, message: '' })}
         cancelText=""
       />
+
+      {/* Notification Detail Modal (clients only) */}
+      {notifModalItem && (
+        <div
+          onClick={() => setNotifModalItem(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(15,23,42,0.55)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#fff', borderRadius: 20, maxWidth: 540, width: '100%',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.22)',
+              overflow: 'hidden', animation: 'fadeInUp 0.22s ease',
+            }}
+          >
+            {/* Modal header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)',
+              padding: '20px 24px',
+              display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <i className="ri-notification-3-fill" style={{ color: '#fff', fontSize: 20 }}></i>
+                </div>
+                <div>
+                  <div style={{ color: '#fff', fontWeight: 700, fontSize: 16, lineHeight: 1.3 }}>{notifModalItem.subject}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 3 }}>
+                    From {notifModalItem.sender_name} · {new Date(notifModalItem.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setNotifModalItem(null)}
+                style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+              >
+                <i className="ri-close-line" style={{ fontSize: 18 }}></i>
+              </button>
+            </div>
+
+            {/* Message body */}
+            <div style={{ padding: '24px 24px 16px' }}>
+              <div style={{ fontSize: 14, color: '#374151', lineHeight: 1.85, whiteSpace: 'pre-line', minHeight: 60 }}>
+                {notifModalItem.message}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '12px 24px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderTop: '1px solid #f1f5f9' }}>
+              <div style={{ fontSize: 12, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {notifModalItem.is_read
+                  ? <><i className="ri-check-double-line" style={{ color: '#10b981', fontSize: 15 }}></i> Marked as read</>
+                  : <><i className="ri-circle-fill" style={{ color: '#3b82f6', fontSize: 9 }}></i> Unread</>
+                }
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                {!notifModalItem.is_read && (
+                  <button
+                    onClick={async () => {
+                      await markNotifRead(notifModalItem.id);
+                      setNotifModalItem(prev => ({ ...prev, is_read: true }));
+                    }}
+                    style={{
+                      padding: '9px 18px', borderRadius: 10, border: 'none',
+                      background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                      color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 7,
+                      boxShadow: '0 4px 12px rgba(37,99,235,0.3)',
+                    }}
+                  >
+                    <i className="ri-check-double-line"></i>
+                    Mark as Read
+                  </button>
+                )}
+                <button
+                  onClick={() => setNotifModalItem(null)}
+                  style={{
+                    padding: '9px 18px', borderRadius: 10, border: '1.5px solid #e2e8f0',
+                    background: '#f8fafc', color: '#475569', fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+          <style>{`
+            @keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+          `}</style>
+        </div>
+      )}
       </main>
     </div>
     </React.Fragment>

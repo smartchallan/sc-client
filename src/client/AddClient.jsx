@@ -111,9 +111,11 @@ export default function AddClient() {
     setSaving(true);
     // Get logged-in user id for parent_id
     let parentId = 0;
+    let dealerName = '';
     try {
       const scUser = JSON.parse(localStorage.getItem('sc_user')) || {};
       parentId = scUser.user?.id || scUser.user?.client_id || scUser.user?._id || 0;
+      dealerName = scUser.user?.name || '';
     } catch (e) {
       console.error('Failed to get parent_id from localStorage:', e);
     }
@@ -142,6 +144,8 @@ export default function AddClient() {
       business_category: business,
       pin: zip,
       parent_id: parentId,
+      dealer_name: dealerName,
+      dealer_id: parentId,
       sendEmail
     };
 

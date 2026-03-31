@@ -125,6 +125,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
   // Add "My Clients" only if user has clients or is parent account
   if (showClientPages) {
     clientMenuItems.push({ icon: "ri-team-line", label: "My Clients" });
+    clientMenuItems.push({ icon: "ri-notification-3-line", label: "Notifications" });
   }
   
   // Insert client menu items at position 1 (after Dashboard)
