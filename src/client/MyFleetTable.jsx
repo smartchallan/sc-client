@@ -20,8 +20,9 @@ const formatExpiry = (dateStr, useColor = true) => {
   // Color logic can be added if needed
   return formatted;
 };
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import SelectShowMore from "./SelectShowMore";
+import ClientTreeDropdown from "../components/ClientTreeDropdown";
 import { FaSyncAlt, FaEye, FaUpload } from "react-icons/fa";
 import { FiDownloadCloud, FiPrinter } from "react-icons/fi";
 import * as XLSX from "xlsx";
@@ -122,7 +123,7 @@ const buildPrintableTableHtml = () => {
 
   try {
     const uploadEnabled = import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true';
-    const columnsToRemove = uploadEnabled ? 2 : 1; // Remove View and Upload if enabled, else just View
+    const columnsToRemove = uploadEnabled ? 1 : 0; // Remove Upload column if enabled; View column no longer exists
 
     const theadRows = printTable.querySelectorAll('thead tr');
     theadRows.forEach((tr, rowIndex) => {
@@ -264,60 +265,66 @@ export default function MyFleetTable({
   initialClientId = null,
   initialVehicleSearch = null,
   onConsumeJump,
+  onFetchRto,
+  onFetchChallan,
+  onStatusChange,
+  onDelete,
+  refreshKey = 0,
 }) {
+  // ── Column config ────────────────────────────────────────────────────────
+  const ALL_COLS = [
+    { key: 'vehicle_number', label: 'Vehicle No.',     icon: 'ri-roadster-line',              fixed: true },
+    { key: 'body_type',      label: 'Body Type',        icon: 'ri-car-washing-line' },
+    { key: 'rc_regn_dt',     label: 'Regn. Date',       icon: 'ri-calendar-check-line',        sortKey: 'rc_regn_dt' },
+    { key: 'rc_insurance_upto', label: 'Insurance',     icon: 'ri-shield-check-line',          sortKey: 'rc_insurance_upto', filterKey: 'insurance' },
+    { key: 'rc_tax_upto',    label: 'Road Tax',         icon: 'ri-money-rupee-circle-line',    sortKey: 'rc_tax_upto',       filterKey: 'roadtax' },
+    { key: 'rc_np_upto',     label: 'Nat. Permit',      icon: 'ri-file-paper-2-line',          sortKey: 'rc_np_upto',        filterKey: 'np' },
+    { key: 'rc_permit_valid_upto', label: 'State Permit', icon: 'ri-file-shield-2-line',       sortKey: 'rc_permit_valid_upto', filterKey: 'permit' },
+    { key: 'rc_fit_upto',    label: 'Fitness',          icon: 'ri-heart-pulse-line',           sortKey: 'rc_fit_upto',       filterKey: 'fitness' },
+    { key: 'rc_pucc_upto',   label: 'Pollution',        icon: 'ri-leaf-line',                  sortKey: 'rc_pucc_upto',      filterKey: 'pollution' },
+    { key: 'pending',        label: 'Pending',          icon: 'ri-error-warning-line',         sortKey: 'pending_challan_count' },
+    { key: 'settled',        label: 'Settled',          icon: 'ri-check-double-line',          sortKey: 'disposed_challan_count' },
+  ];
+  const DEFAULT_COL_ORDER = ALL_COLS.map(c => c.key);
+  // ── Column order / visibility state ─────────────────────────────────────
+  const [colOrder, setColOrder] = useState(() => {
+    try { const s = localStorage.getItem('fleet_col_order'); if (s) return JSON.parse(s); } catch {}
+    return DEFAULT_COL_ORDER;
+  });
+  const [visibleCols, setVisibleCols] = useState(() => {
+    try { const s = localStorage.getItem('fleet_vis_cols'); if (s) return new Set(JSON.parse(s)); } catch {}
+    return new Set(DEFAULT_COL_ORDER);
+  });
+  const [colMenuOpen, setColMenuOpen] = useState(false);
+  const [draggedCol, setDraggedCol] = useState(null);
+  const [dragOverCol, setDragOverCol] = useState(null);
+  const [actionMenuRowId, setActionMenuRowId] = useState(null);
+  const colMenuRef = useRef(null);
+
   // Client selection state for Client Vehicles mode
-  const [selectedClientId, setSelectedClientId] = useState(null);
-  const [clientList, setClientList] = useState([]);
-  const [clientSearchTerm, setClientSearchTerm] = useState('');
-  const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [networkTree, setNetworkTree] = useState([]);
   const [loadingClientVehicles, setLoadingClientVehicles] = useState(false);
   const [clientVehiclesData, setClientVehiclesData] = useState([]);
-  const clientDropdownRef = useRef(null);
-  
-  // Load clients from localStorage when in Client Vehicles mode
+
+  // Derive selectedClientId from the selected client object
+  const selectedClientId = selectedClient ? String(selectedClient.id) : null;
+
+  // Load tree from localStorage when in Client Vehicles mode
   useEffect(() => {
     if (showClientPages) {
       try {
         const cachedData = localStorage.getItem('client_network');
         if (cachedData) {
-          const data = JSON.parse(cachedData);
-          const rawData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
-          
-          // Flatten nested children
-          const flattenChildren = (node, dealerName = null) => {
-            const result = [];
-            result.push({ ...node, dealerName, isParent: !dealerName });
-            if (Array.isArray(node.children) && node.children.length > 0) {
-              node.children.forEach(child => {
-                result.push(...flattenChildren(child, node.name));
-              });
-            }
-            return result;
-          };
-          
-          const flatClients = [];
-          rawData.forEach(parent => {
-            flatClients.push(...flattenChildren(parent));
-          });
-          
-          setClientList(flatClients);
+          const parsed = JSON.parse(cachedData);
+          const tree = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.data) ? parsed.data : []);
+          setNetworkTree(tree);
         }
       } catch (e) {
         console.error('Failed to load clients:', e);
       }
     }
   }, [showClientPages]);
-  
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (clientDropdownRef.current && !clientDropdownRef.current.contains(event.target)) {
-        setShowClientDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
   
   // Fetch vehicles when client is selected
   useEffect(() => {
@@ -359,6 +366,7 @@ export default function MyFleetTable({
             fitness_exp: r.fitness_exp || r.fitnessUpto || r.rc_fit_upto || '-',
             pollution_exp: r.pollution_exp || r.pollutionUpto || r.rc_pucc_upto || '-',
             registered_at: r.registered_at || r.registeredAt || r.registration_date || r.created_at || r.createdAt || null,
+            onboarded_at: r.created_at || r.createdAt || null,
             rc_body_type_desc: r.rc_body_type_desc || r.body_type_desc || r.body_type || r._raw?.rto_data?.VehicleDetails?.rc_body_type_desc || r.rto_data?.VehicleDetails?.rc_body_type_desc || '-',
             _raw: r
           }));
@@ -378,7 +386,7 @@ export default function MyFleetTable({
       // Reset data when no client is selected
       setClientVehiclesData([]);
     }
-  }, [showClientPages, selectedClientId]);
+  }, [showClientPages, selectedClientId, refreshKey]);
   
   // Use client vehicles data when in Client Vehicles mode
   const actualData = showClientPages ? clientVehiclesData : data;
@@ -434,12 +442,27 @@ export default function MyFleetTable({
   const [vehicleNumberSearch, setVehicleNumberSearch] = useState("");
 
   // Auto-select client and pre-fill vehicle search when initialClientId/initialVehicleSearch are provided (master search jump)
+  const flatNetworkTree = useMemo(() => {
+    const flatten = (nodes, depth = 0, parentName = null) => {
+      const result = [];
+      for (const node of nodes) {
+        result.push({ ...node, depth, parentName });
+        if (node.children && node.children.length > 0) {
+          result.push(...flatten(node.children, depth + 1, node.name));
+        }
+      }
+      return result;
+    };
+    return flatten(networkTree);
+  }, [networkTree]);
+
   useEffect(() => {
-    if (!showClientPages || !initialClientId) return;
-    setSelectedClientId(String(initialClientId));
+    if (!showClientPages || !initialClientId || flatNetworkTree.length === 0) return;
+    const found = flatNetworkTree.find(c => String(c.id) === String(initialClientId));
+    if (found) setSelectedClient(found);
     if (initialVehicleSearch) setVehicleNumberSearch(initialVehicleSearch);
     if (onConsumeJump) onConsumeJump();
-  }, [initialClientId, initialVehicleSearch]);
+  }, [initialClientId, initialVehicleSearch, flatNetworkTree]);
 
   // Expired filter: multiple types (insurance, roadtax, fitness, pollution)
   const [expiredTypes, setExpiredTypes] = useState([]); // e.g. ['insurance', 'roadtax']
@@ -485,13 +508,17 @@ export default function MyFleetTable({
       if (challanDropdownRef.current && !challanDropdownRef.current.contains(event.target)) {
         setShowChallanDropdown(false);
       }
+      if (colMenuRef.current && !colMenuRef.current.contains(event.target)) setColMenuOpen(false);
+      if (actionMenuRowId !== null) {
+        if (!event.target.closest?.('.vft-action-anchor')) setActionMenuRowId(null);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
+  }, [actionMenuRowId]);
 
   // When coming from the dashboard Vehicle Renewals stat card,
   // auto-select the corresponding "expired" filter once.
@@ -688,8 +715,6 @@ export default function MyFleetTable({
       isFit(row.rc_pucc_upto || row.pollution_exp)
     );
   };
-  // Get selected client name for loader
-  const selectedClient = clientList.find(c => String(c.id || c._id) === String(selectedClientId));
   const selectedClientName = selectedClient?.name || 'Client';
 
   // Helper to extract a plain string from a date field (string or { value } object)
@@ -697,6 +722,127 @@ export default function MyFleetTable({
     if (field === null || field === undefined) return null;
     if (typeof field === 'object') return field.value || null;
     return field || null;
+  };
+
+  // ── Column drag handlers ─────────────────────────────────────────────────
+  const handleColDragStart = (e, key) => { setDraggedCol(key); e.dataTransfer.effectAllowed = 'move'; };
+  const handleColDragOver  = (e, key) => { e.preventDefault(); if (key !== draggedCol) setDragOverCol(key); };
+  const handleColDrop = (e, key) => {
+    e.preventDefault();
+    if (!draggedCol || draggedCol === key) return;
+    const next = [...colOrder];
+    const fi = next.indexOf(draggedCol), ti = next.indexOf(key);
+    if (fi < 0 || ti < 0) return;
+    next.splice(fi, 1); next.splice(ti, 0, draggedCol);
+    setColOrder(next);
+    localStorage.setItem('fleet_col_order', JSON.stringify(next));
+    setDraggedCol(null); setDragOverCol(null);
+  };
+  const handleColDragEnd = () => { setDraggedCol(null); setDragOverCol(null); };
+
+  // ── renderCell helper ─────────────────────────────────────────────────────
+  const renderCell = (row, colKey, rowId) => {
+    switch (colKey) {
+      case 'vehicle_number': {
+        const hasMultiOffice = (
+          row._isFallback || !row.rc_owner_name || row.rc_owner_name === '-'
+        ) && (() => {
+          const msg = row._statusMessage || row.stautsMessage || row.statusMessage || row.status_message
+            || row._raw?.rto_data?.VehicleDetails?.stautsMessage
+            || row._raw?.rto_data?.VehicleDetails?.statusMessage
+            || row._raw?.rto_data?.VehicleDetails?.status_message;
+          return typeof msg === 'string' && msg.includes('Vehicle Record found in more than one office');
+        })();
+        return (
+          <div className="vft-vnum-wrap">
+            {hasMultiOffice && (
+              <span title="Vehicle record found in more than one office" style={{ marginRight: 4, color: '#ff9800' }}>
+                <i className="ri-error-warning-line" />
+              </span>
+            )}
+            <span className="vst-vehicle-num" onClick={() => onView(row)} title="Click to view details">
+              {row.vehicle_number || '-'}
+              <i className="ri-external-link-line vst-vehicle-num__icon" />
+            </span>
+            <div className="vft-action-anchor" onClick={e => e.stopPropagation()}>
+              <button
+                className="vft-kebab-btn"
+                title="Actions"
+                onClick={() => setActionMenuRowId(prev => prev === rowId ? null : rowId)}
+              >
+                <i className="ri-more-2-fill" />
+              </button>
+              {actionMenuRowId === rowId && (
+                <div className="vft-action-menu">
+                  <button onClick={() => { onView(row); setActionMenuRowId(null); }}>
+                    <i className="ri-eye-line" /> View Details
+                  </button>
+                  <button onClick={() => { onFetchRto?.(row); setActionMenuRowId(null); }}>
+                    <i className="ri-database-2-line" /> Fetch RTO Data
+                  </button>
+                  <button onClick={() => { onFetchChallan?.(row); setActionMenuRowId(null); }}>
+                    <i className="ri-file-list-3-line" /> Fetch Challan Data
+                  </button>
+                  <div className="vft-action-menu__divider" />
+                  <button onClick={() => { onStatusChange?.(row); setActionMenuRowId(null); }}>
+                    <i className={(row.status || '').toUpperCase() === 'ACTIVE' ? 'ri-pause-circle-line' : 'ri-checkbox-circle-line'} />
+                    {(row.status || '').toUpperCase() === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                  </button>
+                  <button className="vft-action-menu__item--danger" onClick={() => { onDelete?.(row); setActionMenuRowId(null); }}>
+                    <i className="ri-delete-bin-6-line" /> Delete Vehicle
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+      case 'body_type':
+        return row.rc_body_type_desc || row.body_type_desc || row.body_type || row._raw?.rto_data?.VehicleDetails?.rc_body_type_desc || '-';
+      case 'rc_regn_dt': {
+        const regnRaw = row.rc_regn_dt || row.registration_date || row.registered_at;
+        return regnRaw ? formatExpiry(regnRaw, false) : <span style={{ color: '#94a3b8' }}>—</span>;
+      }
+      case 'rc_insurance_upto':
+        return renderDateCell(extractDateVal(row.rc_insurance_upto || row.insurance_exp));
+      case 'rc_tax_upto':
+        return renderDateCell(extractDateVal(row.rc_tax_upto || row.road_tax_exp));
+      case 'rc_np_upto': {
+        let val = row.rc_np_upto ?? row._raw?.rc_np_upto ?? row.temp_permit?.rc_np_upto ?? row._raw?.temp_permit?.rc_np_upto;
+        if (!val) return renderDateCell(null);
+        if (typeof val === 'string' && val.trim().startsWith('{') && val.trim().endsWith('}')) {
+          try { val = JSON.parse(val); } catch { return renderDateCell(null); }
+        }
+        if (typeof val === 'object') { if ('value' in val && val.value) val = val.value; else return renderDateCell(null); }
+        return renderDateCell(formatExpiry(String(val), false));
+      }
+      case 'rc_permit_valid_upto': {
+        let val = row.rc_permit_valid_upto ?? row._raw?.rc_permit_valid_upto ?? row.temp_permit?.rc_permit_valid_upto ?? row._raw?.temp_permit?.rc_permit_valid_upto;
+        if (!val) return renderDateCell(null);
+        if (typeof val === 'string' && val.trim().startsWith('{') && val.trim().endsWith('}')) {
+          try { val = JSON.parse(val); } catch { return renderDateCell(null); }
+        }
+        if (typeof val === 'object') { if ('value' in val && val.value) val = val.value; else return renderDateCell(null); }
+        return renderDateCell(formatExpiry(String(val), false));
+      }
+      case 'rc_fit_upto':
+        return renderDateCell(extractDateVal(row.rc_fit_upto || row.fitness_exp));
+      case 'rc_pucc_upto':
+        return renderDateCell(extractDateVal(row.rc_pucc_upto || row.pollution_exp));
+      case 'pending':
+        return <span className={`vst-badge ${row.pending_challan_count > 0 ? 'vst-badge--pending' : 'vst-badge--zero'}`}>{row.pending_challan_count ?? 0}</span>;
+      case 'settled':
+        return <span className={`vst-badge ${row.disposed_challan_count > 0 ? 'vst-badge--settled' : 'vst-badge--zero'}`}>{row.disposed_challan_count ?? 0}</span>;
+      default:
+        return '-';
+    }
+  };
+
+  const getTdStyle = (colKey) => {
+    const fk = ALL_COLS.find(c => c.key === colKey)?.filterKey;
+    if (fk && (expiredTypes.includes(fk) || urgentTypes.includes(fk))) return { background: '#e3f2fd', fontWeight: 600 };
+    if (colKey === 'pending' || colKey === 'settled') return { textAlign: 'center' };
+    return {};
   };
 
   // Render a date cell with color coding: red=expired, amber=expiring within 30d, green=valid
@@ -789,146 +935,16 @@ export default function MyFleetTable({
       
       {/* Client selector dropdown for Client Vehicles mode */}
       {showClientPages && (
-        <div style={{ marginBottom: 20, padding: '0 0'}}>
-          <div style={{ position: 'relative', maxWidth: 650 }} ref={clientDropdownRef}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: 8, 
-              fontWeight: 600, 
-              color: '#1565c0', 
-              fontSize: 15,
-              letterSpacing: '-0.2px',
-              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-            }}>
-              Select Client
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                placeholder="Search by name, company, or email..."
-                value={clientSearchTerm}
-                onChange={(e) => setClientSearchTerm(e.target.value)}
-                onFocus={() => setShowClientDropdown(true)}
-                style={{
-                  width: '100%',
-                  padding: '14px 44px 14px 18px',
-                  border: '2px solid #2196f3',
-                  borderRadius: 10,
-                  fontSize: 15,
-                  outline: 'none',
-                  background: '#fff',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 2px 8px rgba(33, 150, 243, 0.08)',
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-                }}
-                onMouseEnter={(e) => e.target.style.borderColor = '#1976d2'}
-                onMouseLeave={(e) => e.target.style.borderColor = '#2196f3'}
-              />
-              {clientSearchTerm && (
-                <button
-                  onClick={() => {
-                    setClientSearchTerm('');
-                    setSelectedClientId(null);
-                    setShowClientDropdown(false);
-                  }}
-                  style={{
-                    position: 'absolute',
-                    right: 12,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    width: 28,
-                    height: 28,
-                    borderRadius: '50%',
-                    border: 'none',
-                    background: '#e3f2fd',
-                    color: '#1565c0',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 16,
-                    fontWeight: 700,
-                    transition: 'all 0.2s',
-                    lineHeight: 1
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = '#1565c0';
-                    e.target.style.color = '#fff';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = '#e3f2fd';
-                    e.target.style.color = '#1565c0';
-                  }}
-                  title="Clear search"
-                >
-                  ×
-                </button>
-              )}
-            </div>
-            {showClientDropdown && clientList.length > 0 && (
-              <div style={{
-                position: 'absolute',
-                top: 'calc(100% + 4px)',
-                left: 0,
-                right: 0,
-                maxHeight: 360,
-                overflowY: 'auto',
-                background: '#fff',
-                border: '2px solid #2196f3',
-                borderRadius: 10,
-                boxShadow: '0 8px 24px rgba(33, 150, 243, 0.2), 0 2px 8px rgba(0, 0, 0, 0.08)',
-                zIndex: 1000,
-                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-              }}>
-                {clientList
-                  .filter(client => {
-                    const searchLower = clientSearchTerm.toLowerCase();
-                    const name = client.name || '';
-                    const email = client.email || '';
-                    const company = (client.user_meta || client.userMeta)?.company_name || '';
-                    return name.toLowerCase().includes(searchLower) || 
-                           email.toLowerCase().includes(searchLower) ||
-                           company.toLowerCase().includes(searchLower);
-                  })
-                  .map(client => (
-                    <div
-                      key={client.id || client._id}
-                      onClick={() => {
-                        setSelectedClientId(client.id || client._id);
-                        setClientSearchTerm(`${client.name} (${(client.user_meta || client.userMeta)?.company_name || 'N/A'})`);
-                        setShowClientDropdown(false);
-                      }}
-                      style={{
-                        padding: '14px 18px',
-                        cursor: 'pointer',
-                        borderBottom: '1px solid #e8f4fd',
-                        background: String(client.id || client._id) === String(selectedClientId) ? '#e3f2fd' : '#fff',
-                        transition: 'all 0.15s ease'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = String(client.id || client._id) === String(selectedClientId) ? '#bbdefb' : '#f5f9fc'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = String(client.id || client._id) === String(selectedClientId) ? '#e3f2fd' : '#fff'}
-                    >
-                      <div style={{ 
-                        fontWeight: 600, 
-                        color: '#1565c0', 
-                        fontSize: 15,
-                        marginBottom: 4,
-                        letterSpacing: '-0.2px'
-                      }}>{client.name}</div>
-                      <div style={{ 
-                        fontSize: 13, 
-                        color: '#666', 
-                        lineHeight: 1.4
-                      }}>
-                        {(client.user_meta || client.userMeta)?.company_name || 'N/A'} • {client.email || 'N/A'}
-                      </div>
-                    </div>
-                  ))
-                }
-              </div>
-            )}
-          </div>
+        <div style={{ marginBottom: 20, maxWidth: 650 }}>
+          <ClientTreeDropdown
+            networkTree={networkTree}
+            loading={false}
+            selectedClient={selectedClient}
+            onSelect={setSelectedClient}
+            label="Select Client"
+            placeholder="Search by name, company, or email..."
+            maxHeight={360}
+          />
         </div>
       )}
       
@@ -1121,6 +1137,61 @@ export default function MyFleetTable({
           </div>
         </div>
         <div className="vst-toolbar__right">
+          {/* Columns control */}
+          <div style={{ position: 'relative' }} ref={colMenuRef}>
+            <button
+              className={`vst-action-btn${colMenuOpen ? ' vst-action-btn--active' : ''}`}
+              title="Show/hide columns"
+              onClick={() => setColMenuOpen(v => !v)}
+            >
+              <i className="ri-layout-column-line" /> <span>Columns</span>
+            </button>
+            {colMenuOpen && (
+              <div className="vft-col-menu">
+                <div className="vft-col-menu__header">
+                  <span>Columns</span>
+                  <button onClick={() => {
+                    setColOrder(DEFAULT_COL_ORDER);
+                    setVisibleCols(new Set(DEFAULT_COL_ORDER));
+                    localStorage.removeItem('fleet_col_order');
+                    localStorage.removeItem('fleet_vis_cols');
+                  }}>Reset</button>
+                </div>
+                {colOrder.map(key => {
+                  const col = ALL_COLS.find(c => c.key === key);
+                  if (!col) return null;
+                  return (
+                    <div
+                      key={key}
+                      className={`vft-col-menu__row${dragOverCol === key ? ' vft-col-menu__row--over' : ''}`}
+                      draggable
+                      onDragStart={e => handleColDragStart(e, key)}
+                      onDragOver={e => handleColDragOver(e, key)}
+                      onDrop={e => handleColDrop(e, key)}
+                      onDragEnd={handleColDragEnd}
+                    >
+                      <i className="ri-draggable vft-col-menu__grip" />
+                      <label className="vft-col-menu__label">
+                        <input
+                          type="checkbox"
+                          checked={visibleCols.has(key)}
+                          disabled={!!col.fixed}
+                          onChange={e => {
+                            const next = new Set(visibleCols);
+                            if (e.target.checked) next.add(key); else next.delete(key);
+                            setVisibleCols(next);
+                            localStorage.setItem('fleet_vis_cols', JSON.stringify([...next]));
+                          }}
+                        />
+                        <i className={col.icon} style={{ fontSize: 13, color: '#64748b', marginLeft: 6 }} />
+                        <span>{col.label}</span>
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           <button className="vst-action-btn vst-action-btn--download" title="Download" onClick={() => { setDownloadFormat('excel'); setShowDownloadModal(true); }}>
             <i className="ri-download-cloud-2-line" /> <span>Download</span>
           </button>
@@ -1134,176 +1205,78 @@ export default function MyFleetTable({
           <thead>
             <tr>
               <th className="vst-th--num">#</th>
-              <th>Vehicle No.</th>
-              <th>Body Type</th>
-              <th className={`vst-th--sortable${sortConfig.key === 'rc_regn_dt' ? ' vst-th--sorted' : ''}`} onClick={() => handleSort('rc_regn_dt')}>
-                Registration Date
-                <em className="vst-sort-icon">{sortConfig.key === 'rc_regn_dt' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
-              </th>
-              <th
-                className={`vst-th--sortable${sortConfig.key === 'rc_insurance_upto' ? ' vst-th--sorted' : ''}${expiredTypes.includes('insurance') ? ' vst-th--highlighted' : ''}`}
-                onClick={() => handleSort('rc_insurance_upto')}
-              >
-                Insurance Upto
-                <em className="vst-sort-icon">{sortConfig.key === 'rc_insurance_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
-              </th>
-              <th
-                className={`vst-th--sortable${sortConfig.key === 'rc_tax_upto' ? ' vst-th--sorted' : ''}${expiredTypes.includes('roadtax') ? ' vst-th--highlighted' : ''}`}
-                onClick={() => handleSort('rc_tax_upto')}
-              >
-                Road Tax Upto
-                <em className="vst-sort-icon">{sortConfig.key === 'rc_tax_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
-              </th>
-              <th
-                className={`vst-th--sortable${sortConfig.key === 'rc_np_upto' ? ' vst-th--sorted' : ''}${(expiredTypes.includes('np') || urgentTypes.includes('np')) ? ' vst-th--highlighted' : ''}`}
-                onClick={() => handleSort('rc_np_upto')}
-              >
-                National Permit
-                <em className="vst-sort-icon">{sortConfig.key === 'rc_np_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
-              </th>
-              <th
-                className={`vst-th--sortable${sortConfig.key === 'rc_permit_valid_upto' ? ' vst-th--sorted' : ''}${(expiredTypes.includes('permit') || urgentTypes.includes('permit')) ? ' vst-th--highlighted' : ''}`}
-                onClick={() => handleSort('rc_permit_valid_upto')}
-              >
-                Permit Valid
-                <em className="vst-sort-icon">{sortConfig.key === 'rc_permit_valid_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
-              </th>
-              <th
-                className={`vst-th--sortable${sortConfig.key === 'rc_fit_upto' ? ' vst-th--sorted' : ''}${expiredTypes.includes('fitness') ? ' vst-th--highlighted' : ''}`}
-                onClick={() => handleSort('rc_fit_upto')}
-              >
-                Fitness Upto
-                <em className="vst-sort-icon">{sortConfig.key === 'rc_fit_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
-              </th>
-              <th
-                className={`vst-th--sortable${sortConfig.key === 'rc_pucc_upto' ? ' vst-th--sorted' : ''}${expiredTypes.includes('pollution') ? ' vst-th--highlighted' : ''}`}
-                onClick={() => handleSort('rc_pucc_upto')}
-              >
-                Pollution Upto
-                <em className="vst-sort-icon">{sortConfig.key === 'rc_pucc_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
-              </th>
-              <th colSpan={2} className="challans-header">Challans</th>
-              <th>View</th>
-              {import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' && (
-                <th>Upload Docs</th>
-              )}
-            </tr>
-            <tr>
-              <th colSpan={10}></th>
-              <th
-                className={`vst-th--sortable vst-th--center${sortConfig.key === 'pending_challan_count' ? ' vst-th--sorted' : ''}`}
-                style={{ color: '#dc2626' }}
-                onClick={() => handleSort('pending_challan_count')}
-              >
-                Pending
-                <em className="vst-sort-icon">{sortConfig.key === 'pending_challan_count' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
-              </th>
-              <th
-                className={`vst-th--sortable vst-th--center${sortConfig.key === 'disposed_challan_count' ? ' vst-th--sorted' : ''}`}
-                style={{ color: '#16a34a' }}
-                onClick={() => handleSort('disposed_challan_count')}
-              >
-                Settled
-                <em className="vst-sort-icon">{sortConfig.key === 'disposed_challan_count' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
-              </th>
-              <th></th>
-              {import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' && (
-                <th></th>
-              )}
+              {colOrder.filter(k => visibleCols.has(k)).map(colKey => {
+                const col = ALL_COLS.find(c => c.key === colKey);
+                if (!col) return null;
+                const isSorted = sortConfig.key === col.sortKey;
+                const isHighlighted = col.filterKey && (expiredTypes.includes(col.filterKey) || urgentTypes.includes(col.filterKey));
+                return (
+                  <th
+                    key={colKey}
+                    draggable
+                    className={[
+                      col.sortKey ? 'vst-th--sortable' : '',
+                      isSorted ? 'vst-th--sorted' : '',
+                      isHighlighted ? 'vst-th--highlighted' : '',
+                      dragOverCol === colKey ? 'vft-th--drag-over' : '',
+                    ].filter(Boolean).join(' ')}
+                    onDragStart={e => handleColDragStart(e, colKey)}
+                    onDragOver={e => handleColDragOver(e, colKey)}
+                    onDrop={e => handleColDrop(e, colKey)}
+                    onDragEnd={handleColDragEnd}
+                    onClick={col.sortKey ? () => handleSort(col.sortKey) : undefined}
+                    style={col.sortKey ? { cursor: 'pointer' } : {}}
+                  >
+                    <span className="vft-th-inner">
+                      <i className={`${col.icon} vft-th-icon`} />
+                      {col.label}
+                      {col.sortKey && (
+                        <em className="vst-sort-icon">{isSorted ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
+                      )}
+                      <i className="ri-draggable vft-th-drag" title="Drag to reorder" onClick={e => e.stopPropagation()} />
+                    </span>
+                  </th>
+                );
+              })}
+              {import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' && <th>Upload</th>}
             </tr>
           </thead>
           <tbody>
-            {actualLoading ? (
-              <tr><td colSpan={import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' ? 14 : 13}>Loading...</td></tr>
-            ) : showClientPages && !selectedClientId ? (
-              <tr><td colSpan={import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' ? 14 : 13} style={{ textAlign: 'center', padding: 24, color: '#666' }}>Please select a client from the dropdown above to view their vehicles.</td></tr>
-            ) : sortedAll.length === 0 ? (
-              <tr><td colSpan={import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' ? 14 : 13}>No data found.</td></tr>
-            ) : (
-              visibleRows.map((row, idx) => (
-                <tr key={row.vehicle_id || idx} className="vst-row">
-                  <td>{idx + 1}</td>
-                  <td className="vst-td--vehicle" onClick={() => onView(row)} title="Click to view details">
-                    {( (
-                      row._isFallback || !row.rc_owner_name || row.rc_owner_name === '-' || !row.rc_chasi_no || row.rc_chasi_no === '-'
-                    ) && (
-                      (row._statusMessage || row.stautsMessage || row.statusMessage || row.status_message) ||
-                      (row._raw && row._raw.rto_data && row._raw.rto_data.VehicleDetails && (row._raw.rto_data.VehicleDetails.stautsMessage || row._raw.rto_data.VehicleDetails.statusMessage || row._raw.rto_data.VehicleDetails.status_message))
-                    ) && typeof ((row._statusMessage || row.stautsMessage || row.statusMessage || row.status_message) || (row._raw && row._raw.rto_data && row._raw.rto_data.VehicleDetails && (row._raw.rto_data.VehicleDetails.stautsMessage || row._raw.rto_data.VehicleDetails.statusMessage || row._raw.rto_data.VehicleDetails.status_message))) === 'string' && ((row._statusMessage || row.stautsMessage || row.statusMessage || row.status_message) || (row._raw && row._raw.rto_data && row._raw.rto_data.VehicleDetails && (row._raw.rto_data.VehicleDetails.stautsMessage || row._raw.rto_data.VehicleDetails.statusMessage || row._raw.rto_data.VehicleDetails.status_message))).includes('Vehicle Record found in more than one office')) && (
-                      <span title="Vehicle record found in more than one office" style={{ marginRight: 8, color: '#ff9800' }}>
-                        <i className="ri-error-warning-line"></i>
-                      </span>
-                    )}
-                    <span className="vst-vehicle-num">
-                      {row.vehicle_number || '-'}
-                      <i className="ri-external-link-line vst-vehicle-num__icon" />
-                    </span>
-                  </td>
-                  <td>{row.rc_body_type_desc || row.body_type_desc || row.body_type || row._raw?.rto_data?.VehicleDetails?.rc_body_type_desc || row.rto_data?.VehicleDetails?.rc_body_type_desc || '-'}</td>
-                  <td>{(row.rc_regn_dt || row.registration_date || row.registered_at) ?? 'N/A'}</td>
-                  <td
-                    style={expiredTypes.includes('insurance') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
-                  >{renderDateCell(extractDateVal(row.rc_insurance_upto || row.insurance_exp))}</td>
-                  <td
-                    style={expiredTypes.includes('roadtax') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
-                  >{renderDateCell(extractDateVal(row.rc_tax_upto || row.road_tax_exp))}</td>
-                  <td style={(expiredTypes.includes('np') || urgentTypes.includes('np')) ? { background: '#e3f2fd', fontWeight: 600 } : {}}>{(() => {
-                    let val = row.rc_np_upto ?? row._raw?.rc_np_upto ?? row.temp_permit?.rc_np_upto ?? row._raw?.temp_permit?.rc_np_upto;
-                    if (!val) return renderDateCell(null);
-                    if (typeof val === 'string' && val.trim().startsWith('{') && val.trim().endsWith('}')) {
-                      try { val = JSON.parse(val); } catch (e) { return renderDateCell(null); }
-                    }
-                    if (typeof val === 'object') {
-                      if ('value' in val && val.value) val = val.value;
-                      else return renderDateCell(null);
-                    }
-                    if (!val || typeof val !== 'string') return renderDateCell(null);
-                    return renderDateCell(formatExpiry(val, false));
-                  })()}</td>
-                  <td style={(expiredTypes.includes('permit') || urgentTypes.includes('permit')) ? { background: '#e3f2fd', fontWeight: 600 } : {}}>{(() => {
-                    let val = row.rc_permit_valid_upto ?? row._raw?.rc_permit_valid_upto ?? row.temp_permit?.rc_permit_valid_upto ?? row._raw?.temp_permit?.rc_permit_valid_upto;
-                    if (!val) return renderDateCell(null);
-                    if (typeof val === 'string' && val.trim().startsWith('{') && val.trim().endsWith('}')) {
-                      try { val = JSON.parse(val); } catch (e) { return renderDateCell(null); }
-                    }
-                    if (typeof val === 'object') {
-                      if ('value' in val && val.value) val = val.value;
-                      else return renderDateCell(null);
-                    }
-                    if (!val || typeof val !== 'string') return renderDateCell(null);
-                    return renderDateCell(formatExpiry(val, false));
-                  })()}</td>
-                  <td
-                    style={expiredTypes.includes('fitness') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
-                  >{renderDateCell(extractDateVal(row.rc_fit_upto || row.fitness_exp))}</td>
-                  <td
-                    style={expiredTypes.includes('pollution') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
-                  >{renderDateCell(extractDateVal(row.rc_pucc_upto || row.pollution_exp))}</td>
-                  <td className="vst-td--center"><span className={`vst-badge ${row.pending_challan_count > 0 ? 'vst-badge--pending' : 'vst-badge--zero'}`}>{row.pending_challan_count ?? 0}</span></td>
-                  <td className="vst-td--center"><span className={`vst-badge ${row.disposed_challan_count > 0 ? 'vst-badge--settled' : 'vst-badge--zero'}`}>{row.disposed_challan_count ?? 0}</span></td>
-                  <td className="vst-td--center">
-                    <button className="vst-view-btn" title="View" onClick={() => onView(row)}>
-                      <i className="ri-eye-line" />
-                    </button>
-                  </td>
-                  {import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' && (
-                    <td style={{ textAlign: 'center' }}>
-                      <button 
-                        className="action-btn flat-btn" 
-                        title="Upload Documents" 
-                        style={{ fontSize: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
-                        onClick={() => {
-                          setSelectedVehicleForUpload(row);
-                          setShowUploadModal(true);
-                        }}
+            {(() => {
+              const dynColSpan = colOrder.filter(k => visibleCols.has(k)).length + 1 + (import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' ? 1 : 0);
+              if (actualLoading) return <tr><td colSpan={dynColSpan}>Loading...</td></tr>;
+              if (showClientPages && !selectedClientId) return <tr><td colSpan={dynColSpan} style={{ textAlign: 'center', padding: 24, color: '#666' }}>Please select a client from the dropdown above to view their vehicles.</td></tr>;
+              if (sortedAll.length === 0) return <tr><td colSpan={dynColSpan}>No data found.</td></tr>;
+              return visibleRows.map((row, idx) => {
+                const rowId = row.vehicle_id || row.vehicle_number || idx;
+                return (
+                  <tr key={rowId} className="vst-row">
+                    <td>{idx + 1}</td>
+                    {colOrder.filter(k => visibleCols.has(k)).map(colKey => (
+                      <td
+                        key={colKey}
+                        className={colKey === 'vehicle_number' ? 'vst-td--vehicle' : (colKey === 'pending' || colKey === 'settled' ? 'vst-td--center' : '')}
+                        style={getTdStyle(colKey)}
                       >
-                        <FaUpload style={{ fontSize: '1.2em' }} />
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))
-            )}
+                        {renderCell(row, colKey, rowId)}
+                      </td>
+                    ))}
+                    {import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' && (
+                      <td style={{ textAlign: 'center' }}>
+                        <button
+                          className="action-btn flat-btn"
+                          title="Upload Documents"
+                          style={{ fontSize: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          onClick={() => { setSelectedVehicleForUpload(row); setShowUploadModal(true); }}
+                        >
+                          <FaUpload style={{ fontSize: '1.2em' }} />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                );
+              });
+            })()}
           </tbody>
         </table>
         {/* Show more records control to match VehicleRtoData UI */}

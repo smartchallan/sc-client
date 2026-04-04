@@ -14,8 +14,13 @@ export default function LatestRTOTable({ vehicleData = [], loading, error, setSe
     if (typeof val === 'string' && val.trim().startsWith('{') && val.trim().endsWith('}')) {
       try { const parsed = JSON.parse(val); if (parsed && parsed.value) val = parsed.value; else if (parsed) val = parsed; } catch (e) { }
     }
+    // Parse DD-MM-YYYY (e.g. from ULIP API)
+    if (typeof val === 'string' && /^\d{2}-\d{2}-\d{4}$/.test(val)) {
+      const [d, m, y] = val.split('-');
+      val = `${y}-${m}-${d}`;
+    }
     let d = new Date(val);
-    if (isNaN(d.getTime())) return val;
+    if (isNaN(d.getTime())) return dateStr;
     return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
   };
   return (
@@ -46,7 +51,7 @@ export default function LatestRTOTable({ vehicleData = [], loading, error, setSe
                   <th>#</th>
                   <th>Vehicle No.</th>
                   <th>Insurance</th>
-                  <th>RoadTax</th>
+                  <th>Road Tax</th>
                   <th>National Permit</th>
                   <th>Permit Valid</th>
                   <th>Fitness</th>
@@ -81,8 +86,8 @@ export default function LatestRTOTable({ vehicleData = [], loading, error, setSe
                   <tr key={v.rc_regn_no || idx}>
                     <td>{idx + 1}</td>
                     <td>{v.rc_regn_no || '-'}</td>
-                    <td>{v.insurance_exp || v.rc_insurance_upto || '-'}</td>
-                    <td>{v.road_tax_exp || v.rc_tax_upto || '-'}</td>
+                    <td>{formatExpiry(v.insurance_exp || v.rc_insurance_upto)}</td>
+                    <td>{formatExpiry(v.road_tax_exp || v.rc_tax_upto)}</td>
                     <td>{(() => {
                       let val = v.rc_np_upto ?? v._raw?.rc_np_upto ?? v.temp_permit?.rc_np_upto ?? v._raw?.temp_permit?.rc_np_upto;
                       if (!val) return '-';
@@ -93,8 +98,8 @@ export default function LatestRTOTable({ vehicleData = [], loading, error, setSe
                       if (!val) return '-';
                       return formatExpiry(val);
                     })()}</td>
-                    <td>{v.fitness_exp || v.rc_fit_upto || '-'}</td>
-                    <td>{v.pollution_exp || v.rc_pucc_upto || '-'}</td>
+                    <td>{formatExpiry(v.fitness_exp || v.rc_fit_upto)}</td>
+                    <td>{formatExpiry(v.pollution_exp || v.rc_pucc_upto)}</td>
                     <td className="print-hide vst-td--center">
                       <button className="vst-view-btn" onClick={() => setSelectedRtoData && setSelectedRtoData(v)} title="View Vehicle">
                         <i className="ri-eye-line" />

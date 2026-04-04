@@ -20,6 +20,10 @@ export default function MyClients() {
   const [statusModal, setStatusModal] = useState({ open: false, client: null, action: '' });
   const [selectedClient, setSelectedClient] = useState(null);
   const [settingsClient, setSettingsClient] = useState(null);
+  const [billingMap, setBillingMap] = useState({});  // { clientId → billing record }
+  const [billingModal, setBillingModal] = useState({ open: false, client: null, record: null });
+  const [billingDate, setBillingDate] = useState('');
+  const [billingSaving, setBillingSaving] = useState(false);
   const API_ROOT = import.meta.env.VITE_API_BASE_URL || '';
 
   // Strict: Clear search box when change password modal is opened (prevents autofill or indirect state sync)
@@ -120,6 +124,62 @@ export default function MyClients() {
   };
 
   useEffect(() => { fetchClients(); }, []);
+
+  // Fetch billing records for all direct clients
+  useEffect(() => {
+    const userId = getUserId();
+    if (!userId) return;
+    fetch(`${API_ROOT}/userbillingsetting/dealer?dealer_id=${userId}`)
+      .then(r => r.json())
+      .then(data => {
+        const map = {};
+        (data.billingRecords || []).forEach(r => { map[String(r.user_id)] = r; });
+        setBillingMap(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  const daysUntilExpiry = (dateStr) => {
+    if (!dateStr) return null;
+    const diff = new Date(dateStr).getTime() - Date.now();
+    return Math.ceil(diff / (24 * 60 * 60 * 1000));
+  };
+
+  const getBillingHighlight = (dateStr) => {
+    const days = daysUntilExpiry(dateStr);
+    if (days === null) return null;
+    if (days < 0) return 'expired';
+    if (days <= 15) return 'warning';
+    return 'ok';
+  };
+
+  const openBillingModal = (client) => {
+    const record = billingMap[String(client.id)] || null;
+    setBillingDate(record?.plan_end_dt ? record.plan_end_dt.split('T')[0] : '');
+    setBillingModal({ open: true, client, record });
+  };
+
+  const handleSaveBilling = async () => {
+    if (!billingDate) return;
+    const userId = getUserId();
+    setBillingSaving(true);
+    try {
+      const res = await fetch(`${API_ROOT}/clientbilling`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client_id: billingModal.client.id, dealer_id: userId, plan_end_dt: billingDate }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Save failed');
+      setBillingMap(prev => ({ ...prev, [String(billingModal.client.id)]: data.record }));
+      toast.success('Billing date updated successfully');
+      setBillingModal({ open: false, client: null, record: null });
+    } catch (err) {
+      toast.error(err.message || 'Failed to save billing');
+    } finally {
+      setBillingSaving(false);
+    }
+  };
 
   // Get unique states and cities for filters
   const uniqueStates = useMemo(() => {
@@ -398,6 +458,7 @@ export default function MyClients() {
               <th>Phone</th>
               <th>Address</th>
               <th>Registered On</th>
+              <th>Billed Till</th>
               <th>Status</th>
               <th>Last Login</th>
               <th>Actions</th>
@@ -406,7 +467,7 @@ export default function MyClients() {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={10} style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 20px' }}>
+                <td colSpan={11} style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 20px' }}>
                   {loading ? (
                     <span><i className="ri-loader-4-line" style={{ animation: 'spin 1s linear infinite', marginRight: 8 }}></i> Loading clients...</span>
                   ) : (
@@ -417,12 +478,41 @@ export default function MyClients() {
             ) : filtered.map((c, i) => (
               <tr key={c.id || c._id || i} className="vst-row">
                 <td className="vst-td--num">{i + 1}</td>
-                <td style={{ fontWeight: 600, color: '#1e293b', maxWidth: 350, whiteSpace: 'normal', wordBreak: 'break-word' }}>{c.name || '-'}</td>
+                <td style={{ fontWeight: 600, color: '#1e293b', maxWidth: 350, whiteSpace: 'normal' }}>{c.name || '-'}</td>
                 <td>{c.dealerName || '-'}</td>
                 <td>{c.email || '-'}</td>
                 <td>{(c.user_meta || c.userMeta)?.phone || (c.user_meta || c.userMeta)?.mobile || '-'}</td>
                 <td style={{ maxWidth: 150, whiteSpace: 'normal' }}>{formatAddress(c)}</td>
                 <td>{formatDate(c.created_at || c.createdAt || c.registered_at)}</td>
+                <td>
+                  {(() => {
+                    const br = billingMap[String(c.id)];
+                    const highlight = getBillingHighlight(br?.plan_end_dt);
+                    const days = daysUntilExpiry(br?.plan_end_dt);
+                    if (!br?.plan_end_dt) return (
+                      <span style={{ color: '#94a3b8', fontSize: 12 }}>—</span>
+                    );
+                    return (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '2px 8px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                        background: highlight === 'expired' ? '#fef2f2' : highlight === 'warning' ? '#fff7ed' : '#f0fdf4',
+                        color: highlight === 'expired' ? '#dc2626' : highlight === 'warning' ? '#ea580c' : '#16a34a',
+                        border: `1px solid ${highlight === 'expired' ? '#fecaca' : highlight === 'warning' ? '#fed7aa' : '#bbf7d0'}`,
+                      }}>
+                        {highlight === 'expired' && <i className="ri-error-warning-fill" style={{ fontSize: 11 }} />}
+                        {highlight === 'warning' && <i className="ri-alarm-warning-fill" style={{ fontSize: 11 }} />}
+                        {highlight === 'ok' && <i className="ri-checkbox-circle-fill" style={{ fontSize: 11 }} />}
+                        {formatDate(br.plan_end_dt)}
+                        {highlight !== 'ok' && (
+                          <span style={{ fontSize: 10, opacity: 0.8 }}>
+                            {highlight === 'expired' ? ' · Expired' : ` · ${days}d`}
+                          </span>
+                        )}
+                      </span>
+                    );
+                  })()}
+                </td>
                 <td>
                   <span className={`client-status-pill ${(c.status === 'active' || !c.status) ? 'active' : 'inactive'}`}>
                     {c.status === 'active' || !c.status ? 'Active' : 'Inactive'}
@@ -444,6 +534,18 @@ export default function MyClients() {
                       title="Client Settings"
                     >
                       <i className="ri-settings-3-line"></i>
+                    </button>
+                    <button
+                      style={{
+                        background: billingMap[String(c.id)] ? '#eff6ff' : '#f8fafc',
+                        border: `1px solid ${billingMap[String(c.id)] ? '#bfdbfe' : '#e2e8f0'}`,
+                        color: billingMap[String(c.id)] ? '#2563eb' : '#64748b',
+                        borderRadius: 7, padding: '4px 7px', cursor: 'pointer', fontSize: 14, lineHeight: 1,
+                      }}
+                      onClick={() => openBillingModal(c)}
+                      title="Set Billing Date"
+                    >
+                      <i className="ri-money-dollar-circle-line"></i>
                     </button>
                     <button
                       className={`client-action-btn ${(c.status === 'active' || !c.status) ? 'toggle-disable' : 'toggle-enable'}`}
@@ -628,6 +730,83 @@ export default function MyClients() {
         onClose={() => setSettingsClient(null)}
         client={settingsClient}
       />
+
+      {/* Billing Date Modal */}
+      {billingModal.open && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 16, boxShadow: '0 16px 48px rgba(0,0,0,0.18)',
+            padding: 28, width: 380, maxWidth: '95vw',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <i className="ri-money-dollar-circle-line" style={{ fontSize: 20, color: '#2563eb' }} />
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 15, color: '#1e293b' }}>Set Billing Date</div>
+                <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{billingModal.client?.name}</div>
+              </div>
+              <button onClick={() => setBillingModal({ open: false, client: null, record: null })} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 20, lineHeight: 1 }}>
+                <i className="ri-close-line" />
+              </button>
+            </div>
+
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 8 }}>
+              Billed Till Date
+            </label>
+            <input
+              type="date"
+              value={billingDate}
+              onChange={e => setBillingDate(e.target.value)}
+              style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 14px', fontSize: 14, outline: 'none', background: '#f8fafc', boxSizing: 'border-box', color: '#1e293b' }}
+            />
+
+            {billingDate && (() => {
+              const days = Math.ceil((new Date(billingDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+              if (days < 0) return (
+                <div style={{ marginTop: 10, padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, fontSize: 12, color: '#dc2626', display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <i className="ri-error-warning-fill" /> This date is in the past — billing is expired.
+                </div>
+              );
+              if (days <= 15) return (
+                <div style={{ marginTop: 10, padding: '8px 12px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, fontSize: 12, color: '#ea580c', display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <i className="ri-alarm-warning-fill" /> Expires in {days} day{days !== 1 ? 's' : ''}. You will receive an email alert.
+                </div>
+              );
+              return (
+                <div style={{ marginTop: 10, padding: '8px 12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, fontSize: 12, color: '#16a34a', display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <i className="ri-checkbox-circle-fill" /> Active for {days} more day{days !== 1 ? 's' : ''}.
+                </div>
+              );
+            })()}
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <button
+                onClick={() => setBillingModal({ open: false, client: null, record: null })}
+                style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#f8fafc', color: '#64748b', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveBilling}
+                disabled={!billingDate || billingSaving}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: 10, border: 'none',
+                  background: billingDate && !billingSaving ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : '#e2e8f0',
+                  color: billingDate && !billingSaving ? '#fff' : '#94a3b8',
+                  fontSize: 14, fontWeight: 700, cursor: billingDate && !billingSaving ? 'pointer' : 'not-allowed',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}
+              >
+                {billingSaving ? <><i className="ri-loader-4-line" style={{ animation: 'spin 1s linear infinite' }} /> Saving...</> : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

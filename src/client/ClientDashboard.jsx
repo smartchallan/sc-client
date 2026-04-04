@@ -17,6 +17,7 @@ import scLogo from "../assets/sc-logo.png";
 // ...existing code...
 import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { resolvePerHostEnv, getWhitelabelHosts } from "../utils/whitelabel";
+import { formatDate as fmtDate } from "../utils/dateUtils";
 import AddClient from './AddClient';
 import MyClients from './MyClients';
 import ActivityTracker from './ActivityTracker';
@@ -933,6 +934,8 @@ function ClientDashboard() {
   const [loadingVehicleSummary, setLoadingVehicleSummary] = useState(false);
   const [fleetLimit, setFleetLimit] = useState(100); // Start with 100 for better initial UX
   const [fleetOffset, setFleetOffset] = useState(0);
+  const [fleetRefreshKey, setFleetRefreshKey] = useState(0);
+  const refreshFleet = () => setFleetRefreshKey(k => k + 1);
   const [fleetAll, setFleetAll] = useState(true); // Load all vehicles by default so users can search through complete fleet
   // Read current logged-in user from localStorage when component mounts.
   // State for challan filter in My Fleet
@@ -1016,21 +1019,39 @@ function ClientDashboard() {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
+  // Client billing expiry banner (for client accounts)
+  const [billingExpiry, setBillingExpiry] = useState(null); // null | { plan_end_dt, daysLeft }
+
   // Client notification bell state
   const [notifUnread, setNotifUnread] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notifLoading, setNotifLoading] = useState(false);
   const notifDropdownRef = useRef(null);
+  const notifAutoOpenedRef = useRef(false); // only auto-open once per session
 
   // Notification bell: fetch unread count for clients (not dealers)
   const notifRecipientId = user?.user?.id || user?.user?.client_id || null;
   const API_ROOT_NOTIF = import.meta.env.VITE_API_BASE_URL || '';
   useEffect(() => {
     if (showClientPages || !notifRecipientId) return;
+    // Initial fetch — auto-open popup if there are unread notifications
     fetch(`${API_ROOT_NOTIF}/notifications/unread-count?recipient_id=${notifRecipientId}`)
       .then(r => r.json())
-      .then(d => setNotifUnread(d.unread || 0))
+      .then(d => {
+        const count = d.unread || 0;
+        setNotifUnread(count);
+        // Auto-open once on load if there are unread notifications
+        if (count > 0 && !notifAutoOpenedRef.current) {
+          notifAutoOpenedRef.current = true;
+          setNotifLoading(true);
+          fetch(`${API_ROOT_NOTIF}/notifications?recipient_id=${notifRecipientId}`)
+            .then(r => r.json())
+            .then(d => { setNotifications(d.notifications || []); setNotifOpen(true); })
+            .catch(() => {})
+            .finally(() => setNotifLoading(false));
+        }
+      })
       .catch(() => {});
     const interval = setInterval(() => {
       fetch(`${API_ROOT_NOTIF}/notifications/unread-count?recipient_id=${notifRecipientId}`)
@@ -1041,18 +1062,27 @@ function ClientDashboard() {
     return () => clearInterval(interval);
   }, [showClientPages, notifRecipientId]);
 
-  const openNotifications = async () => {
+  const fetchNotifList = async () => {
+    setNotifLoading(true);
+    try {
+      const r = await fetch(`${API_ROOT_NOTIF}/notifications?recipient_id=${notifRecipientId}`);
+      const d = await r.json();
+      setNotifications(d.notifications || []);
+    } catch {}
+    setNotifLoading(false);
+  };
+
+  const openNotifications = () => {
     if (showClientPages || !notifRecipientId) return;
-    setNotifOpen(o => !o);
-    if (!notifOpen) {
-      setNotifLoading(true);
-      try {
-        const r = await fetch(`${API_ROOT_NOTIF}/notifications?recipient_id=${notifRecipientId}`);
-        const d = await r.json();
-        setNotifications(d.notifications || []);
-      } catch {}
-      setNotifLoading(false);
-    }
+    const willOpen = !notifOpen;
+    setNotifOpen(willOpen);
+    if (willOpen) fetchNotifList();
+  };
+
+  const hoverOpenNotifications = () => {
+    if (showClientPages || !notifRecipientId || notifOpen) return;
+    setNotifOpen(true);
+    fetchNotifList();
   };
 
   const markNotifRead = async (id) => {
@@ -1067,6 +1097,21 @@ function ClientDashboard() {
     setNotifUnread(0);
     await fetch(`${API_ROOT_NOTIF}/notifications/read-all?recipient_id=${notifRecipientId}`, { method: 'PUT' }).catch(() => {});
   };
+
+  // Fetch billing expiry for client accounts
+  useEffect(() => {
+    if (showClientPages || !notifRecipientId) return;
+    fetch(`${API_ROOT_NOTIF}/userbillingsetting?client_id=${notifRecipientId}`)
+      .then(r => r.json())
+      .then(data => {
+        const records = data.billingRecords || [];
+        const active = records.find(r => r.billing_plan_status === 'active');
+        if (!active?.plan_end_dt) return;
+        const daysLeft = Math.ceil((new Date(active.plan_end_dt).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+        if (daysLeft <= 15) setBillingExpiry({ plan_end_dt: active.plan_end_dt, daysLeft });
+      })
+      .catch(() => {});
+  }, [showClientPages, notifRecipientId]);
 
   // Close notif dropdown on outside click
   useEffect(() => {
@@ -1198,7 +1243,7 @@ function ClientDashboard() {
         setVehicleSummary([]);
         setLoadingVehicleSummary(false);
       });
-  }, [user, fleetLimit, fleetOffset, fleetAll, showClientPages]);
+  }, [user, fleetLimit, fleetOffset, fleetAll, showClientPages, fleetRefreshKey]);
   // initial filter to pass into MyChallans when opened via dashboard quick links
   const [initialChallanFilter, setInitialChallanFilter] = useState(null);
 
@@ -2065,12 +2110,7 @@ function ClientDashboard() {
           <td>{c.vehicle_number}</td>
           <td>
             <span title={c.challan_date_time} style={{cursor:'pointer'}}>
-              {(() => {
-                if (!c.challan_date_time) return '';
-                const dt = c.challan_date_time;
-                const match = dt.match(/\d{4}-\d{2}-\d{2}|\d{2}-\d{2}-\d{4}|\d{2}-[A-Za-z]{3}-\d{4}/);
-                return match ? match[0] : dt.slice(0,10);
-              })()}
+              {c.challan_date_time ? fmtDate(c.challan_date_time) : ''}
             </span>
           </td>
           <td style={{ textAlign: 'center' }}>
@@ -2605,7 +2645,7 @@ function ClientDashboard() {
 
                 {/* Notification Bell (clients only) */}
                 {!showClientPages && notifRecipientId && (
-                  <div style={{ position: 'relative' }} ref={notifDropdownRef}>
+                  <div style={{ position: 'relative' }} ref={notifDropdownRef} onMouseEnter={hoverOpenNotifications}>
                     <button
                       onClick={(e) => { e.stopPropagation(); openNotifications(); }}
                       className="p-2.5 rounded-xl hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all duration-200 hover:shadow-md"
@@ -2635,16 +2675,31 @@ function ClientDashboard() {
                         width: 380, maxHeight: 480, display: 'flex', flexDirection: 'column',
                         overflow: 'hidden',
                       }}>
-                        <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontWeight: 700, fontSize: 15, color: '#1e293b' }}>Notifications</span>
-                          {notifications.some(n => !n.is_read) && (
+                        <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <i className="ri-notification-3-fill" style={{ color: '#3b82f6', fontSize: 16 }} />
+                            <span style={{ fontWeight: 700, fontSize: 15, color: '#1e293b' }}>Notifications</span>
+                            {notifUnread > 0 && (
+                              <span style={{ background: '#ef4444', color: '#fff', borderRadius: 20, fontSize: 11, fontWeight: 700, padding: '1px 7px' }}>{notifUnread}</span>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {notifications.some(n => !n.is_read) && (
+                              <button
+                                onClick={markAllNotifRead}
+                                style={{ fontSize: 12, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}
+                              >
+                                Mark all read
+                              </button>
+                            )}
                             <button
-                              onClick={markAllNotifRead}
-                              style={{ fontSize: 12, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                              onClick={() => setNotifOpen(false)}
+                              title="Minimize"
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '2px 4px', borderRadius: 4, fontSize: 18, lineHeight: 1, display: 'flex', alignItems: 'center' }}
                             >
-                              Mark all as read
+                              <i className="ri-subtract-line" />
                             </button>
-                          )}
+                          </div>
                         </div>
                         <div style={{ overflowY: 'auto', flex: 1 }}>
                           {notifLoading ? (
@@ -2711,6 +2766,31 @@ function ClientDashboard() {
         
         {/* Main Content Container */}
         <div className="p-4">
+
+        {/* Billing expiry banner for clients */}
+        {billingExpiry && !showClientPages && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16,
+            padding: '12px 18px', borderRadius: 12,
+            background: billingExpiry.daysLeft < 0 ? '#fef2f2' : '#fff7ed',
+            border: `1.5px solid ${billingExpiry.daysLeft < 0 ? '#fecaca' : '#fed7aa'}`,
+            color: billingExpiry.daysLeft < 0 ? '#dc2626' : '#ea580c',
+          }}>
+            <i className={`${billingExpiry.daysLeft < 0 ? 'ri-error-warning-fill' : 'ri-alarm-warning-fill'}`} style={{ fontSize: 20, flexShrink: 0 }} />
+            <div>
+              <span style={{ fontWeight: 700, fontSize: 13 }}>
+                {billingExpiry.daysLeft < 0 ? 'Your subscription has expired.' : `Your subscription expires in ${billingExpiry.daysLeft} day${billingExpiry.daysLeft !== 1 ? 's' : ''}.`}
+              </span>
+              <span style={{ fontSize: 12, marginLeft: 8, opacity: 0.85 }}>
+                Please contact your dealer to renew.
+              </span>
+            </div>
+            <button onClick={() => setBillingExpiry(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6, fontSize: 18, lineHeight: 1, color: 'inherit' }}>
+              <i className="ri-close-line" />
+            </button>
+          </div>
+        )}
+
         {activeMenu === "Dashboard" && (
           <React.Fragment>
             {/* Dashboard Gradient Banner */}
@@ -3740,6 +3820,86 @@ function ClientDashboard() {
                   setFleetOffset(0);
                 }}
                 filteredFleet={filteredFleet}
+                refreshKey={fleetRefreshKey}
+                onFetchRto={async (row) => {
+                  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+                  const clientID = row.client_id;
+                  const vehicleNumber = row.vehicle_number;
+                  const toastId = toast.loading(`Fetching RTO data for ${vehicleNumber}…`);
+                  try {
+                    const res = await fetch(`${baseUrl}/getvehiclertodata/batch`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ vehicleNumbers: [vehicleNumber], clientID })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Request failed');
+                    toast.update(toastId, { render: `RTO data updated for ${vehicleNumber}`, type: 'success', isLoading: false, autoClose: 3000 });
+                    refreshFleet();
+                  } catch (e) {
+                    toast.update(toastId, { render: `Failed to fetch RTO data: ${e.message}`, type: 'error', isLoading: false, autoClose: 4000 });
+                  }
+                }}
+                onFetchChallan={async (row) => {
+                  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+                  const clientID = row.client_id;
+                  const vehicleNumber = row.vehicle_number;
+                  const toastId = toast.loading(`Fetching challan data for ${vehicleNumber}…`);
+                  try {
+                    const res = await fetch(`${baseUrl}/getvehicleechallandata/batch`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ vehicleNumbers: [vehicleNumber], clientID })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Request failed');
+                    toast.update(toastId, { render: `Challan data updated for ${vehicleNumber}`, type: 'success', isLoading: false, autoClose: 3000 });
+                    refreshFleet();
+                  } catch (e) {
+                    toast.update(toastId, { render: `Failed to fetch challan data: ${e.message}`, type: 'error', isLoading: false, autoClose: 4000 });
+                  }
+                }}
+                onStatusChange={async (row) => {
+                  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+                  const vehicle_id = row.vehicle_id || row.id;
+                  const isActive = (row.status || '').toLowerCase() === 'active';
+                  const newStatus = isActive ? 'inactive' : 'active';
+                  const vehicleNumber = row.vehicle_number;
+                  const toastId = toast.loading(`${isActive ? 'Deactivating' : 'Activating'} ${vehicleNumber}…`);
+                  try {
+                    const res = await fetch(`${baseUrl}/updatevehiclestatus`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ vehicle_id, status: newStatus })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Request failed');
+                    toast.update(toastId, { render: `${vehicleNumber} ${newStatus === 'active' ? 'activated' : 'deactivated'}`, type: 'success', isLoading: false, autoClose: 3000 });
+                    refreshFleet();
+                  } catch (e) {
+                    toast.update(toastId, { render: `Status update failed: ${e.message}`, type: 'error', isLoading: false, autoClose: 4000 });
+                  }
+                }}
+                onDelete={async (row) => {
+                  const vehicleNumber = row.vehicle_number;
+                  if (!window.confirm(`Delete ${vehicleNumber}? This will also remove all associated RTO and challan data.`)) return;
+                  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+                  const vehicle_id = row.vehicle_id || row.id;
+                  const toastId = toast.loading(`Deleting ${vehicleNumber}…`);
+                  try {
+                    const res = await fetch(`${baseUrl}/updatevehiclestatus`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ vehicle_id, status: 'delete' })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Request failed');
+                    toast.update(toastId, { render: `${vehicleNumber} deleted`, type: 'success', isLoading: false, autoClose: 3000 });
+                    refreshFleet();
+                  } catch (e) {
+                    toast.update(toastId, { render: `Delete failed: ${e.message}`, type: 'error', isLoading: false, autoClose: 4000 });
+                  }
+                }}
               />
               {selectedVehicle && (activeMenu === "My Fleet" || activeMenu === "Client Vehicles") && (
                 <RightSidebar
@@ -3797,7 +3957,7 @@ function ClientDashboard() {
         <QuickActionsRibbon
           onRegister={() => checkPermissionAndNavigate('Register Vehicle')}
           onChallans={() => setActiveMenu('Vehicle Challans')}
-          onRTO={() => setActiveMenu('Vehicle RTO Data')}
+          onRTO={() => setActiveMenu('RTO Details')}
           onClients={() => setActiveMenu('My Clients')}
           onReports={() => setReportsModal({ open: true })}
         />
@@ -3957,7 +4117,7 @@ function ClientDashboard() {
               <tr><td><b>Status</b></td><td>{selectedChallan.challan_status}</td></tr>
               <tr><td><b>Vehicle Number</b></td><td>{selectedChallan.vehicle_number}</td></tr>
               <tr><td><b>Challan No</b></td><td>{selectedChallan.challan_no}</td></tr>
-              <tr><td><b>Date/Time</b></td><td>{selectedChallan.challan_date_time}</td></tr>
+              <tr><td><b>Date/Time</b></td><td>{fmtDate(selectedChallan.challan_date_time)}</td></tr>
               <tr><td><b>Location</b></td><td>{selectedChallan.challan_place || selectedChallan.location || selectedChallan.challan_location}</td></tr>
               <tr><td><b>Owner Name</b></td><td>{selectedChallan.owner_name}</td></tr>
               <tr><td><b>Driver Name</b></td><td>{selectedChallan.driver_name}</td></tr>

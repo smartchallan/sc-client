@@ -448,684 +448,423 @@ export default function DriverVerification() {
 
   return (
     <>
-      {/* Registered Drivers Table ...existing code... */}
+      <style>{`
+        @keyframes dl-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes dl-fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(${openUpwards ? '10px' : '-10px'}) scale(0.95); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .date-picker-container { animation: fadeInUp 0.2s ease-out; }
+        .dl-result-card { animation: dl-fadeIn 0.3s ease; }
+        .dl-info-field { display: flex; flex-direction: column; gap: 2px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+        .dl-info-field:last-child { border-bottom: none; }
+        .dl-info-label { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+        .dl-info-value { font-size: 14px; font-weight: 500; color: #1e293b; }
+      `}</style>
 
-      <h3 style={{ marginBottom: 12 }}>Verify Driver License</h3>
-      <div className="card" style={{background: 'linear-gradient(180deg, #f8fafc 0%, #e0e7ef 100%)', boxShadow: '0 4px 24px rgba(30, 64, 175, 0.06)', borderRadius: 14, padding: 28, marginBottom: 24}}>
-        <form className="register-vehicle-form" onSubmit={handleSubmit} style={{display: 'flex', flexWrap: 'wrap', gap: 16}} autoComplete="off">
-          {/* ...existing manual DL form fields... */}
-        </form>
-        {/* Bulk DL Verification Option inside card */}
-        <form className="bulk-upload-form" style={{
-          background: '#f8fafc',
-          border: '1px solid #e0e7ef',
-          borderRadius: 12,
-          padding: 24,
-          margin: '24px 0 0 0',
-          boxShadow: '0 2px 8px rgba(30, 64, 175, 0.04)',
-          maxWidth: 600
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-            <input
-              type="checkbox"
-              id="bulkDLCheckbox"
-              checked={bulkLoading || !!showBulkDL}
-              onChange={e => setShowBulkDL(e.target.checked)}
-              disabled={bulkLoading}
-              style={{ width: 18, height: 18 }}
-            />
-            <label htmlFor="bulkDLCheckbox" style={{ fontWeight: 500, fontSize: 16, cursor: 'pointer' }}>
-              Bulk Driver Verification
-            </label>
-          </div>
-          {showBulkDL && (
-            <div style={{ marginTop: 8 }}>
-              <label style={{ fontWeight: 500, fontSize: 15, marginBottom: 8, display: 'block' }}>
-                Upload Excel file (max 100 records):
-              </label>
-              <input
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={handleBulkFile}
-                disabled={bulkLoading}
-                style={{
-                  padding: 8,
-                  border: '1px solid #d1d5db',
-                  borderRadius: 8,
-                  background: '#fff',
-                  fontSize: 15,
-                  marginBottom: 8
-                }}
-              />
-              {bulkLoading && <div style={{ marginTop: 8, color: '#0072ff' }}>Processing... {bulkProgress}%</div>}
-              {bulkAlert && (
-                <div style={{ marginTop: 8, color: bulkAlert.type === 'error' ? '#d32f2f' : '#388e3c', fontWeight: 500 }}>
-                  {bulkAlert.msg}
-                </div>
-              )}
-              <div style={{ fontSize: 13, color: '#6c757d', marginTop: 6 }}>
-                Excel columns required: <b>S. No.</b>, <b>DL No.</b>, <b>DOB</b> (in order)
-              </div>
-            </div>
-          )}
-        </form>
-      </div>
-      <style>
-        {`
-          @keyframes fadeInUp {
-            from {
-              opacity: 0;
-              transform: translateY(${openUpwards ? '10px' : '-10px'}) scale(0.95);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0) scale(1);
-            }
-          }
-          
-          .date-picker-container {
-            animation: fadeInUp 0.2s ease-out;
-          }
-          
-          .date-picker-container::-webkit-scrollbar {
-            width: 6px;
-          }
-          
-          .date-picker-container::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 10px;
-          }
-          
-          .date-picker-container::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
-          }
-          
-          .date-picker-container::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-          }
-        `}
-      </style>
       <div className="register-vehicle-content">
-      {/* <h2 style={{ marginBottom: 18 }}>Registered Drivers</h2> */}
-      <div className="vst-card">
-        <div className="vst-header">
-          <div className="vst-header__left">
-            <span className="vst-header__icon-box">
-              <i className="ri-id-card-line"></i>
-            </span>
-            <div>
-              <h2 className="vst-header__title">Driver License Details</h2>
-              <span className="vst-header__count">{Array.isArray(drivers) ? drivers.length : 0} drivers registered</span>
-            </div>
+        {/* Page header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <i className="ri-id-card-line" style={{ color: '#fff', fontSize: 22 }} />
           </div>
-          <span className="vst-record-badge">
-            Showing {Array.isArray(drivers) ? drivers.length : 0} drivers
-          </span>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#1e293b' }}>DL Details</h2>
+            <p style={{ margin: 0, fontSize: 13, color: '#64748b' }}>Verify and track driving license information</p>
+          </div>
         </div>
-        {fetchingDrivers ? (
-          <div style={{ padding: '20px', color: '#666' }}>Loading drivers...</div>
-        ) : (
-          <div className="vst-table-wrap">
-            <table className="vst-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>License No.</th>
-                  <th>DOB</th>
-                  <th>Name</th>
-                  <th>Gender</th>
-                  <th>Status</th>
-                  <th>Address</th>
-                  <th>Created At</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Array.isArray(drivers) && drivers.length > 0 ? (
-                  drivers.map((d, idx) => (
-                    <tr key={idx}>
-                      <td>{idx + 1}</td>
-                      <td>{d.license_no || d.licenseNo || '-'}</td>
-                      <td>{d.dob || '-'}</td>
-                      <td>{d.details?.name || d.details?.bioObj?.bioFullName || '-'}</td>
-                      <td>{d.details?.gender || d.details?.bioObj?.bioGenderDesc || '-'}</td>
-                      <td>{d.details?.status || d.details?.dlobj?.dlStatus || '-'}</td>
-                      <td>
-                        <div><strong>Permanent:</strong> {d.details?.address?.permanent || '-'}</div>
-                        <div><strong>Temporary:</strong> {d.details?.address?.temporary || '-'}</div>
-                      </td>
-                      <td>{d.created_at ? new Date(d.created_at).toLocaleString() : '-'}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={8} style={{ color: "#888", padding: "12px" }}>No drivers found.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-      <h3 style={{ marginBottom: 12 }}>Verify Driver License</h3>
-      <div className="card" style={{background: 'linear-gradient(180deg, #f8fafc 0%, #e0e7ef 100%)', boxShadow: '0 4px 24px rgba(30, 64, 175, 0.06)', borderRadius: 14, padding: 28, marginBottom: 24}}>
-        <form className="register-vehicle-form" onSubmit={handleSubmit} style={{display: 'flex', flexWrap: 'wrap', gap: 16}} autoComplete="off">
-          <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '50%'}}>
-            <label htmlFor="licenseNo" style={{fontSize: 14, fontWeight: 500, marginBottom: 8, display: 'block'}}>License Number</label>
-            <input
-              type="text"
-              id="licenseNo"
-              name="licenseNo"
-              className="simple-search-input"
-              value={form.licenseNo}
-              onChange={handleChange}
-              placeholder="Enter driving license number"
-              disabled={loading}
-              maxLength={15}
-              style={{ width: '100%' }}
-            />
-            <div className="security-features">
-              <div className="hologram"></div>
+
+        {/* Top section: form + result side by side */}
+        <div style={{ display: 'grid', gridTemplateColumns: driverDetails ? '1fr 1.6fr' : '1fr', gap: 20, marginBottom: 24, alignItems: 'start' }}>
+
+          {/* ── Verify Form Card ── */}
+          <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 4px 24px rgba(37,99,235,0.08)', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+            <div style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)', padding: '18px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <i className="ri-search-eye-line" style={{ color: '#fff', fontSize: 20 }} />
+              <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>Verify Driver License</div>
             </div>
-            <small style={{fontSize: 12, color: '#6c757d', marginTop: 4, display: 'block'}}>
-              Format: GJ0420120005008 (State + Office + Year + Serial)
-            </small>
-          </div>
-          <div className="form-group" style={{flex: '1 1 45%', minWidth: 220, maxWidth: '50%'}}>
-            <label htmlFor="dob" style={{fontSize: 14, fontWeight: 500, marginBottom: 8, display: 'block'}}>Date of Birth</label>
-            <div style={{position: 'relative'}} ref={datePickerRef}>
-              <div
-                className={`form-control${showDatePicker ? ' input-active' : ''}`}
-                onClick={toggleDatePicker}
-                style={{
-                  padding: '14px 16px 14px 48px',
-                  fontSize: 15,
-                  width: '100%',
-                  backgroundColor: loading ? '#f9fafb' : '#fff',
-                  color: form.dob ? '#374151' : '#9ca3af',
-                  fontFamily: 'system-ui, -apple-system, sans-serif',
-                  fontWeight: 500,
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  outline: 'none',
-                  border: showDatePicker ? '2px solid #667eea' : '1px solid #d1d5db',
-                  borderRadius: 12,
-                  boxShadow: showDatePicker 
-                    ? '0 0 0 3px rgba(102, 126, 234, 0.1), 0 4px 12px rgba(0, 0, 0, 0.1)' 
-                    : '0 1px 2px rgba(0, 0, 0, 0.05)',
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-                }}
-                tabIndex={0}
-              >
-                <span>{formatDisplayDate(form.dob)}</span>
-                <i className={`ri-arrow-${showDatePicker ? 'up' : 'down'}-s-line`} style={{
-                  color: showDatePicker ? '#667eea' : '#9ca3af',
-                  fontSize: 18,
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  transform: showDatePicker ? 'rotate(180deg)' : 'rotate(0deg)'
-                }}></i>
-              </div>
-              <i className="ri-calendar-event-line" style={{
-                position: 'absolute',
-                left: 16,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: showDatePicker ? '#667eea' : '#9ca3af',
-                pointerEvents: 'none',
-                fontSize: 18,
-                transition: 'color 0.2s ease'
-              }}></i>
-              
-              {showDatePicker && (
-                <div className="date-picker-container" style={{
-                  position: 'absolute',
-                  ...(openUpwards 
-                    ? { bottom: '100%', marginBottom: 8 } 
-                    : { top: '100%', marginTop: 8 }
-                  ),
-                  left: 0,
-                  right: 0,
-                  background: '#fff',
-                  border: '1px solid #e0e6ed',
-                  borderRadius: 16,
-                  boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-                  zIndex: 1000,
-                  overflow: 'hidden',
-                  backdropFilter: 'blur(20px)'
-                }}>
-                  <div style={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: '#fff',
-                    padding: '20px 24px',
-                    fontSize: 15,
-                    fontWeight: 500,
-                    textAlign: 'center',
-                    letterSpacing: '0.5px'
-                  }}>
-                    📅 Select Date of Birth
-                  </div>
-                  
-                  <div style={{ padding: '20px' }}>
-                    {/* Year Selection */}
-                    <div style={{ marginBottom: 20 }}>
-                      <label style={{ 
-                        fontSize: 13, 
-                        fontWeight: 600, 
-                        color: '#374151', 
-                        marginBottom: 10, 
-                        display: 'block',
-                        letterSpacing: '0.3px'
-                      }}>Birth Year</label>
-                      <select
-                        className="form-control"
-                        value={selectedDate.year}
-                        onChange={(e) => setSelectedDate({...selectedDate, year: parseInt(e.target.value)})}
-                        style={{
-                          width: '100%',
-                          appearance: 'none',
-                          backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'right 12px center',
-                          backgroundSize: '16px'
-                        }}
-                      >
-                        <option value="">Choose year</option>
-                        {generateYears().map(year => (
-                          <option key={year} value={year}>{year}</option>
-                        ))}
-                      </select>
+            <div style={{ padding: 24 }}>
+              <form onSubmit={handleSubmit} autoComplete="off">
+                {/* License Number */}
+                <div style={{ marginBottom: 18 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
+                    License Number
+                  </label>
+                  <input
+                    type="text"
+                    name="licenseNo"
+                    className="simple-search-input"
+                    value={form.licenseNo}
+                    onChange={handleChange}
+                    placeholder="e.g. GJ0420120005008"
+                    disabled={loading}
+                    maxLength={15}
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                  />
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>Format: State + Office + Year + Serial</div>
+                </div>
+
+                {/* Date of Birth picker */}
+                <div style={{ marginBottom: 20 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
+                    Date of Birth
+                  </label>
+                  <div style={{ position: 'relative' }} ref={datePickerRef}>
+                    <div
+                      onClick={toggleDatePicker}
+                      style={{
+                        padding: '10px 14px 10px 42px', fontSize: 14,
+                        width: '100%', boxSizing: 'border-box',
+                        background: loading ? '#f8fafc' : '#f8fafc',
+                        color: form.dob ? '#1e293b' : '#94a3b8',
+                        cursor: loading ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        border: `1.5px solid ${showDatePicker ? '#3b82f6' : '#e2e8f0'}`,
+                        borderRadius: 10,
+                        boxShadow: showDatePicker ? '0 0 0 3px rgba(59,130,246,0.12)' : 'none',
+                        transition: 'all 0.15s',
+                        userSelect: 'none',
+                      }}
+                      tabIndex={0}
+                    >
+                      <span>{formatDisplayDate(form.dob)}</span>
+                      <i className={`ri-arrow-${showDatePicker ? 'up' : 'down'}-s-line`} style={{ color: '#94a3b8', fontSize: 18 }} />
                     </div>
+                    <i className="ri-calendar-event-line" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: showDatePicker ? '#3b82f6' : '#94a3b8', fontSize: 16, pointerEvents: 'none' }} />
 
-                    {/* Month Selection */}
-                    {selectedDate.year && (
-                      <div style={{ marginBottom: 20 }}>
-                        <label style={{ 
-                          fontSize: 13, 
-                          fontWeight: 600, 
-                          color: '#374151', 
-                          marginBottom: 10, 
-                          display: 'block',
-                          letterSpacing: '0.3px'
-                        }}>Birth Month</label>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-                          {months.map(month => (
-                            <button
-                              key={month.num}
-                              type="button"
-                              onClick={() => setSelectedDate({...selectedDate, month: month.num, day: ''})}
-                              style={{
-                                padding: '10px 8px',
-                                border: selectedDate.month === month.num ? '2px solid #667eea' : '1px solid #e5e7eb',
-                                borderRadius: 10,
-                                background: selectedDate.month === month.num 
-                                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
-                                  : '#fff',
-                                color: selectedDate.month === month.num ? '#fff' : '#6b7280',
-                                fontSize: 13,
-                                fontWeight: selectedDate.month === month.num ? 600 : 500,
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                outline: 'none',
-                                boxShadow: selectedDate.month === month.num 
-                                  ? '0 4px 12px rgba(102, 126, 234, 0.3)' 
-                                  : 'none'
-                              }}
-                              onMouseEnter={(e) => {
-                                if (selectedDate.month !== month.num) {
-                                  e.target.style.background = '#f9fafb';
-                                  e.target.style.borderColor = '#d1d5db';
-                                }
-                              }}
-                              onMouseLeave={(e) => {
-                                if (selectedDate.month !== month.num) {
-                                  e.target.style.background = '#fff';
-                                  e.target.style.borderColor = '#e5e7eb';
-                                }
-                              }}
-                            >
-                              {month.short}
+                    {showDatePicker && (
+                      <div className="date-picker-container" style={{
+                        position: 'absolute',
+                        ...(openUpwards ? { bottom: '100%', marginBottom: 8 } : { top: '100%', marginTop: 8 }),
+                        left: 0, right: 0, zIndex: 200,
+                        background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 14,
+                        boxShadow: '0 12px 36px rgba(0,0,0,0.12)', overflow: 'hidden',
+                      }}>
+                        <div style={{ background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)', padding: '14px 18px', color: '#fff', fontSize: 14, fontWeight: 600 }}>
+                          Select Date of Birth
+                        </div>
+                        <div style={{ padding: 16 }}>
+                          {/* Year */}
+                          <div style={{ marginBottom: 14 }}>
+                            <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>Year</label>
+                            <select className="form-control" value={selectedDate.year} onChange={e => setSelectedDate({ ...selectedDate, year: parseInt(e.target.value) })}>
+                              <option value="">Select year</option>
+                              {generateYears().map(y => <option key={y} value={y}>{y}</option>)}
+                            </select>
+                          </div>
+                          {/* Month */}
+                          {selectedDate.year && (
+                            <div style={{ marginBottom: 14 }}>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>Month</label>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                                {months.map(m => (
+                                  <button key={m.num} type="button"
+                                    onClick={() => setSelectedDate({ ...selectedDate, month: m.num, day: '' })}
+                                    style={{
+                                      padding: '8px 4px', border: `1.5px solid ${selectedDate.month === m.num ? '#3b82f6' : '#e2e8f0'}`,
+                                      borderRadius: 8, background: selectedDate.month === m.num ? '#3b82f6' : '#fff',
+                                      color: selectedDate.month === m.num ? '#fff' : '#475569',
+                                      fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                    }}>
+                                    {m.short}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {/* Day */}
+                          {selectedDate.year && selectedDate.month && (
+                            <div style={{ marginBottom: 14 }}>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>Day</label>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, maxHeight: 160, overflowY: 'auto', background: '#f8fafc', borderRadius: 8, padding: 8 }}>
+                                {Array.from({ length: getDaysInMonth(selectedDate.month, selectedDate.year) }, (_, i) => i + 1).map(day => (
+                                  <button key={day} type="button"
+                                    onClick={() => handleDateSelect(day, selectedDate.month, selectedDate.year)}
+                                    style={{
+                                      padding: '8px 4px', border: 'none', borderRadius: 6,
+                                      background: '#fff', color: '#1e293b', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = '#3b82f6'; e.currentTarget.style.color = '#fff'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#1e293b'; }}>
+                                    {day}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button type="button" onClick={() => setShowDatePicker(false)}
+                              style={{ flex: 1, padding: '10px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', color: '#64748b', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                              Cancel
                             </button>
-                          ))}
+                            <button type="button" onClick={() => { setForm({ ...form, dob: '' }); setSelectedDate({ day: '', month: '', year: '' }); setShowDatePicker(false); }}
+                              style={{ flex: 1, padding: '10px', border: 'none', borderRadius: 8, background: '#fee2e2', color: '#dc2626', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                              Clear
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>Click to select • Must be 18+ years old</div>
+                </div>
 
-                    {/* Day Selection */}
-                    {selectedDate.year && selectedDate.month && (
-                      <div style={{ marginBottom: 20 }}>
-                        <label style={{ 
-                          fontSize: 13, 
-                          fontWeight: 600, 
-                          color: '#374151', 
-                          marginBottom: 10, 
-                          display: 'block',
-                          letterSpacing: '0.3px'
-                        }}>Birth Day</label>
-                        <div style={{ 
-                          display: 'grid', 
-                          gridTemplateColumns: 'repeat(7, 1fr)', 
-                          gap: 6,
-                          maxHeight: 240,
-                          overflowY: 'auto',
-                          padding: '8px',
-                          background: '#f8fafc',
-                          borderRadius: 12,
-                          border: '1px solid #e5e7eb'
-                        }}>
-                          {Array.from({length: getDaysInMonth(selectedDate.month, selectedDate.year)}, (_, i) => i + 1).map(day => (
-                            <button
-                              key={day}
-                              type="button"
-                              onClick={() => handleDateSelect(day, selectedDate.month, selectedDate.year)}
-                              style={{
-                                padding: '10px 6px',
-                                border: 'none',
-                                borderRadius: 8,
-                                background: '#fff',
-                                color: '#374151',
-                                fontSize: 13,
-                                fontWeight: 500,
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                minHeight: 36,
-                                outline: 'none',
-                                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.target.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-                                e.target.style.color = '#fff';
-                                e.target.style.transform = 'scale(1.05)';
-                                e.target.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.target.style.background = '#fff';
-                                e.target.style.color = '#374151';
-                                e.target.style.transform = 'scale(1)';
-                                e.target.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-                              }}
-                            >
-                              {day}
-                            </button>
-                          ))}
-                        </div>
+                {/* Submit */}
+                <button type="submit" disabled={loading || !form.licenseNo || !form.dob}
+                  style={{
+                    width: '100%', padding: '12px 20px', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700,
+                    background: (!loading && form.licenseNo && form.dob) ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : '#e2e8f0',
+                    color: (!loading && form.licenseNo && form.dob) ? '#fff' : '#94a3b8', cursor: (!loading && form.licenseNo && form.dob) ? 'pointer' : 'not-allowed',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    boxShadow: (!loading && form.licenseNo && form.dob) ? '0 4px 12px rgba(37,99,235,0.25)' : 'none',
+                    transition: 'all 0.2s',
+                  }}>
+                  <i className={loading ? 'ri-loader-4-line' : 'ri-search-line'} style={{ animation: loading ? 'dl-spin 1s linear infinite' : 'none' }} />
+                  {loading ? 'Fetching Details...' : 'Verify License'}
+                </button>
+
+                {error && (
+                  <div style={{ marginTop: 12, padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, fontSize: 13, color: '#dc2626', display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <i className="ri-error-warning-line" style={{ flexShrink: 0 }} />
+                    {error}
+                  </div>
+                )}
+              </form>
+
+              {/* Bulk DL Verification */}
+              <div style={{ marginTop: 20, padding: 16, background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: showBulkDL ? 14 : 0 }}>
+                  <input type="checkbox" id="bulkDLCheckbox" checked={bulkLoading || !!showBulkDL} onChange={e => setShowBulkDL(e.target.checked)} disabled={bulkLoading} style={{ width: 16, height: 16, accentColor: '#2563eb' }} />
+                  <label htmlFor="bulkDLCheckbox" style={{ fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#1e293b' }}>
+                    <i className="ri-upload-2-line" style={{ marginRight: 6, color: '#2563eb' }} />
+                    Bulk DL Verification
+                  </label>
+                </div>
+                {showBulkDL && (
+                  <div>
+                    <label style={{ fontSize: 13, fontWeight: 500, color: '#475569', marginBottom: 8, display: 'block' }}>Upload Excel file (max 100 records):</label>
+                    <input type="file" accept=".xlsx,.xls" onChange={handleBulkFile} disabled={bulkLoading}
+                      style={{ padding: 8, border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', fontSize: 13, marginBottom: 8, width: '100%', boxSizing: 'border-box' }} />
+                    {bulkLoading && (
+                      <div style={{ background: '#eff6ff', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <i className="ri-loader-4-line" style={{ color: '#2563eb', animation: 'dl-spin 1s linear infinite' }} />
+                        <span style={{ color: '#2563eb', fontSize: 13, fontWeight: 500 }}>Processing... {bulkProgress}%</span>
                       </div>
                     )}
+                    {bulkAlert && (
+                      <div style={{ marginTop: 8, padding: '10px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: bulkAlert.type === 'error' ? '#fef2f2' : '#f0fdf4', color: bulkAlert.type === 'error' ? '#dc2626' : '#16a34a', border: `1px solid ${bulkAlert.type === 'error' ? '#fecaca' : '#bbf7d0'}` }}>
+                        {bulkAlert.msg}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 8 }}>
+                      Required columns: <strong>S. No.</strong>, <strong>DL No.</strong>, <strong>DOB</strong>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
 
-                    <div style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      paddingTop: 20,
-                      borderTop: '1px solid #f3f4f6',
-                      gap: 12
-                    }}>
-                      <button
-                        type="button"
-                        onClick={() => setShowDatePicker(false)}
-                        style={{
-                          flex: 1,
-                          padding: '12px 20px',
-                          border: '1px solid #d1d5db',
-                          borderRadius: 10,
-                          background: '#fff',
-                          color: '#6b7280',
-                          fontSize: 14,
-                          fontWeight: 500,
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          outline: 'none'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.background = '#f9fafb';
-                          e.target.style.borderColor = '#9ca3af';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.background = '#fff';
-                          e.target.style.borderColor = '#d1d5db';
-                        }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setForm({...form, dob: ''});
-                          setSelectedDate({day: '', month: '', year: ''});
-                          setShowDatePicker(false);
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: '12px 20px',
-                          border: '1px solid #f87171',
-                          borderRadius: 10,
-                          background: 'linear-gradient(135deg, #f87171 0%, #ef4444 100%)',
-                          color: '#fff',
-                          fontSize: 14,
-                          fontWeight: 500,
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          outline: 'none',
-                          boxShadow: '0 2px 8px rgba(248, 113, 113, 0.2)'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.transform = 'translateY(-1px)';
-                          e.target.style.boxShadow = '0 4px 12px rgba(248, 113, 113, 0.3)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.transform = 'translateY(0)';
-                          e.target.style.boxShadow = '0 2px 8px rgba(248, 113, 113, 0.2)';
-                        }}
-                      >
-                        Clear Date
-                      </button>
+          {/* ── Driver Result Card ── */}
+          {driverDetails && (
+            <div className="dl-result-card" style={{ background: '#fff', borderRadius: 16, boxShadow: '0 4px 24px rgba(37,99,235,0.08)', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+              {/* Result header */}
+              <div style={{ background: 'linear-gradient(135deg, #065f46, #059669)', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <i className="ri-check-double-line" style={{ color: '#fff', fontSize: 22 }} />
+                  <div>
+                    <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>License Verified</div>
+                    <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12 }}>{driverDetails.dlobj?.dlLicno?.trim()}</div>
+                  </div>
+                </div>
+                <button onClick={handleSaveDriver} disabled={saving || saveSuccess}
+                  style={{
+                    padding: '8px 16px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer',
+                    background: saveSuccess ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.2)',
+                    color: '#fff', display: 'flex', alignItems: 'center', gap: 6, backdropFilter: 'blur(10px)',
+                    transition: 'background 0.2s',
+                  }}
+                  onMouseEnter={e => { if (!saving && !saveSuccess) e.currentTarget.style.background = 'rgba(255,255,255,0.35)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = saveSuccess ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.2)'; }}>
+                  {saving ? <><i className="ri-loader-4-line" style={{ animation: 'dl-spin 1s linear infinite' }} /> Saving...</>
+                    : saveSuccess ? <><i className="ri-check-line" /> Saved</>
+                    : <><i className="ri-save-3-line" /> Save Driver</>}
+                </button>
+              </div>
+
+              <div style={{ padding: 24 }}>
+                {saveSuccess && (
+                  <div style={{ marginBottom: 16, padding: '10px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, fontSize: 13, color: '#15803d', display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <i className="ri-checkbox-circle-line" /> Driver saved to your records.
+                  </div>
+                )}
+
+                {/* Profile row */}
+                <div style={{ display: 'flex', gap: 20, marginBottom: 20, alignItems: 'flex-start' }}>
+                  {/* Photo */}
+                  <div style={{ flexShrink: 0 }}>
+                    {driverPhoto ? (
+                      <img src={`data:image/jpeg;base64,${driverPhoto}`} alt="Driver"
+                        style={{ width: 90, height: 110, objectFit: 'cover', borderRadius: 10, border: '2px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }} />
+                    ) : (
+                      <div style={{ width: 90, height: 110, borderRadius: 10, background: '#f1f5f9', border: '2px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 4 }}>
+                        <i className="ri-user-line" style={{ fontSize: 28, color: '#cbd5e1' }} />
+                        <span style={{ fontSize: 10, color: '#94a3b8' }}>No Photo</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Name and status */}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>
+                      {driverDetails.bioObj?.bioFullName?.replace(/\*/g, '') || 'N/A'}
+                    </div>
+                    <div style={{ fontSize: 13, color: '#64748b', marginBottom: 8 }}>
+                      {driverDetails.bioObj?.bioSwdFullName ? `S/O ${driverDetails.bioObj.bioSwdFullName.replace(/\*/g, '')}` : ''}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{
+                        fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
+                        background: driverDetails.dlobj?.dlStatus?.toUpperCase() === 'ACTIVE' ? '#dcfce7' : '#fee2e2',
+                        color: driverDetails.dlobj?.dlStatus?.toUpperCase() === 'ACTIVE' ? '#15803d' : '#dc2626',
+                      }}>{driverDetails.dlobj?.dlStatus || 'Unknown'}</span>
+                      {driverDetails.bioObj?.bioGenderDesc && (
+                        <span style={{ fontSize: 12, fontWeight: 500, padding: '3px 10px', borderRadius: 20, background: '#f1f5f9', color: '#475569' }}>
+                          {driverDetails.bioObj.bioGenderDesc.trim()}
+                        </span>
+                      )}
+                      {driverDetails.bioObj?.bioBloodGroup && (
+                        <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: '#fef2f2', color: '#dc2626' }}>
+                          {driverDetails.bioObj.bioBloodGroup.trim()}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
-            <small style={{fontSize: 12, color: '#6c757d', marginTop: 4, display: 'block'}}>
-              Click to select your date of birth • Must be 18+ years old
-            </small>
-          </div>
-          <div className="button-group" style={{width: '100%'}}>
-            <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? "Fetching..." : "Fetch Driver Details"}
-            </button>
-          </div>
-          {error && <div style={{ color: "#d32f2f", marginTop: 4, width: '100%' }}>{error}</div>}
-        </form>
-      </div>
 
-      {/* Debug Info */}
-      {loading && <div style={{ padding: 10, background: '#f0f0f0', margin: '10px 0', fontSize: 12 }}>Loading driver data...</div>}
-      {driverDetails && <div style={{ padding: 10, background: '#e8f5e8', margin: '10px 0', fontSize: 12 }}>Driver details loaded: {driverDetails.dlobj?.dlLicno || 'No license number'}</div>}
-      <div style={{ padding: 10, background: '#fff3cd', margin: '10px 0', fontSize: 12 }}>
-        Photo state: {driverPhoto ? `Photo loaded (${driverPhoto.length} chars)` : 'No photo loaded'}
-      </div>
-
-      {/* Driver Photo Display */}
-      {driverPhoto ? (
-        <div className="card" style={{ marginTop: 24, border: '2px solid #0072ff' }}>
-          <h3 style={{ marginBottom: 16, color: "#0072ff" }}>
-            <i className="ri-image-line" style={{ marginRight: 8 }}></i>
-            Driver Photo Found! 📸
-          </h3>
-          <div style={{ textAlign: 'center', padding: 20 }}>
-            <img 
-              src={`data:image/jpeg;base64,${driverPhoto}`}
-              alt="Driver Photo"
-              style={{
-                maxWidth: '300px',
-                maxHeight: '400px',
-                border: '2px solid #0072ff',
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0,114,255,0.2)'
-              }}
-              onLoad={() => console.log('Image loaded successfully')}
-              onError={(e) => {
-                console.log('Image failed to load');
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'block';
-              }}
-            />
-            <div style={{ display: 'none', color: '#e74c3c', padding: 20 }}>
-              <i className="ri-error-warning-line" style={{ fontSize: 48, marginBottom: 10, display: 'block' }}></i>
-              <p>Unable to load driver photo</p>
-              <p style={{ fontSize: 12 }}>Base64 length: {driverPhoto.length}</p>
-            </div>
-          </div>
-        </div>
-      ) : driverDetails ? (
-        <div className="card" style={{ marginTop: 24, border: '2px solid #ffc107' }}>
-          <h3 style={{ marginBottom: 16, color: "#ffc107" }}>
-            <i className="ri-image-off-line" style={{ marginRight: 8 }}></i>
-            No Photo Available
-          </h3>
-          <div style={{ textAlign: 'center', padding: 20, color: '#6c757d' }}>
-            <p>Driver details loaded but no photo found in the response.</p>
-          </div>
-        </div>
-      ) : null}
-
-      {/* Driver Details Display */}
-      {driverDetails && (
-        <div className="card" style={{ marginTop: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ margin: 0, color: "#28a745" }}>
-              <i className="ri-check-line" style={{ marginRight: 8 }}></i>
-              Driver Details Retrieved
-            </h3>
-            <button
-              onClick={handleSaveDriver}
-              disabled={saving || saveSuccess}
-              className="btn"
-              style={{
-                background: saveSuccess ? '#28a745' : '#0072ff',
-                color: '#fff',
-                border: 'none',
-                padding: '10px 20px',
-                borderRadius: 6,
-                fontSize: 14,
-                fontWeight: 500,
-                cursor: saving ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                transition: 'all 0.2s ease',
-                opacity: saving ? 0.7 : 1
-              }}
-              onMouseOver={(e) => {
-                if (!saving && !saveSuccess) {
-                  e.target.style.transform = 'translateY(-1px)';
-                  e.target.style.boxShadow = '0 4px 12px rgba(0, 114, 255, 0.3)';
-                }
-              }}
-              onMouseOut={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = 'none';
-              }}
-            >
-              {saving ? (
-                <>
-                  <div style={{
-                    width: 16,
-                    height: 16,
-                    border: '2px solid #fff',
-                    borderTop: '2px solid transparent',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                  }}></div>
-                  Saving...
-                </>
-              ) : saveSuccess ? (
-                <>
-                  <i className="ri-check-line"></i>
-                  Saved Successfully
-                </>
-              ) : (
-                <>
-                  <i className="ri-save-line"></i>
-                  Save Driver
-                </>
-              )}
-            </button>
-          </div>
-          
-          {saveSuccess && (
-            <div style={{
-              background: '#d4edda',
-              border: '1px solid #c3e6cb',
-              color: '#155724',
-              padding: 12,
-              borderRadius: 6,
-              marginBottom: 16,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8
-            }}>
-              <i className="ri-check-circle-line"></i>
-              Driver details have been successfully saved to the database!
-            </div>
-          )}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
-            <div style={{ background: '#f8f9fa', padding: 16, borderRadius: 8 }}>
-              <h4 style={{ margin: '0 0 12px 0', color: '#333' }}>Personal Information</h4>
-              <div style={{ fontSize: 14, lineHeight: 1.8 }}>
-                <div><strong>Name:</strong> {driverDetails.bioObj?.bioFullName?.replace(/\*/g, '') || 'N/A'}</div>
-                <div><strong>Father's Name:</strong> {driverDetails.bioObj?.bioSwdFullName?.replace(/\*/g, '') || 'N/A'}</div>
-                <div><strong>Date of Birth:</strong> {driverDetails.bioObj?.bioDob?.replace(/\*/g, '') || 'N/A'}</div>
-                <div><strong>Gender:</strong> {driverDetails.bioObj?.bioGenderDesc?.trim() || 'N/A'}</div>
-                <div><strong>Blood Group:</strong> {driverDetails.bioObj?.bioBloodGroup?.trim() || 'N/A'}</div>
-              </div>
-            </div>
-            <div style={{ background: '#f8f9fa', padding: 16, borderRadius: 8 }}>
-              <h4 style={{ margin: '0 0 12px 0', color: '#333' }}>License Information</h4>
-              <div style={{ fontSize: 14, lineHeight: 1.8 }}>
-                <div><strong>License No:</strong> {driverDetails.dlobj?.dlLicno?.trim() || 'N/A'}</div>
-                <div><strong>Issue Date:</strong> {driverDetails.dlobj?.dlIssuedt || 'N/A'}</div>
-                <div><strong>Status:</strong> {driverDetails.dlobj?.dlStatus || 'N/A'}</div>
-                <div><strong>NT Valid Till:</strong> {driverDetails.dlobj?.dlNtValdtoDt || 'N/A'}</div>
-                <div><strong>Transport Valid Till:</strong> {driverDetails.dlobj?.dlTrValdtoDt || 'N/A'}</div>
-              </div>
-            </div>
-            {driverDetails.dlcovs && driverDetails.dlcovs.length > 0 && (
-              <div style={{ background: '#f8f9fa', padding: 16, borderRadius: 8, gridColumn: 'span 2' }}>
-                <h4 style={{ margin: '0 0 12px 0', color: '#333' }}>Vehicle Classes</h4>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {driverDetails.dlcovs.map((cov, idx) => (
-                    <span key={idx} style={{ 
-                      background: '#0072ff', 
-                      color: '#fff', 
-                      padding: '4px 8px', 
-                      borderRadius: 4, 
-                      fontSize: 12,
-                      fontWeight: 500
-                    }}>
-                      {cov.covabbrv} - {cov.covdesc}
-                    </span>
+                {/* Details grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+                  {[
+                    { label: 'License No', value: driverDetails.dlobj?.dlLicno?.trim() },
+                    { label: 'Date of Birth', value: driverDetails.bioObj?.bioDob?.replace(/\*/g, '') },
+                    { label: 'Issue Date', value: driverDetails.dlobj?.dlIssuedt },
+                    { label: 'NT Valid Till', value: driverDetails.dlobj?.dlNtValdtoDt },
+                    { label: 'Transport Valid Till', value: driverDetails.dlobj?.dlTrValdtoDt },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="dl-info-field">
+                      <span className="dl-info-label">{label}</span>
+                      <span className="dl-info-value">{value || 'N/A'}</span>
+                    </div>
                   ))}
                 </div>
+
+                {/* Vehicle classes */}
+                {driverDetails.dlcovs && driverDetails.dlcovs.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Vehicle Classes</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {driverDetails.dlcovs.map((cov, idx) => (
+                        <span key={idx} style={{ background: '#eff6ff', color: '#1d4ed8', padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600, border: '1px solid #dbeafe' }}>
+                          {cov.covabbrv} {cov.covdesc && `— ${cov.covdesc}`}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Address */}
+                {(driverDetails.bioObj?.bioPermAdd1 || driverDetails.bioObj?.bioTempAdd1) && (
+                  <div style={{ marginTop: 16, padding: '12px 14px', background: '#f8fafc', borderRadius: 8, border: '1px solid #f1f5f9' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Address</div>
+                    {driverDetails.bioObj?.bioPermAdd1 && (
+                      <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.5 }}>
+                        <strong style={{ color: '#1e293b' }}>Permanent: </strong>
+                        {[driverDetails.bioObj?.bioPermAdd1, driverDetails.bioObj?.bioPermAdd2, driverDetails.bioObj?.bioPermAdd3, driverDetails.bioObj?.bioPermDistName, driverDetails.bioObj?.bioPermPin].map(v => v?.replace(/\*/g, '')).filter(Boolean).join(', ')}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            )}
-            {(driverDetails.bioObj?.bioPermAdd1 || driverDetails.bioObj?.bioTempAdd1) && (
-              <div style={{ background: '#f8f9fa', padding: 16, borderRadius: 8, gridColumn: 'span 2' }}>
-                <h4 style={{ margin: '0 0 12px 0', color: '#333' }}>Address</h4>
-                <div style={{ fontSize: 14, color: '#666' }}>
-                  <div><strong>Permanent:</strong> {[
-                    driverDetails.bioObj?.bioPermAdd1?.replace(/\*/g, ''),
-                    driverDetails.bioObj?.bioPermAdd2?.replace(/\*/g, ''),
-                    driverDetails.bioObj?.bioPermAdd3?.replace(/\*/g, ''),
-                    driverDetails.bioObj?.bioPermDistName?.replace(/\*/g, ''),
-                    driverDetails.bioObj?.bioPermPin
-                  ].filter(Boolean).join(', ')}</div>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
-      )}
-    </div>
+
+        {/* ── Registered Drivers Table ── */}
+        <div className="vst-card">
+          <div className="vst-header">
+            <div className="vst-header__left">
+              <span className="vst-header__icon-box" style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}>
+                <i className="ri-id-card-line" />
+              </span>
+              <div>
+                <h2 className="vst-header__title">Registered Drivers</h2>
+                <span className="vst-header__count">{Array.isArray(drivers) ? drivers.length : 0} drivers</span>
+              </div>
+            </div>
+            <span className="vst-record-badge">Showing {Array.isArray(drivers) ? drivers.length : 0} drivers</span>
+          </div>
+
+          {fetchingDrivers ? (
+            <div style={{ padding: '32px 24px', textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>
+              <i className="ri-loader-4-line" style={{ fontSize: 28, display: 'block', marginBottom: 8, animation: 'dl-spin 1s linear infinite' }} />
+              Loading drivers...
+            </div>
+          ) : !Array.isArray(drivers) || drivers.length === 0 ? (
+            <div style={{ padding: '40px 24px', textAlign: 'center' }}>
+              <i className="ri-id-card-line" style={{ fontSize: 40, color: '#cbd5e1', display: 'block', marginBottom: 10 }} />
+              <div style={{ fontSize: 15, fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>No drivers registered yet</div>
+              <div style={{ fontSize: 13, color: '#cbd5e1' }}>Use the form above to verify and save driver licenses.</div>
+            </div>
+          ) : (
+            <div className="vst-table-wrap">
+              <table className="vst-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>License No.</th>
+                    <th>Name</th>
+                    <th>DOB</th>
+                    <th>Gender</th>
+                    <th>Status</th>
+                    <th>Address</th>
+                    <th>Saved On</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {drivers.map((d, idx) => {
+                    const status = d.details?.status || d.details?.dlobj?.dlStatus || '';
+                    return (
+                      <tr key={idx}>
+                        <td>{idx + 1}</td>
+                        <td style={{ fontWeight: 600, color: '#2563eb' }}>{d.license_no || d.licenseNo || '-'}</td>
+                        <td style={{ fontWeight: 500 }}>{d.details?.name || d.details?.bioObj?.bioFullName || '-'}</td>
+                        <td>{d.dob || '-'}</td>
+                        <td>{d.details?.gender || d.details?.bioObj?.bioGenderDesc || '-'}</td>
+                        <td>
+                          <span style={{
+                            fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
+                            background: status?.toUpperCase() === 'ACTIVE' ? '#dcfce7' : '#f1f5f9',
+                            color: status?.toUpperCase() === 'ACTIVE' ? '#15803d' : '#64748b',
+                          }}>
+                            {status || 'N/A'}
+                          </span>
+                        </td>
+                        <td style={{ fontSize: 12, color: '#64748b', maxWidth: 200 }}>
+                          {d.details?.address?.permanent || '-'}
+                        </td>
+                        <td style={{ fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                          {d.created_at ? new Date(d.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
     </>
   );
-}
+}

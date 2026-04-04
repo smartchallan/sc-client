@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 
 export default function VehicleSummaryTable({ data, loading, onRefresh, onView, onViewAll }) {
 
@@ -47,8 +47,7 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView, 
   const vehicles = Array.isArray(data?.vehicles) ? data.vehicles : (Array.isArray(data) ? data : []);
   const sortedAll = [...vehicles].sort((a, b) => new Date(b.registered_at) - new Date(a.registered_at));
   const DEFAULT_VISIBLE = 10;
-  const [visibleLimit, setVisibleLimit] = useState(DEFAULT_VISIBLE);
-  const sorted = sortedAll.slice(0, visibleLimit);
+  const sorted = sortedAll.slice(0, DEFAULT_VISIBLE);
 
   const getRcStatus = (row) => {
     const status = resolveField(row, 'rc_status', 'rcStatus', '_raw.rc_status', '_raw.rcStatus');
@@ -69,8 +68,8 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView, 
     { key: 'regn', label: 'Regn. Date', icon: 'ri-calendar-check-line' },
     { key: 'insurance', label: 'Insurance', icon: 'ri-shield-check-line' },
     { key: 'road_tax', label: 'Road Tax', icon: 'ri-money-rupee-circle-line' },
-    { key: 'np_upto', label: 'Nat. Permit', icon: 'ri-file-paper-2-line' },
-    { key: 'permit_valid', label: 'Permit Valid', icon: 'ri-file-shield-2-line' },
+    { key: 'np_upto', label: 'National Permit', icon: 'ri-file-paper-2-line' },
+    { key: 'permit_valid', label: 'State Permit', icon: 'ri-file-shield-2-line' },
     { key: 'fitness', label: 'Fitness', icon: 'ri-heart-pulse-line' },
     { key: 'pollution', label: 'Pollution', icon: 'ri-leaf-line' },
   ];
@@ -127,10 +126,10 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView, 
           </div>
           <div>
             <h2 className="vst-header__title">Vehicle Summary</h2>
-            <span className="vst-header__count">{vehicles.length} vehicles</span>
           </div>
         </div>
         <div className="vst-header__actions">
+          <span className="vst-header__count">Showing {sorted.length} of {sortedAll.length}</span>
           <button
             className="vst-btn vst-btn--outline"
             onClick={() => onViewAll?.()}
@@ -145,17 +144,22 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView, 
         <table className="vst-table">
           <thead>
             <tr>
-              <th className="vst-th--num">#</th>
+              <th className="vst-th--num" rowSpan={2}>#</th>
               {cols.map(c => (
-                <th key={c.key}>
+                <th key={c.key} rowSpan={2}>
                   <span className="vst-th__inner">
                     <i className={c.icon} /> {c.label}
                   </span>
                 </th>
               ))}
-              <th className="vst-th--center"><span className="vst-th__inner vst-th--pending"><i className="ri-error-warning-line" /> Pending</span></th>
-              <th className="vst-th--center"><span className="vst-th__inner vst-th--settled"><i className="ri-checkbox-circle-line" /> Settled</span></th>
-              <th className="vst-th--center">Action</th>
+              <th colSpan={2} className="challans-header">
+                <span className="vst-th__inner"><i className="ri-ticket-2-line" /> Challans</span>
+              </th>
+              <th className="vst-th--center" rowSpan={2}>Action</th>
+            </tr>
+            <tr>
+              <th className="vst-th--center" style={{ color: '#dc2626' }}>Pending</th>
+              <th className="vst-th--center" style={{ color: '#16a34a' }}>Settled</th>
             </tr>
           </thead>
           <tbody>
@@ -196,23 +200,6 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView, 
         </table>
       </div>
 
-      {/* ── Footer ── */}
-      {sortedAll.length > DEFAULT_VISIBLE && (
-        <div className="vst-footer">
-          {visibleLimit < sortedAll.length ? (
-            <button className="vst-btn vst-btn--ghost" onClick={() => setVisibleLimit(v => Math.min(v + 10, sortedAll.length))}>
-              <i className="ri-arrow-down-s-line" /> Show more ({Math.min(sortedAll.length - visibleLimit, 10)} remaining)
-            </button>
-          ) : (
-            <button className="vst-btn vst-btn--ghost" onClick={() => setVisibleLimit(DEFAULT_VISIBLE)}>
-              <i className="ri-arrow-up-s-line" /> Show less
-            </button>
-          )}
-          <span className="vst-footer__info">
-            Showing {Math.min(visibleLimit, sortedAll.length)} of {sortedAll.length}
-          </span>
-        </div>
-      )}
     </div>
   );
 }

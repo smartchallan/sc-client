@@ -245,7 +245,7 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
                   <td>{idx + 1}</td>
                   <td>{c.vehicle_number || '-'}</td>
                   <td>{c.challan_no || '-'}</td>
-                  <td>{c.challan_date_time || '-'}</td>
+                  <td>{formatDate(c.challan_date_time) || '-'}</td>
                   <td>
                     {(() => {
                       const loc = c.challan_place || c.location || c.challan_location || c.address || c.owner_address;
@@ -594,7 +594,7 @@ export default function DisposedChallansPage() {
               <tr><td><b>Status</b></td><td>{selectedChallan.challan_status}</td></tr>
               <tr><td><b>Vehicle Number</b></td><td>{selectedChallan.vehicle_number}</td></tr>
               <tr><td><b>Challan No</b></td><td>{selectedChallan.challan_no}</td></tr>
-              <tr><td><b>Date/Time</b></td><td>{selectedChallan.challan_date_time}</td></tr>
+              <tr><td><b>Date/Time</b></td><td>{formatDate(selectedChallan.challan_date_time)}</td></tr>
               <tr><td><b>Location</b></td><td>{selectedChallan.challan_place || selectedChallan.location || selectedChallan.challan_location}</td></tr>
               <tr><td><b>Owner Name</b></td><td>{selectedChallan.owner_name}</td></tr>
               <tr><td><b>Driver Name</b></td><td>{selectedChallan.driver_name}</td></tr>

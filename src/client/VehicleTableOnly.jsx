@@ -7,10 +7,12 @@ import { FaDownload, FaPrint } from "react-icons/fa";
 import * as XLSX from "xlsx";
 import { toast } from 'react-toastify';
 import CustomModal from "./CustomModal";
+import SelectShowMore from "./SelectShowMore";
 
 export default function VehicleTableOnly() {
   const [vehicles, setVehicles] = useState([]);
-  const [visibleCount, setVisibleCount] = useState(10);
+  const DEFAULT_LIMIT = 30;
+  const [visibleCount, setVisibleCount] = useState(DEFAULT_LIMIT);
   const [fetchingVehicles, setFetchingVehicles] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -194,21 +196,18 @@ export default function VehicleTableOnly() {
           </tbody>
   </table>
   </div>
-        {/* Load more dropdown */}
-        {filteredVehicles.length > visibleCount && (
-          <div style={{ marginTop: 16, textAlign: 'center' }}>
-            <select
-              className="form-control"
-              style={{ maxWidth: 180, display: 'inline-block' }}
-              value={visibleCount}
-              onChange={e => setVisibleCount(Number(e.target.value))}
-            >
-              <option value={visibleCount}>Show More...</option>
-              {filteredVehicles.length >= 50 && <option value={visibleCount + 50}>Show 50 more</option>}
-              {filteredVehicles.length >= 100 && <option value={visibleCount + 100}>Show 100 more</option>}
-              {filteredVehicles.length >= 200 && <option value={visibleCount + 200}>Show 200 more</option>}
-              <option value={filteredVehicles.length}>Show All</option>
-            </select>
+        {/* Load more */}
+        {filteredVehicles.length > DEFAULT_LIMIT && (
+          <div className="vst-show-more">
+            <span className="vst-show-more__label">Show more records:</span>
+            <SelectShowMore
+              onShowMoreRecords={val => {
+                if (val === 'all') setVisibleCount(filteredVehicles.length);
+                else setVisibleCount(Number(val));
+              }}
+              onResetRecords={() => setVisibleCount(DEFAULT_LIMIT)}
+              maxCount={filteredVehicles.length}
+            />
           </div>
         )}
         </>

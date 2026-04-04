@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import ClientTreeDropdown from '../components/ClientTreeDropdown';
+import { timeAgo, formatDateTime as formatDate } from '../utils/dateUtils';
 
 const API_ROOT = import.meta.env.VITE_API_BASE_URL || '';
 
-// Recursively flatten tree into [{...node, depth, parentName}]
+// Recursively flatten tree (kept for clientNameMap lookup)
 function flattenNetwork(nodes, depth = 0, parentName = null) {
   const result = [];
   for (const node of nodes) {
@@ -14,46 +16,10 @@ function flattenNetwork(nodes, depth = 0, parentName = null) {
   return result;
 }
 
-function getInitials(name = '') {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return name.substring(0, 2).toUpperCase();
-}
-
-function timeAgo(ts) {
-  if (!ts) return '';
-  const diff = Date.now() - new Date(ts).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return 'Just now';
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  if (d < 7) return `${d}d ago`;
-  return new Date(ts).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-function formatDate(ts) {
-  if (!ts) return '';
-  return new Date(ts).toLocaleString('en-IN', {
-    timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short',
-    year: 'numeric', hour: '2-digit', minute: '2-digit',
-  });
-}
-
-const AVATAR_COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444', '#06b6d4'];
-function avatarColor(name = '') {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
 export default function NotificationCenter() {
   const [networkTree, setNetworkTree] = useState([]);
   const [loadingClients, setLoadingClients] = useState(true);
   const [selectedClient, setSelectedClient] = useState(null);
-  const [clientSearch, setClientSearch] = useState('');
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -62,8 +28,6 @@ export default function NotificationCenter() {
   const [loadingSent, setLoadingSent] = useState(false);
   const [expandedNotif, setExpandedNotif] = useState(null);
   const [historyFilter, setHistoryFilter] = useState('all'); // 'all' | 'unread' | 'read'
-  const dropdownRef = useRef(null);
-  const searchInputRef = useRef(null);
 
   const scUser = useMemo(() => {
     try { return JSON.parse(localStorage.getItem('sc_user')) || {}; } catch { return {}; }
@@ -105,33 +69,6 @@ export default function NotificationCenter() {
     return () => clearInterval(interval);
   }, [dealerId]);
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handler = e => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  // Focus search input when dropdown opens
-  useEffect(() => {
-    if (dropdownOpen && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [dropdownOpen]);
-
-  const filteredClients = useMemo(() => {
-    const q = clientSearch.toLowerCase().trim();
-    if (!q) return allClients;
-    return allClients.filter(c =>
-      (c.name || '').toLowerCase().includes(q) ||
-      (c.email || '').toLowerCase().includes(q) ||
-      (c.user_meta?.company_name || '').toLowerCase().includes(q)
-    );
-  }, [allClients, clientSearch]);
 
   // Base list: filter by selected client if one is chosen
   const clientFilteredNotifs = useMemo(() => {
@@ -191,6 +128,20 @@ export default function NotificationCenter() {
 
   const canSend = selectedClient && subject.trim() && message.trim();
 
+  const handleDelete = async (notifId, e) => {
+    e.stopPropagation();
+    if (!window.confirm('Delete this notification? This cannot be undone.')) return;
+    // Optimistic remove
+    setSentNotifs(prev => prev.filter(n => n.id !== notifId));
+    try {
+      const res = await fetch(`${API_ROOT}/notifications/${notifId}?sender_id=${dealerId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Delete failed');
+    } catch (err) {
+      console.error('[delete notif]', err);
+      fetchSentNotifs(); // restore on error
+    }
+  };
+
   return (
     <div style={{ padding: '4px 0', height: '100%' }}>
       <style>{`
@@ -233,171 +184,14 @@ export default function NotificationCenter() {
           <div style={{ padding: 24 }}>
             {/* Client Selector */}
             <div style={{ marginBottom: 18 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
-                To
-              </label>
-              <div style={{ position: 'relative' }} ref={dropdownRef}>
-                {/* Selected client chip or placeholder */}
-                <div
-                  onClick={() => setDropdownOpen(o => !o)}
-                  style={{
-                    border: `1.5px solid ${dropdownOpen ? '#3b82f6' : '#e2e8f0'}`,
-                    borderRadius: 10, padding: '10px 14px', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    background: '#f8fafc', transition: 'border-color 0.15s',
-                    boxShadow: dropdownOpen ? '0 0 0 3px rgba(59,130,246,0.12)' : 'none',
-                  }}
-                >
-                  {selectedClient ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                        background: avatarColor(selectedClient.name),
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: '#fff', fontWeight: 700, fontSize: 13,
-                      }}>
-                        {getInitials(selectedClient.name)}
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, fontSize: 14, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {selectedClient.name}
-                        </div>
-                        {selectedClient.email && (
-                          <div style={{ fontSize: 11, color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {selectedClient.email}
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={e => { e.stopPropagation(); setSelectedClient(null); }}
-                        style={{ marginLeft: 'auto', flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4, borderRadius: 4, lineHeight: 1 }}
-                      >
-                        <i className="ri-close-line" style={{ fontSize: 16 }} />
-                      </button>
-                    </div>
-                  ) : (
-                    <span style={{ color: '#94a3b8', fontSize: 14 }}>Select a client...</span>
-                  )}
-                  {!selectedClient && (
-                    <i className={`ri-arrow-${dropdownOpen ? 'up' : 'down'}-s-line`} style={{ color: '#94a3b8', fontSize: 18, flexShrink: 0 }} />
-                  )}
-                </div>
-
-                {/* Dropdown */}
-                {dropdownOpen && (
-                  <div style={{
-                    position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 200,
-                    background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12,
-                    boxShadow: '0 12px 36px rgba(0,0,0,0.14)',
-                    display: 'flex', flexDirection: 'column', overflow: 'hidden',
-                  }}>
-                    {/* Search */}
-                    <div style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <i className="ri-search-line" style={{ color: '#94a3b8', fontSize: 16 }} />
-                      <input
-                        ref={searchInputRef}
-                        placeholder="Search name, email, or company..."
-                        value={clientSearch}
-                        onChange={e => setClientSearch(e.target.value)}
-                        onClick={e => e.stopPropagation()}
-                        style={{
-                          flex: 1, border: 'none', outline: 'none', fontSize: 13,
-                          background: 'transparent', color: '#1e293b',
-                        }}
-                      />
-                      {clientSearch && (
-                        <button onClick={() => setClientSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0, lineHeight: 1 }}>
-                          <i className="ri-close-circle-fill" style={{ fontSize: 15 }} />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Stats bar */}
-                    <div style={{ padding: '6px 14px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9', fontSize: 11, color: '#64748b' }}>
-                      {loadingClients
-                        ? 'Loading network...'
-                        : clientSearch
-                          ? `${filteredClients.length} of ${allClients.length} clients`
-                          : `${allClients.length} clients across all levels`
-                      }
-                    </div>
-
-                    {/* Client list */}
-                    <div style={{ overflowY: 'auto', maxHeight: 300 }}>
-                      {loadingClients ? (
-                        <div style={{ padding: '20px 14px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
-                          <i className="ri-loader-4-line" style={{ fontSize: 20, display: 'block', marginBottom: 6 }} />
-                          Loading your client network...
-                        </div>
-                      ) : filteredClients.length === 0 ? (
-                        <div style={{ padding: '20px 14px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
-                          No clients match your search
-                        </div>
-                      ) : filteredClients.map(c => (
-                        <div
-                          key={c.id}
-                          onClick={() => { setSelectedClient(c); setDropdownOpen(false); setClientSearch(''); }}
-                          style={{
-                            padding: `10px 14px 10px ${14 + c.depth * 20}px`,
-                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
-                            background: selectedClient?.id === c.id ? '#eff6ff' : 'transparent',
-                            borderBottom: '1px solid #f8fafc',
-                            transition: 'background 0.1s',
-                          }}
-                          onMouseEnter={e => { if (selectedClient?.id !== c.id) e.currentTarget.style.background = '#f8fafc'; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = selectedClient?.id === c.id ? '#eff6ff' : 'transparent'; }}
-                        >
-                          {/* Depth indicator */}
-                          {c.depth > 0 && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
-                              {Array.from({ length: c.depth }).map((_, i) => (
-                                <span key={i} style={{ width: 1, height: 24, background: '#e2e8f0', display: 'block' }} />
-                              ))}
-                              <i className="ri-corner-down-right-line" style={{ color: '#cbd5e1', fontSize: 13, marginLeft: 2 }} />
-                            </div>
-                          )}
-                          {/* Avatar */}
-                          <div style={{
-                            width: 34, height: 34, borderRadius: 8, flexShrink: 0,
-                            background: avatarColor(c.name),
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: '#fff', fontWeight: 700, fontSize: 12,
-                          }}>
-                            {getInitials(c.name)}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontWeight: 600, fontSize: 13, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {c.name}
-                              </span>
-                              {c.depth === 0 && (
-                                <span style={{ fontSize: 10, background: '#dbeafe', color: '#1d4ed8', padding: '1px 6px', borderRadius: 20, fontWeight: 600, flexShrink: 0 }}>Direct</span>
-                              )}
-                              {c.depth > 0 && (
-                                <span style={{ fontSize: 10, background: '#f3e8ff', color: '#7c3aed', padding: '1px 6px', borderRadius: 20, fontWeight: 600, flexShrink: 0 }}>Sub</span>
-                              )}
-                              <span style={{
-                                fontSize: 10, padding: '1px 6px', borderRadius: 20, fontWeight: 600, flexShrink: 0,
-                                background: c.status === 'active' ? '#dcfce7' : '#fee2e2',
-                                color: c.status === 'active' ? '#166534' : '#991b1b',
-                              }}>
-                                {c.status}
-                              </span>
-                            </div>
-                            <div style={{ fontSize: 11, color: '#64748b', marginTop: 1, display: 'flex', gap: 8 }}>
-                              {c.email && <span>{c.email}</span>}
-                              {c.parentName && c.depth > 0 && <span style={{ color: '#94a3b8' }}>· under {c.parentName}</span>}
-                            </div>
-                          </div>
-                          {selectedClient?.id === c.id && (
-                            <i className="ri-check-line" style={{ color: '#2563eb', fontSize: 18, flexShrink: 0 }} />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <ClientTreeDropdown
+                networkTree={networkTree}
+                loading={loadingClients}
+                selectedClient={selectedClient}
+                onSelect={setSelectedClient}
+                label="To"
+                placeholder="Select a client..."
+              />
             </div>
 
             {/* Subject */}
@@ -685,20 +479,37 @@ export default function NotificationCenter() {
                           }}>
                             {n.message}
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                             <div style={{ fontSize: 11, color: '#94a3b8' }}>
                               <i className="ri-time-line" style={{ marginRight: 4 }} />
                               {formatDate(n.created_at)}
                               {!selectedClient && ` · To: ${clientNameMap[String(n.recipient_id)] || `Client #${n.recipient_id}`}`}
                             </div>
-                            <span style={{
-                              fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
-                              background: n.is_read ? '#f1f5f9' : '#dbeafe',
-                              color: n.is_read ? '#64748b' : '#1d4ed8',
-                              border: `1px solid ${n.is_read ? '#e2e8f0' : '#bfdbfe'}`,
-                            }}>
-                              {n.is_read ? 'Read by client' : 'Not yet read'}
-                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{
+                                fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
+                                background: n.is_read ? '#f1f5f9' : '#dbeafe',
+                                color: n.is_read ? '#64748b' : '#1d4ed8',
+                                border: `1px solid ${n.is_read ? '#e2e8f0' : '#bfdbfe'}`,
+                              }}>
+                                {n.is_read ? 'Read by client' : 'Not yet read'}
+                              </span>
+                              <button
+                                onClick={(e) => handleDelete(n.id, e)}
+                                title="Delete notification"
+                                style={{
+                                  background: 'none', border: '1px solid #fecaca', color: '#ef4444',
+                                  borderRadius: 8, padding: '3px 10px', cursor: 'pointer',
+                                  fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
+                                  transition: 'background 0.15s',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#fef2f2'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
+                              >
+                                <i className="ri-delete-bin-line" style={{ fontSize: 13 }} />
+                                Delete
+                              </button>
+                            </div>
                           </div>
                         </div>
                       )}

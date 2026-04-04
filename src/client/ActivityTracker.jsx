@@ -1,21 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import LoadingSkeleton from './LoadingSkeleton';
+import ClientTreeDropdown from '../components/ClientTreeDropdown';
 
 const API_ROOT = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
 function ActivityTracker() {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [clientList, setClientList] = useState([]);
-  const [selectedClientId, setSelectedClientId] = useState(null);
-  const [clientSearchTerm, setClientSearchTerm] = useState('');
-  const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const [networkTree, setNetworkTree] = useState([]);
+  const [selectedClient, setSelectedClient] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [parentId, setParentId] = useState(null);
   const recordsPerPage = 30;
-  const clientDropdownRef = useRef(null);
   
   // New filter states
   const [actionFilter, setActionFilter] = useState('all');
@@ -38,54 +36,22 @@ function ActivityTracker() {
     }
   }, []);
 
-  // Load clients from localStorage (same as MyFleetTable and MyChallans)
+  // Load client network tree
   useEffect(() => {
+    if (!parentId) return;
     try {
-      const cachedData = localStorage.getItem('client_network');
-      console.log('Activity Tracker - client_network from localStorage:', cachedData ? 'Found' : 'Not found');
-      
-      if (cachedData) {
-        const data = JSON.parse(cachedData);
-        console.log('Activity Tracker - Parsed client_network data:', data);
-        
-        const rawData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
-        console.log('Activity Tracker - Raw data array:', rawData);
-        
-        // Flatten nested children
-        const flattenChildren = (node, dealerName = null) => {
-          const result = [];
-          result.push({ ...node, dealerName, isParent: !dealerName });
-          if (Array.isArray(node.children) && node.children.length > 0) {
-            node.children.forEach(child => {
-              result.push(...flattenChildren(child, node.name));
-            });
-          }
-          return result;
-        };
-        
-        const flatClients = [];
-        rawData.forEach(parent => {
-          flatClients.push(...flattenChildren(parent));
-        });
-        
-        console.log('Activity Tracker - Flattened client list:', flatClients.length, 'clients');
-        setClientList(flatClients);
+      const cached = localStorage.getItem('client_network');
+      if (cached) {
+        const data = JSON.parse(cached);
+        setNetworkTree(Array.isArray(data) ? data : (data.clients || data.users || []));
+        return;
       }
-    } catch (e) {
-      console.error('Failed to load clients:', e);
-    }
-  }, []);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (clientDropdownRef.current && !clientDropdownRef.current.contains(event.target)) {
-        setShowClientDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    } catch {}
+    fetch(`${API_ROOT}/getclientnetwork?parent_id=${parentId}`)
+      .then(r => r.json())
+      .then(data => setNetworkTree(Array.isArray(data) ? data : (data.clients || data.users || [])))
+      .catch(() => {});
+  }, [parentId]);
 
   // Fetch activities
   useEffect(() => {
@@ -101,9 +67,9 @@ function ActivityTracker() {
       setLoading(true);
       try {
         let url = '';
-        if (selectedClientId) {
+        if (selectedClient?.id) {
           // Fetch all activities for specific client (no limit)
-          url = `${API_ROOT}/saveuseractivity?user_id=${selectedClientId}`;
+          url = `${API_ROOT}/saveuseractivity?user_id=${selectedClient.id}`;
         } else {
           // Fetch all activities for parent (no limit)
           url = `${API_ROOT}/saveuseractivity?parent_id=${parentId}`;
@@ -147,20 +113,11 @@ function ActivityTracker() {
     };
 
     fetchActivities();
-  }, [parentId, selectedClientId]);
+  }, [parentId, selectedClient]);
 
-  const handleClientSelect = (client) => {
-    setSelectedClientId(client.id || client._id);
-    setClientSearchTerm(`${client.name} (${(client.user_meta || client.userMeta)?.company_name || 'N/A'})`);
-    setShowClientDropdown(false);
-    setCurrentPage(1); // Reset to first page when client changes
-  };
-
-  const handleClearSearch = () => {
-    setClientSearchTerm('');
-    setSelectedClientId(null);
-    setShowClientDropdown(false);
-    setCurrentPage(1); // Reset to first page when clearing filter
+  const handleClientChange = (client) => {
+    setSelectedClient(client);
+    setCurrentPage(1);
   };
 
   const formatDateTime = (timestamp) => {
@@ -244,31 +201,6 @@ function ActivityTracker() {
     }
   }, [actionFilter, locationFilter, dateFrom, dateTo]);
 
-  const filteredClientList = clientList.filter(client => {
-    const searchLower = clientSearchTerm.toLowerCase();
-    const name = client.name || '';
-    const email = client.email || '';
-    const company = (client.user_meta || client.userMeta)?.company_name || '';
-    return name.toLowerCase().includes(searchLower) || 
-           email.toLowerCase().includes(searchLower) ||
-           company.toLowerCase().includes(searchLower);
-  });
-
-  // Debug logging
-  console.log('Activity Tracker - Render state:', {
-    loading,
-    activitiesCount: activities.length,
-    filteredCount: filteredActivities.length,
-    paginatedCount: paginatedActivities.length,
-    totalFilteredRecords,
-    totalPages,
-    recordsPerPage,
-    showPagination: totalFilteredRecords > recordsPerPage,
-    parentId,
-    selectedClientId,
-    currentPage,
-    clientListCount: clientList.length
-  });
 
   return (
     <div className="latest-table-container">
@@ -278,141 +210,15 @@ function ActivityTracker() {
       </p>
 
       {/* Client selector dropdown */}
-      <div style={{ marginBottom: 20, padding: '0 0'}}>
-        <div style={{ position: 'relative', maxWidth: 650 }} ref={clientDropdownRef}>
-          <label style={{ 
-            display: 'block', 
-            marginBottom: 8, 
-            fontWeight: 600, 
-            color: '#1565c0', 
-            fontSize: 15,
-            letterSpacing: '-0.2px',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-          }}>
-            Filter by Client {selectedClientId ? '' : '(Showing All)'}
-          </label>
-          <div style={{ position: 'relative' }}>
-            <input
-              type="text"
-              placeholder={selectedClientId ? clientSearchTerm : "Filter by client name, company, or email..."}
-              value={clientSearchTerm}
-              onChange={(e) => setClientSearchTerm(e.target.value)}
-              onFocus={() => setShowClientDropdown(true)}
-              style={{
-                width: '100%',
-                padding: '14px 44px 14px 18px',
-                border: '2px solid #2196f3',
-                borderRadius: 10,
-                fontSize: 15,
-                outline: 'none',
-                background: '#fff',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                boxShadow: '0 2px 8px rgba(33, 150, 243, 0.08)',
-                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-              }}
-              onMouseEnter={(e) => e.target.style.borderColor = '#1976d2'}
-              onMouseLeave={(e) => e.target.style.borderColor = '#2196f3'}
-            />
-            {clientSearchTerm && (
-              <button
-                onClick={handleClearSearch}
-                style={{
-                  position: 'absolute',
-                  right: 12,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  width: 28,
-                  height: 28,
-                  borderRadius: '50%',
-                  border: 'none',
-                  background: '#e3f2fd',
-                  color: '#1565c0',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 16,
-                  fontWeight: 700,
-                  transition: 'all 0.2s',
-                  lineHeight: 1
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = '#1565c0';
-                  e.target.style.color = '#fff';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = '#e3f2fd';
-                  e.target.style.color = '#1565c0';
-                }}
-                title="Clear search"
-              >
-                ×
-              </button>
-            )}
-          </div>
-          {showClientDropdown && (
-            <div style={{
-              position: 'absolute',
-              top: 'calc(100% + 4px)',
-              left: 0,
-              right: 0,
-              maxHeight: 360,
-              overflowY: 'auto',
-              background: '#fff',
-              border: '2px solid #2196f3',
-              borderRadius: 10,
-              boxShadow: '0 8px 24px rgba(33, 150, 243, 0.2), 0 2px 8px rgba(0, 0, 0, 0.08)',
-              zIndex: 1000,
-              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-            }}>
-              {filteredClientList.length === 0 ? (
-                <div style={{ padding: '20px', textAlign: 'center', color: '#78909c' }}>
-                  {clientList.length === 0 ? 'No clients found. Please visit My Clients page first.' : 'No matching clients found'}
-                </div>
-              ) : (
-                filteredClientList.map(client => (
-                <div
-                  key={client.id || client._id}
-                  onClick={() => handleClientSelect(client)}
-                  style={{
-                    padding: '14px 18px',
-                    cursor: 'pointer',
-                    borderBottom: '1px solid #e8f4fd',
-                    background: (client.id || client._id) === selectedClientId ? '#e3f2fd' : '#fff',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = (client.id || client._id) === selectedClientId ? '#bbdefb' : '#f5f9fc'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = (client.id || client._id) === selectedClientId ? '#e3f2fd' : '#fff'}
-                >
-                  <div style={{ 
-                    fontWeight: 600, 
-                    fontSize: 15, 
-                    color: '#1565c0',
-                    marginBottom: 4
-                  }}>
-                    {client.name || 'Unknown'}
-                  </div>
-                  <div style={{ 
-                    fontSize: 13, 
-                    color: '#546e7a',
-                    display: 'flex',
-                    gap: 8,
-                    flexWrap: 'wrap'
-                  }}>
-                    {(client.user_meta || client.userMeta)?.company_name && (
-                      <span>{(client.user_meta || client.userMeta).company_name}</span>
-                    )}
-                    {client.email && (
-                      <span style={{ color: '#78909c' }}>• {client.email}</span>
-                    )}
-                  </div>
-                </div>
-              ))
-              )}
-            </div>
-          )}
-        </div>
+      <div style={{ marginBottom: 20, maxWidth: 480 }}>
+        <ClientTreeDropdown
+          networkTree={networkTree}
+          selectedClient={selectedClient}
+          onSelect={handleClientChange}
+          label="Filter by Client"
+          placeholder="Select a client to filter…"
+          maxHeight={320}
+        />
       </div>
 
       {/* Filters Section */}
@@ -619,7 +425,7 @@ function ActivityTracker() {
                 {filteredActivities.length === 0 ? (
                   <tr>
                     <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#78909c' }}>
-                      {selectedClientId 
+                      {selectedClient
                         ? 'No activity records found for this client'
                         : actionFilter !== 'all' || locationFilter || dateFrom || dateTo
                           ? 'No activity records match the selected filters'

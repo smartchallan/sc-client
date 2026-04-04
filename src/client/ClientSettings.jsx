@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
+import ClientTreeDropdown from '../components/ClientTreeDropdown';
 
 const DEFAULT_SETTINGS = {
   addVehicle: false,
@@ -17,93 +18,39 @@ const DEFAULT_SETTINGS = {
 };
 
 export default function ClientSettings() {
-  const [clients, setClients] = useState([]);
-  const [selectedClient, setSelectedClient] = useState('');
+  const [networkTree, setNetworkTree] = useState([]);
+  const [selectedClient, setSelectedClient] = useState(null); // full client object
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [showPermissions, setShowPermissions] = useState(false);
   const [loading, setLoading] = useState(false);
   const API_ROOT = import.meta.env.VITE_API_BASE_URL || '';
+  const selectedClientId = selectedClient?.id || null;
 
   useEffect(() => {
-    // Get user_id from localStorage
     const getUserId = () => {
       try {
         const scUser = JSON.parse(localStorage.getItem('sc_user')) || {};
         return scUser.user?.id || scUser.user?.client_id || scUser.user?._id || null;
-      } catch {
-        return null;
-      }
+      } catch { return null; }
     };
-    const fetchClients = async () => {
-      const userId = getUserId();
-      if (!userId) {
-        setClients([]);
+    const userId = getUserId();
+    if (!userId) return;
+    try {
+      const cached = localStorage.getItem('client_network');
+      if (cached) {
+        const data = JSON.parse(cached);
+        setNetworkTree(Array.isArray(data) ? data : (data.clients || data.users || []));
         return;
       }
-      
-      // Check if data already exists in localStorage (from login)
-      try {
-        const cachedData = localStorage.getItem('client_network');
-        if (cachedData) {
-          const data = JSON.parse(cachedData);
-          const rawData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
-          // Recursively flatten all nested children (from MyClients)
-          const flattenChildren = (node, dealerName = null) => {
-            const result = [];
-            result.push({ ...node, dealerName, isParent: !dealerName });
-            if (Array.isArray(node.children) && node.children.length > 0) {
-              node.children.forEach(child => {
-                result.push(...flattenChildren(child, node.name));
-              });
-            }
-            return result;
-          };
-          const flatClients = [];
-          rawData.forEach(parent => {
-            flatClients.push(...flattenChildren(parent));
-          });
-          setClients(flatClients);
-          if (flatClients.length > 0) setSelectedClient(flatClients[0].id || flatClients[0]._id || flatClients[0]);
-          return;
-        }
-      } catch (e) {
-        // If cached data is invalid, continue to fetch from API
-      }
-      
-      try {
-        const res = await fetch(`${API_ROOT}/getclientnetwork?parent_id=${userId}`);
-        const data = await res.json().catch(() => []);
-        const rawData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
-        
-        // Store in localStorage for future use
-        localStorage.setItem('client_network', JSON.stringify(data));
-        
-        // Recursively flatten all nested children (from MyClients)
-        const flattenChildren = (node, dealerName = null) => {
-          const result = [];
-          result.push({ ...node, dealerName, isParent: !dealerName });
-          if (Array.isArray(node.children) && node.children.length > 0) {
-            node.children.forEach(child => {
-              result.push(...flattenChildren(child, node.name));
-            });
-          }
-          return result;
-        };
-        const flatClients = [];
-        rawData.forEach(parent => {
-          flatClients.push(...flattenChildren(parent));
-        });
-        setClients(flatClients);
-        if (flatClients.length > 0) setSelectedClient(flatClients[0].id || flatClients[0]._id || flatClients[0]);
-      } catch (e) {
-        setClients([]);
-      }
-    };
-    fetchClients();
+    } catch {}
+    fetch(`${API_ROOT}/getclientnetwork?parent_id=${userId}`)
+      .then(r => r.json())
+      .then(data => setNetworkTree(Array.isArray(data) ? data : (data.clients || data.users || [])))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
-    if (!selectedClient) {
+    if (!selectedClientId) {
       setShowPermissions(false);
       setSettings(DEFAULT_SETTINGS);
       return;
@@ -112,7 +59,7 @@ export default function ClientSettings() {
     // Fetch permissions for selected client
     (async () => {
       try {
-        const res = await fetch(`${API_ROOT}/useroptions?user_id=${encodeURIComponent(selectedClient)}`);
+        const res = await fetch(`${API_ROOT}/useroptions?user_id=${encodeURIComponent(selectedClientId)}`);
         const d = await res.json().catch(() => null);
         let opts = d && d.options ? d.options : d;
         if (res.ok && opts && typeof opts === 'object') {
@@ -140,7 +87,7 @@ export default function ClientSettings() {
         setShowPermissions(true);
       }
     })();
-  }, [selectedClient]);
+  }, [selectedClientId]);
 
 
   // Map UI settings to API keys
@@ -163,9 +110,9 @@ export default function ClientSettings() {
   const handleCheckboxChange = (key) => (e) => {
     const updated = { ...settings, [key]: e.target.checked };
     setSettings(updated);
-    if (!selectedClient) return;
+    if (!selectedClientId) return;
     const payload = {
-      user_id: selectedClient,
+      user_id: selectedClientId,
       user_role: 'client',
       settings: mapSettingsToApi(updated)
     };
@@ -190,19 +137,15 @@ export default function ClientSettings() {
       {/* <h1 className="page-title">Client Settings</h1> */}
       <p className="page-subtitle">Configure client-specific permissions and defaults for downstream services.</p>
       <div style={{ width: '100%' }}>
-        <div className="form-group" style={{ width: '50%' }}>
-          <label className="form-label">Select Client</label>
-          <select className="form-control" style={{ width: '100%' }} value={selectedClient} onChange={e => setSelectedClient(e.target.value)}>
-            <option value="">Select client</option>
-            {clients.map(c => (
-              <option key={c.id || c._id || c.email}
-                value={c.id || c._id || c}
-              >
-                {c.name || c.email || c}
-                {c.dealerName ? ` (${c.dealerName})` : ''}
-              </option>
-            ))}
-          </select>
+        <div style={{ maxWidth: 480, marginBottom: 4 }}>
+          <ClientTreeDropdown
+            networkTree={networkTree}
+            selectedClient={selectedClient}
+            onSelect={setSelectedClient}
+            label="Select Client"
+            placeholder="Select a client…"
+            maxHeight={320}
+          />
         </div>
 
         {showPermissions && (

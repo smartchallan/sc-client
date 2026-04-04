@@ -1,14 +1,5 @@
-// Table utility for date formatting
-function formatDate(dateStr) {
-  if (!dateStr) return '-';
-  let d = null;
-  if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(dateStr)) d = new Date(dateStr.replace(/-/g, ' '));
-  else if (/\d{2}-\d{2}-\d{4}/.test(dateStr)) { const [day, month, year] = dateStr.split('-'); d = new Date(`${year}-${month}-${day}`); }
-  else if (/\d{4}-\d{2}-\d{2}/.test(dateStr)) d = new Date(dateStr);
-  else d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
-}
+import { formatDate, parseDate } from '../utils/dateUtils';
+import ClientTreeDropdown from '../components/ClientTreeDropdown';
 
 // Helper to get a comparable timestamp for challan date/time
 function getChallanTimestamp(raw) {
@@ -581,7 +572,7 @@ export function ChallanTableV2({
                     </span>
                   </td>
                   <td>{c.challan_no || "-"}</td>
-                  <td>{c.challan_date_time || '-'}</td>
+                  <td>{formatDate(c.challan_date_time) || '-'}</td>
                   <td>
                     {(() => {
                       const loc =
@@ -1032,7 +1023,7 @@ export function ChallanTable({
                     <td>{idx + 1}</td>
                     <td>{c.vehicle_number || '-'}</td>
                     <td>{c.challan_no || '-'}</td>
-                    <td>{c.challan_date_time || c.created_at || c.createdAt}</td>
+                    <td>{formatDate(c.challan_date_time || c.created_at || c.createdAt)}</td>
                     <td>
                       {(() => {
                         const loc = c.challan_place || c.location || c.challan_location || c.address || c.owner_address;
@@ -1135,59 +1126,21 @@ export default function MyChallans({ initialFilter = null, showClientPages = fal
   const [isLoading, setIsLoading] = useState(true);
   
   // Client selection state for Client Vehicles mode
-  const [selectedClientId, setSelectedClientId] = useState(null);
-  const [clientList, setClientList] = useState([]);
-  const [clientSearchTerm, setClientSearchTerm] = useState('');
-  const [showClientDropdown, setShowClientDropdown] = useState(false);
-  const clientDropdownRef = useRef(null);
-  
-  // Load clients from localStorage when in Client mode
-  useEffect(() => {
-    if (showClientPages) {
-      try {
-        const cachedData = localStorage.getItem('client_network');
-        if (cachedData) {
-          const data = JSON.parse(cachedData);
-          const rawData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
-          
-          // Flatten nested children (same logic as MyFleetTable)
-          const flattenChildren = (node, dealerName = null) => {
-            const result = [];
-            result.push({ ...node, dealerName, isParent: !dealerName });
-            if (Array.isArray(node.children) && node.children.length > 0) {
-              node.children.forEach(child => {
-                result.push(...flattenChildren(child, node.name));
-              });
-            }
-            return result;
-          };
-          
-          const flatClients = [];
-          rawData.forEach(parent => {
-            flatClients.push(...flattenChildren(parent));
-          });
-          
-          setClientList(flatClients);
-        }
-      } catch (e) {
-        console.error('Failed to load client list:', e);
-      }
-    }
-  }, [showClientPages]);
-  
-  // Close dropdown when clicking outside
-  useEffect(() => {
+  const [selectedClient, setSelectedClient] = React.useState(null);
+  const [networkTree, setNetworkTree] = React.useState([]);
+  const selectedClientId = selectedClient?.id || null;
+
+  // Load client network tree when in Client mode
+  React.useEffect(() => {
     if (!showClientPages) return;
-    const handleClickOutside = (event) => {
-      if (clientDropdownRef.current && !clientDropdownRef.current.contains(event.target)) {
-        setShowClientDropdown(false);
+    try {
+      const cached = localStorage.getItem('client_network');
+      if (cached) {
+        const data = JSON.parse(cached);
+        setNetworkTree(Array.isArray(data) ? data : (data.clients || data.users || []));
       }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    } catch {}
   }, [showClientPages]);
-  
-  const selectedClientName = clientList.find(c => (c.id || c._id) === selectedClientId)?.name || '';
   useEffect(() => {
     async function fetchChallans() {
       // Don't fetch if in client mode and no client is selected
@@ -1261,7 +1214,7 @@ export default function MyChallans({ initialFilter = null, showClientPages = fal
       }
     }
     fetchChallans();
-  }, [showClientPages, selectedClientId]);
+  }, [showClientPages, selectedClient]);
 
   const [selectedChallan, setSelectedChallan] = useState(null);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
@@ -1322,7 +1275,7 @@ export default function MyChallans({ initialFilter = null, showClientPages = fal
               letterSpacing: '-0.3px',
               lineHeight: 1.3
             }}>
-              Fetching challans for {selectedClientName}
+              Fetching challans for {selectedClient?.name || 'client'}
             </div>
             <div style={{ 
               fontSize: 15, 
@@ -1345,146 +1298,15 @@ export default function MyChallans({ initialFilter = null, showClientPages = fal
       
       {/* Client selector dropdown for Client mode */}
       {showClientPages && (
-        <div style={{ marginBottom: 20, padding: '0 0'}}>
-          <div style={{ position: 'relative', maxWidth: 650 }} ref={clientDropdownRef}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: 8, 
-              fontWeight: 600, 
-              color: '#1565c0', 
-              fontSize: 15,
-              letterSpacing: '-0.2px',
-              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-            }}>
-              Select Client
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                placeholder="Search by name, company, or email..."
-                value={clientSearchTerm}
-                onChange={(e) => setClientSearchTerm(e.target.value)}
-                onFocus={() => setShowClientDropdown(true)}
-                style={{
-                  width: '100%',
-                  padding: '14px 44px 14px 18px',
-                  border: '2px solid #2196f3',
-                  borderRadius: 10,
-                  fontSize: 15,
-                  outline: 'none',
-                  background: '#fff',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 2px 8px rgba(33, 150, 243, 0.08)',
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-                }}
-                onMouseEnter={(e) => e.target.style.borderColor = '#1976d2'}
-                onMouseLeave={(e) => e.target.style.borderColor = '#2196f3'}
-              />
-              {clientSearchTerm && (
-                <button
-                  onClick={() => {
-                    setClientSearchTerm('');
-                    setSelectedClientId(null);
-                    setShowClientDropdown(false);
-                  }}
-                  style={{
-                    position: 'absolute',
-                    right: 12,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    width: 28,
-                    height: 28,
-                    borderRadius: '50%',
-                    border: 'none',
-                    background: '#e3f2fd',
-                    color: '#1565c0',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 16,
-                    fontWeight: 700,
-                    transition: 'all 0.2s',
-                    lineHeight: 1
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = '#1565c0';
-                    e.target.style.color = '#fff';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = '#e3f2fd';
-                    e.target.style.color = '#1565c0';
-                  }}
-                  title="Clear search"
-                >
-                  ×
-                </button>
-              )}
-            </div>
-            {showClientDropdown && clientList.length > 0 && (
-              <div style={{
-                position: 'absolute',
-                top: 'calc(100% + 4px)',
-                left: 0,
-                right: 0,
-                maxHeight: 360,
-                overflowY: 'auto',
-                background: '#fff',
-                border: '2px solid #2196f3',
-                borderRadius: 10,
-                boxShadow: '0 8px 24px rgba(33, 150, 243, 0.2), 0 2px 8px rgba(0, 0, 0, 0.08)',
-                zIndex: 1000,
-                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-              }}>
-                {clientList
-                  .filter(client => {
-                    const searchLower = clientSearchTerm.toLowerCase();
-                    const name = client.name || '';
-                    const email = client.email || '';
-                    const company = (client.user_meta || client.userMeta)?.company_name || '';
-                    return name.toLowerCase().includes(searchLower) || 
-                           email.toLowerCase().includes(searchLower) ||
-                           company.toLowerCase().includes(searchLower);
-                  })
-                  .map(client => (
-                    <div
-                      key={client.id || client._id}
-                      onClick={() => {
-                        setSelectedClientId(client.id || client._id);
-                        setClientSearchTerm(`${client.name} (${(client.user_meta || client.userMeta)?.company_name || 'N/A'})`);
-                        setShowClientDropdown(false);
-                      }}
-                      style={{
-                        padding: '14px 18px',
-                        cursor: 'pointer',
-                        borderBottom: '1px solid #e8f4fd',
-                        background: (client.id || client._id) === selectedClientId ? '#e3f2fd' : '#fff',
-                        transition: 'all 0.15s ease'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = (client.id || client._id) === selectedClientId ? '#bbdefb' : '#f5f9fc'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = (client.id || client._id) === selectedClientId ? '#e3f2fd' : '#fff'}
-                    >
-                      <div style={{ 
-                        fontWeight: 600, 
-                        color: '#1565c0', 
-                        fontSize: 15,
-                        marginBottom: 4,
-                        letterSpacing: '-0.2px'
-                      }}>{client.name}</div>
-                      <div style={{ 
-                        fontSize: 13, 
-                        color: '#666', 
-                        lineHeight: 1.4
-                      }}>
-                        {(client.user_meta || client.userMeta)?.company_name || 'N/A'} • {client.email || 'N/A'}
-                      </div>
-                    </div>
-                  ))
-                }
-              </div>
-            )}
-          </div>
+        <div style={{ marginBottom: 20, maxWidth: 480 }}>
+          <ClientTreeDropdown
+            networkTree={networkTree}
+            selectedClient={selectedClient}
+            onSelect={setSelectedClient}
+            label="Select Client"
+            placeholder="Select a client…"
+            maxHeight={320}
+          />
         </div>
       )}
       
@@ -1576,7 +1398,7 @@ export default function MyChallans({ initialFilter = null, showClientPages = fal
               <tr><td><b>Status</b></td><td>{selectedChallan.challan_status}</td></tr>
               <tr><td><b>Vehicle Number</b></td><td>{selectedChallan.vehicle_number}</td></tr>
               <tr><td><b>Challan No</b></td><td>{selectedChallan.challan_no}</td></tr>
-              <tr><td><b>Date/Time</b></td><td>{selectedChallan.challan_date_time}</td></tr>
+              <tr><td><b>Date/Time</b></td><td>{formatDate(selectedChallan.challan_date_time)}</td></tr>
               <tr><td><b>Location</b></td><td>{selectedChallan.challan_place || selectedChallan.location || selectedChallan.challan_location}</td></tr>
               <tr><td><b>Owner Name</b></td><td>{selectedChallan.owner_name}</td></tr>
               <tr><td><b>Driver Name</b></td><td>{selectedChallan.driver_name}</td></tr>

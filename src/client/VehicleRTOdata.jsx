@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import SelectShowMore from "./SelectShowMore";
+import { parseDate, formatDate as sharedFormatDate } from '../utils/dateUtils';
 
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
@@ -28,31 +29,16 @@ const buildPrintableRtoTableHtml = () => {
   return printTable.outerHTML;
 };
 
-// Helper to parse various date formats and object wrappers like { value }
+// Delegate to shared utility — kept as local alias for backward compatibility with callers in this file
 const parseFlexibleDateValue = (raw) => {
-  if (!raw || raw === '-' || raw === 'NA' || raw === 'N/A') return null;
-  let val = raw;
-  if (typeof val === 'object') {
-    if (val.value) val = val.value;
-    else if (val.date) val = val.date;
-    else return null;
-  }
-  if (typeof val !== 'string') val = String(val);
-  // If it's a JSON string with an object, try to parse
-  if (val.trim().startsWith('{') && val.trim().endsWith('}')) {
-    try { const parsed = JSON.parse(val); if (parsed && (parsed.value || parsed.date)) return parsed.value || parsed.date; } catch (e) { /* ignore */ }
-  }
-  return val;
+  const d = parseDate(raw);
+  if (!d) return null;
+  // Return the canonical ISO string for downstream use
+  return d.toISOString().slice(0, 10);
 };
 
-// Simple expiry formatter (returns 'DD-MMM-YYYY' or '-') without color
-const formatExpirySimple = (dateStr) => {
-  if (!dateStr) return '-';
-  const v = parseFlexibleDateValue(dateStr) || dateStr;
-  const d = new Date(v);
-  if (isNaN(d.getTime())) return v || '-';
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
-};
+// Simple expiry formatter using shared utility
+const formatExpirySimple = sharedFormatDate;
 // Download RTO data as Excel (includes National Permit and Permit Valid)
 const handleRtoDownloadExcel = (rows) => {
   const exportData = rows.map((row, index) => {
@@ -281,6 +267,12 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
               vd._isFallback = false;
               // ensure rc_regn_no is present by preferring the VehicleDetails value, else fall back to wrapper's vehicle_number or other fields
               vd.rc_regn_no = vd.rc_regn_no || item.vehicle_number || item.rc_regn_no || item.registration_no || item.regn_no || item.reg_no || null;
+              vd._onboarded_at = item.created_at || item.createdAt || null;
+              // Use normalized YYYY-MM-DD columns from DB so formatExpiry always outputs DD-MMM-YYYY
+              if (item.insurance_exp) vd.insurance_exp = item.insurance_exp;
+              if (item.road_tax_exp) vd.road_tax_exp = item.road_tax_exp;
+              if (item.fitness_exp) vd.fitness_exp = item.fitness_exp;
+              if (item.pollution_exp) vd.pollution_exp = item.pollution_exp;
               // keep original raw item for deeper checks
               vd._raw = item;
               return vd;
@@ -304,6 +296,7 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
                 rc_mobile_no: '-',
                 rc_present_address: '-',
                 _statusMessage: item.stautsMessage || item.statusMessage || item.status_message || null,
+                _onboarded_at: item.created_at || item.createdAt || null,
                 _isFallback: true,
                 _raw: item
               };
@@ -677,6 +670,12 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
               <th>#</th>
               <th>Vehicle No.</th>
               {!hideSearchSortFilter && (
+                <th className={`vst-th--sortable${sortConfig.key === '_onboarded_at' ? ' vst-th--sorted' : ''}`} onClick={() => handleSort('_onboarded_at')}>
+                  Onboarding At
+                  <em className="vst-sort-icon">{sortConfig.key === '_onboarded_at' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
+                </th>
+              )}
+              {!hideSearchSortFilter && (
                 <th className={`vst-th--sortable${sortConfig.key === 'rc_regn_dt' ? ' vst-th--sorted' : ''}`} onClick={() => handleSort('rc_regn_dt')}>
                   Registration Date
                   <em className="vst-sort-icon">{sortConfig.key === 'rc_regn_dt' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
@@ -695,7 +694,7 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
                 <em className="vst-sort-icon">{sortConfig.key === 'rc_np_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
               </th>
               <th className={`vst-th--sortable${sortConfig.key === 'rc_permit_valid_upto' ? ' vst-th--sorted' : ''}`} onClick={() => handleSort('rc_permit_valid_upto')}>
-                Permit Valid
+                State Permit
                 <em className="vst-sort-icon">{sortConfig.key === 'rc_permit_valid_upto' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '▲▼'}</em>
               </th>
               <th className={`vst-th--sortable${sortConfig.key === 'fitness_exp' ? ' vst-th--sorted' : ''}${expiredTypes.includes('fitness') ? ' vst-th--highlighted' : ''}`} onClick={() => handleSort('fitness_exp')}>
@@ -711,7 +710,7 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
           </thead>
           <tbody>
             {displayed.length === 0 ? (
-              <tr><td colSpan={hideSearchSortFilter ? 7 : 8}>No vehicle data found.</td></tr>
+              <tr><td colSpan={hideSearchSortFilter ? 7 : 9}>No vehicle data found.</td></tr>
             ) : (
               displayed.map((v, idx) => (
                 <tr key={v.rc_regn_no || idx} className="vst-row">
@@ -734,6 +733,11 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
                       <i className="ri-external-link-line vst-vehicle-num__icon" />
                     </span>
                   </td>
+                  {!hideSearchSortFilter && (
+                    <td style={{ fontSize: 12, color: '#475569', whiteSpace: 'nowrap' }}>
+                      {v._onboarded_at ? formatExpiry(String(v._onboarded_at).split('T')[0], false) : '-'}
+                    </td>
+                  )}
                   {!hideSearchSortFilter && <td>{formatExpiry(v.rc_regn_dt, false)}</td>}
                   <td
                     style={expiredTypes.includes('insurance') ? { background: '#e3f2fd', fontWeight: 600 } : {}}
