@@ -1,4 +1,4 @@
-import { formatDate, parseDate } from '../utils/dateUtils';
+import { formatDate, formatChallanDateTime, parseDate } from '../utils/dateUtils';
 import ClientTreeDropdown from '../components/ClientTreeDropdown';
 
 // Helper to get a comparable timestamp for challan date/time
@@ -572,7 +572,7 @@ export function ChallanTableV2({
                     </span>
                   </td>
                   <td>{c.challan_no || "-"}</td>
-                  <td>{formatDate(c.challan_date_time) || '-'}</td>
+                  <td>{formatChallanDateTime(c.challan_date_time) || '-'}</td>
                   <td>
                     {(() => {
                       const loc =
@@ -1398,7 +1398,7 @@ export default function MyChallans({ initialFilter = null, showClientPages = fal
               <tr><td><b>Status</b></td><td>{selectedChallan.challan_status}</td></tr>
               <tr><td><b>Vehicle Number</b></td><td>{selectedChallan.vehicle_number}</td></tr>
               <tr><td><b>Challan No</b></td><td>{selectedChallan.challan_no}</td></tr>
-              <tr><td><b>Date/Time</b></td><td>{formatDate(selectedChallan.challan_date_time)}</td></tr>
+              <tr><td><b>Date/Time</b></td><td>{formatChallanDateTime(selectedChallan.challan_date_time)}</td></tr>
               <tr><td><b>Location</b></td><td>{selectedChallan.challan_place || selectedChallan.location || selectedChallan.challan_location}</td></tr>
               <tr><td><b>Owner Name</b></td><td>{selectedChallan.owner_name}</td></tr>
               <tr><td><b>Driver Name</b></td><td>{selectedChallan.driver_name}</td></tr>

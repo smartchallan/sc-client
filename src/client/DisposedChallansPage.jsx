@@ -18,14 +18,34 @@ const IS_WHITELABEL = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME) && !IS_DEFAULT
 const BRAND_LOGO = (IS_WHITELABEL && resolvePerHostEnv(CURRENT_HOSTNAME, 'LOGO_URL')) || import.meta.env.VITE_CUSTOM_LOGO_URL || scLogo;
 // Reuse ChallanTableV2 pattern from MyChallans.jsx
 
-function formatDate(dateStr) {
-  if (!dateStr) return '-';
+function formatChallanDateTime(dateStr) {
+  if (!dateStr || dateStr === '-') return '-';
+  const s = String(dateStr).trim();
+  const hasTime = /\d{2}:\d{2}/.test(s);
   let d = null;
-  if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(dateStr)) d = new Date(dateStr.replace(/-/g, ' '));
-  else if (/\d{2}-\d{2}-\d{4}/.test(dateStr)) { const [day, month, year] = dateStr.split('-'); d = new Date(`${year}-${month}-${day}`); }
-  else if (/\d{4}-\d{2}-\d{2}/.test(dateStr)) d = new Date(dateStr);
-  else d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
+  // DD-MM-YYYY HH:mm:ss  e.g. 31-03-2026 08:36:08
+  const dmyHms = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (dmyHms) {
+    const sec = dmyHms[6] || '00';
+    d = new Date(`${dmyHms[3]}-${dmyHms[2].padStart(2,'0')}-${dmyHms[1].padStart(2,'0')}T${dmyHms[4].padStart(2,'0')}:${dmyHms[5]}:${sec}`);
+  } else if (/\d{2}-[A-Za-z]{3}-\d{4}/.test(s)) {
+    d = new Date(s.replace(/-/g, ' '));
+  } else if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(s)) {
+    const [day, month, year] = s.split('-');
+    d = new Date(`${year}-${month.padStart(2,'0')}-${day.padStart(2,'0')}`);
+  } else if (/\d{4}-\d{2}-\d{2}/.test(s)) {
+    d = new Date(s);
+  } else {
+    d = new Date(s);
+  }
+  if (!d || isNaN(d.getTime())) return s;
+  if (hasTime) {
+    return d.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  }
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
 }
 
@@ -245,7 +265,7 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
                   <td>{idx + 1}</td>
                   <td>{c.vehicle_number || '-'}</td>
                   <td>{c.challan_no || '-'}</td>
-                  <td>{formatDate(c.challan_date_time) || '-'}</td>
+                  <td>{formatChallanDateTime(c.challan_date_time) || '-'}</td>
                   <td>
                     {(() => {
                       const loc = c.challan_place || c.location || c.challan_location || c.address || c.owner_address;
@@ -594,7 +614,7 @@ export default function DisposedChallansPage() {
               <tr><td><b>Status</b></td><td>{selectedChallan.challan_status}</td></tr>
               <tr><td><b>Vehicle Number</b></td><td>{selectedChallan.vehicle_number}</td></tr>
               <tr><td><b>Challan No</b></td><td>{selectedChallan.challan_no}</td></tr>
-              <tr><td><b>Date/Time</b></td><td>{formatDate(selectedChallan.challan_date_time)}</td></tr>
+              <tr><td><b>Date/Time</b></td><td>{formatChallanDateTime(selectedChallan.challan_date_time)}</td></tr>
               <tr><td><b>Location</b></td><td>{selectedChallan.challan_place || selectedChallan.location || selectedChallan.challan_location}</td></tr>
               <tr><td><b>Owner Name</b></td><td>{selectedChallan.owner_name}</td></tr>
               <tr><td><b>Driver Name</b></td><td>{selectedChallan.driver_name}</td></tr>

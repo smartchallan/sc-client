@@ -17,7 +17,7 @@ import scLogo from "../assets/sc-logo.png";
 // ...existing code...
 import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { resolvePerHostEnv, getWhitelabelHosts } from "../utils/whitelabel";
-import { formatDate as fmtDate } from "../utils/dateUtils";
+import { formatDate as fmtDate, formatChallanDateTime as fmtChallanDT } from "../utils/dateUtils";
 import AddClient from './AddClient';
 import MyClients from './MyClients';
 import ActivityTracker from './ActivityTracker';
@@ -2110,7 +2110,7 @@ function ClientDashboard() {
           <td>{c.vehicle_number}</td>
           <td>
             <span title={c.challan_date_time} style={{cursor:'pointer'}}>
-              {c.challan_date_time ? fmtDate(c.challan_date_time) : ''}
+              {c.challan_date_time ? fmtChallanDT(c.challan_date_time) : ''}
             </span>
           </td>
           <td style={{ textAlign: 'center' }}>
@@ -4117,7 +4117,7 @@ function ClientDashboard() {
               <tr><td><b>Status</b></td><td>{selectedChallan.challan_status}</td></tr>
               <tr><td><b>Vehicle Number</b></td><td>{selectedChallan.vehicle_number}</td></tr>
               <tr><td><b>Challan No</b></td><td>{selectedChallan.challan_no}</td></tr>
-              <tr><td><b>Date/Time</b></td><td>{fmtDate(selectedChallan.challan_date_time)}</td></tr>
+              <tr><td><b>Date/Time</b></td><td>{fmtChallanDT(selectedChallan.challan_date_time)}</td></tr>
               <tr><td><b>Location</b></td><td>{selectedChallan.challan_place || selectedChallan.location || selectedChallan.challan_location}</td></tr>
               <tr><td><b>Owner Name</b></td><td>{selectedChallan.owner_name}</td></tr>
               <tr><td><b>Driver Name</b></td><td>{selectedChallan.driver_name}</td></tr>

@@ -38,6 +38,17 @@ export function parseDate(dateStr) {
     if (!isNaN(d)) return d;
   }
 
+  // DD-MM-YYYY HH:mm:ss  e.g. 31-03-2026 08:36:08  (ULIP challan datetime)
+  const dmyHms = val.match(/^(\d{1,2})-(\d{1,2})-(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (dmyHms) {
+    const sec = dmyHms[6] || '00';
+    const d = new Date(
+      `${dmyHms[3]}-${dmyHms[2].padStart(2, '0')}-${dmyHms[1].padStart(2, '0')}` +
+      `T${dmyHms[4].padStart(2, '0')}:${dmyHms[5]}:${sec}`
+    );
+    if (!isNaN(d)) return d;
+  }
+
   // DD-MM-YYYY  e.g. 15-03-2024
   const dmy = val.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
   if (dmy) {
@@ -77,6 +88,30 @@ export function formatDateTime(ts) {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   });
+}
+
+/**
+ * Format a challan date/time value.
+ * - If the source string contains a time component (HH:mm), shows date + time.
+ * - If date-only, shows date only (DD-Mon-YYYY).
+ * Handles "DD-MM-YYYY HH:mm:ss" (raw ULIP) and "DD-MMM-YYYY" (normalized) formats.
+ */
+export function formatChallanDateTime(dateStr) {
+  if (!dateStr || dateStr === '-' || dateStr === 'NA' || dateStr === 'N/A') return '-';
+  const s = String(dateStr).trim();
+  const hasTime = /\d{2}:\d{2}/.test(s);
+  const d = parseDate(s);
+  if (!d) return s; // return raw string if still unparseable
+  if (hasTime) {
+    return d.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  }
+  return d.toLocaleDateString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  }).replace(/ /g, '-');
 }
 
 /**
