@@ -26,7 +26,7 @@ const LatestChallansTable = ({ latestChallanRows, loadingVehicleChallan, vehicle
     ) : (
       <div>
         
-        <div className="vst-table-wrap" id="latest-challans-table-print-area">
+        <div className="vst-table-wrap vst-table-wrap--compact" id="latest-challans-table-print-area">
           <table className="vst-table">
             <colgroup>
               <col style={{ width: '4%' }} />

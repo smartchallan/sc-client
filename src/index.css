@@ -1008,6 +1008,15 @@ main > div {
 .vst-table-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 .vst-table-wrap::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
+/* Dashboard preview tables — no sticky/full-height behaviour */
+.vst-table-wrap--compact {
+  position: static;
+  height: auto;
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
 /* ── Challan table container (MyChallans / PayChallans / DisposedChallans) ── */
 .modern-table-container {
   position: sticky;

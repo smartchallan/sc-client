@@ -44,7 +44,7 @@ export default function LatestRTOTable({ vehicleData = [], loading, error, setSe
       {/* Caption row removed, now next to title */}
       
       {vehicleData.length === 0 ? (
-        <div className="vst-table-wrap" id="latest-rto-table-print-area">
+        <div className="vst-table-wrap vst-table-wrap--compact" id="latest-rto-table-print-area">
           <table className="vst-table">
             <thead>
                 <tr>
@@ -66,7 +66,7 @@ export default function LatestRTOTable({ vehicleData = [], loading, error, setSe
         </div>
       ) : (
         <div>
-          <div className="vst-table-wrap" id="latest-rto-table-print-area">
+          <div className="vst-table-wrap vst-table-wrap--compact" id="latest-rto-table-print-area">
             <table className="vst-table">
               <thead>
                 <tr>
