@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import * as XLSX from 'xlsx';
 
 const API = import.meta.env.VITE_API_BASE_URL;
@@ -15,7 +15,7 @@ function getToken() {
 }
 
 function clean(str) {
-  return str?.replace(/\*/g, '').trim() || '';
+  return str?.trim() || '';
 }
 
 function fmtDate(dateStr) {
@@ -51,6 +51,9 @@ export default function DriverVerification() {
   const [drivers, setDrivers] = useState([]);
   const [fetchingDrivers, setFetchingDrivers] = useState(true);
 
+  const [selectedDriverId, setSelectedDriverId] = useState(null);
+  const resultRef = useRef(null);
+
   const [showBulk, setShowBulk] = useState(false);
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkProgress, setBulkProgress] = useState(0);
@@ -72,10 +75,11 @@ export default function DriverVerification() {
     finally { setFetchingDrivers(false); }
   };
 
-  const buildPayload = (dldetobj) => ({
+  const buildPayload = (dldetobj, overrideLicenseNo, overrideDob) => ({
     client_id: getClientId(),
-    licenseNo: clean(dldetobj.dlobj?.dlLicno) || licenseNo,
-    dob: dldetobj.bioObj?.bioDob || dob,
+    licenseNo: clean(dldetobj.dlobj?.dlLicno) || overrideLicenseNo || licenseNo,
+    dob: overrideDob || dob,
+    status: 'verified',
     details: {
       name: clean(dldetobj.bioObj?.bioFullName),
       fatherName: clean(dldetobj.bioObj?.bioSwdFullName),
@@ -101,12 +105,22 @@ export default function DriverVerification() {
     },
   });
 
-  const saveToDb = async (dldetobj) => {
+  const saveToDb = async (dldetobj, overrideLicenseNo, overrideDob) => {
     try {
       await fetch(`${API}/savedrivedata`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
-        body: JSON.stringify(buildPayload(dldetobj)),
+        body: JSON.stringify(buildPayload(dldetobj, overrideLicenseNo, overrideDob)),
+      });
+    } catch {}
+  };
+
+  const savePending = async (dlNo, rowDob) => {
+    try {
+      await fetch(`${API}/savedrivedata`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+        body: JSON.stringify({ client_id: getClientId(), licenseNo: dlNo, dob: rowDob, status: 'pending', details: null }),
       });
     } catch {}
   };
@@ -118,6 +132,7 @@ export default function DriverVerification() {
     setError('');
     setResult(null);
     setSaved(false);
+    setSelectedDriverId(null);
     try {
       const res = await fetch(`${API}/getdriverdata`, {
         method: 'POST',
@@ -130,8 +145,6 @@ export default function DriverVerification() {
       if (!dldetobj) throw new Error('Driver details not found in response');
       const photo = dldetobj.bioImgObj?.biPhoto || dldetobj.bioObj?.biPhoto || null;
       setResult({ dldetobj, photo });
-      await saveToDb(dldetobj);
-      await fetchDrivers();
     } catch (err) {
       setError(err.message || 'Verification failed');
     } finally {
@@ -153,6 +166,27 @@ export default function DriverVerification() {
     finally { setSaving(false); }
   };
 
+  const handleRowClick = (dr) => {
+    const det = dr.details || {};
+    if (!det.rawDetails) return; // pending record — no details to show
+    setResult({ dldetobj: det.rawDetails, photo: det.photo || null });
+    setSaved(true); // already persisted in DB
+    setError('');
+    setSelectedDriverId(dr.id);
+    resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const downloadSample = () => {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['S. No.', 'DL No.', 'DOB'],
+      [1, 'GJ0420120005008', '1990-05-15']      
+    ]);
+    ws['!cols'] = [{ wch: 8 }, { wch: 20 }, { wch: 14 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'DL Upload');
+    XLSX.writeFile(wb, 'DL_Bulk_Upload_Sample.xlsx');
+  };
+
   const handleBulkFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -172,14 +206,31 @@ export default function DriverVerification() {
       let ok = 0, fail = 0;
       for (let i = 0; i < valid.length; i++) {
         setBulkProgress(Math.round(((i + 1) / valid.length) * 100));
+        const dlNo = String(valid[i][1]).trim();
+        const rowDob = String(valid[i][2]).trim();
         try {
           const res = await fetch(`${API}/getdriverdata`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
-            body: JSON.stringify({ driverId: String(valid[i][1]).trim(), dob: String(valid[i][2]).trim() }),
+            body: JSON.stringify({ driverId: dlNo, dob: rowDob }),
           });
-          res.ok ? ok++ : fail++;
-        } catch { fail++; }
+          if (res.ok) {
+            const data = await res.json();
+            const dldetobj = data?.response?.[0]?.response?.dldetobj?.[0];
+            if (dldetobj) {
+              await saveToDb(dldetobj, dlNo, rowDob);
+            } else {
+              await savePending(dlNo, rowDob);
+            }
+            ok++;
+          } else {
+            await savePending(dlNo, rowDob);
+            fail++;
+          }
+        } catch {
+          await savePending(dlNo, rowDob);
+          fail++;
+        }
       }
       setBulkMsg({ type: 'success', text: `Done — Success: ${ok}, Failed: ${fail}` });
       await fetchDrivers();
@@ -230,12 +281,15 @@ export default function DriverVerification() {
         .dl-btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,0.28); }
         .dl-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
         .dl-table-row:hover td { background: #f8fafc; }
+        .dl-table-row--selected td { background: #eff6ff !important; }
+        .dl-table-row--selected td:first-child { border-left: 3px solid #2563eb; }
+        .dl-table-row--clickable { cursor: pointer; }
       `}</style>
 
       <p className="page-subtitle">Verify driving licenses against ULIP and track driver information.</p>
 
       {/* ── Top section: form + result ── */}
-      <div style={{
+      <div ref={resultRef} style={{
         display: 'grid',
         gridTemplateColumns: d ? '360px 1fr' : '360px',
         gap: 20,
@@ -323,8 +377,23 @@ export default function DriverVerification() {
 
               {showBulk && (
                 <div style={{ marginTop: 12, padding: 14, background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: 12, color: '#64748b', marginBottom: 10, lineHeight: 1.5 }}>
-                    Upload an Excel file with columns: <strong>S. No.</strong>, <strong>DL No.</strong>, <strong>DOB</strong> (max 100 rows).
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, gap: 8 }}>
+                    <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>
+                      Upload an Excel file with columns: <strong>S. No.</strong>, <strong>DL No.</strong>, <strong>DOB</strong> (max 100 rows).
+                    </div>
+                    <button
+                      type="button"
+                      onClick={downloadSample}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0,
+                        padding: '5px 10px', borderRadius: 6, border: '1.5px solid #2563eb',
+                        background: '#eff6ff', color: '#2563eb', fontSize: 12, fontWeight: 600,
+                        cursor: 'pointer', fontFamily: 'inherit',
+                      }}
+                    >
+                      <i className="ri-download-2-line" />
+                      Sample
+                    </button>
                   </div>
                   <input
                     type="file"
@@ -512,18 +581,26 @@ export default function DriverVerification() {
                   <th>DOB</th>
                   <th>Gender</th>
                   <th>Blood Group</th>
-                  <th>Status</th>
+                  <th>DL Status</th>
                   <th>NT Valid Till</th>
                   <th>TR Valid Till</th>
                   <th>Address</th>
+                  <th>Record Status</th>
                   <th>Saved On</th>
                 </tr>
               </thead>
               <tbody>
                 {drivers.map((dr, idx) => {
                   const det = dr.details || {};
+                  const hasDetails = !!det.rawDetails;
+                  const isSelected = selectedDriverId === dr.id;
                   return (
-                    <tr key={dr.id || idx} className="dl-table-row">
+                    <tr
+                      key={dr.id || idx}
+                      className={`dl-table-row${hasDetails ? ' dl-table-row--clickable' : ''}${isSelected ? ' dl-table-row--selected' : ''}`}
+                      onClick={() => hasDetails && handleRowClick(dr)}
+                      title={hasDetails ? 'Click to view details' : undefined}
+                    >
                       <td>{idx + 1}</td>
                       <td style={{ fontWeight: 600, color: '#2563eb', whiteSpace: 'nowrap' }}>
                         {dr.license_no || '—'}
@@ -544,6 +621,16 @@ export default function DriverVerification() {
                         maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>
                         {det.address?.permanent || '—'}
+                      </td>
+                      <td>
+                        <span style={{
+                          fontSize: 11, fontWeight: 600, padding: '2px 10px', borderRadius: 20,
+                          whiteSpace: 'nowrap',
+                          background: dr.status === 'verified' ? '#dcfce7' : '#fef9c3',
+                          color: dr.status === 'verified' ? '#15803d' : '#92400e',
+                        }}>
+                          {dr.status === 'verified' ? 'Verified' : 'Pending'}
+                        </span>
                       </td>
                       <td style={{ fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap' }}>
                         {fmtDate(dr.created_at)}

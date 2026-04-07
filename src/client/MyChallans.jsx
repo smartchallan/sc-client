@@ -453,7 +453,7 @@ export function ChallanTableV2({
                   onClick={() => setShowFineDropdown((v) => !v)}
                 >
                   <i className="ri-money-rupee-circle-line vst-filter-trigger__icon" />
-                  {maxFineFilter === null ? "Fine amount" : `Fine ≤ ₹${Math.round(effectiveMax)}`}
+                  {maxFineFilter === null ? "Challan amount" : `Fine ≤ ₹${Math.round(effectiveMax)}`}
                   {maxFineFilter !== null && <span className="vst-filter-trigger__badge">1</span>}
                   <i className="ri-arrow-down-s-line vst-filter-trigger__chevron" />
                 </button>
@@ -494,7 +494,7 @@ export function ChallanTableV2({
             onClick={() => { if (typeof onClickDownload === 'function') onClickDownload(filteredData); }}
           >
             <i className="ri-download-cloud-2-line"></i>
-            <span>Download</span>
+            
           </button>
           <button
             className="vst-action-btn vst-action-btn--print"
@@ -502,7 +502,7 @@ export function ChallanTableV2({
             onClick={() => { if (typeof onClickPrint === 'function') onClickPrint(filteredData); }}
           >
             <i className="ri-printer-line"></i>
-            <span>Print</span>
+            
           </button>
         </div>
       </div>

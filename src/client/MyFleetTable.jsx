@@ -1189,10 +1189,10 @@ export default function MyFleetTable({
         </div>
         <div className="vst-toolbar__right">
           <button className="vst-action-btn vst-action-btn--download" title="Download" onClick={() => { setDownloadFormat('excel'); setShowDownloadModal(true); }}>
-            <i className="ri-download-cloud-2-line" /> <span>Download</span>
+            <i className="ri-download-cloud-2-line" />
           </button>
           <button className="vst-action-btn vst-action-btn--print" title="Print Table" onClick={handlePrint}>
-            <i className="ri-printer-line" /> <span>Print</span>
+            <i className="ri-printer-line" />
           </button>
         </div>
       </div>

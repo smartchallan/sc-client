@@ -650,7 +650,7 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
               }}
             >
               <i className="ri-download-cloud-2-line"></i>
-              <span>Download</span>
+              
             </button>
             <button
               className="vst-action-btn vst-action-btn--print"
@@ -658,7 +658,7 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
               onClick={handleRtoPrint}
             >
               <i className="ri-printer-line"></i>
-              <span>Print</span>
+              
             </button>
           </div>
         </div>
