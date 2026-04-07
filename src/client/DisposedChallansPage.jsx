@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import RightSidebar from "./RightSidebar";
 import SelectShowMore from "./SelectShowMore";
 import CustomModal from "./CustomModal";
@@ -55,7 +55,21 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
     : data.length;
 
   const [maxFineFilter, setMaxFineFilter] = useState(null);
+  const [showFineDropdown, setShowFineDropdown] = useState(false);
+  const fineDropdownRef = useRef(null);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (fineDropdownRef.current && !fineDropdownRef.current.contains(event.target)) {
+        setShowFineDropdown(false);
+      }
+    };
+    if (showFineDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showFineDropdown]);
 
   const parseFine = (val) => {
     if (val === null || val === undefined || val === '') return NaN;
@@ -166,26 +180,42 @@ function ChallanTableV2({ title, data, onView, visibleCount, onShowMore, onReset
             const minFine = Math.min(...fines);
             const effectiveMax = maxFineFilter === null ? maxFine : maxFineFilter;
             return (
-              <div className="fine-filter-card">
-                <span className="fine-filter-label">Fine up to</span>
-                <input
-                  type="range"
-                  min={minFine}
-                  max={maxFine}
-                  step={1}
-                  value={effectiveMax}
-                  onChange={(e) => setMaxFineFilter(Number(e.target.value))}
-                  className="fine-filter-range"
-                />
-                <span className="fine-filter-value">₹{Math.round(effectiveMax)}</span>
-                {maxFineFilter !== null && (
-                  <button
-                    type="button"
-                    onClick={() => setMaxFineFilter(null)}
-                    className="fine-filter-reset-btn"
-                  >
-                    Reset
-                  </button>
+              <div style={{ position: "relative" }} ref={fineDropdownRef}>
+                <button
+                  type="button"
+                  className={`vst-filter-trigger${maxFineFilter !== null ? ' vst-filter-trigger--active' : ''}${showFineDropdown ? ' vst-filter-trigger--open' : ''}`}
+                  onClick={() => setShowFineDropdown((v) => !v)}
+                >
+                  <i className="ri-money-rupee-circle-line vst-filter-trigger__icon" />
+                  {maxFineFilter === null ? "Fine amount" : `Fine ≤ ₹${Math.round(effectiveMax)}`}
+                  {maxFineFilter !== null && <span className="vst-filter-trigger__badge">1</span>}
+                  <i className="ri-arrow-down-s-line vst-filter-trigger__chevron" />
+                </button>
+                {showFineDropdown && (
+                  <div className="vst-dropdown" style={{ minWidth: 220 }}>
+                    <div style={{ padding: '8px 12px 4px', fontSize: 12, color: '#64748b', fontWeight: 600 }}>
+                      Fine up to: <span style={{ color: '#4338ca', fontWeight: 700 }}>₹{Math.round(effectiveMax)}</span>
+                    </div>
+                    <div style={{ padding: '4px 12px 8px' }}>
+                      <input
+                        type="range"
+                        min={minFine}
+                        max={maxFine}
+                        step={1}
+                        value={effectiveMax}
+                        onChange={(e) => setMaxFineFilter(Number(e.target.value))}
+                        style={{ width: '100%', accentColor: '#6366f1' }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+                        <span>₹{Math.round(minFine)}</span>
+                        <span>₹{Math.round(maxFine)}</span>
+                      </div>
+                    </div>
+                    <div className="vst-dropdown__footer">
+                      <button className="vst-dropdown__footer-btn" onClick={() => setMaxFineFilter(null)}>Reset</button>
+                      <button className="vst-dropdown__footer-btn" onClick={() => setShowFineDropdown(false)}>Close</button>
+                    </div>
+                  </div>
                 )}
               </div>
             );

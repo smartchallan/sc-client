@@ -764,24 +764,19 @@ export default function MyFleetTable({
               {row.vehicle_number || '-'}
               <i className="ri-external-link-line vst-vehicle-num__icon" />
             </span>
-            <div className="vft-action-anchor" onClick={e => e.stopPropagation()}>
-              <button
-                className="vft-kebab-btn"
-                title="Actions"
-                onClick={() => setActionMenuRowId(prev => prev === rowId ? null : rowId)}
-              >
+            <div
+              className="vft-action-anchor"
+              onClick={e => e.stopPropagation()}
+              onMouseEnter={() => setActionMenuRowId(rowId)}
+              onMouseLeave={() => setActionMenuRowId(null)}
+            >
+              <button className="vft-kebab-btn" title="Actions">
                 <i className="ri-more-2-fill" />
               </button>
               {actionMenuRowId === rowId && (
                 <div className="vft-action-menu">
                   <button onClick={() => { onView(row); setActionMenuRowId(null); }}>
                     <i className="ri-eye-line" /> View Details
-                  </button>
-                  <button onClick={() => { onFetchRto?.(row); setActionMenuRowId(null); }}>
-                    <i className="ri-database-2-line" /> Fetch RTO Data
-                  </button>
-                  <button onClick={() => { onFetchChallan?.(row); setActionMenuRowId(null); }}>
-                    <i className="ri-file-list-3-line" /> Fetch Challan Data
                   </button>
                   <div className="vft-action-menu__divider" />
                   <button onClick={() => { onStatusChange?.(row); setActionMenuRowId(null); }}>
@@ -1134,18 +1129,16 @@ export default function MyFleetTable({
                 </div>
               )}
             </div>
-          </div>
-        </div>
-        <div className="vst-toolbar__right">
-          {/* Columns control */}
-          <div style={{ position: 'relative' }} ref={colMenuRef}>
-            <button
-              className={`vst-action-btn${colMenuOpen ? ' vst-action-btn--active' : ''}`}
-              title="Show/hide columns"
-              onClick={() => setColMenuOpen(v => !v)}
-            >
-              <i className="ri-layout-column-line" /> <span>Columns</span>
-            </button>
+            {/* Columns control */}
+            <div style={{ position: 'relative' }} ref={colMenuRef}>
+              <button
+                className={`vst-filter-trigger${colMenuOpen ? ' vst-filter-trigger--open' : ''}`}
+                title="Show/hide columns"
+                onClick={() => setColMenuOpen(v => !v)}
+              >
+                <i className="ri-layout-column-line vst-filter-trigger__icon" /> Columns
+                <i className="ri-arrow-down-s-line vst-filter-trigger__chevron" />
+              </button>
             {colMenuOpen && (
               <div className="vft-col-menu">
                 <div className="vft-col-menu__header">
@@ -1191,7 +1184,10 @@ export default function MyFleetTable({
                 })}
               </div>
             )}
+            </div>
           </div>
+        </div>
+        <div className="vst-toolbar__right">
           <button className="vst-action-btn vst-action-btn--download" title="Download" onClick={() => { setDownloadFormat('excel'); setShowDownloadModal(true); }}>
             <i className="ri-download-cloud-2-line" /> <span>Download</span>
           </button>

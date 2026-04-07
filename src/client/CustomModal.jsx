@@ -1,12 +1,12 @@
 import React from "react";
 import { createPortal } from "react-dom";
 
-export default function CustomModal({ open, title, description, icon, onConfirm, onCancel, confirmText = "Yes", cancelText = "Cancel", children }) {
+export default function CustomModal({ open, title, description, icon, onConfirm, onCancel, confirmText = "Yes", cancelText = "Cancel", children, maxWidth = "max-w-md" }) {
   if (!open) return null;
 
   const modal = (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all animate-slide-up relative">
+      <div className={`bg-white rounded-2xl shadow-2xl ${maxWidth} w-full transform transition-all animate-slide-up relative`}>
         <div className="flex flex-col items-center px-8 py-8">
           {/* Close button */}
           <button 

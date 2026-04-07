@@ -853,7 +853,7 @@ main > div {
   border-radius: 16px;
   border: 1px solid rgba(59, 130, 246, 0.1);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 24px rgba(59, 130, 246, 0.06);
-  overflow: hidden;
+  overflow: clip; /* clip preserves border-radius without creating a scroll container (allows sticky children) */
   transition: box-shadow 0.25s ease;
 }
 
@@ -991,11 +991,15 @@ main > div {
   color: #334155;
 }
 
-/* ── Table container ── */
+/* ── Table container ──
+   Scrolls with the page until the top of the wrap reaches 64px (app header),
+   then freezes and fills the remaining viewport height with internal row scroll. */
 .vst-table-wrap {
+  position: sticky;
+  top: 64px;
+  height: calc(100vh - 64px);
   overflow-x: auto;
   overflow-y: auto;
-  max-height: calc(100vh - 280px);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -1004,11 +1008,13 @@ main > div {
 .vst-table-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 .vst-table-wrap::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-/* ── Challan table container (MyChallans page) ── */
+/* ── Challan table container (MyChallans / PayChallans / DisposedChallans) ── */
 .modern-table-container {
+  position: sticky;
+  top: 64px;
+  height: calc(100vh - 64px);
   overflow-x: auto;
   overflow-y: auto;
-  max-height: calc(100vh - 320px);
   -webkit-overflow-scrolling: touch;
   border-radius: 12px;
 }
@@ -1020,9 +1026,11 @@ main > div {
 
 /* ── Activity / generic table wrapper ── */
 .table-wrapper {
+  position: sticky;
+  top: 64px;
+  height: calc(100vh - 64px);
   overflow-x: auto;
   overflow-y: auto;
-  max-height: calc(100vh - 280px);
   -webkit-overflow-scrolling: touch;
   border-radius: 12px;
 }
@@ -1041,7 +1049,10 @@ main > div {
   font-size: 14px;
 }
 
-.vst-table thead {
+/* thead is sticky at top:0 within its own scrollable container */
+.vst-table thead,
+.modern-table-container thead,
+.table-wrapper thead {
   position: sticky;
   top: 0;
   z-index: 10;

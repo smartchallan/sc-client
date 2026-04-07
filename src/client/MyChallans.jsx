@@ -47,6 +47,8 @@ export function ChallanTableV2({
   const [statusFilter, setStatusFilter] = React.useState({ pending: false, disposed: false });
   const [showChallanTypeDropdown, setShowChallanTypeDropdown] = React.useState(false);
   const challanTypeDropdownRef = React.useRef(null);
+  const [showFineDropdown, setShowFineDropdown] = React.useState(false);
+  const fineDropdownRef = React.useRef(null);
   const [sortConfig, setSortConfig] = React.useState({ key: null, direction: "desc" });
   const [mapModal, setMapModal] = React.useState({ open: false, location: null });
   const [dateFrom, setDateFrom] = React.useState('');
@@ -248,20 +250,20 @@ export function ChallanTableV2({
 
   React.useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        challanTypeDropdownRef.current &&
-        !challanTypeDropdownRef.current.contains(event.target)
-      ) {
+      if (challanTypeDropdownRef.current && !challanTypeDropdownRef.current.contains(event.target)) {
         setShowChallanTypeDropdown(false);
       }
+      if (fineDropdownRef.current && !fineDropdownRef.current.contains(event.target)) {
+        setShowFineDropdown(false);
+      }
     };
-    if (showChallanTypeDropdown) {
+    if (showChallanTypeDropdown || showFineDropdown) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showChallanTypeDropdown]);
+  }, [showChallanTypeDropdown, showFineDropdown]);
 
   return (
     <div className="vst-card">
@@ -342,7 +344,6 @@ export function ChallanTableV2({
           <div
             style={{ position: "relative" }}
             ref={challanTypeDropdownRef}
-            onMouseLeave={() => setShowChallanTypeDropdown(false)}
           >
             <button
               type="button"
@@ -443,33 +444,44 @@ export function ChallanTableV2({
             if (fines.length === 0) return null;
             const maxFine = Math.max(...fines);
             const minFine = Math.min(...fines);
-            const effectiveMax =
-              maxFineFilter === null ? maxFine : maxFineFilter;
+            const effectiveMax = maxFineFilter === null ? maxFine : maxFineFilter;
             return (
-              <div className="fine-filter-card">
-                <span className="fine-filter-label">Fine up to</span>
-                <input
-                  type="range"
-                  min={minFine}
-                  max={maxFine}
-                  step={1}
-                  value={effectiveMax}
-                  onChange={(e) =>
-                    setMaxFineFilter(Number(e.target.value))
-                  }
-                  className="fine-filter-range"
-                />
-                <span className="fine-filter-value">
-                  ₹{Math.round(effectiveMax)}
-                </span>
-                {maxFineFilter !== null && (
-                  <button
-                    type="button"
-                    onClick={() => setMaxFineFilter(null)}
-                    className="fine-filter-reset-btn"
-                  >
-                    Reset
-                  </button>
+              <div style={{ position: "relative" }} ref={fineDropdownRef}>
+                <button
+                  type="button"
+                  className={`vst-filter-trigger${maxFineFilter !== null ? ' vst-filter-trigger--active' : ''}${showFineDropdown ? ' vst-filter-trigger--open' : ''}`}
+                  onClick={() => setShowFineDropdown((v) => !v)}
+                >
+                  <i className="ri-money-rupee-circle-line vst-filter-trigger__icon" />
+                  {maxFineFilter === null ? "Fine amount" : `Fine ≤ ₹${Math.round(effectiveMax)}`}
+                  {maxFineFilter !== null && <span className="vst-filter-trigger__badge">1</span>}
+                  <i className="ri-arrow-down-s-line vst-filter-trigger__chevron" />
+                </button>
+                {showFineDropdown && (
+                  <div className="vst-dropdown" style={{ minWidth: 220 }}>
+                    <div style={{ padding: '8px 12px 4px', fontSize: 12, color: '#64748b', fontWeight: 600 }}>
+                      Fine up to: <span style={{ color: '#4338ca', fontWeight: 700 }}>₹{Math.round(effectiveMax)}</span>
+                    </div>
+                    <div style={{ padding: '4px 12px 8px' }}>
+                      <input
+                        type="range"
+                        min={minFine}
+                        max={maxFine}
+                        step={1}
+                        value={effectiveMax}
+                        onChange={(e) => setMaxFineFilter(Number(e.target.value))}
+                        style={{ width: '100%', accentColor: '#6366f1' }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+                        <span>₹{Math.round(minFine)}</span>
+                        <span>₹{Math.round(maxFine)}</span>
+                      </div>
+                    </div>
+                    <div className="vst-dropdown__footer">
+                      <button className="vst-dropdown__footer-btn" onClick={() => setMaxFineFilter(null)}>Reset</button>
+                      <button className="vst-dropdown__footer-btn" onClick={() => setShowFineDropdown(false)}>Close</button>
+                    </div>
+                  </div>
                 )}
               </div>
             );
@@ -671,18 +683,15 @@ export function ChallanTableV2({
         onCancel={() => setMapModal({ open: false, location: null })}
         confirmText="OK"
         cancelText={null}
+        maxWidth="max-w-3xl"
       >
         {mapModal.location && (
-          <div className="map-frame-wrapper">
-            <iframe
-              title="Google Maps"
-              style={{ border: 0, borderRadius: 12, width: '100%' }}
-              src={`https://www.google.com/maps?q=${encodeURIComponent(
-                mapModal.location
-              )}&output=embed`}
-              allowFullScreen
-            />
-          </div>
+          <iframe
+            title="Google Maps"
+            style={{ border: 0, borderRadius: 12, width: '100%', height: 480 }}
+            src={`https://www.google.com/maps?q=${encodeURIComponent(mapModal.location)}&output=embed`}
+            allowFullScreen
+          />
         )}
       </CustomModal>
     </div>
