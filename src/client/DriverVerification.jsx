@@ -25,6 +25,26 @@ function fmtDate(dateStr) {
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+// Converts an Excel cell value (serial number or string) to YYYY-MM-DD.
+// xlsx without cellDates returns date-formatted cells as serial numbers (integers).
+function excelDobToISO(val) {
+  if (!val && val !== 0) return '';
+  if (typeof val === 'number') {
+    // Excel serial date: days since 1899-12-30 (UTC), offset 25569 aligns to Unix epoch
+    const ms = Math.round((val - 25569) * 86400 * 1000);
+    const dt = new Date(ms);
+    const y = dt.getUTCFullYear();
+    const m = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(dt.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  const s = String(val).trim();
+  // DD-MM-YYYY or DD/MM/YYYY
+  const ddmmyyyy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (ddmmyyyy) return `${ddmmyyyy[3]}-${ddmmyyyy[2].padStart(2,'0')}-${ddmmyyyy[1].padStart(2,'0')}`;
+  return s; // already YYYY-MM-DD or pass through
+}
+
 function StatusPill({ status }) {
   const isActive = status?.toUpperCase() === 'ACTIVE';
   return (
@@ -196,9 +216,10 @@ export default function DriverVerification() {
     try {
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: 'array' });
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true });
       const [header, ...records] = rows;
-      if (!/s.?no/i.test(header?.[0]) || !/dl.?no/i.test(header?.[1]) || !/dob/i.test(header?.[2])) {
+      const h = (header || []).map(v => String(v ?? '').trim());
+      if (!/s.*no/i.test(h[0]) || !/dl.*no/i.test(h[1]) || !/dob/i.test(h[2])) {
         throw new Error('Columns must be: S. No., DL No., DOB');
       }
       const valid = records.filter(r => r[1] && r[2]).slice(0, 100);
@@ -206,8 +227,8 @@ export default function DriverVerification() {
       let ok = 0, fail = 0;
       for (let i = 0; i < valid.length; i++) {
         setBulkProgress(Math.round(((i + 1) / valid.length) * 100));
-        const dlNo = String(valid[i][1]).trim();
-        const rowDob = String(valid[i][2]).trim();
+        const dlNo = String(valid[i][1]).trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const rowDob = excelDobToISO(valid[i][2]);
         try {
           const res = await fetch(`${API}/getdriverdata`, {
             method: 'POST',
@@ -584,7 +605,7 @@ export default function DriverVerification() {
                   <th>DL Status</th>
                   <th>NT Valid Till</th>
                   <th>TR Valid Till</th>
-                  <th>Address</th>
+                  <th>Vehicle Classes</th>
                   <th>Record Status</th>
                   <th>Saved On</th>
                 </tr>
@@ -616,11 +637,10 @@ export default function DriverVerification() {
                       <td><StatusPill status={det.status} /></td>
                       <td style={{ whiteSpace: 'nowrap' }}>{det.ntValidTill || '—'}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>{det.trValidTill || '—'}</td>
-                      <td style={{
-                        fontSize: 12, color: '#64748b',
-                        maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>
-                        {det.address?.permanent || '—'}
+                      <td style={{ fontSize: 12, color: '#1d4ed8', whiteSpace: 'nowrap' }}>
+                        {Array.isArray(det.vehicleClasses) && det.vehicleClasses.length > 0
+                          ? det.vehicleClasses.map(c => c.covabbrv).filter(Boolean).join(', ')
+                          : '—'}
                       </td>
                       <td>
                         <span style={{
