@@ -185,6 +185,10 @@ function SidebarVehicleReport({ vehicleChallanData }) {
 
   // Download/Print handlers
   const handleDownload = (section, data) => {
+    try {
+      const u = JSON.parse(localStorage.getItem('sc_user')) || {};
+      if (u.user?.account_type === 'trial') { showToast('Downloads are not available on a trial account. Please upgrade.'); return; }
+    } catch {}
     if (!data || (Array.isArray(data) && data.length === 0) || (typeof data === 'object' && Object.keys(data).length === 0)) {
       showToast('Sorry no details available to download or print');
       return;
@@ -192,55 +196,102 @@ function SidebarVehicleReport({ vehicleChallanData }) {
     setDownloadDialog({ open: true, section, data });
   };
   const handlePrint = (section, data) => {
+    try {
+      const u = JSON.parse(localStorage.getItem('sc_user')) || {};
+      if (u.user?.account_type === 'trial') { showToast('Printing is not available on a trial account. Please upgrade.'); return; }
+    } catch {}
     if (!data || (Array.isArray(data) && data.length === 0) || (typeof data === 'object' && Object.keys(data).length === 0)) {
       showToast('Sorry no details available to download or print');
       return;
     }
-    // Print logic
+    const now = new Date().toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    const headerTitle = section === 'rto' ? 'RTO Vehicle Details' : 'Vehicle Challan Report';
     let printContent = '';
+
     if (section === 'rto') {
-      // Try to get vehicle number from data
-      const vehicleNumber = data.vehicle_number || data.rc_regn_no || data.regn_no || data.registration_no || '';
-      printContent = `<h2>RTO Details${vehicleNumber ? ` - ${vehicleNumber}` : ''}</h2><table style='width:100%;font-size:14px;'>` +
-        Object.entries(data).map(([k,v]) => `<tr><td style='font-weight:600;width:40%'>${prettifyKey(k)}</td><td>${typeof v === 'object' ? JSON.stringify(v) : v}</td></tr>`).join('') + '</table>';
-    } else if (section === 'pending' || section === 'disposed') {
-      // Each challan on a separate page, visually distinct
-      printContent = data.map((challan, idx) => `
-        <div style='page-break-after: always; padding: 32px 0 24px 0; width: 90%; margin: 0 auto;'>
-          <div style='background: linear-gradient(90deg, #f5f8fa 60%, #e3eaf1 100%); border-radius: 16px; box-shadow: 0 2px 12px #0001; padding: 32px 40px 28px 40px; margin-bottom: 24px; border: 2px solid #1976d2;'>
-            <div style='display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;'>
-              <h2 style='margin: 0; color: #1976d2; font-size: 2em;'>${section === 'pending' ? 'Pending' : 'Disposed'} Challan</h2>
-              <span style='font-size: 1.1em; color: #888;'>#${idx + 1}</span>
-            </div>
-            <table style='width:100%;font-size:15px; border-collapse: collapse;'>
-              <tbody>
-                ${Object.entries(challan).map(([k,v]) => `
-                  <tr>
-                    <td style='font-weight:600; width:38%; padding: 7px 12px; background: #f0f4fa; border-bottom: 1px solid #e3eaf1;'>${prettifyKey(k)}</td>
-                    <td style='padding: 7px 12px; border-bottom: 1px solid #e3eaf1;'>${Array.isArray(v) ? v.map((item,i) => typeof item === 'object' ? JSON.stringify(item) : item).join(', ') : (typeof v === 'object' ? JSON.stringify(v) : v)}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
+      printContent = `
+        <table class="sc-table">
+          <thead><tr><th>Field</th><th>Value</th></tr></thead>
+          <tbody>
+            ${Object.entries(data).map(([k,v], i) => `
+              <tr class="${i%2===0?'row-even':'row-odd'}">
+                <td class="label">${prettifyKey(k)}</td>
+                <td>${typeof v === 'object' ? JSON.stringify(v) : (v || '—')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>`;
+    } else if (section === 'pending' || section === 'disposed' || section === 'challans') {
+      const challans = Array.isArray(data) ? data : [];
+      const pendingCount = challans.filter(c => String(c.challan_status||'').toLowerCase() !== 'disposed').length;
+      const disposedCount = challans.length - pendingCount;
+      printContent = `
+        <div class="summary-bar">
+          <span>Total: <strong>${challans.length}</strong></span>
+          <span class="pending-badge">Pending: <strong>${pendingCount}</strong></span>
+          <span class="disposed-badge">Disposed: <strong>${disposedCount}</strong></span>
         </div>
-      `).join('');
+        ${challans.map((challan, idx) => {
+          const isPending = String(challan.challan_status||'').toLowerCase() !== 'disposed';
+          return `
+            <div class="challan-card" style="page-break-inside:avoid;margin-bottom:16px;">
+              <div class="challan-header ${isPending?'pending-header':'disposed-header'}">
+                <span>Challan #${idx+1}${challan.challan_no ? ': '+challan.challan_no : ''}</span>
+                <span class="status-badge">${isPending?'PENDING':'DISPOSED'}</span>
+              </div>
+              <table class="sc-table">
+                <tbody>
+                  ${Object.entries(challan).map(([k,v],i) => `
+                    <tr class="${i%2===0?'row-even':'row-odd'}">
+                      <td class="label">${prettifyKey(k)}</td>
+                      <td>${Array.isArray(v)?v.map(item=>typeof item==='object'?JSON.stringify(item):item).join(', '):(typeof v==='object'?JSON.stringify(v):(v||'—'))}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>`;
+        }).join('')}`;
     }
 
-    const brandingHtml = `
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-        <div style="width:4px;height:28px;background:linear-gradient(135deg,#2196f3 0%,#21cbf3 100%);border-radius:3px;"></div>
-        <div style="display:flex;flex-direction:column;">
-          <div style="font-size:18px;font-weight:700;color:#1565c0;">Smart Challan</div>
-          <div style="font-size:11px;color:#555;">${section === 'rto' ? 'RTO Details' : (section === 'pending' ? 'Vehicle Challans' : '')} Summary</div>
+    const win = window.open('', '', 'height=700,width=960');
+    win.document.write(`<html><head><title>${headerTitle}</title><style>
+      *{margin:0;padding:0;box-sizing:border-box;}
+      body{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#222;background:#fff;}
+      .sc-header{background:#1a237e;color:white;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;}
+      .sc-header-left .title{font-size:18px;font-weight:700;letter-spacing:0.4px;}
+      .sc-header-left .subtitle{font-size:11px;opacity:0.82;margin-top:3px;}
+      .sc-header-right{font-size:11px;opacity:0.8;text-align:right;}
+      .sc-accent{height:3px;background:linear-gradient(90deg,#42a5f5,#1a237e);}
+      .sc-body{padding:18px 24px;}
+      .summary-bar{display:flex;gap:24px;padding:9px 14px;background:#f0f4ff;border-radius:6px;margin-bottom:14px;font-size:13px;border:1px solid #c5cae9;}
+      .pending-badge{color:#c62828;font-weight:500;}
+      .disposed-badge{color:#2e7d32;font-weight:500;}
+      .sc-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:0;}
+      .sc-table th{background:#1a237e;color:white;padding:7px 12px;text-align:left;font-weight:600;font-size:12px;}
+      .sc-table td{padding:6px 12px;border-bottom:1px solid #e8eaf6;vertical-align:top;}
+      .row-even td{background:#f5f7ff;}
+      .row-odd td{background:#fff;}
+      .label{font-weight:600;color:#283593;width:38%;}
+      .challan-card{border-radius:6px;overflow:hidden;border:1px solid #e0e0e0;}
+      .challan-header{display:flex;justify-content:space-between;align-items:center;padding:7px 14px;color:white;font-weight:600;font-size:12px;}
+      .pending-header{background:#c62828;}
+      .disposed-header{background:#2e7d32;}
+      .status-badge{font-size:10px;background:rgba(255,255,255,0.22);padding:2px 8px;border-radius:10px;letter-spacing:0.5px;}
+      @media print{
+        .challan-card{page-break-inside:avoid;}
+        body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+      }
+    </style></head><body>
+      <div class="sc-header">
+        <div class="sc-header-left">
+          <div class="title">SmartChallan</div>
+          <div class="subtitle">${headerTitle}</div>
         </div>
+        <div class="sc-header-right">Generated: ${now}</div>
       </div>
-    `;
-
-    const win = window.open('', '', 'height=700,width=900');
-    win.document.write('<html><head><title>Print</title>');
-    win.document.write('<style>body{font-family:Segoe UI, Arial, sans-serif;font-size:13px;color:#333;} table{border-collapse:collapse;width:100%;} td,th{padding:6px 8px;border-bottom:1px solid #e3eaf1;} h2{margin:0 0 8px 0;} @media print { div[style*="page-break-after"] { page-break-after: always !important; } }</style>');
-    win.document.write('</head><body>' + brandingHtml + printContent + '</body></html>');
+      <div class="sc-accent"></div>
+      <div class="sc-body">${printContent}</div>
+    </body></html>`);
     win.document.close();
     win.focus();
     setTimeout(() => { win.print(); win.close(); }, 500);
@@ -251,16 +302,18 @@ function SidebarVehicleReport({ vehicleChallanData }) {
     let rows = [];
     if (section === 'rto') {
       rows = [data];
-    } else if (section === 'pending' || section === 'disposed') {
-      rows = data;
+    } else if (section === 'pending' || section === 'disposed' || section === 'challans') {
+      rows = Array.isArray(data) ? data : [];
     }
     if (!rows.length) { showToast('Sorry no details available to download or print'); return; }
+    const filename = section === 'rto' ? 'vehicle-rto-details' : 'vehicle-challans';
     // Use XLSX if available, else fallback to CSV
     if (window.XLSX) {
       const ws = window.XLSX.utils.json_to_sheet(rows);
       const wb = window.XLSX.utils.book_new();
-      window.XLSX.utils.book_append_sheet(wb, ws, section);
-      window.XLSX.writeFile(wb, `${section}-details.xlsx`);
+      const sheetName = section === 'rto' ? 'RTO Details' : 'Challans';
+      window.XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      window.XLSX.writeFile(wb, `${filename}.xlsx`);
     } else {
       // Fallback: CSV
       const headers = Object.keys(rows[0]);
@@ -268,7 +321,7 @@ function SidebarVehicleReport({ vehicleChallanData }) {
       const blob = new Blob([csv], { type: 'text/csv' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `${section}-details.csv`;
+      a.download = `${filename}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -279,128 +332,147 @@ function SidebarVehicleReport({ vehicleChallanData }) {
   // Download as PDF
   const downloadPDF = (section, data) => {
     try {
-      const doc = new jsPDF();
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const PW = doc.internal.pageSize.getWidth();
+      const PH = doc.internal.pageSize.getHeight();
+      const now = new Date().toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      const headerTitle = section === 'rto' ? 'RTO Vehicle Details' : 'Vehicle Challan Report';
+      const HEADER_H = 20;
 
-      // ---- Logo + title header (top strip) ----
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const headerHeight = 22; // reserve space at top
+      const drawHeader = () => {
+        // Navy background
+        doc.setFillColor(26, 35, 126);
+        doc.rect(0, 0, PW, HEADER_H, 'F');
+        // Title
+        doc.setFontSize(13);
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.text('SmartChallan', 10, 9);
+        // Subtitle
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text(headerTitle, 10, 16);
+        // Date right-aligned
+        doc.text(`Generated: ${now}`, PW - 10, 16, { align: 'right' });
+        // Accent line
+        doc.setDrawColor(66, 165, 245);
+        doc.setLineWidth(0.7);
+        doc.line(0, HEADER_H, PW, HEADER_H);
+      };
 
-      // Light background bar
-      doc.setFillColor(245, 248, 250);
-      doc.rect(0, 0, pageWidth, headerHeight, 'F');
+      const addFooter = () => {
+        const total = doc.getNumberOfPages();
+        for (let p = 1; p <= total; p++) {
+          doc.setPage(p);
+          doc.setFontSize(7.5);
+          doc.setTextColor(160, 160, 160);
+          doc.setFont('helvetica', 'normal');
+          doc.text(`Page ${p} of ${total}`, PW / 2, PH - 4, { align: 'center' });
+        }
+      };
 
-      // Logo on the left
-      try {
-        // jsPDF supports HTMLImageElement; use BRAND_LOGO URL
-        const img = new Image();
-        img.src = BRAND_LOGO;
-        doc.addImage(img, 'PNG', 8, 4, 30, 14);
-      } catch (_) {
-        // ignore logo errors, keep text header
-      }
-
-      // Title + subtitle next to logo
-      doc.setFontSize(12);
-      doc.setTextColor(21, 101, 192);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Smart Challan', 42, 10);
-
-      doc.setFontSize(9);
-      doc.setTextColor(100, 100, 100);
-      const subtitle = section === 'rto'
-        ? 'RTO Details'
-        : section === 'pending'
-          ? 'Vehicle Challans'
-          : '';
-      doc.text(subtitle, 42, 15);
-
-      // Start content a bit below the header
-      let y = headerHeight + 6;
+      drawHeader();
+      let y = HEADER_H + 8;
 
       if (section === 'rto') {
-        // Professional color palette
-        const accent = [44, 62, 80]; // dark blue-gray
-        const labelColor = [60, 60, 60];
-        const valueColor = [30, 30, 30];
-        const bgColor = [255, 255, 255];
-        const borderColor = [220, 220, 220];
-        // Section heading under header
-        doc.setFillColor(...accent);
-        doc.roundedRect(8, y - 8, 194, 14, 3, 3, 'F');
-        doc.setFontSize(14);
-        doc.setTextColor(255,255,255);
-        doc.setFont('times', 'bold');
-        doc.text('Vehicle Details', 14, y + 1);
-        y += 14;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(12);
-        // Single-column layout: each key/value in its own card row
-        const entries = Object.entries(data);
-        const cardX = 18, cardW = 175, cardPad = 3, rowHeight = 16;
-        for (let i = 0; i < entries.length; i++) {
-          const [k, v] = entries[i];
-          // Paginate if near bottom
-          if (y > 270) {
-            doc.addPage();
-            y = 20;
-          }
-          // Card row background
-          doc.setFillColor(245, 248, 250);
-          doc.roundedRect(cardX, y-6, cardW, rowHeight, 3, 3, 'F');
-          // Border
-          doc.setDrawColor(...borderColor);
-          doc.setLineWidth(0.3);
-          doc.roundedRect(cardX, y-6, cardW, rowHeight, 3, 3);
-          // Label
-          doc.setFont('helvetica', 'bold');
-          doc.setTextColor(...labelColor);
-          doc.text(`${prettifyKey(k)}`, cardX + cardPad, y);
-          // Value
-          doc.setFont('times', 'normal');
-          doc.setTextColor(...valueColor);
-          let value = typeof v === 'object' ? JSON.stringify(v) : v;
-          const splitValue = doc.splitTextToSize(value, cardW - 60);
-          doc.text(splitValue, cardX + 60, y);
-          y += rowHeight + 2;
-        }
-        y += 8;
-      } else if (section === 'pending' || section === 'disposed') {
-        const mainColor = section === 'pending' ? [231, 76, 60] : [67, 160, 71];
-        // Section title row under header
-        doc.setFontSize(14);
-        doc.setTextColor(...mainColor);
+        // Column header row
+        doc.setFillColor(30, 55, 130);
+        doc.rect(10, y - 5, PW - 20, 9, 'F');
+        doc.setFontSize(9);
+        doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'bold');
-        doc.text(`${section === 'pending' ? 'Pending' : 'Disposed'} Challans`, 10, y);
-        y += 8;
-        data.forEach((challan, idx) => {
-          if (idx > 0) {
-            doc.addPage();
-            y = 15;
-          }
-          // Section header for each challan
-          doc.setFillColor(...mainColor);
-          doc.roundedRect(8, y-7, 194, 12, 3, 3, 'F');
-          doc.setTextColor(255,255,255);
-          doc.setFontSize(15);
-          doc.text(`Challan #${idx+1}`, 14, y+2);
-          y += 12;
-          doc.setTextColor(33,33,33);
-          doc.setFontSize(12);
-          Object.entries(challan).forEach(([k,v]) => {
+        doc.text('Field', 13, y);
+        doc.text('Value', PW / 2, y);
+        y += 7;
+
+        Object.entries(data).forEach(([k, v], i) => {
+          if (y > PH - 14) { doc.addPage(); drawHeader(); y = HEADER_H + 8; }
+          doc.setFillColor(...(i % 2 === 0 ? [245, 247, 255] : [255, 255, 255]));
+          doc.rect(10, y - 5, PW - 20, 8, 'F');
+          doc.setDrawColor(220, 225, 240);
+          doc.setLineWidth(0.15);
+          doc.rect(10, y - 5, PW - 20, 8);
+          // Label
+          doc.setFontSize(8.5);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(40, 53, 147);
+          doc.text(prettifyKey(k), 13, y);
+          // Value
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(30, 30, 30);
+          const val = String(typeof v === 'object' ? JSON.stringify(v) : (v ?? ''));
+          const lines = doc.splitTextToSize(val, PW / 2 - 14);
+          doc.text(lines, PW / 2, y);
+          y += Math.max(8, lines.length * 5);
+        });
+
+      } else if (section === 'pending' || section === 'disposed' || section === 'challans') {
+        const challans = Array.isArray(data) ? data : [];
+        const pendingCount = challans.filter(c => String(c.challan_status || '').toLowerCase() !== 'disposed').length;
+        const disposedCount = challans.length - pendingCount;
+
+        // Summary bar
+        doc.setFillColor(240, 244, 255);
+        doc.roundedRect(10, y - 5, PW - 20, 10, 2, 2, 'F');
+        doc.setFontSize(8.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(60, 60, 60);
+        doc.text(`Total: ${challans.length}`, 14, y);
+        doc.setTextColor(198, 40, 40);
+        doc.text(`Pending: ${pendingCount}`, 45, y);
+        doc.setTextColor(46, 125, 50);
+        doc.text(`Disposed: ${disposedCount}`, 80, y);
+        y += 12;
+
+        challans.forEach((challan, idx) => {
+          const isPending = String(challan.challan_status || '').toLowerCase() !== 'disposed';
+          const cardColor = isPending ? [198, 40, 40] : [46, 125, 50];
+
+          // Estimate card height; add page if needed
+          const rowCount = Object.keys(challan).length;
+          const estimatedH = 12 + rowCount * 7 + 6;
+          if (y + estimatedH > PH - 14) { doc.addPage(); drawHeader(); y = HEADER_H + 8; }
+
+          // Challan header bar
+          doc.setFillColor(...cardColor);
+          doc.roundedRect(10, y - 5, PW - 20, 9, 2, 2, 'F');
+          doc.setFontSize(9);
+          doc.setTextColor(255, 255, 255);
+          doc.setFont('helvetica', 'bold');
+          const label = challan.challan_no ? `#${idx + 1}: ${challan.challan_no}` : `Challan #${idx + 1}`;
+          doc.text(label, 13, y);
+          doc.text(isPending ? 'PENDING' : 'DISPOSED', PW - 13, y, { align: 'right' });
+          y += 10;
+
+          Object.entries(challan).forEach(([k, v], i) => {
+            if (y > PH - 14) { doc.addPage(); drawHeader(); y = HEADER_H + 8; }
+            doc.setFillColor(...(i % 2 === 0 ? [250, 250, 255] : [255, 255, 255]));
+            doc.rect(10, y - 4, PW - 20, 7, 'F');
+            doc.setDrawColor(220, 225, 240);
+            doc.setLineWidth(0.12);
+            doc.rect(10, y - 4, PW - 20, 7);
+            doc.setFontSize(8);
             doc.setFont('helvetica', 'bold');
-            doc.text(`${prettifyKey(k)}:`, 12, y);
+            doc.setTextColor(40, 53, 147);
+            doc.text(prettifyKey(k), 13, y);
             doc.setFont('helvetica', 'normal');
-            let value = Array.isArray(v) ? v.map((item,i) => typeof item === 'object' ? JSON.stringify(item) : item).join(', ') : (typeof v === 'object' ? JSON.stringify(v) : v);
-            // Wrap text if too long
-            const splitValue = doc.splitTextToSize(value, 120);
-            doc.text(splitValue, 70, y);
-            y += Math.max(7, splitValue.length * 6);
+            doc.setTextColor(30, 30, 30);
+            const val = Array.isArray(v)
+              ? v.map(item => typeof item === 'object' ? JSON.stringify(item) : item).join(', ')
+              : String(typeof v === 'object' ? JSON.stringify(v) : (v ?? ''));
+            const lines = doc.splitTextToSize(val, PW / 2 - 10);
+            doc.text(lines, PW / 2, y);
+            y += Math.max(7, lines.length * 5);
           });
-          y += 4;
+          y += 6;
         });
       }
-      doc.save(`${section}-details.pdf`);
+
+      addFooter();
+      const filename = section === 'rto' ? 'vehicle-rto-details.pdf' : 'vehicle-challans.pdf';
+      doc.save(filename);
     } catch (e) {
+      console.error('PDF error:', e);
       showToast('PDF download failed. Please try again.');
     }
     setDownloadDialog({ open: false, section: null, data: null });
@@ -482,8 +554,8 @@ function SidebarVehicleReport({ vehicleChallanData }) {
           <span style={{marginLeft:8}}>{pendingOpen ? <RiArrowDownSLine size={22} /> : <RiArrowRightSLine size={22} />}</span>
         </span>
         <span style={{marginLeft:8, display:'flex', gap:8}}>
-          <RiDownload2Line style={{cursor:'pointer'}} size={22} title="Download" onClick={()=>handleDownload('pending', pending_data)} />
-          <RiPrinterLine style={{cursor:'pointer'}} size={22} title="Print" onClick={()=>handlePrint('pending', pending_data)} />
+          <RiDownload2Line style={{cursor:'pointer'}} size={22} title="Download" onClick={()=>handleDownload('challans', [...(Array.isArray(pending_data)?pending_data:[]), ...(Array.isArray(disposed_data)?disposed_data:[])])} />
+          <RiPrinterLine style={{cursor:'pointer'}} size={22} title="Print" onClick={()=>handlePrint('challans', [...(Array.isArray(pending_data)?pending_data:[]), ...(Array.isArray(disposed_data)?disposed_data:[])])} />
         </span>
       </div>
       {pendingOpen && (
@@ -907,6 +979,10 @@ function ClientDashboard() {
   // const [sidebarOpen, setSidebarOpen] = useState(false);
   // Print filteredFleet table
   const handlePrintTable = () => {
+    try {
+      const u = JSON.parse(localStorage.getItem('sc_user')) || {};
+      if (u.user?.account_type === 'trial') { showToast('Printing is not available on a trial account. Please upgrade.'); return; }
+    } catch {}
     const printContents = document.getElementById('my-fleet-table-print-area')?.innerHTML;
     if (!printContents) return;
     const printWindow = window.open('', '', 'height=600,width=900');
@@ -921,6 +997,10 @@ function ClientDashboard() {
   };
   // Download filteredFleet as Excel
   const handleDownloadExcel = () => {
+    try {
+      const u = JSON.parse(localStorage.getItem('sc_user')) || {};
+      if (u.user?.account_type === 'trial') { showToast('Downloads are not available on a trial account. Please upgrade.'); return; }
+    } catch {}
     if (!filteredFleet || filteredFleet.length === 0) return;
     // Prepare data: remove _raw if present, flatten if needed
     const exportData = filteredFleet.map(({ _raw, ...row }) => row);
@@ -2790,6 +2870,46 @@ function ClientDashboard() {
             </button>
           </div>
         )}
+
+        {/* ── Trial account banner ── */}
+        {(() => {
+          try {
+            const u = JSON.parse(localStorage.getItem('sc_user')) || {};
+            if (u.user?.account_type !== 'trial') return null;
+            const exp = u.user?.trial_expires_at ? new Date(u.user.trial_expires_at) : null;
+            if (!exp) return null;
+            const daysLeft = Math.ceil((exp - new Date()) / (24 * 60 * 60 * 1000));
+            const expired = daysLeft <= 0;
+            return (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16,
+                padding: '12px 18px', borderRadius: 12,
+                background: expired ? '#fef2f2' : daysLeft <= 3 ? '#fff7ed' : '#fefce8',
+                border: `1.5px solid ${expired ? '#fecaca' : daysLeft <= 3 ? '#fed7aa' : '#fde047'}`,
+                color: expired ? '#dc2626' : daysLeft <= 3 ? '#ea580c' : '#92400e',
+              }}>
+                <i className={expired ? 'ri-error-warning-fill' : 'ri-time-fill'} style={{ fontSize: 20, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13 }}>
+                    {expired
+                      ? 'Your trial has expired.'
+                      : daysLeft === 1
+                      ? 'Your trial expires tomorrow!'
+                      : `Trial account — ${daysLeft} days remaining.`}
+                  </span>
+                  <span style={{ fontSize: 12, marginLeft: 8, opacity: 0.85 }}>
+                    {expired
+                      ? 'Please contact your dealer to activate your account.'
+                      : 'Upgrade to unlock unlimited vehicles, downloads, and printing.'}
+                  </span>
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', opacity: 0.75 }}>
+                  {expired ? 'Expired' : `Expires ${exp.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`}
+                </div>
+              </div>
+            );
+          } catch { return null; }
+        })()}
 
         {activeMenu === "Dashboard" && (
           <React.Fragment>

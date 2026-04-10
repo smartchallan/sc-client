@@ -79,6 +79,8 @@ export function LoginPage() {
           user_options: data.user_options || (data.user && data.user.user_options) || {},
           // New flag (from /login) indicating whether this account has clients
           hasClients: data.hasClients || false,
+          // Trial account info (account_type and trial_expires_at are inside data.user)
+          // They are already part of data.user so no extra storage needed; kept here for clarity
         };
         localStorage.setItem('sc_user', JSON.stringify(stored));
         

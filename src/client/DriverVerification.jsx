@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import * as XLSX from 'xlsx';
+import { getTrialRestrictions } from '../utils/trialGuard';
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
@@ -74,10 +75,20 @@ export default function DriverVerification() {
   const [selectedDriverId, setSelectedDriverId] = useState(null);
   const resultRef = useRef(null);
 
+  // Table controls
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all'); // all | verified | pending
+  const [filterDlStatus, setFilterDlStatus] = useState('all'); // all | ACTIVE | OTHER
+  const [filterVehicleClass, setFilterVehicleClass] = useState('all');
+  const [sortKey, setSortKey] = useState('created_at');
+  const [sortDir, setSortDir] = useState('desc');
+  const [deletingId, setDeletingId] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
   const [showBulk, setShowBulk] = useState(false);
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkProgress, setBulkProgress] = useState(0);
-  const [bulkMsg, setBulkMsg] = useState(null);
+  const [bulkMsg, setBulkMsg] = useState(null); // { type, text, failed: [{dlNo, dob, reason}] }
 
   useEffect(() => { fetchDrivers(); }, []);
 
@@ -196,6 +207,144 @@ export default function DriverVerification() {
     resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  const handleDelete = async (id) => {
+    setDeletingId(id);
+    try {
+      const res = await fetch(
+        `${API}/deletedriver/${id}?client_id=${encodeURIComponent(getClientId())}`,
+        { method: 'PATCH', headers: { 'Authorization': `Bearer ${getToken()}` } }
+      );
+      if (res.ok) {
+        if (selectedDriverId === id) { setResult(null); setSelectedDriverId(null); }
+        await fetchDrivers();
+      }
+    } catch {}
+    finally { setDeletingId(null); setConfirmDeleteId(null); }
+  };
+
+  // All unique vehicle class abbreviations across all drivers
+  const allVehicleClasses = [...new Set(
+    drivers.flatMap(dr => (Array.isArray(dr.details?.vehicleClasses) ? dr.details.vehicleClasses.map(c => c.covabbrv).filter(Boolean) : []))
+  )].sort();
+
+  // Derived: filtered + sorted drivers
+  const visibleDrivers = (() => {
+    const q = search.trim().toLowerCase();
+    let list = drivers.filter(dr => {
+      const det = dr.details || {};
+      if (filterStatus !== 'all' && dr.status !== filterStatus) return false;
+      if (filterDlStatus !== 'all') {
+        const dlSt = (det.status || '').toUpperCase();
+        if (filterDlStatus === 'ACTIVE' && dlSt !== 'ACTIVE') return false;
+        if (filterDlStatus === 'OTHER' && dlSt === 'ACTIVE') return false;
+      }
+      if (filterVehicleClass !== 'all') {
+        const classes = Array.isArray(det.vehicleClasses) ? det.vehicleClasses.map(c => c.covabbrv) : [];
+        if (!classes.includes(filterVehicleClass)) return false;
+      }
+      if (!q) return true;
+      return (
+        (dr.license_no || '').toLowerCase().includes(q) ||
+        (det.name || '').toLowerCase().includes(q) ||
+        (det.gender || '').toLowerCase().includes(q) ||
+        (det.bloodGroup || '').toLowerCase().includes(q) ||
+        (Array.isArray(det.vehicleClasses) ? det.vehicleClasses.map(c => c.covabbrv).join(' ') : '').toLowerCase().includes(q)
+      );
+    });
+    list = [...list].sort((a, b) => {
+      let av, bv;
+      const da = a.details || {}, db = b.details || {};
+      if (sortKey === 'name')           { av = da.name || ''; bv = db.name || ''; }
+      else if (sortKey === 'license_no'){ av = a.license_no || ''; bv = b.license_no || ''; }
+      else if (sortKey === 'dob')       { av = a.dob || ''; bv = b.dob || ''; }
+      else if (sortKey === 'status')    { av = da.status || ''; bv = db.status || ''; }
+      else if (sortKey === 'ntValidTill'){ av = da.ntValidTill || ''; bv = db.ntValidTill || ''; }
+      else if (sortKey === 'trValidTill'){ av = da.trValidTill || ''; bv = db.trValidTill || ''; }
+      else                              { av = a.created_at || ''; bv = b.created_at || ''; }
+      const cmp = typeof av === 'string' ? av.localeCompare(bv) : av - bv;
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return list;
+  })();
+
+  const toggleSort = (key) => {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('asc'); }
+  };
+
+  const downloadDriversExcel = () => {
+    if (trial.download) { alert('Downloads are not available on a trial account. Please upgrade to export data.'); return; }
+    const rows = [
+      ['#', 'License No.', 'Name', 'DOB', 'Gender', 'Blood Group', 'DL Status', 'NT Valid Till', 'TR Valid Till', 'Vehicle Classes', 'Record Status', 'Saved On'],
+      ...visibleDrivers.map((dr, idx) => {
+        const det = dr.details || {};
+        return [
+          idx + 1,
+          dr.license_no || '',
+          det.name || '',
+          fmtDate(dr.dob),
+          det.gender || '',
+          det.bloodGroup || '',
+          det.status || '',
+          det.ntValidTill || '',
+          det.trValidTill || '',
+          Array.isArray(det.vehicleClasses) ? det.vehicleClasses.map(c => c.covabbrv).filter(Boolean).join(', ') : '',
+          dr.status === 'verified' ? 'Verified' : 'Pending',
+          fmtDate(dr.created_at),
+        ];
+      }),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [4, 18, 22, 12, 10, 12, 12, 14, 14, 20, 12, 14].map(wch => ({ wch }));
+    const wb2 = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb2, ws, 'Registered Drivers');
+    XLSX.writeFile(wb2, 'Registered_Drivers.xlsx');
+  };
+
+  const printDriversTable = () => {
+    if (trial.print) { alert('Printing is not available on a trial account. Please upgrade to print.'); return; }
+    const rows = visibleDrivers.map((dr, idx) => {
+      const det = dr.details || {};
+      const vc = Array.isArray(det.vehicleClasses) ? det.vehicleClasses.map(c => c.covabbrv).filter(Boolean).join(', ') : '—';
+      return `<tr>
+        <td>${idx + 1}</td><td>${dr.license_no || '—'}</td><td>${det.name || '—'}</td>
+        <td>${fmtDate(dr.dob)}</td><td>${det.gender || '—'}</td><td>${det.bloodGroup || '—'}</td>
+        <td>${det.status || '—'}</td><td>${det.ntValidTill || '—'}</td><td>${det.trValidTill || '—'}</td>
+        <td>${vc}</td><td>${dr.status === 'verified' ? 'Verified' : 'Pending'}</td><td>${fmtDate(dr.created_at)}</td>
+      </tr>`;
+    }).join('');
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><title>Registered Drivers</title>
+      <style>
+        body { font-family: sans-serif; font-size: 11px; padding: 16px; }
+        h2 { font-size: 15px; margin-bottom: 4px; }
+        p { color: #64748b; margin: 0 0 12px; font-size: 11px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #1e3a8a; color: #fff; padding: 6px 8px; text-align: left; font-size: 10px; }
+        td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; }
+        tr:nth-child(even) td { background: #f8fafc; }
+        @media print { body { padding: 0; } }
+      </style></head><body>
+      <h2>Registered Drivers</h2>
+      <p>Exported on ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} &nbsp;|&nbsp; ${visibleDrivers.length} record(s)</p>
+      <table>
+        <thead><tr>
+          <th>#</th><th>License No.</th><th>Name</th><th>DOB</th><th>Gender</th>
+          <th>Blood Group</th><th>DL Status</th><th>NT Valid Till</th><th>TR Valid Till</th>
+          <th>Vehicle Classes</th><th>Record Status</th><th>Saved On</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <script>window.onload=()=>{window.print();}<\/script>
+      </body></html>`);
+    win.document.close();
+  };
+
+  const SortIcon = ({ col }) => {
+    if (sortKey !== col) return <i className="ri-arrow-up-down-line" style={{ opacity: 0.3, marginLeft: 4, fontSize: 11 }} />;
+    return <i className={`ri-arrow-${sortDir === 'asc' ? 'up' : 'down'}-line`} style={{ marginLeft: 4, fontSize: 11, color: '#2563eb' }} />;
+  };
+
   const downloadSample = () => {
     const ws = XLSX.utils.aoa_to_sheet([
       ['S. No.', 'DL No.', 'DOB'],
@@ -222,11 +371,14 @@ export default function DriverVerification() {
       if (!/s.*no/i.test(h[0]) || !/dl.*no/i.test(h[1]) || !/dob/i.test(h[2])) {
         throw new Error('Columns must be: S. No., DL No., DOB');
       }
-      const valid = records.filter(r => r[1] && r[2]).slice(0, 100);
+      const bulkCap = trial.bulkLimit < Infinity ? trial.bulkLimit : 100;
+      const valid = records.filter(r => r[1] && r[2]).slice(0, bulkCap);
       if (!valid.length) throw new Error('No valid records found');
-      let ok = 0, fail = 0;
+      let ok = 0;
+      const failedRows = []; // { sno, dlNo, dob, reason }
       for (let i = 0; i < valid.length; i++) {
         setBulkProgress(Math.round(((i + 1) / valid.length) * 100));
+        const sno = valid[i][0] ?? (i + 1);
         const dlNo = String(valid[i][1]).trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
         const rowDob = excelDobToISO(valid[i][2]);
         try {
@@ -240,20 +392,23 @@ export default function DriverVerification() {
             const dldetobj = data?.response?.[0]?.response?.dldetobj?.[0];
             if (dldetobj) {
               await saveToDb(dldetobj, dlNo, rowDob);
+              ok++;
             } else {
               await savePending(dlNo, rowDob);
+              failedRows.push({ sno, dlNo, dob: rowDob, reason: 'No DL data returned' });
             }
-            ok++;
           } else {
+            let reason = 'API error';
+            try { const e = await res.json(); reason = e.message || e.error || reason; } catch {}
             await savePending(dlNo, rowDob);
-            fail++;
+            failedRows.push({ sno, dlNo, dob: rowDob, reason });
           }
-        } catch {
+        } catch (err) {
           await savePending(dlNo, rowDob);
-          fail++;
+          failedRows.push({ sno, dlNo, dob: rowDob, reason: err.message || 'Network error' });
         }
       }
-      setBulkMsg({ type: 'success', text: `Done — Success: ${ok}, Failed: ${fail}` });
+      setBulkMsg({ type: failedRows.length ? 'partial' : 'success', ok, failed: failedRows });
       await fetchDrivers();
     } catch (err) {
       setBulkMsg({ type: 'error', text: err.message || 'Bulk upload failed' });
@@ -262,6 +417,8 @@ export default function DriverVerification() {
       e.target.value = '';
     }
   };
+
+  const trial = getTrialRestrictions();
 
   const dobMax = new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0];
   const dobMin = new Date(new Date().setFullYear(new Date().getFullYear() - 80)).toISOString().split('T')[0];
@@ -305,6 +462,16 @@ export default function DriverVerification() {
         .dl-table-row--selected td { background: #eff6ff !important; }
         .dl-table-row--selected td:first-child { border-left: 3px solid #2563eb; }
         .dl-table-row--clickable { cursor: pointer; }
+        .dl-th-sort { cursor: pointer; user-select: none; white-space: nowrap; }
+        .dl-th-sort:hover { color: #2563eb; }
+        .dl-delete-btn {
+          padding: 3px 8px; border: 1.5px solid #fecaca; border-radius: 6px;
+          background: #fff; color: #dc2626; font-size: 12px; cursor: pointer;
+          display: inline-flex; align-items: center; gap: 4px; font-family: inherit;
+          transition: background 0.12s;
+        }
+        .dl-delete-btn:hover { background: #fef2f2; }
+        .dl-confirm-row td { background: #fff7ed !important; }
       `}</style>
 
       <p className="page-subtitle">Verify driving licenses against ULIP and track driver information.</p>
@@ -400,7 +567,8 @@ export default function DriverVerification() {
                 <div style={{ marginTop: 12, padding: 14, background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, gap: 8 }}>
                     <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>
-                      Upload an Excel file with columns: <strong>S. No.</strong>, <strong>DL No.</strong>, <strong>DOB</strong> (max 100 rows).
+                      Upload an Excel file with columns: <strong>S. No.</strong>, <strong>DL No.</strong>, <strong>DOB</strong>{' '}
+                      (max {trial.bulkLimit < Infinity ? <><strong style={{ color: '#92400e' }}>{trial.bulkLimit} rows — trial limit</strong></> : '100 rows'}).
                     </div>
                     <button
                       type="button"
@@ -434,13 +602,74 @@ export default function DriverVerification() {
                     </div>
                   )}
                   {bulkMsg && (
-                    <div style={{
-                      marginTop: 10, padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-                      background: bulkMsg.type === 'error' ? '#fef2f2' : '#f0fdf4',
-                      color: bulkMsg.type === 'error' ? '#dc2626' : '#15803d',
-                      border: `1px solid ${bulkMsg.type === 'error' ? '#fecaca' : '#bbf7d0'}`,
-                    }}>
-                      {bulkMsg.text}
+                    <div style={{ marginTop: 10 }}>
+                      {/* Summary pill */}
+                      <div style={{
+                        padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+                        background: bulkMsg.type === 'error' ? '#fef2f2' : bulkMsg.type === 'partial' ? '#fff7ed' : '#f0fdf4',
+                        color: bulkMsg.type === 'error' ? '#dc2626' : bulkMsg.type === 'partial' ? '#92400e' : '#15803d',
+                        border: `1px solid ${bulkMsg.type === 'error' ? '#fecaca' : bulkMsg.type === 'partial' ? '#fed7aa' : '#bbf7d0'}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap',
+                      }}>
+                        {bulkMsg.type === 'error'
+                          ? <span><i className="ri-error-warning-line" /> {bulkMsg.text || 'Bulk upload failed'}</span>
+                          : <span>
+                              <i className={bulkMsg.type === 'partial' ? 'ri-error-warning-line' : 'ri-checkbox-circle-line'} />
+                              {' '}Done — <strong style={{ color: '#15803d' }}>{bulkMsg.ok} succeeded</strong>
+                              {bulkMsg.failed?.length > 0 && <>, <strong style={{ color: '#dc2626' }}>{bulkMsg.failed.length} failed</strong></>}
+                            </span>}
+                        {bulkMsg.failed?.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const rows = [['S. No.', 'DL No.', 'DOB', 'Reason'], ...bulkMsg.failed.map(r => [r.sno, r.dlNo, r.dob, r.reason])];
+                              const ws = XLSX.utils.aoa_to_sheet(rows);
+                              ws['!cols'] = [{ wch: 8 }, { wch: 20 }, { wch: 14 }, { wch: 40 }];
+                              const wb2 = XLSX.utils.book_new();
+                              XLSX.utils.book_append_sheet(wb2, ws, 'Failed Records');
+                              XLSX.writeFile(wb2, 'DL_Bulk_Failed.xlsx');
+                            }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px',
+                              borderRadius: 6, border: '1.5px solid #fca5a5', background: '#fff',
+                              color: '#dc2626', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                            }}
+                          >
+                            <i className="ri-download-2-line" /> Download failed ({bulkMsg.failed.length})
+                          </button>
+                        )}
+                      </div>
+                      {/* Failed rows preview (max 5) */}
+                      {bulkMsg.failed?.length > 0 && (
+                        <div style={{ marginTop: 8, border: '1px solid #fed7aa', borderRadius: 8, overflow: 'hidden', fontSize: 12 }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                              <tr style={{ background: '#fff7ed' }}>
+                                {['#', 'DL No.', 'DOB', 'Reason'].map(h => (
+                                  <th key={h} style={{ padding: '5px 8px', textAlign: 'left', color: '#92400e', fontWeight: 700, borderBottom: '1px solid #fed7aa' }}>{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {bulkMsg.failed.slice(0, 5).map((r, i) => (
+                                <tr key={i} style={{ background: i % 2 ? '#fffbf7' : '#fff' }}>
+                                  <td style={{ padding: '4px 8px', color: '#64748b' }}>{r.sno}</td>
+                                  <td style={{ padding: '4px 8px', fontWeight: 600, color: '#1e293b' }}>{r.dlNo}</td>
+                                  <td style={{ padding: '4px 8px', color: '#64748b' }}>{r.dob}</td>
+                                  <td style={{ padding: '4px 8px', color: '#dc2626' }}>{r.reason}</td>
+                                </tr>
+                              ))}
+                              {bulkMsg.failed.length > 5 && (
+                                <tr>
+                                  <td colSpan={4} style={{ padding: '4px 8px', color: '#94a3b8', textAlign: 'center' }}>
+                                    +{bulkMsg.failed.length - 5} more — download for full list
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -566,8 +795,42 @@ export default function DriverVerification() {
         )}
       </div>
 
+      {/* ── Stats ── */}
+      {!fetchingDrivers && drivers.length > 0 && (() => {
+        const total     = drivers.length;
+        const verified  = drivers.filter(d => d.status === 'verified').length;
+        const pending   = drivers.filter(d => d.status === 'pending').length;
+        const active    = drivers.filter(d => (d.details?.status || '').toUpperCase() === 'ACTIVE').length;
+        const inactive  = verified - active;
+        const stats = [
+          { label: 'Total',    value: total,    icon: 'ri-id-card-line',        bg: '#eff6ff', color: '#2563eb' },
+          { label: 'Verified', value: verified, icon: 'ri-shield-check-line',   bg: '#f0fdf4', color: '#15803d' },
+          { label: 'Pending',  value: pending,  icon: 'ri-time-line',           bg: '#fefce8', color: '#92400e' },
+          { label: 'DL Active',   value: active,   icon: 'ri-checkbox-circle-line', bg: '#f0fdf4', color: '#15803d' },
+          { label: 'DL Inactive', value: inactive, icon: 'ri-close-circle-line',    bg: '#fef2f2', color: '#dc2626' },
+        ];
+        return (
+          <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+            {stats.map(s => (
+              <div key={s.label} style={{
+                flex: '1 1 120px', background: s.bg, borderRadius: 10,
+                padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10,
+                border: `1px solid ${s.color}22`,
+              }}>
+                <i className={s.icon} style={{ fontSize: 22, color: s.color }} />
+                <div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{s.label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* ── Registered Drivers Table ── */}
       <div className="vst-card">
+        {/* Card header */}
         <div className="vst-header">
           <div className="vst-header__left">
             <span className="vst-header__icon-box">
@@ -575,10 +838,94 @@ export default function DriverVerification() {
             </span>
             <div>
               <h2 className="vst-header__title">Registered Drivers</h2>
-              <span className="vst-header__count">{drivers.length} drivers</span>
+              <span className="vst-header__count">
+                {visibleDrivers.length !== drivers.length
+                  ? `${visibleDrivers.length} of ${drivers.length} drivers`
+                  : `${drivers.length} drivers`}
+              </span>
             </div>
           </div>
         </div>
+
+        {/* Toolbar: search + filters + actions — same pattern as fleet page */}
+        {drivers.length > 0 && (
+          <div className="vst-toolbar">
+            <div className="vst-toolbar__left" style={{ flexWrap: 'nowrap' }}>
+              {/* Search */}
+              <div className="vst-search-wrap" style={{ width: 180, flexShrink: 0 }}>
+                <i className="ri-search-line vst-search-wrap__icon" />
+                <input
+                  className="vst-search-input"
+                  style={{ width: '100%' }}
+                  placeholder="Search name, license…"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+              </div>
+
+              {/* Record status */}
+              <select
+                className={`vst-filter-trigger${filterStatus !== 'all' ? ' vst-filter-trigger--active' : ''}`}
+                style={{ width: 'auto', flexShrink: 0 }}
+                value={filterStatus}
+                onChange={e => setFilterStatus(e.target.value)}
+              >
+                <option value="all">Record: All</option>
+                <option value="verified">Verified</option>
+                <option value="pending">Pending</option>
+              </select>
+
+              {/* DL status */}
+              <select
+                className={`vst-filter-trigger${filterDlStatus !== 'all' ? ' vst-filter-trigger--active' : ''}`}
+                style={{ width: 'auto', flexShrink: 0 }}
+                value={filterDlStatus}
+                onChange={e => setFilterDlStatus(e.target.value)}
+              >
+                <option value="all">DL Status: All</option>
+                <option value="ACTIVE">DL Active</option>
+                <option value="OTHER">DL Inactive</option>
+              </select>
+
+              {/* Vehicle class */}
+              {allVehicleClasses.length > 0 && (
+                <select
+                  className={`vst-filter-trigger${filterVehicleClass !== 'all' ? ' vst-filter-trigger--active' : ''}`}
+                  style={{ width: 'auto', flexShrink: 0 }}
+                  value={filterVehicleClass}
+                  onChange={e => setFilterVehicleClass(e.target.value)}
+                >
+                  <option value="all">Class: All</option>
+                  {allVehicleClasses.map(cls => (
+                    <option key={cls} value={cls}>{cls}</option>
+                  ))}
+                </select>
+              )}
+
+              {/* Clear filters */}
+              {(search || filterStatus !== 'all' || filterDlStatus !== 'all' || filterVehicleClass !== 'all') && (
+                <button
+                  type="button"
+                  className="vst-filter-trigger"
+                  onClick={() => { setSearch(''); setFilterStatus('all'); setFilterDlStatus('all'); setFilterVehicleClass('all'); }}
+                >
+                  <i className="ri-close-circle-line vst-filter-trigger__icon" /> Clear
+                </button>
+              )}
+            </div>
+
+            <div className="vst-toolbar__right">
+              <button type="button" className="vst-action-btn vst-action-btn--download" title="Download Excel" onClick={downloadDriversExcel}>
+                <i className="ri-download-cloud-2-line" />
+                <span>Excel</span>
+              </button>
+              <button type="button" className="vst-action-btn vst-action-btn--print" title="Print Table" onClick={printDriversTable}>
+                <i className="ri-printer-line" />
+                <span>Print</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {fetchingDrivers ? (
           <div style={{ padding: '48px 24px', textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>
@@ -591,41 +938,61 @@ export default function DriverVerification() {
             <div style={{ fontSize: 15, fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>No drivers registered yet</div>
             <div style={{ fontSize: 13, color: '#cbd5e1' }}>Verify a license above to get started.</div>
           </div>
+        ) : visibleDrivers.length === 0 ? (
+          <div style={{ padding: '40px 24px', textAlign: 'center' }}>
+            <i className="ri-filter-off-line" style={{ fontSize: 36, color: '#cbd5e1', display: 'block', marginBottom: 10 }} />
+            <div style={{ fontSize: 14, color: '#94a3b8' }}>No records match the current filters.</div>
+          </div>
         ) : (
           <div className="vst-table-wrap">
             <table className="vst-table">
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>License No.</th>
-                  <th>Name</th>
-                  <th>DOB</th>
+                  <th className="dl-th-sort" onClick={() => toggleSort('license_no')}>
+                    License No. <SortIcon col="license_no" />
+                  </th>
+                  <th className="dl-th-sort" onClick={() => toggleSort('name')}>
+                    Name <SortIcon col="name" />
+                  </th>
+                  <th className="dl-th-sort" onClick={() => toggleSort('dob')}>
+                    DOB <SortIcon col="dob" />
+                  </th>
                   <th>Gender</th>
                   <th>Blood Group</th>
-                  <th>DL Status</th>
-                  <th>NT Valid Till</th>
-                  <th>TR Valid Till</th>
+                  <th className="dl-th-sort" onClick={() => toggleSort('status')}>
+                    DL Status <SortIcon col="status" />
+                  </th>
+                  <th className="dl-th-sort" onClick={() => toggleSort('ntValidTill')}>
+                    NT Valid Till <SortIcon col="ntValidTill" />
+                  </th>
+                  <th className="dl-th-sort" onClick={() => toggleSort('trValidTill')}>
+                    TR Valid Till <SortIcon col="trValidTill" />
+                  </th>
                   <th>Vehicle Classes</th>
                   <th>Record Status</th>
-                  <th>Saved On</th>
+                  <th className="dl-th-sort" onClick={() => toggleSort('created_at')}>
+                    Saved On <SortIcon col="created_at" />
+                  </th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
-                {drivers.map((dr, idx) => {
+                {visibleDrivers.map((dr, idx) => {
                   const det = dr.details || {};
                   const hasDetails = !!det.rawDetails;
                   const isSelected = selectedDriverId === dr.id;
+                  const isConfirming = confirmDeleteId === dr.id;
+                  const isDeleting = deletingId === dr.id;
                   return (
                     <tr
                       key={dr.id || idx}
-                      className={`dl-table-row${hasDetails ? ' dl-table-row--clickable' : ''}${isSelected ? ' dl-table-row--selected' : ''}`}
-                      onClick={() => hasDetails && handleRowClick(dr)}
-                      title={hasDetails ? 'Click to view details' : undefined}
+                      className={`dl-table-row${hasDetails ? ' dl-table-row--clickable' : ''}${isSelected ? ' dl-table-row--selected' : ''}${isConfirming ? ' dl-confirm-row' : ''}`}
+                      onClick={() => !isConfirming && hasDetails && handleRowClick(dr)}
+                      title={!isConfirming && hasDetails ? 'Click to view details' : undefined}
                     >
                       <td>{idx + 1}</td>
-                      <td style={{ fontWeight: 600, color: '#2563eb', whiteSpace: 'nowrap' }}>
-                        {dr.license_no || '—'}
-                      </td>
+                      <td style={{ fontWeight: 600, color: '#2563eb', whiteSpace: 'nowrap' }}>{dr.license_no || '—'}</td>
                       <td style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{det.name || '—'}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(dr.dob)}</td>
                       <td>{det.gender || '—'}</td>
@@ -652,8 +1019,36 @@ export default function DriverVerification() {
                           {dr.status === 'verified' ? 'Verified' : 'Pending'}
                         </span>
                       </td>
-                      <td style={{ fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap' }}>
-                        {fmtDate(dr.created_at)}
+                      <td style={{ fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap' }}>{fmtDate(dr.created_at)}</td>
+                      <td style={{ whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
+                        {isConfirming ? (
+                          <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                            <span style={{ fontSize: 11, color: '#92400e', fontWeight: 600 }}>Delete?</span>
+                            <button
+                              className="dl-delete-btn"
+                              style={{ borderColor: '#fca5a5', background: '#fee2e2' }}
+                              onClick={() => handleDelete(dr.id)}
+                              disabled={isDeleting}
+                            >
+                              {isDeleting ? <i className="ri-loader-4-line dl-spin" /> : 'Yes'}
+                            </button>
+                            <button
+                              className="dl-delete-btn"
+                              style={{ borderColor: '#e2e8f0', color: '#64748b' }}
+                              onClick={() => setConfirmDeleteId(null)}
+                            >
+                              No
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            className="dl-delete-btn"
+                            onClick={() => setConfirmDeleteId(dr.id)}
+                            title="Delete record"
+                          >
+                            <i className="ri-delete-bin-6-line" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

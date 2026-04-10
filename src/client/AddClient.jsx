@@ -66,6 +66,7 @@ export default function AddClient() {
       setAddress('');
       setZip('');
       setSendEmail(false);
+      setAccountType('trial');
       setErrors({});
     }, []);
   const [name, setName] = useState('');
@@ -84,6 +85,7 @@ export default function AddClient() {
   const [address, setAddress] = useState('');
   const [zip, setZip] = useState('');
 
+  const [accountType, setAccountType] = useState('trial'); // trial | billable | demo
   const [saving, setSaving] = useState(false);
 
   const API_ROOT = import.meta.env.VITE_API_BASE_URL || '';
@@ -146,7 +148,8 @@ export default function AddClient() {
       parent_id: parentId,
       dealer_name: dealerName,
       dealer_id: parentId,
-      sendEmail
+      sendEmail,
+      account_type: accountType,
     };
 
     try {
@@ -289,6 +292,45 @@ export default function AddClient() {
                 {errors.password && <div style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>{errors.password}</div>}
               </div>
             </div>
+            {/* Account Type */}
+            <div className="form-row" style={{ marginTop: 8 }}>
+              <div className="form-col" style={{ gridColumn: '1 / -1' }}>
+                <label className="form-label">Account Type <span style={{color:'#ef4444'}}>*</span></label>
+                <div style={{ display: 'flex', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
+                  {[
+                    { value: 'trial',    label: 'Trial',    icon: 'ri-time-line',          desc: `Free trial (${import.meta.env.VITE_TRIAL_VALIDITY_DAYS || 7} days)`,  bg: '#fefce8', border: '#fde047', color: '#92400e' },
+                    { value: 'billable', label: 'Billable', icon: 'ri-shield-check-line',  desc: 'Full paid access',             bg: '#f0fdf4', border: '#86efac', color: '#15803d' },
+                    { value: 'demo',     label: 'Demo',     icon: 'ri-eye-line',            desc: 'Demo / showcase account',      bg: '#eff6ff', border: '#93c5fd', color: '#1d4ed8' },
+                  ].map(opt => (
+                    <label
+                      key={opt.value}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+                        padding: '10px 16px', borderRadius: 10, flex: '1 1 140px',
+                        border: `2px solid ${accountType === opt.value ? opt.border : '#e2e8f0'}`,
+                        background: accountType === opt.value ? opt.bg : '#fff',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="account_type"
+                        value={opt.value}
+                        checked={accountType === opt.value}
+                        onChange={() => setAccountType(opt.value)}
+                        style={{ accentColor: opt.color, width: 16, height: 16, flexShrink: 0 }}
+                      />
+                      <i className={opt.icon} style={{ fontSize: 18, color: opt.color, flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: opt.color }}>{opt.label}</div>
+                        <div style={{ fontSize: 11, color: '#64748b' }}>{opt.desc}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18 }}>
               <button type="button" className="btn btn-primary" onClick={() => setAddClientTab('business')}>
                 Next: Business Info <i className="ri-arrow-right-line"></i>
