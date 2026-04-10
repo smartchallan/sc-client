@@ -474,7 +474,7 @@ export default function DriverVerification() {
         .dl-confirm-row td { background: #fff7ed !important; }
       `}</style>
 
-      <p className="page-subtitle">Verify driving licenses against ULIP and track driver information.</p>
+      <p className="page-subtitle">Verify driving licenses and track driver information.</p>
 
       {/* ── Top section: form + result ── */}
       <div ref={resultRef} style={{
