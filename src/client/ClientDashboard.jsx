@@ -806,6 +806,28 @@ function ClientDashboard() {
     };
   }, [showClientPages, networkStats]);
     useAutoLogout();
+
+  // Re-hydrate current user record from server so DB changes (e.g. trial→billable)
+  // take effect without requiring the user to log out and back in.
+  useEffect(() => {
+    const API_ROOT = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+    (async () => {
+      try {
+        const res = await fetch(`${API_ROOT}/auth/me`);
+        if (!res.ok) return;
+        const { user: fresh } = await res.json();
+        if (!fresh) return;
+        const raw = localStorage.getItem('sc_user');
+        if (!raw) return;
+        const stored = JSON.parse(raw);
+        stored.user = { ...(stored.user || {}), ...fresh };
+        localStorage.setItem('sc_user', JSON.stringify(stored));
+      } catch {
+        // non-fatal — banner will just reflect stale data until next refresh
+      }
+    })();
+  }, []);
+
   // Helper to get the correct Fleet menu name based on showClientPages
   const getFleetMenuName = () => showClientPages ? 'Client Vehicles' : 'My Fleet';
 
