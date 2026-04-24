@@ -11,10 +11,6 @@ function getClientId() {
   } catch { return ''; }
 }
 
-function getToken() {
-  return localStorage.getItem('sc_token') || '';
-}
-
 function clean(str) {
   return str?.trim() || '';
 }
@@ -140,7 +136,7 @@ export default function DriverVerification() {
     try {
       await fetch(`${API}/savedrivedata`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildPayload(dldetobj, overrideLicenseNo, overrideDob)),
       });
     } catch {}
@@ -150,7 +146,7 @@ export default function DriverVerification() {
     try {
       await fetch(`${API}/savedrivedata`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ client_id: getClientId(), licenseNo: dlNo, dob: rowDob, status: 'pending', details: null }),
       });
     } catch {}
@@ -167,7 +163,7 @@ export default function DriverVerification() {
     try {
       const res = await fetch(`${API}/getdriverdata`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ driverId: licenseNo, dob }),
       });
       const data = await res.json();
@@ -189,7 +185,7 @@ export default function DriverVerification() {
     try {
       const res = await fetch(`${API}/savedrivedata`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildPayload(result.dldetobj)),
       });
       if (res.ok) { setSaved(true); await fetchDrivers(); }
@@ -212,7 +208,7 @@ export default function DriverVerification() {
     try {
       const res = await fetch(
         `${API}/deletedriver/${id}?client_id=${encodeURIComponent(getClientId())}`,
-        { method: 'PATCH', headers: { 'Authorization': `Bearer ${getToken()}` } }
+        { method: 'PATCH' }
       );
       if (res.ok) {
         if (selectedDriverId === id) { setResult(null); setSelectedDriverId(null); }
@@ -384,7 +380,7 @@ export default function DriverVerification() {
         try {
           const res = await fetch(`${API}/getdriverdata`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ driverId: dlNo, dob: rowDob }),
           });
           if (res.ok) {

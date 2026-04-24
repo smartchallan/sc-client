@@ -47,7 +47,11 @@ window.fetch = async (input, init = {}) => {
     const token = getToken();
     if (token) {
       const headers = new Headers(init.headers || (input instanceof Request ? input.headers : {}));
-      if (!headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`);
+      const existing = headers.get('Authorization') || '';
+      // Treat empty or "Bearer " (no token) as missing so we can inject the real one
+      if (!existing.trim() || /^Bearer\s*$/i.test(existing.trim())) {
+        headers.set('Authorization', `Bearer ${token}`);
+      }
       init = { ...init, headers };
     }
   }

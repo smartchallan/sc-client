@@ -85,7 +85,7 @@ export default function VehicleFastag() {
     try {
       const res = await fetch(`${API_ROOT}/getvehiclefastagdata`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('sc_token')}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ vehiclenumber: vehicleNumber.trim() }),
       });
       const data = await res.json();
