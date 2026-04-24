@@ -283,9 +283,12 @@ function SidebarVehicleReport({ vehicleChallanData }) {
       }
     </style></head><body>
       <div class="sc-header">
-        <div class="sc-header-left">
-          <div class="title">SmartChallan</div>
-          <div class="subtitle">${headerTitle}</div>
+        <div class="sc-header-left" style="display:flex;align-items:center;gap:14px;">
+          <img src="${BRAND_LOGO}" alt="Logo" style="height:36px;max-width:180px;object-fit:contain;background:#fff;padding:3px;border-radius:4px;" />
+          <div>
+            ${IS_WHITELABEL ? '' : '<div class="title">SmartChallan</div>'}
+            <div class="subtitle">${headerTitle}</div>
+          </div>
         </div>
         <div class="sc-header-right">Generated: ${now}</div>
       </div>
@@ -343,15 +346,28 @@ function SidebarVehicleReport({ vehicleChallanData }) {
         // Navy background
         doc.setFillColor(26, 35, 126);
         doc.rect(0, 0, PW, HEADER_H, 'F');
-        // Title
-        doc.setFontSize(13);
-        doc.setTextColor(255, 255, 255);
-        doc.setFont('helvetica', 'bold');
-        doc.text('SmartChallan', 10, 9);
+
+        // Logo (whitelabel-aware)
+        let textStartX = 10;
+        try {
+          const img = new Image();
+          img.src = BRAND_LOGO;
+          doc.addImage(img, 'PNG', 6, 3, 26, 14);
+          textStartX = 36;
+        } catch (_) {}
+
+        // Title — hidden for whitelabel so only the custom logo represents the brand
+        if (!IS_WHITELABEL) {
+          doc.setFontSize(13);
+          doc.setTextColor(255, 255, 255);
+          doc.setFont('helvetica', 'bold');
+          doc.text('SmartChallan', textStartX, 9);
+        }
         // Subtitle
         doc.setFontSize(8);
+        doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'normal');
-        doc.text(headerTitle, 10, 16);
+        doc.text(headerTitle, textStartX, IS_WHITELABEL ? 12 : 16);
         // Date right-aligned
         doc.text(`Generated: ${now}`, PW - 10, 16, { align: 'right' });
         // Accent line

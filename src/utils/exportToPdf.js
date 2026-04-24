@@ -51,14 +51,17 @@ export function exportToPdf(section, data, filename) {
       doc.addImage(img, 'PNG', 8, 4, 30, 14);
     } catch (_) {}
 
-    doc.setFontSize(12);
-    doc.setTextColor(21, 101, 192);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Smart Challan', 42, 10);
+    if (!IS_WHITELABEL) {
+      doc.setFontSize(12);
+      doc.setTextColor(21, 101, 192);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Smart Challan', 42, 10);
+    }
     doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'normal');
     const subtitle = section === 'rto' ? 'RTO Details' : section === 'pending' ? 'Vehicle Challans' : '';
-    doc.text(subtitle, 42, 15);
+    doc.text(subtitle, 42, IS_WHITELABEL ? 12 : 15);
 
     let y = headerHeight + 6;
 
