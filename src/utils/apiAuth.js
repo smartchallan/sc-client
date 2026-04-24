@@ -34,9 +34,11 @@ function isAuthEndpoint(url) {
   return typeof url === 'string' && (url.includes('/auth/login') || url.includes('/auth/register'));
 }
 
-function handleUnauthorized() {
+function handleUnauthorized(triggerUrl) {
+  console.warn('[apiAuth] 401 on', triggerUrl, '— clearing session and redirecting to /');
   try { localStorage.removeItem('sc_user'); } catch {}
-  try { window.location.hash = '/login'; } catch { window.location.replace('/#/login'); }
+  // App.jsx mounts <LoginPage /> at path "/" — redirect there, NOT "/login"
+  try { window.location.hash = '/'; } catch { window.location.replace('/#/'); }
 }
 
 const originalFetch = window.fetch.bind(window);
@@ -64,7 +66,7 @@ window.fetch = async (input, init = {}) => {
       const code = body && (body.error || body.code);
       if (code === 'TOKEN_EXPIRED' || code === 'INVALID_TOKEN' || code === 'MISSING_TOKEN' ||
           (body && /Authorization/i.test(body.message || body.error || ''))) {
-        handleUnauthorized();
+        handleUnauthorized(url);
       }
     } catch {}
   }
