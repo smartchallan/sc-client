@@ -3413,48 +3413,36 @@ function ClientDashboard() {
                         <i className="ri-alarm-warning-line text-amber-600 text-3xl"></i>
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm text-slate-600 mb-1">Clients Renewals</p>
+                        <p className="text-sm text-slate-600 mb-1">Expired Renewals</p>
                         <p className="text-3xl font-bold text-slate-900">
-                          {loadingNetworkStats ? '...' : networkStatsError ? '0' : (networkStats && networkStats.totalRenewals != null ? networkStats.totalRenewals : '0')}
+                          {loadingNetworkStats ? '...' : networkStatsError ? '0' : (networkStats?.renewalStats?.totalExpired ?? '0')}
                         </p>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-red-50 rounded-lg p-2 border border-red-100" title="Insurance renewals">
+                      <div className="bg-red-50 rounded-lg p-2 border border-red-100" title="Expired insurance">
                         <div className="text-lg font-bold text-red-600">
-                          {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.insurance !== 'undefined' ? networkStats.renewalTypes.insurance : '0'}
+                          {loadingNetworkStats ? '...' : (networkStats?.renewalStats?.insurance ?? '0')}
                         </div>
                         <div className="text-xs text-slate-600 mt-1">Insurance</div>
                       </div>
-                      <div className="bg-orange-50 rounded-lg p-2 border border-orange-100" title="Road tax renewals">
+                      <div className="bg-orange-50 rounded-lg p-2 border border-orange-100" title="Expired road tax">
                         <div className="text-lg font-bold text-orange-600">
-                          {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.roadTax !== 'undefined' ? networkStats.renewalTypes.roadTax : '0'}
+                          {loadingNetworkStats ? '...' : (networkStats?.renewalStats?.road_tax ?? '0')}
                         </div>
                         <div className="text-xs text-slate-600 mt-1">Road Tax</div>
                       </div>
-                      <div className="bg-yellow-50 rounded-lg p-2 border border-yellow-100" title="Fitness renewals">
+                      <div className="bg-yellow-50 rounded-lg p-2 border border-yellow-100" title="Expired fitness">
                         <div className="text-lg font-bold text-yellow-600">
-                          {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.fitness !== 'undefined' ? networkStats.renewalTypes.fitness : '0'}
+                          {loadingNetworkStats ? '...' : (networkStats?.renewalStats?.fitness ?? '0')}
                         </div>
                         <div className="text-xs text-slate-600 mt-1">Fitness</div>
                       </div>
-                      <div className="bg-blue-50 rounded-lg p-2 border border-blue-100" title="Pollution renewals">
+                      <div className="bg-blue-50 rounded-lg p-2 border border-blue-100" title="Expired pollution">
                         <div className="text-lg font-bold text-blue-600">
-                          {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.pollution !== 'undefined' ? networkStats.renewalTypes.pollution : '0'}
+                          {loadingNetworkStats ? '...' : (networkStats?.renewalStats?.pollution ?? '0')}
                         </div>
                         <div className="text-xs text-slate-600 mt-1">Pollution</div>
-                      </div>
-                      <div className="bg-purple-50 rounded-lg p-2 border border-purple-100" title="National permit renewals">
-                        <div className="text-lg font-bold text-purple-600">
-                          {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.nationalPermit !== 'undefined' ? networkStats.renewalTypes.nationalPermit : '0'}
-                        </div>
-                        <div className="text-xs text-slate-600 mt-1">Nat'l Permit</div>
-                      </div>
-                      <div className="bg-teal-50 rounded-lg p-2 border border-teal-100" title="Permit validity renewals">
-                        <div className="text-lg font-bold text-teal-600">
-                          {loadingNetworkStats ? '...' : networkStats && networkStats.renewalTypes && typeof networkStats.renewalTypes.permitValid !== 'undefined' ? networkStats.renewalTypes.permitValid : '0'}
-                        </div>
-                        <div className="text-xs text-slate-600 mt-1">Permit Valid</div>
                       </div>
                     </div>
                   </div>
