@@ -1,17 +1,16 @@
-import React, { useEffect, useState } from "react";
-import tsplQr from '../assets/tspl-qr.png';
-// Robust QR image logic for Vite/React
-let qrImageUrl = import.meta.env.VITE_CHALLAN_QR_IMAGE_URL;
-if (qrImageUrl && !/^https?:\/\//.test(qrImageUrl)) {
-  qrImageUrl = tsplQr;
-}
+import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
 export default function ChallanCartModal({ open, cart, onClose, onRemove, onSubmittingChange, onCartSubmitted }) {
-  const ONLINE_FEE = Number(import.meta.env.VITE_ONLINE_CHALLAN_FEE || 170);
-  const VIRTUAL_COURT_FEE = Number(import.meta.env.VITE_VIRTUAL_COURT_FEE || 499);
-  const REGISTERED_COURT_FEE = Number(import.meta.env.VITE_REGISTERED_COURT_FEE || 899);
-  const GST_PERCENT = Number(import.meta.env.VITE_CHALLAN_GST_PERCENT || 18);
+  // Pricing + UPI come from server (resolved client-override > dealer default)
+  const [pricingInfo, setPricingInfo] = useState(null);
+  const [pricingLoading, setPricingLoading] = useState(false);
+  const [pricingError, setPricingError] = useState("");
+
+  const ONLINE_FEE = Number(pricingInfo?.pricing?.online_fee?.value ?? 0);
+  const VIRTUAL_COURT_FEE = Number(pricingInfo?.pricing?.virtual_court_fee?.value ?? 0);
+  const REGISTERED_COURT_FEE = Number(pricingInfo?.pricing?.court_fee?.value ?? 0);
+  const GST_PERCENT = Number(pricingInfo?.pricing?.gst_percent?.value ?? 0);
 
   const [showPayment, setShowPayment] = useState(false);
   const [transactionId, setTransactionId] = useState("");
@@ -48,6 +47,39 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove, onSubm
       setIsSubmittingTxn(false);
       setTransactionError("");
     }
+  }, [open]);
+
+  // Load resolved pricing + UPI for the logged-in client when modal opens
+  useEffect(() => {
+    if (!open) return;
+    const API_ROOT = import.meta.env.VITE_API_BASE_URL;
+    if (!API_ROOT) {
+      setPricingError("API base URL is not configured.");
+      return;
+    }
+    let clientId = null;
+    try {
+      const stored = JSON.parse(localStorage.getItem("sc_user")) || {};
+      if (stored && stored.user) {
+        clientId = stored.user.client_id || stored.user.id || stored.user._id || null;
+      }
+    } catch { /* ignore */ }
+
+    if (!clientId) {
+      setPricingError("Unable to identify the logged-in client.");
+      return;
+    }
+
+    setPricingLoading(true);
+    setPricingError("");
+    fetch(`${API_ROOT}/usermeta/pricing?client_id=${clientId}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d && d.client_id) setPricingInfo(d);
+        else setPricingError(d.error || "Failed to load pricing");
+      })
+      .catch(() => setPricingError("Failed to load pricing"))
+      .finally(() => setPricingLoading(false));
   }, [open]);
 
   const formatDateTime = () => {
@@ -258,6 +290,19 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove, onSubm
     { base: 0, fee: 0, gst: 0, total: 0 }
   );
 
+  const paymentAvailable = !!(pricingInfo && pricingInfo.paymentAvailable);
+  const pricingComplete = !!(pricingInfo && pricingInfo.pricingComplete);
+  const upiId = pricingInfo?.upi?.upi_id || "";
+  const payeeName = pricingInfo?.upi?.payee_name || "Smart Challan";
+
+  // Build UPI deep-link + QR image URL with the actual amount
+  const upiQrUrl = useMemo(() => {
+    if (!upiId) return null;
+    const amount = Number(cartTotals.total || 0).toFixed(2);
+    const upiUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=INR&tn=${encodeURIComponent('Challan settlement #' + (requestId || ''))}`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiUri)}`;
+  }, [upiId, payeeName, cartTotals.total, requestId]);
+
     if (!open) {
       return null;
     }
@@ -341,7 +386,33 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove, onSubm
             <>
               {!showPayment && (
                 <>
-                  <div style={{ 
+                  {pricingLoading && (
+                    <div style={{ marginBottom: 12, padding: 10, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, color: '#1d4ed8', fontSize: 13 }}>
+                      <i className="ri-loader-4-line" style={{ animation: 'spin 1s linear infinite', marginRight: 6 }} />
+                      Loading pricing…
+                    </div>
+                  )}
+                  {!pricingLoading && pricingInfo && !paymentAvailable && (
+                    <div style={{ marginBottom: 12, padding: 12, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, color: '#b91c1c', fontSize: 14, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <i className="ri-error-warning-line" style={{ fontSize: 18, marginTop: 2 }} />
+                      <div>
+                        <div style={{ fontWeight: 700, marginBottom: 2 }}>Challan payment service is unavailable</div>
+                        <div style={{ fontSize: 13 }}>Your dealer has not configured a UPI account for receiving payments. Please contact your dealer to enable this service.</div>
+                      </div>
+                    </div>
+                  )}
+                  {!pricingLoading && pricingInfo && paymentAvailable && !pricingComplete && (
+                    <div style={{ marginBottom: 12, padding: 12, background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, color: '#9a3412', fontSize: 13 }}>
+                      <i className="ri-alarm-warning-line" style={{ marginRight: 6 }} />
+                      Pricing is not fully configured yet (online fee or GST missing). Please contact your dealer.
+                    </div>
+                  )}
+                  {pricingError && (
+                    <div style={{ marginBottom: 12, padding: 10, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, color: '#b91c1c', fontSize: 13 }}>
+                      {pricingError}
+                    </div>
+                  )}
+                  <div style={{
                     marginTop: 8,
                     background: '#f8fafc',
                     borderRadius: 12,
@@ -564,23 +635,24 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove, onSubm
                   <button
                     className="action-btn"
                     type="button"
-                    style={{ 
+                    style={{
                       marginTop: 20,
                       width: '100%',
-                      background: 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)',
+                      background: (!paymentAvailable || !pricingComplete) ? '#cbd5e1' : 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)',
                       color: '#fff',
                       padding: '14px 24px',
                       fontSize: 17,
                       fontWeight: 700,
                       borderRadius: 10,
                       border: 'none',
-                      cursor: isSubmittingCart ? 'wait' : 'pointer',
-                      boxShadow: '0 4px 14px rgba(8, 145, 178, 0.3)',
+                      cursor: isSubmittingCart ? 'wait' : ((!paymentAvailable || !pricingComplete) ? 'not-allowed' : 'pointer'),
+                      boxShadow: (!paymentAvailable || !pricingComplete) ? 'none' : '0 4px 14px rgba(8, 145, 178, 0.3)',
                       transition: 'all 0.2s',
                       opacity: isSubmittingCart ? 0.8 : 1
                     }}
                     onClick={submitCartRequest}
-                    disabled={isSubmittingCart}
+                    disabled={isSubmittingCart || !paymentAvailable || !pricingComplete}
+                    title={!paymentAvailable ? 'Payment service unavailable' : (!pricingComplete ? 'Pricing not configured' : '')}
                     onMouseEnter={(e) => {
                       if (!isSubmittingCart) {
                         e.currentTarget.style.transform = 'translateY(-2px)';
@@ -662,14 +734,28 @@ export default function ChallanCartModal({ open, cart, onClose, onRemove, onSubm
                         marginBottom: 20,
                         boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.04)'
                       }}>
-                        <img
-                          src={qrImageUrl}
-                          alt="UPI Payment QR Code"
-                          width={240}
-                          height={240}
-                          style={{ display: 'block', margin: '0 auto', borderRadius: 8 }}
-                          onError={e => { e.target.onerror = null; e.target.src = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=upi://pay?pa=demo@upi&pn=Smart%20Challan&am=1.00&cu=INR'; }}
-                        />
+                        {upiQrUrl ? (
+                          <img
+                            src={upiQrUrl}
+                            alt="UPI Payment QR Code"
+                            width={240}
+                            height={240}
+                            style={{ display: 'block', margin: '0 auto', borderRadius: 8 }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: 240, height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            margin: '0 auto', borderRadius: 8, background: '#fef2f2', color: '#dc2626',
+                            border: '1px dashed #fecaca', fontSize: 13, textAlign: 'center', padding: 12,
+                          }}>
+                            UPI not configured by your dealer
+                          </div>
+                        )}
+                        {upiId && (
+                          <div style={{ marginTop: 10, fontSize: 12, color: '#64748b' }}>
+                            Paying to <b>{payeeName}</b> · <span style={{ fontFamily: 'monospace' }}>{upiId}</span>
+                          </div>
+                        )}
                       </div>
 
                       <div style={{

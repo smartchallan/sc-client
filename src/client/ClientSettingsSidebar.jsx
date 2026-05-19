@@ -47,6 +47,67 @@ export default function ClientSettingsSidebar({ open, onClose, client }) {
   const [loading, setLoading] = useState(false);
   const API_ROOT = import.meta.env.VITE_API_BASE_URL || '';
 
+  // Per-client pricing override (lives on this client's user_meta row)
+  const [pricing, setPricing] = useState({
+    default_online_fee: '',
+    default_court_fee: '',
+    default_virtual_court_fee: '',
+    default_gst_percent: '',
+  });
+  const [pricingDirty, setPricingDirty] = useState(false);
+  const [pricingSaving, setPricingSaving] = useState(false);
+
+  useEffect(() => {
+    if (!client || !open) return;
+    const clientId = client.id || client._id;
+    fetch(`${API_ROOT}/usermeta?user_id=${encodeURIComponent(clientId)}`)
+      .then(r => r.json())
+      .then(d => {
+        const m = d && d.meta ? d.meta : null;
+        setPricing({
+          default_online_fee: m && m.default_online_fee != null ? String(m.default_online_fee) : '',
+          default_court_fee: m && m.default_court_fee != null ? String(m.default_court_fee) : '',
+          default_virtual_court_fee: m && m.default_virtual_court_fee != null ? String(m.default_virtual_court_fee) : '',
+          default_gst_percent: m && m.default_gst_percent != null ? String(m.default_gst_percent) : '',
+        });
+        setPricingDirty(false);
+      })
+      .catch(() => {});
+  }, [client, open, API_ROOT]);
+
+  const updatePricingField = (field, value) => {
+    setPricing(prev => ({ ...prev, [field]: value }));
+    setPricingDirty(true);
+  };
+
+  const savePricing = async () => {
+    if (!client) return;
+    const clientId = client.id || client._id;
+    setPricingSaving(true);
+    try {
+      const payload = {
+        user_id: clientId,
+        default_online_fee: pricing.default_online_fee === '' ? null : Number(pricing.default_online_fee),
+        default_court_fee: pricing.default_court_fee === '' ? null : Number(pricing.default_court_fee),
+        default_virtual_court_fee: pricing.default_virtual_court_fee === '' ? null : Number(pricing.default_virtual_court_fee),
+        default_gst_percent: pricing.default_gst_percent === '' ? null : Number(pricing.default_gst_percent),
+      };
+      const res = await fetch(`${API_ROOT}/usermeta`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Save failed');
+      toast.success('Client-specific pricing saved');
+      setPricingDirty(false);
+    } catch (e) {
+      toast.error(e.message || 'Failed to save pricing');
+    } finally {
+      setPricingSaving(false);
+    }
+  };
+
   useEffect(() => {
     if (!client || !open) {
       setSettings(DEFAULT_SETTINGS);
@@ -196,6 +257,59 @@ export default function ClientSettingsSidebar({ open, onClose, client }) {
             }}>
               <i className="ri-information-line" style={{ marginRight: 6 }}></i>
               Configure permissions and features for this client. Changes are saved automatically.
+            </div>
+
+            {/* Per-client pricing override */}
+            <div style={{ marginBottom: 28 }}>
+              <h3 style={{
+                fontSize: 15, fontWeight: 700, color: '#1565c0',
+                marginBottom: 12, paddingBottom: 8,
+                borderBottom: '2px solid #e3f2fd',
+                display: 'flex', alignItems: 'center', gap: 8
+              }}>
+                <i className="ri-price-tag-3-line" /> Pricing Override
+              </h3>
+              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>
+                Leave any field blank to use your default pricing for this client.
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {[
+                  { key: 'default_online_fee', label: 'Online Fee (₹)', placeholder: 'Default' },
+                  { key: 'default_court_fee', label: 'Court Fee (₹)', placeholder: 'Default' },
+                  { key: 'default_virtual_court_fee', label: 'Virtual Court Fee (₹)', placeholder: 'Default' },
+                  { key: 'default_gst_percent', label: 'GST %', placeholder: 'Default' },
+                ].map(f => (
+                  <div key={f.key}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
+                      {f.label}
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step={f.key === 'default_gst_percent' ? '0.01' : '1'}
+                      value={pricing[f.key]}
+                      placeholder={f.placeholder}
+                      onChange={(e) => updatePricingField(f.key, e.target.value)}
+                      style={{
+                        width: '100%', padding: '8px 10px', borderRadius: 6,
+                        border: '1px solid #cbd5e1', fontSize: 13, boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={savePricing}
+                disabled={!pricingDirty || pricingSaving}
+                style={{
+                  marginTop: 12, padding: '8px 16px', borderRadius: 8,
+                  border: 'none', cursor: pricingDirty && !pricingSaving ? 'pointer' : 'not-allowed',
+                  background: pricingDirty && !pricingSaving ? '#1565c0' : '#cbd5e1',
+                  color: '#fff', fontWeight: 600, fontSize: 13
+                }}
+              >
+                {pricingSaving ? 'Saving…' : 'Save Pricing'}
+              </button>
             </div>
 
             {Object.entries(SETTING_CATEGORIES).map(([category, settingsList]) => (

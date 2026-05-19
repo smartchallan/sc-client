@@ -18,58 +18,100 @@ function formatDateTime(value) {
   }
 }
 
+const STATUS_OPTIONS = [
+  { value: 'pending', label: 'Pending', bg: '#fef3c7', color: '#92400e' },
+  { value: 'payment_received', label: 'Payment Received', bg: '#dbeafe', color: '#1e40af' },
+  { value: 'in_progress', label: 'In Progress', bg: '#ede9fe', color: '#5b21b6' },
+  { value: 'completed', label: 'Completed', bg: '#dcfce7', color: '#166534' },
+];
+
+function statusPill(status) {
+  const opt = STATUS_OPTIONS.find(o => o.value === status);
+  if (!opt) return <span className="vst-status-pill vst-status-pill--default">{status || '-'}</span>;
+  return (
+    <span style={{
+      display: 'inline-block', padding: '2px 10px', borderRadius: 999,
+      background: opt.bg, color: opt.color, fontWeight: 600, fontSize: 12,
+    }}>{opt.label}</span>
+  );
+}
+
 export default function ChallanRequests() {
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [statusUpdatingId, setStatusUpdatingId] = useState(null);
 
-  useEffect(() => {
-    async function fetchRequests() {
-      try {
-        const API_ROOT = import.meta.env.VITE_API_BASE_URL;
-        if (!API_ROOT) {
-          throw new Error("VITE_API_BASE_URL is not set. Please check your .env file and restart the dev server.");
-        }
+  const [currentUser, setCurrentUser] = useState({ id: null, parent_id: null });
+  const isRootOperations = currentUser.id != null && !currentUser.parent_id;
 
-        let clientId = null;
-        try {
-          const stored = JSON.parse(localStorage.getItem("sc_user")) || {};
-          if (stored && stored.user) {
-            clientId = stored.user.id || stored.user._id || stored.user.client_id || null;
-          }
-        } catch {
-          clientId = null;
-        }
-
-        if (!clientId) {
-          setRequests([]);
-          setError("Client information not found. Please log in again.");
-          return;
-        }
-
-        const url = `${API_ROOT}/cart?client_id=${clientId}`;
-        const res = await fetch(url);
-        const json = await res.json();
-
-        if (!res.ok) {
-          throw new Error(json && json.message ? json.message : "Failed to load challan requests");
-        }
-
-        const rows = Array.isArray(json?.data) ? json.data : [];
-        setRequests(rows);
-        setError(null);
-      } catch (e) {
-        setRequests([]);
-        setError(e.message || "Something went wrong while loading challan requests.");
-      } finally {
-        setIsLoading(false);
+  const fetchRequests = React.useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const API_ROOT = import.meta.env.VITE_API_BASE_URL;
+      if (!API_ROOT) {
+        throw new Error("VITE_API_BASE_URL is not set. Please check your .env file and restart the dev server.");
       }
-    }
 
-    fetchRequests();
+      let userId = null;
+      let parentId = null;
+      try {
+        const stored = JSON.parse(localStorage.getItem("sc_user")) || {};
+        if (stored && stored.user) {
+          userId = stored.user.id || stored.user._id || stored.user.client_id || null;
+          parentId = stored.user.parent_id || null;
+        }
+      } catch { /* ignore */ }
+
+      if (!userId) {
+        setRequests([]);
+        setError("Client information not found. Please log in again.");
+        return;
+      }
+      setCurrentUser({ id: userId, parent_id: parentId });
+
+      // Inbox shows every request for any descendant of this user (plus their own).
+      const res = await fetch(`${API_ROOT}/cart/inbox?user_id=${userId}`);
+      const json = await res.json();
+
+      if (!res.ok) {
+        throw new Error(json && json.error ? json.error : "Failed to load challan requests");
+      }
+
+      const rows = Array.isArray(json?.data) ? json.data : [];
+      setRequests(rows);
+      setError(null);
+    } catch (e) {
+      setRequests([]);
+      setError(e.message || "Something went wrong while loading challan requests.");
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => { fetchRequests(); }, [fetchRequests]);
+
+  const updateStatus = async (requestId, newStatus) => {
+    const API_ROOT = import.meta.env.VITE_API_BASE_URL;
+    if (!API_ROOT || !currentUser.id) return;
+    setStatusUpdatingId(requestId);
+    try {
+      const res = await fetch(`${API_ROOT}/cart/${requestId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus, actor_user_id: currentUser.id }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to update status');
+      setRequests(prev => prev.map(r => (r.id === requestId ? { ...r, status: newStatus, last_updated_by: 'admin' } : r)));
+    } catch (e) {
+      alert(e.message || 'Failed to update status');
+    } finally {
+      setStatusUpdatingId(null);
+    }
+  };
 
   return (
     <div className="my-challans-content">
@@ -199,13 +241,15 @@ export default function ChallanRequests() {
                   <tr>
                     <th>#</th>
                     <th>Request ID</th>
+                    <th>Client</th>
+                    <th>Dealer</th>
                     <th>Created At</th>
                     <th>Status</th>
-                    <th>Challan Count</th>
+                    <th>Challans</th>
                     <th>Transaction ID</th>
                     <th>Last Updated By</th>
                     <th>View</th>
-                    <th>Action</th>
+                    {isRootOperations && <th>Update Status</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -214,12 +258,10 @@ export default function ChallanRequests() {
                     <tr key={req.id || idx}>
                       <td>{idx + 1}</td>
                       <td>{req.id ?? "-"}</td>
+                      <td>{req.client_name || req.client_id || "-"}</td>
+                      <td>{req.dealer_name || "-"}</td>
                       <td>{formatDateTime(req.created_at)}</td>
-                      <td>
-                        <span className={`vst-status-pill ${req.status === 'pending' ? 'vst-status-pill--pending' : (req.status === 'completed' || req.status === 'success') ? 'vst-status-pill--disposed' : 'vst-status-pill--default'}`}>
-                          {req.status || "-"}
-                        </span>
-                      </td>
+                      <td>{statusPill(req.status)}</td>
                       <td>{req.item_count ?? (Array.isArray(req.line_items) ? req.line_items.length : "-")}</td>
                       <td>{req.transaction_id || "-"}</td>
                       <td>{req.last_updated_by || "-"}</td>
@@ -236,15 +278,23 @@ export default function ChallanRequests() {
                           <i className="ri-eye-line" />
                         </button>
                       </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="vst-view-btn"
-                          title="Open challan request actions"
-                        >
-                          <i className="ri-more-2-fill" />
-                        </button>
-                      </td>
+                      {isRootOperations && (
+                        <td>
+                          <select
+                            value={req.status || 'pending'}
+                            disabled={statusUpdatingId === req.id}
+                            onChange={(e) => updateStatus(req.id, e.target.value)}
+                            style={{
+                              padding: '4px 8px', borderRadius: 6, border: '1px solid #cbd5e1',
+                              fontSize: 12, fontWeight: 600, background: '#fff'
+                            }}
+                          >
+                            {STATUS_OPTIONS.map(o => (
+                              <option key={o.value} value={o.value}>{o.label}</option>
+                            ))}
+                          </select>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

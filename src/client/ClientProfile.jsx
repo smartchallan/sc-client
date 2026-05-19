@@ -45,7 +45,19 @@ export default function ClientProfile() {
   const [alertsDirty, setAlertsDirty] = useState(false);
   const [alertsSaving, setAlertsSaving] = useState(false);
   const initialAlertsRef = React.useRef(null);
-  
+
+  // Payments & Pricing state (UPI + default fees stored on user_meta)
+  const [upiId, setUpiId] = useState('');
+  const [upiPayeeName, setUpiPayeeName] = useState('');
+  const [defaultOnlineFee, setDefaultOnlineFee] = useState('');
+  const [defaultCourtFee, setDefaultCourtFee] = useState('');
+  const [defaultVirtualCourtFee, setDefaultVirtualCourtFee] = useState('');
+  const [defaultGstPercent, setDefaultGstPercent] = useState('');
+  const [paymentsDirty, setPaymentsDirty] = useState(false);
+  const [paymentsSaving, setPaymentsSaving] = useState(false);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const paymentsFetchedRef = React.useRef(false);
+
   // Get user info from localStorage
   const scUser = (() => {
     try {
@@ -519,6 +531,64 @@ export default function ClientProfile() {
       fetchBilling();
     }
   }, [clientId]);
+
+  // Load existing payments / pricing fields from user_meta
+  React.useEffect(() => {
+    if (paymentsFetchedRef.current) return;
+    paymentsFetchedRef.current = true;
+    const load = async () => {
+      try {
+        setPaymentsLoading(true);
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/usermeta?user_id=${clientId}`);
+        const data = await res.json().catch(() => ({}));
+        const m = data && data.meta ? data.meta : null;
+        if (m) {
+          setUpiId(m.upi_id || '');
+          setUpiPayeeName(m.upi_payee_name || '');
+          setDefaultOnlineFee(m.default_online_fee != null ? String(m.default_online_fee) : '');
+          setDefaultCourtFee(m.default_court_fee != null ? String(m.default_court_fee) : '');
+          setDefaultVirtualCourtFee(m.default_virtual_court_fee != null ? String(m.default_virtual_court_fee) : '');
+          setDefaultGstPercent(m.default_gst_percent != null ? String(m.default_gst_percent) : '');
+        }
+      } catch (e) {
+        // silent
+      } finally {
+        setPaymentsLoading(false);
+        setPaymentsDirty(false);
+      }
+    };
+    load();
+  }, [clientId]);
+
+  const handleSavePayments = async () => {
+    setPaymentsSaving(true);
+    try {
+      const payload = {
+        user_id: clientId,
+        upi_id: upiId.trim() || null,
+        upi_payee_name: upiPayeeName.trim() || null,
+        default_online_fee: defaultOnlineFee === '' ? null : Number(defaultOnlineFee),
+        default_court_fee: defaultCourtFee === '' ? null : Number(defaultCourtFee),
+        default_virtual_court_fee: defaultVirtualCourtFee === '' ? null : Number(defaultVirtualCourtFee),
+        default_gst_percent: defaultGstPercent === '' ? null : Number(defaultGstPercent),
+      };
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/usermeta`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Save failed');
+      toast.success('Payment & pricing settings saved');
+      setPaymentsDirty(false);
+    } catch (err) {
+      toast.error(err.message || 'Failed to save payment settings');
+    } finally {
+      setPaymentsSaving(false);
+    }
+  };
+
+  const markPaymentsDirty = () => { if (!paymentsDirty) setPaymentsDirty(true); };
   // ...existing code...
   const [supportModal, setSupportModal] = useState(false);
   const userName = user.name || "John Smith";
@@ -548,6 +618,7 @@ export default function ClientProfile() {
   const profileTabs = [
     { key: 'personal', label: 'Personal Info', icon: 'ri-user-settings-line' },
     { key: 'preferences', label: 'Preferences', icon: 'ri-palette-line' },
+    { key: 'payments', label: 'Payments & Pricing', icon: 'ri-money-rupee-circle-line' },
     { key: 'security', label: 'Security', icon: 'ri-lock-password-line' },
     { key: 'notifications', label: 'Notifications', icon: 'ri-notification-3-line' },
   ];
@@ -747,6 +818,147 @@ export default function ClientProfile() {
           </div>
         </div>
         </>
+        )}
+
+        {/* Payments & Pricing Tab */}
+        {profileTab === 'payments' && (
+        <div className="profile-section">
+          <h3><i className="ri-money-rupee-circle-line" style={{ color: '#6366f1' }}></i> Payments & Pricing</h3>
+          <p style={{ marginTop: -6, marginBottom: 14, color: '#64748b', fontSize: 14 }}>
+            Configure the UPI account that will receive challan settlement payments and your default service fees.
+            Per-client overrides can be set from the client&apos;s settings.
+          </p>
+          {paymentsLoading ? (
+            <div style={{ padding: 18, color: '#64748b' }}>
+              <i className="ri-loader-4-line" style={{ animation: 'spin 1s linear infinite', marginRight: 6 }} /> Loading…
+            </div>
+          ) : (
+            <form className="profile-form" onSubmit={(e) => { e.preventDefault(); handleSavePayments(); }}>
+              <div style={{ borderRadius: 10, border: '1px solid #e2e8f0', padding: 16, marginBottom: 18, background: '#f8fafc' }}>
+                <div style={{ fontWeight: 700, fontSize: 15, color: '#0f172a', marginBottom: 12 }}>
+                  <i className="ri-bank-card-2-line" style={{ marginRight: 6, color: '#0891b2' }} />
+                  Receiving UPI Account
+                </div>
+                <div className="form-row">
+                  <div className="form-col">
+                    <div className="form-group">
+                      <label className="form-label">UPI ID</label>
+                      <input
+                        className="form-control"
+                        type="text"
+                        placeholder="yourname@bank"
+                        value={upiId}
+                        onChange={(e) => { setUpiId(e.target.value); markPaymentsDirty(); }}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-col">
+                    <div className="form-group">
+                      <label className="form-label">Payee Name (shown on UPI app)</label>
+                      <input
+                        className="form-control"
+                        type="text"
+                        placeholder="Your business name"
+                        value={upiPayeeName}
+                        onChange={(e) => { setUpiPayeeName(e.target.value); markPaymentsDirty(); }}
+                      />
+                    </div>
+                  </div>
+                </div>
+                {!upiId && (
+                  <div style={{ marginTop: 8, fontSize: 13, color: '#dc2626', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <i className="ri-error-warning-line" />
+                    Challan payment service will be unavailable until a UPI ID is saved.
+                  </div>
+                )}
+              </div>
+
+              <div style={{ borderRadius: 10, border: '1px solid #e2e8f0', padding: 16, marginBottom: 18 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, color: '#0f172a', marginBottom: 12 }}>
+                  <i className="ri-price-tag-3-line" style={{ marginRight: 6, color: '#0891b2' }} />
+                  Default Service Fees
+                </div>
+                <div className="form-row">
+                  <div className="form-col">
+                    <div className="form-group">
+                      <label className="form-label">Online Challan Fee (₹)</label>
+                      <input
+                        className="form-control"
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="e.g. 170"
+                        value={defaultOnlineFee}
+                        onChange={(e) => { setDefaultOnlineFee(e.target.value); markPaymentsDirty(); }}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-col">
+                    <div className="form-group">
+                      <label className="form-label">Registered Court Fee (₹)</label>
+                      <input
+                        className="form-control"
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="e.g. 899"
+                        value={defaultCourtFee}
+                        onChange={(e) => { setDefaultCourtFee(e.target.value); markPaymentsDirty(); }}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-col">
+                    <div className="form-group">
+                      <label className="form-label">Virtual Court Fee (₹)</label>
+                      <input
+                        className="form-control"
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="e.g. 499"
+                        value={defaultVirtualCourtFee}
+                        onChange={(e) => { setDefaultVirtualCourtFee(e.target.value); markPaymentsDirty(); }}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-col">
+                    <div className="form-group">
+                      <label className="form-label">GST %</label>
+                      <input
+                        className="form-control"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        placeholder="e.g. 18"
+                        value={defaultGstPercent}
+                        onChange={(e) => { setDefaultGstPercent(e.target.value); markPaymentsDirty(); }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ textAlign: 'right' }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={!paymentsDirty || paymentsSaving}
+                  style={{ minWidth: 160 }}
+                >
+                  {paymentsSaving ? (
+                    <>
+                      <i className="ri-loader-4-line" style={{ animation: 'spin 1s linear infinite', marginRight: 6 }} />
+                      Saving…
+                    </>
+                  ) : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
         )}
 
         {/* Security Tab: Password */}
