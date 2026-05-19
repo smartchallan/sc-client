@@ -43,6 +43,17 @@ export default function MyClients() {
     }
   };
 
+  // Get logged-in user's name (used as dealer name for direct clients)
+  const getUserName = () => {
+    try {
+      const scUser = JSON.parse(localStorage.getItem('sc_user')) || {};
+      return scUser.user?.name || '';
+    } catch {
+      return '';
+    }
+  };
+  const loggedInUserName = getUserName();
+
   const fetchClients = async (forceRefresh = false) => {
     setLoading(true);
     const userId = getUserId();
@@ -60,6 +71,17 @@ export default function MyClients() {
           const data = JSON.parse(cachedData);
           const rawData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
           
+          // Annotate each node with its network vehicle count (own + descendants)
+          const annotateNetworkCount = (node) => {
+            let total = Number(node.vehicle_count) || 0;
+            if (Array.isArray(node.children)) {
+              node.children.forEach(child => { total += annotateNetworkCount(child); });
+            }
+            node.network_vehicle_count = total;
+            return total;
+          };
+          rawData.forEach(annotateNetworkCount);
+
           // Recursively flatten all nested children
           const flattenChildren = (node, dealerName = null) => {
             const result = [];
@@ -73,12 +95,12 @@ export default function MyClients() {
             }
             return result;
           };
-          
+
           const flatClients = [];
           rawData.forEach(parent => {
             flatClients.push(...flattenChildren(parent));
           });
-          
+
           setClients(flatClients);
           setLoading(false);
           return;
@@ -95,7 +117,18 @@ export default function MyClients() {
       
       // Store in localStorage for future use
       localStorage.setItem('client_network', JSON.stringify(data));
-      
+
+      // Annotate each node with its network vehicle count (own + descendants)
+      const annotateNetworkCount = (node) => {
+        let total = Number(node.vehicle_count) || 0;
+        if (Array.isArray(node.children)) {
+          node.children.forEach(child => { total += annotateNetworkCount(child); });
+        }
+        node.network_vehicle_count = total;
+        return total;
+      };
+      rawData.forEach(annotateNetworkCount);
+
       // Recursively flatten all nested children
       const flattenChildren = (node, dealerName = null) => {
         const result = [];
@@ -202,11 +235,14 @@ export default function MyClients() {
 
   const uniqueDealers = useMemo(() => {
     const dealers = new Set();
+    let hasDirectClients = false;
     clients.forEach(c => {
       if (c.dealerName) dealers.add(c.dealerName);
+      else hasDirectClients = true;
     });
+    if (hasDirectClients && loggedInUserName) dealers.add(loggedInUserName);
     return Array.from(dealers).sort();
-  }, [clients]);
+  }, [clients, loggedInUserName]);
   const filtered = clients.filter(c => {
     // Search filter
     if (search) {
@@ -240,7 +276,8 @@ export default function MyClients() {
     
     // Dealer filter
     if (dealerFilter !== 'all') {
-      if (c.dealerName !== dealerFilter) return false;
+      const effectiveDealer = c.dealerName || loggedInUserName;
+      if (effectiveDealer !== dealerFilter) return false;
     }
     
     return true;
@@ -267,6 +304,25 @@ export default function MyClients() {
       return dateStr;
     }
   };
+
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return '-';
+    try {
+      const d = new Date(dateStr);
+      const datePart = d.toLocaleDateString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric'
+      }).replace(/ /g, '-');
+      const timePart = d.toLocaleTimeString('en-GB', {
+        hour: '2-digit', minute: '2-digit', hour12: true
+      });
+      return `${datePart} ${timePart}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Show column only if the logged-in user actually owns a network (has clients)
+  const showNetworkVehiclesColumn = clients.length > 0;
 
   const handleChangePasswordClick = () => {
     if (!newPassword || newPassword.length < 6) {
@@ -457,6 +513,7 @@ export default function MyClients() {
               <th>Email</th>
               <th>Phone</th>
               <th>Address</th>
+              {showNetworkVehiclesColumn && <th>Network Vehicles</th>}
               <th>Registered On</th>
               <th>Billed Till</th>
               <th>Status</th>
@@ -467,7 +524,7 @@ export default function MyClients() {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={11} style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 20px' }}>
+                <td colSpan={showNetworkVehiclesColumn ? 12 : 11} style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 20px' }}>
                   {loading ? (
                     <span><i className="ri-loader-4-line" style={{ animation: 'spin 1s linear infinite', marginRight: 8 }}></i> Loading clients...</span>
                   ) : (
@@ -479,10 +536,32 @@ export default function MyClients() {
               <tr key={c.id || c._id || i} className="vst-row">
                 <td className="vst-td--num">{i + 1}</td>
                 <td style={{ fontWeight: 600, color: '#1e293b', maxWidth: 350, whiteSpace: 'normal' }}>{c.name || '-'}</td>
-                <td>{c.dealerName || '-'}</td>
+                <td>{c.dealerName || loggedInUserName || '-'}</td>
                 <td>{c.email || '-'}</td>
                 <td>{(c.user_meta || c.userMeta)?.phone || (c.user_meta || c.userMeta)?.mobile || '-'}</td>
                 <td style={{ maxWidth: 150, whiteSpace: 'normal' }}>{formatAddress(c)}</td>
+                {showNetworkVehiclesColumn && (
+                  <td style={{ textAlign: 'center', fontWeight: 600, color: '#1e293b' }}>
+                    {(() => {
+                      const net = Number(c.network_vehicle_count) || 0;
+                      const own = Number(c.vehicle_count) || 0;
+                      if (net === 0) return <span style={{ color: '#94a3b8', fontWeight: 400 }}>0</span>;
+                      return (
+                        <span
+                          title={`Own: ${own} • Network total: ${net}`}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                            background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe',
+                          }}
+                        >
+                          <i className="ri-car-line" style={{ fontSize: 11 }} />
+                          {net}
+                        </span>
+                      );
+                    })()}
+                  </td>
+                )}
                 <td>{formatDate(c.created_at || c.createdAt || c.registered_at)}</td>
                 <td>
                   {(() => {
@@ -518,7 +597,7 @@ export default function MyClients() {
                     {c.status === 'active' || !c.status ? 'Active' : 'Inactive'}
                   </span>
                 </td>
-                <td>{formatDate(c.last_login_at || c.last_login || c.lastLogin)}</td>
+                <td style={{ whiteSpace: 'nowrap' }}>{formatDateTime(c.last_login_at || c.last_login || c.lastLogin)}</td>
                 <td>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'nowrap' }}>
                     <button
@@ -666,7 +745,7 @@ export default function MyClients() {
                 </div>
                 <div className="sidebar-detail-item">
                   <label>Dealer</label>
-                  <div className="value">{selectedClient.dealerName || '-'}</div>
+                  <div className="value">{selectedClient.dealerName || loggedInUserName || '-'}</div>
                 </div>
                 <div className="sidebar-detail-item">
                   <label>Email</label>
@@ -712,7 +791,7 @@ export default function MyClients() {
                 </div>
                 <div className="sidebar-detail-item">
                   <label>Last Login</label>
-                  <div>{formatDate(selectedClient.last_login_at || selectedClient.last_login || selectedClient.lastLogin)}</div>
+                  <div>{formatDateTime(selectedClient.last_login_at || selectedClient.last_login || selectedClient.lastLogin)}</div>
                 </div>
                 <div className="sidebar-detail-item">
                   <label>Client ID</label>
