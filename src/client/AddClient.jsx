@@ -85,7 +85,7 @@ export default function AddClient() {
   const [address, setAddress] = useState('');
   const [zip, setZip] = useState('');
 
-  const [accountType, setAccountType] = useState('trial'); // trial | billable | demo
+  const [accountType, setAccountType] = useState('trial'); // trial | billable
   const [saving, setSaving] = useState(false);
 
   const API_ROOT = import.meta.env.VITE_API_BASE_URL || '';
@@ -300,7 +300,6 @@ export default function AddClient() {
                   {[
                     { value: 'trial',    label: 'Trial',    icon: 'ri-time-line',          desc: `Free trial (${import.meta.env.VITE_TRIAL_VALIDITY_DAYS || 7} days)`,  bg: '#fefce8', border: '#fde047', color: '#92400e' },
                     { value: 'billable', label: 'Billable', icon: 'ri-shield-check-line',  desc: 'Full paid access',             bg: '#f0fdf4', border: '#86efac', color: '#15803d' },
-                    { value: 'demo',     label: 'Demo',     icon: 'ri-eye-line',            desc: 'Demo / showcase account',      bg: '#eff6ff', border: '#93c5fd', color: '#1d4ed8' },
                   ].map(opt => (
                     <label
                       key={opt.value}
