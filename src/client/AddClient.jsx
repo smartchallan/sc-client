@@ -298,7 +298,7 @@ export default function AddClient() {
                 <label className="form-label">Account Type <span style={{color:'#ef4444'}}>*</span></label>
                 <div style={{ display: 'flex', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
                   {[
-                    { value: 'trial',    label: 'Trial',    icon: 'ri-time-line',          desc: `Free trial (${import.meta.env.VITE_TRIAL_VALIDITY_DAYS || 7} days)`,  bg: '#fefce8', border: '#fde047', color: '#92400e' },
+                    { value: 'trial',    label: 'Trial',    icon: 'ri-time-line',          desc: `Free trial (${import.meta.env.VITE_TRIAL_VALIDITY_DAYS || 3} days)`,  bg: '#fefce8', border: '#fde047', color: '#92400e' },
                     { value: 'billable', label: 'Billable', icon: 'ri-shield-check-line',  desc: 'Full paid access',             bg: '#f0fdf4', border: '#86efac', color: '#15803d' },
                   ].map(opt => (
                     <label
