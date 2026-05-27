@@ -58,8 +58,9 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView, 
     const formatted = formatDate(value);
     if (formatted === '-') return <span className="vst-cell--empty">—</span>;
     const isActive = rcStatus === 'active';
-    const className = `vst-date ${isActive ? 'vst-date--valid' : 'vst-date--expired'}`;
-    return <span className={className}>{formatted}</span>;
+    const cls = `vst-date ${isActive ? 'vst-date--valid' : 'vst-date--expired'}`;
+    const icon = isActive ? 'ri-checkbox-circle-line' : 'ri-alert-line';
+    return <span className={cls}><i className={icon} />{formatted}</span>;
   };
 
   /* ── columns config ── */
@@ -91,11 +92,13 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView, 
   const isDateCol = (key) => key !== 'vehicle_number';
 
   /* ── render helpers ── */
+  const DATE_ICONS = { expired: 'ri-alert-line', expiring: 'ri-time-line', valid: 'ri-checkbox-circle-line' };
   const DateCell = ({ value }) => {
     const formatted = formatDate(value);
     if (formatted === '-') return <span className="vst-cell--empty">—</span>;
     const status = expiryStatus(value);
-    return <span className={`vst-date ${status ? `vst-date--${status}` : ''}`}>{formatted}</span>;
+    const icon = DATE_ICONS[status] || 'ri-calendar-2-line';
+    return <span className={`vst-date ${status ? `vst-date--${status}` : 'vst-date--neutral'}`}><i className={icon} />{formatted}</span>;
   };
 
   const ChallanBadge = ({ count, type }) => {
@@ -176,7 +179,7 @@ export default function VehicleSummaryTable({ data, loading, onRefresh, onView, 
                 {cols.map(c => (
                   <td key={c.key}>
                     {c.key === 'vehicle_number' ? (
-                      <span className="vst-vehicle-num">{row.vehicle_number || '-'}</span>
+                      <span className="vst-vehicle-num"><i className="ri-car-line vst-vehicle-num__car" />{row.vehicle_number || '-'}</span>
                     ) : c.key === 'regn' ? (
                       <RegnDateCell
                         value={getCellValue(row, c.key)}

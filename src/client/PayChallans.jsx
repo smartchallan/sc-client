@@ -15,7 +15,16 @@ export default function PayChallans({ showClientPages = false }) {
   const [isLoading, setIsLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedChallan, setSelectedChallan] = useState(null);
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("sc_user")) || {};
+      const userId = stored?.user?.id || stored?.user?.client_id || "default";
+      const saved = localStorage.getItem(`sc_challan_cart_${userId}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [cartSidebarOpen, setCartSidebarOpen] = useState(false);
   const [cartModalOpen, setCartModalOpen] = useState(false);
   const [isSubmittingCart, setIsSubmittingCart] = useState(false);
@@ -50,6 +59,15 @@ export default function PayChallans({ showClientPages = false }) {
       }
     };
   }, []);
+
+  // Persist cart to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("sc_user")) || {};
+      const userId = stored?.user?.id || stored?.user?.client_id || "default";
+      localStorage.setItem(`sc_challan_cart_${userId}`, JSON.stringify(cart));
+    } catch {}
+  }, [cart]);
 
   useEffect(() => {
     async function fetchChallans() {
@@ -649,7 +667,16 @@ export default function PayChallans({ showClientPages = false }) {
                     opacity: isSubmittingCart ? 0.5 : 1,
                     transition: 'all 0.2s'
                   }}
-                  onClick={() => !isSubmittingCart && setCart([])}
+                  onClick={() => {
+                    if (!isSubmittingCart) {
+                      setCart([]);
+                      try {
+                        const stored = JSON.parse(localStorage.getItem("sc_user")) || {};
+                        const userId = stored?.user?.id || stored?.user?.client_id || "default";
+                        localStorage.removeItem(`sc_challan_cart_${userId}`);
+                      } catch {}
+                    }
+                  }}
                   disabled={isSubmittingCart}
                   onMouseEnter={(e) => {
                     if (!isSubmittingCart) {
@@ -683,7 +710,10 @@ export default function PayChallans({ showClientPages = false }) {
                     transition: 'all 0.2s'
                   }}
                   onClick={() => {
-                    if (!isSubmittingCart) setCartModalOpen(true);
+                    if (!isSubmittingCart) {
+                      setCartSidebarOpen(false);
+                      setCartModalOpen(true);
+                    }
                   }}
                   disabled={isSubmittingCart}
                   onMouseEnter={(e) => {
@@ -705,7 +735,7 @@ export default function PayChallans({ showClientPages = false }) {
                   ) : (
                     <>
                       <i className="ri-secure-payment-line" style={{ marginRight: 6 }}></i>
-                      Proceed to Settlement
+                      Proceed to Checkout
                     </>
                   )}
                 </button>
@@ -724,6 +754,11 @@ export default function PayChallans({ showClientPages = false }) {
         onCartSubmitted={() => {
           setCart([]);
           setCartSidebarOpen(false);
+          try {
+            const stored = JSON.parse(localStorage.getItem("sc_user")) || {};
+            const userId = stored?.user?.id || stored?.user?.client_id || "default";
+            localStorage.removeItem(`sc_challan_cart_${userId}`);
+          } catch {}
         }}
       />
     </div>

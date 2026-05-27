@@ -579,12 +579,13 @@ export function ChallanTableV2({
                   <td>{idx + 1}</td>
                   <td className="vst-td--vehicle" title="Click to view details" onClick={() => onView(c)}>
                     <span className="vst-vehicle-num">
+                      <i className="ri-car-line vst-vehicle-num__car" />
                       {c.vehicle_number || "-"}
                       <i className="ri-external-link-line vst-vehicle-num__icon" />
                     </span>
                   </td>
                   <td>{c.challan_no || "-"}</td>
-                  <td>{formatChallanDateTime(c.challan_date_time) || '-'}</td>
+                  <td><span className="vst-date vst-date--neutral"><i className="ri-calendar-2-line" />{formatChallanDateTime(c.challan_date_time) || '—'}</span></td>
                   <td>
                     {(() => {
                       const loc =

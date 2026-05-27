@@ -729,6 +729,7 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
                       </span>
                     )}
                     <span className="vst-vehicle-num">
+                      <i className="ri-car-line vst-vehicle-num__car" />
                       {v.rc_regn_no || '-'}
                       <i className="ri-external-link-line vst-vehicle-num__icon" />
                     </span>

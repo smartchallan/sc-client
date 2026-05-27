@@ -107,6 +107,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
     { icon: "ri-add-circle-line", label: "Register Vehicle" },
     // { icon: "ri-money-rupee-circle-line", label: "My Billing" },
     { icon: "ri-user-settings-line", label: "Profile" },
+    { icon: "ri-palette-line", label: "Settings" },
     // Conditionally include Activity Tracker only when showClientPages is true
     ...(showClientPages ? [
       { icon: "ri-time-line", label: "Activity Tracker" },
@@ -284,20 +285,22 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
       `}</style>
       
       {/* Logo & Toggle Button */}
-      <div className="h-[72px] flex items-center justify-between px-4 border-b border-gray-200 relative" style={{ 
+      <div className="h-[72px] flex items-center border-b border-gray-200 relative px-2" style={{
         backgroundColor: '#fff',
-        zIndex: 10 
+        zIndex: 10
       }}>
-        <div className={`flex items-center gap-3 transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0'}`}>
-          <img 
-            src={resolvedCustomLogo || scLogo} 
-            alt="Smart Challan" 
+        {/* Logo — absolutely centered, fades when sidebar collapses */}
+        <div className={`absolute inset-x-0 flex justify-center pointer-events-none transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
+          <img
+            src={resolvedCustomLogo || scLogo}
+            alt="Smart Challan"
             className="h-11 w-auto object-contain"
           />
         </div>
-        <button 
-          className={`p-2.5 rounded-lg hover:bg-gray-100 transition-all duration-200 text-gray-700 hover:text-gray-900 ${!sidebarOpen && 'mx-auto'}`}
-          onClick={onToggleSidebar} 
+        {/* Toggle button — right edge when open, centered when collapsed */}
+        <button
+          className={`p-2.5 rounded-lg hover:bg-gray-100 transition-all duration-200 text-gray-700 hover:text-gray-900 z-10 ${sidebarOpen ? 'ml-auto' : 'mx-auto'}`}
+          onClick={onToggleSidebar}
           aria-label="Toggle sidebar"
         >
           <i className={`${sidebarOpen ? 'ri-menu-fold-line' : 'ri-menu-unfold-line'} text-xl`} />

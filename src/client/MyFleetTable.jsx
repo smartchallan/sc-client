@@ -761,6 +761,7 @@ export default function MyFleetTable({
               </span>
             )}
             <span className="vst-vehicle-num" onClick={() => onView(row)} title="Click to view details">
+              <i className="ri-car-line vst-vehicle-num__car" />
               {row.vehicle_number || '-'}
               <i className="ri-external-link-line vst-vehicle-num__icon" />
             </span>
@@ -845,13 +846,14 @@ export default function MyFleetTable({
     if (!val || val === 'N/A' || val === '-') return <span style={{ color: '#94a3b8' }}>—</span>;
     const d = parseFlexibleDate(val);
     let cls = 'vst-date';
+    let icon = 'ri-calendar-2-line';
     if (d) {
       const daysLeft = (d - new Date()) / (1000 * 60 * 60 * 24);
-      if (daysLeft < 0) cls += ' vst-date--expired';
-      else if (daysLeft <= 30) cls += ' vst-date--expiring';
-      else cls += ' vst-date--valid';
+      if (daysLeft < 0) { cls += ' vst-date--expired'; icon = 'ri-alert-line'; }
+      else if (daysLeft <= 30) { cls += ' vst-date--expiring'; icon = 'ri-time-line'; }
+      else { cls += ' vst-date--valid'; icon = 'ri-checkbox-circle-line'; }
     }
-    return <span className={cls}>{val}</span>;
+    return <span className={cls}><i className={icon} />{val}</span>;
   };
 
   return (

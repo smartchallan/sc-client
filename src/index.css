@@ -304,10 +304,28 @@
     margin-bottom: 8px;
   }
   .ds-card__num {
-    font-size: 26px;
-    font-weight: 700;
+    font-size: 38px;
+    font-weight: 800;
     line-height: 1;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.18);
+  }
+
+  /* Glossy highlight overlay for colored card tops */
+  .card-gloss {
+    position: relative;
+    overflow: hidden;
+  }
+  .card-gloss::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 55%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 100%);
+    pointer-events: none;
+    border-radius: inherit;
   }
   .ds-card__label {
     font-size: 11px;
@@ -322,7 +340,7 @@
     margin-top: 2px;
   }
   .ds-card__bottom {
-    padding: 10px 14px 12px;
+    padding: 12px 14px 14px;
     background: #fff;
   }
   
@@ -1146,20 +1164,23 @@ main > div {
   background: #f1f5ff;
 }
 
-/* ── Vehicle number badge ── */
+/* ── Vehicle number badge — pill style ── */
 .vst-vehicle-num {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 800;
-  color: #1e293b;
-  letter-spacing: 0.08em;
+  justify-content: center;
+  gap: 5px;
+  width: 152px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #3730a3;
+  letter-spacing: 0.07em;
   font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
-  background: #f1f5f9;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 5px 12px;
+  background: #eef2ff;
+  border: 1.5px solid #c7d2fe;
+  border-radius: 999px;
+  padding: 4px 12px 4px 8px;
+  white-space: nowrap;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
@@ -1169,25 +1190,46 @@ main > div {
   color: #4c1d95;
 }
 
+/* Car prefix icon — always visible */
+.vst-vehicle-num__car {
+  font-size: 12px;
+  color: #6366f1;
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+/* External-link icon — appears on hover */
 .vst-vehicle-num__icon {
-  font-size: 14px;
+  font-size: 13px;
   color: #7c3aed;
   opacity: 0;
   transition: opacity 0.15s ease;
+  flex-shrink: 0;
 }
 
 .vst-td--vehicle:hover .vst-vehicle-num__icon {
   opacity: 1;
 }
 
-/* ── Date cells with status ── */
+/* ── Date cells — pill style ── */
 .vst-date {
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 6px;
-  display: inline-block;
+  padding: 3px 10px 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  min-width: 100px;
   letter-spacing: 0.01em;
+}
+
+.vst-date i {
+  font-size: 12px;
+  flex-shrink: 0;
+  opacity: 0.85;
 }
 
 .vst-date--expired {
@@ -1206,6 +1248,13 @@ main > div {
   background: #f0fdf4;
   color: #15803d;
   border: 1px solid #bbf7d0;
+}
+
+/* Neutral date — for challan dates, registration dates */
+.vst-date--neutral {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
 }
 
 .vst-cell--empty {

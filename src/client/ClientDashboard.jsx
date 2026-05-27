@@ -55,19 +55,31 @@ const IS_DEFAULT_DOMAIN = CURRENT_HOSTNAME === DEFAULT_HOST;
 const IS_WHITELABEL = WHITELABEL_HOSTS.includes(CURRENT_HOSTNAME) && !IS_DEFAULT_DOMAIN;
 const BRAND_LOGO = (IS_WHITELABEL && resolvePerHostEnv(CURRENT_HOSTNAME, 'LOGO_URL')) || import.meta.env.VITE_CUSTOM_LOGO_URL || scLogo;
 
-// Client Dashboard Card Colors
-const CARD_COLOR_REGISTERED_VEHICLES = import.meta.env.VITE_CLIENT_REGISTERED_VEHICLES_COLOR || '#57A5FF';
-const CARD_COLOR_CHALLANS_FETCHED = import.meta.env.VITE_CLIENT_CHALLANS_FETCHED_COLOR || '#47DDBF';
-const CARD_COLOR_VEHICLE_RENEWALS = import.meta.env.VITE_CLIENT_VEHICLE_RENEWALS_COLOR || '#FFC167';
-const CARD_COLOR_CHALLAN_AMOUNT = import.meta.env.VITE_CLIENT_CHALLAN_AMOUNT_COLOR || '#FF6B84';
+// Client Dashboard Card Colors (env defaults)
+const CARD_COLOR_REGISTERED_VEHICLES = import.meta.env.VITE_CLIENT_REGISTERED_VEHICLES_COLOR || '#4F7EF8';
+const CARD_COLOR_CHALLANS_FETCHED = import.meta.env.VITE_CLIENT_CHALLANS_FETCHED_COLOR || '#e05c7a';
+const CARD_COLOR_VEHICLE_RENEWALS = import.meta.env.VITE_CLIENT_VEHICLE_RENEWALS_COLOR || '#d97706';
+const CARD_COLOR_CHALLAN_AMOUNT = import.meta.env.VITE_CLIENT_CHALLAN_AMOUNT_COLOR || '#059669';
 
-// Debug: Log color values
-console.log('Card Colors:', {
+// Card color gradient helpers
+function _hexAdjust(hex, delta) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  const r = Math.max(0, Math.min(255, (n >> 16) + delta));
+  const g = Math.max(0, Math.min(255, ((n >> 8) & 0xff) + delta));
+  const b = Math.max(0, Math.min(255, (n & 0xff) + delta));
+  return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+}
+function cardGradientStyle(hex) {
+  return { background: `linear-gradient(135deg, ${_hexAdjust(hex, 45)} 0%, ${hex} 55%, ${_hexAdjust(hex, -35)} 100%)` };
+}
+
+// Default card colors object
+const DEFAULT_CARD_COLORS = {
   registeredVehicles: CARD_COLOR_REGISTERED_VEHICLES,
   challansFetched: CARD_COLOR_CHALLANS_FETCHED,
   vehicleRenewals: CARD_COLOR_VEHICLE_RENEWALS,
-  challanAmount: CARD_COLOR_CHALLAN_AMOUNT
-});
+  challanAmount: CARD_COLOR_CHALLAN_AMOUNT,
+};
 
 
 import { FaDownload } from "react-icons/fa";
@@ -710,6 +722,7 @@ import MyChallans from "./MyChallans";
 // const ChallanSettlement = React.lazy(() => import("./ChallanSettlement"));
 import MyBilling from "./MyBilling";
 import UserSettings from "./UserSettings";
+import DashboardSettings from "./DashboardSettings";
 import CustomModal from "./CustomModal";
 import RightSidebar from "./RightSidebar";
 
@@ -1442,6 +1455,19 @@ function ClientDashboard() {
   const [showLoader, setShowLoader] = useState(false);
   // Active menu
   const [activeMenu, setActiveMenu] = useState("Dashboard");
+  const [cardColors, setCardColors] = useState(() => {
+    try {
+      const scUser = JSON.parse(localStorage.getItem('sc_user') || '{}');
+      const userOptions = { ...(scUser.user_options || {}), ...(scUser.user?.user_options || {}) };
+      if (userOptions.card_colors) {
+        const parsed = typeof userOptions.card_colors === 'string'
+          ? JSON.parse(userOptions.card_colors)
+          : userOptions.card_colors;
+        return { ...DEFAULT_CARD_COLORS, ...parsed };
+      }
+    } catch { /* ignore */ }
+    return DEFAULT_CARD_COLORS;
+  });
   const [selectedChallan, setSelectedChallan] = useState(null);
   const [selectedRtoData, setSelectedRtoData] = useState(null);
   // Permission denied modal
@@ -2225,10 +2251,10 @@ function ClientDashboard() {
       latestChallanRows = latestChallans.map((c, idx) => (
         <tr key={`${c.statusType}-${c.vehicle_number}-${c.challan_no}-${idx}`}>
           <td>{idx + 1}</td>
-          <td>{c.vehicle_number}</td>
+          <td className="vst-td--vehicle"><span className="vst-vehicle-num"><i className="ri-car-line vst-vehicle-num__car" />{c.vehicle_number || '—'}</span></td>
           <td>
-            <span title={c.challan_date_time} style={{cursor:'pointer'}}>
-              {c.challan_date_time ? fmtChallanDT(c.challan_date_time) : ''}
+            <span className="vst-date vst-date--neutral" title={c.challan_date_time}>
+              <i className="ri-calendar-2-line" />{c.challan_date_time ? fmtChallanDT(c.challan_date_time) : '—'}
             </span>
           </td>
           <td style={{ textAlign: 'center' }}>
@@ -3047,16 +3073,16 @@ function ClientDashboard() {
 
               {/* Card 1: Registered Vehicles */}
               <div className="rounded-xl overflow-hidden border border-slate-200 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 bg-white">
-                <div className="bg-blue-600 px-4 py-4 text-white">
+                <div className="card-gloss px-4 py-4 text-white" style={cardGradientStyle(cardColors.registeredVehicles)}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
                       <i className="ri-car-line text-base"></i>
                     </div>
                   </div>
-                  <div className="text-2xl font-bold leading-none">
+                  <div className="text-[38px] font-extrabold leading-none tracking-tight" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.18)' }}>
                     {loadingClient ? '...' : (clientData && Array.isArray(clientData.vehicles) ? clientData.vehicles.length : 0)}
                   </div>
-                  <div className="text-[11px] font-medium text-white/80 mt-1">Registered Vehicles</div>
+                  <div className="text-[11px] font-medium text-white/90 mt-1">Registered Vehicles</div>
                 </div>
                 <div className="px-3 py-2.5 flex gap-1">
                   {(() => {
@@ -3093,8 +3119,8 @@ function ClientDashboard() {
                           }, 300);
                         }}
                       >
-                        <div className="text-sm font-bold text-blue-600">{counts.active}</div>
-                        <div className="text-[9px] text-slate-400">Active</div>
+                        <div className="text-[16px] font-bold text-blue-600">{counts.active}</div>
+                        <div className="text-[11px] text-slate-500 font-medium mt-0.5">Active</div>
                       </div>,
                       <div
                         key="inact"
@@ -3119,8 +3145,8 @@ function ClientDashboard() {
                           }, 300);
                         }}
                       >
-                        <div className="text-sm font-bold text-amber-600">{counts.inactive}</div>
-                        <div className="text-[9px] text-slate-400">Inactive</div>
+                        <div className="text-[16px] font-bold text-amber-600">{counts.inactive}</div>
+                        <div className="text-[11px] text-slate-500 font-medium mt-0.5">Inactive</div>
                       </div>,
                       <div
                         key="del"
@@ -3146,8 +3172,8 @@ function ClientDashboard() {
                           setTimeout(attemptScroll, 300);
                         }}
                       >
-                        <div className="text-sm font-bold text-red-500">{counts.deleted}</div>
-                        <div className="text-[9px] text-slate-400">Deleted</div>
+                        <div className="text-[16px] font-bold text-red-500">{counts.deleted}</div>
+                        <div className="text-[11px] text-slate-500 font-medium mt-0.5">Deleted</div>
                       </div>
                     ];
                   })()}
@@ -3156,16 +3182,16 @@ function ClientDashboard() {
 
               {/* Card 2: Challans Fetched */}
               <div className="rounded-xl overflow-hidden border border-slate-200 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 bg-white">
-                <div className="bg-rose-500 px-4 py-4 text-white">
+                <div className="card-gloss px-4 py-4 text-white" style={cardGradientStyle(cardColors.challansFetched)}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
                       <i className="ri-error-warning-line text-base"></i>
                     </div>
                   </div>
-                  <div className="text-2xl font-bold leading-none">
+                  <div className="text-[38px] font-extrabold leading-none tracking-tight" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.18)' }}>
                     {loadingVehicleChallan ? '...' : dashboardTotalChallans}
                   </div>
-                  <div className="text-[11px] font-medium text-white/80 mt-1">Challans Fetched</div>
+                  <div className="text-[11px] font-medium text-white/90 mt-1">Challans Fetched</div>
                 </div>
                 <div className="px-3 py-2.5 flex gap-1">
                   <div
@@ -3180,8 +3206,8 @@ function ClientDashboard() {
                       }
                     }}
                   >
-                    <div className="text-sm font-bold text-red-500">{loadingVehicleChallan ? '...' : dashboardPendingCount}</div>
-                    <div className="text-[9px] text-slate-400">Pending</div>
+                    <div className="text-[16px] font-bold text-red-500">{loadingVehicleChallan ? '...' : dashboardPendingCount}</div>
+                    <div className="text-[11px] text-slate-500 font-medium mt-0.5">Pending</div>
                   </div>
                   <div
                     className="flex-1 text-center py-1.5 rounded-md cursor-pointer hover:bg-emerald-50 transition-colors"
@@ -3195,65 +3221,65 @@ function ClientDashboard() {
                       }
                     }}
                   >
-                    <div className="text-sm font-bold text-emerald-600">{loadingVehicleChallan ? '...' : dashboardDisposedCount}</div>
-                    <div className="text-[9px] text-slate-400">Disposed</div>
+                    <div className="text-[16px] font-bold text-emerald-600">{loadingVehicleChallan ? '...' : dashboardDisposedCount}</div>
+                    <div className="text-[11px] text-slate-500 font-medium mt-0.5">Disposed</div>
                   </div>
                 </div>
               </div>
 
               {/* Card 3: Vehicle Renewals */}
               <div className="rounded-xl overflow-hidden border border-slate-200 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 bg-white">
-                <div className="bg-amber-500 px-4 py-4 text-white">
+                <div className="card-gloss px-4 py-4 text-white" style={cardGradientStyle(cardColors.vehicleRenewals)}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
                       <i className="ri-alarm-warning-line text-base"></i>
                     </div>
                   </div>
-                  <div className="text-2xl font-bold leading-none">
+                  <div className="text-[38px] font-extrabold leading-none tracking-tight" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.18)' }}>
                     {loadingVehicleRto ? '...' : vehicleRenewalsTotal}
                   </div>
-                  <div className="text-[11px] font-medium text-white/80 mt-1">Vehicle Renewals</div>
+                  <div className="text-[11px] font-medium text-white/90 mt-1">Vehicle Renewals</div>
                 </div>
                 <div className="px-3 py-2.5 grid grid-cols-3 gap-0.5">
                   <div className="text-center py-1 rounded cursor-pointer hover:bg-red-50 transition-colors" title="Expired insurance" onClick={() => { setGoToFleetRenewal('insurance'); setActiveMenu(getFleetMenuName()); }}>
-                    <div className="text-sm font-bold text-red-500">{loadingVehicleRto ? '...' : expiryCounts.insurance}</div>
-                    <div className="text-[9px] text-slate-400">Insurance</div>
+                    <div className="text-[16px] font-bold text-red-500">{loadingVehicleRto ? '...' : expiryCounts.insurance}</div>
+                    <div className="text-[11px] text-slate-500 font-medium mt-0.5">Insurance</div>
                   </div>
                   <div className="text-center py-1 rounded cursor-pointer hover:bg-orange-50 transition-colors" title="Expired road tax" onClick={() => { setGoToFleetRenewal('roadTax'); setActiveMenu(getFleetMenuName()); }}>
-                    <div className="text-sm font-bold text-orange-500">{loadingVehicleRto ? '...' : expiryCounts.roadTax}</div>
-                    <div className="text-[9px] text-slate-400">Road Tax</div>
+                    <div className="text-[16px] font-bold text-orange-500">{loadingVehicleRto ? '...' : expiryCounts.roadTax}</div>
+                    <div className="text-[11px] text-slate-500 font-medium mt-0.5">Road Tax</div>
                   </div>
                   <div className="text-center py-1 rounded cursor-pointer hover:bg-yellow-50 transition-colors" title="Expired fitness" onClick={() => { setGoToFleetRenewal('fitness'); setActiveMenu(getFleetMenuName()); }}>
-                    <div className="text-sm font-bold text-yellow-600">{loadingVehicleRto ? '...' : expiryCounts.fitness}</div>
-                    <div className="text-[9px] text-slate-400">Fitness</div>
+                    <div className="text-[16px] font-bold text-yellow-600">{loadingVehicleRto ? '...' : expiryCounts.fitness}</div>
+                    <div className="text-[11px] text-slate-500 font-medium mt-0.5">Fitness</div>
                   </div>
                   <div className="text-center py-1 rounded cursor-pointer hover:bg-blue-50 transition-colors" title="Expired pollution" onClick={() => { setGoToFleetRenewal('pollution'); setActiveMenu(getFleetMenuName()); }}>
-                    <div className="text-sm font-bold text-blue-500">{loadingVehicleRto ? '...' : expiryCounts.pollution}</div>
-                    <div className="text-[9px] text-slate-400">Pollution</div>
+                    <div className="text-[16px] font-bold text-blue-500">{loadingVehicleRto ? '...' : expiryCounts.pollution}</div>
+                    <div className="text-[11px] text-slate-500 font-medium mt-0.5">Pollution</div>
                   </div>
                   <div className="text-center py-1 rounded cursor-pointer hover:bg-purple-50 transition-colors" title="Expired national permit" onClick={() => { setGoToFleetRenewal('nationalPermit'); setActiveMenu(getFleetMenuName()); }}>
-                    <div className="text-sm font-bold text-purple-500">{loadingVehicleRto ? '...' : expiryCounts.nationalPermit}</div>
-                    <div className="text-[9px] text-slate-400">National Permit</div>
+                    <div className="text-[16px] font-bold text-purple-500">{loadingVehicleRto ? '...' : expiryCounts.nationalPermit}</div>
+                    <div className="text-[11px] text-slate-500 font-medium mt-0.5">National Permit</div>
                   </div>
                   <div className="text-center py-1 rounded cursor-pointer hover:bg-teal-50 transition-colors" title="Expired permit validity" onClick={() => { setGoToFleetRenewal('permitValid'); setActiveMenu(getFleetMenuName()); }}>
-                    <div className="text-sm font-bold text-teal-500">{loadingVehicleRto ? '...' : expiryCounts.permitValid}</div>
-                    <div className="text-[9px] text-slate-400">State Permit</div>
+                    <div className="text-[16px] font-bold text-teal-500">{loadingVehicleRto ? '...' : expiryCounts.permitValid}</div>
+                    <div className="text-[11px] text-slate-500 font-medium mt-0.5">State Permit</div>
                   </div>
                 </div>
               </div>
 
               {/* Card 4: Challan Amount */}
               <div className="rounded-xl overflow-hidden border border-slate-200 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 bg-white">
-                <div className="bg-emerald-600 px-4 py-4 text-white">
+                <div className="card-gloss px-4 py-4 text-white" style={cardGradientStyle(cardColors.challanAmount)}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
                       <i className="ri-money-rupee-circle-line text-base"></i>
                     </div>
                   </div>
-                  <div className="text-2xl font-bold leading-none">
+                  <div className="text-[38px] font-extrabold leading-none tracking-tight" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.18)' }}>
                     {loadingVehicleChallan ? '...' : `₹${formatBriefAmount(totalFineAmount)}`}
                   </div>
-                  <div className="text-[11px] font-medium text-white/80 mt-1">Challan Amount</div>
+                  <div className="text-[11px] font-medium text-white/90 mt-1">Challan Amount</div>
                 </div>
                 <div className="px-3 py-2.5 flex gap-1">
                   {loadingVehicleChallan
@@ -3264,16 +3290,16 @@ function ClientDashboard() {
                           title="Show pending challans"
                           onClick={() => { if (typeof window !== 'undefined' && window.handleViewAllChallans) { window.handleViewAllChallans('pending'); } else { localStorage.setItem('sc_challan_filter','pending'); setActiveMenu('Vehicle Challans'); } }}
                         >
-                          <div className="text-sm font-bold text-red-500">₹{formatBriefAmount(pendingFineTotal)}</div>
-                          <div className="text-[9px] text-slate-400">Pending</div>
+                          <div className="text-[16px] font-bold text-red-500">₹{formatBriefAmount(pendingFineTotal)}</div>
+                          <div className="text-[11px] text-slate-500 font-medium mt-0.5">Pending</div>
                         </div>
                         <div
                           className="flex-1 text-center py-1.5 rounded-md cursor-pointer hover:bg-emerald-50 transition-colors"
                           title="Show paid challans"
                           onClick={() => { if (typeof window !== 'undefined' && window.handleViewAllChallans) { window.handleViewAllChallans('disposed'); } else { localStorage.setItem('sc_challan_filter','disposed'); setActiveMenu('Vehicle Challans'); } }}
                         >
-                          <div className="text-sm font-bold text-emerald-600">₹{formatBriefAmount(disposedFineTotal)}</div>
-                          <div className="text-[9px] text-slate-400">Paid</div>
+                          <div className="text-[16px] font-bold text-emerald-600">₹{formatBriefAmount(disposedFineTotal)}</div>
+                          <div className="text-[11px] text-slate-500 font-medium mt-0.5">Paid</div>
                         </div>
                       </React.Fragment>
                   }
@@ -4086,7 +4112,40 @@ function ClientDashboard() {
       {activeMenu === "Challan Requests" && <ChallanRequests />}
         {activeMenu === "Challans" && <UserChallan />}
         {activeMenu === "My Billing" && <MyBilling clientId={user.user && (user.user.id || user.user._id)} />}
-        {activeMenu === "Settings" && <UserSettings users={[]} />}
+        {activeMenu === "Settings" && (
+          <DashboardSettings
+            cardColors={cardColors}
+            defaultColors={DEFAULT_CARD_COLORS}
+            onSave={async (colors) => {
+              setCardColors(colors);
+              try {
+                const scUser = JSON.parse(localStorage.getItem('sc_user') || '{}');
+                const userId = scUser.user?.id || scUser.user?.user_id || scUser.id;
+                const token = scUser.token || '';
+                const API_ROOT = import.meta.env.VITE_API_BASE_URL || '';
+                const res = await fetch(`${API_ROOT}/useroptions`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                  },
+                  body: JSON.stringify({ user_id: userId, user_role: 'client', settings: { card_colors: JSON.stringify(colors) } }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.success !== false) {
+                  toast.success(data.message || 'Dashboard settings saved successfully.');
+                  const userOptions = { ...(scUser.user_options || {}), ...(scUser.user?.user_options || {}), card_colors: JSON.stringify(colors) };
+                  const newScUser = { ...scUser, user_options: userOptions, user: { ...scUser.user, user_options: userOptions } };
+                  localStorage.setItem('sc_user', JSON.stringify(newScUser));
+                } else {
+                  toast.error(data.message || data.error || 'Failed to save settings.');
+                }
+              } catch {
+                toast.error('Could not reach the server. Please try again.');
+              }
+            }}
+          />
+        )}
         {/* Hide DL Details and Fastag Details pages when hasClient flag is true */}
         {activeMenu === "DL Details" && !showClientPages && (
           <Suspense fallback={<div>Loading...</div>}>

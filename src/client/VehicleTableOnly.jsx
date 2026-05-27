@@ -158,12 +158,12 @@ export default function VehicleTableOnly() {
               const handleDelete = () => setModal({ open: true, action: 'delete', vehicle: v });
               return (
                 <tr key={v.id || v._id || idx}>
-                  <td style={{fontWeight:600, color:'#42a5f5', letterSpacing:1}}>{v.vehicle_number || <span style={{color:'#bbb'}}>N/A</span>}</td>
+                  <td className="vst-td--vehicle"><span className="vst-vehicle-num"><i className="ri-car-line vst-vehicle-num__car" />{v.vehicle_number || 'N/A'}</span></td>
                   <td>{v.engine_number || <span style={{color:'#bbb'}}>N/A</span>}</td>
                   <td>{v.chassis_number || <span style={{color:'#bbb'}}>N/A</span>}</td>
                   <td style={{ color: statusColor, fontWeight: 700, letterSpacing: 1 }}>{status}</td>
                   <td>{v.vehicle_type || <span style={{color:'#bbb'}}>N/A</span>}</td>
-                  <td>{v.registered_at ? <span style={{color:'#43e97b', fontWeight:600}}>{new Date(v.registered_at).toLocaleString()}</span> : <span style={{color:'#bbb'}}>N/A</span>}</td>
+                  <td>{v.registered_at ? <span className="vst-date vst-date--neutral"><i className="ri-calendar-2-line" />{new Date(v.registered_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span> : <span className="vst-cell--empty">—</span>}</td>
                   <td>
                     <button
                       className="action-btn flat-btn"

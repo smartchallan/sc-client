@@ -786,11 +786,11 @@ export default function RegisterVehicle() {
                       <thead>
                         <tr>
                           <th style={{ width: 44, textAlign: 'center' }}>#</th>
-                          <th>Vehicle No.</th>
-                          <th style={{ width: 130 }}>RTO data fetched<br/><span style={{fontSize:8}}>(from PARIVAHAN)</span></th>
-                          <th style={{ width: 130 }}>Challan data fetched<br/><span style={{fontSize:8}}>(from PARIVAHAN)</span></th>
-                          <th style={{ width: 110, textAlign: 'center' }}>Status</th>
-                          <th style={{ width: 150 }}>Registered On</th>
+                          <th style={{ width: 120, textAlign: 'center' }}>Vehicle No.</th>
+                          {/* <th style={{ width: 130 }}>RTO data<br/><span style={{fontSize:8}}>(from PARIVAHAN)</span></th>
+                          <th style={{ width: 130 }}>Challan data<br/><span style={{fontSize:8}}>(from PARIVAHAN)</span></th> */}
+                          <th style={{ width: 120, textAlign: 'center' }}>Status</th>
+                          <th style={{ width: 120 }}>Registered On</th>
                           <th style={{ width: 120, textAlign: 'center' }}>Actions</th>
                         </tr>
                       </thead>
@@ -805,12 +805,12 @@ export default function RegisterVehicle() {
                                   {v.vehicle_number || '—'}
                                 </span>
                               </td>
-                              <td className="rv-date-cell">
+                              {/* <td className="rv-date-cell">
                                 {v.rto_updated_at ? new Date(v.rto_updated_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : <span style={{ color: '#cbd5e1' }}>—</span>}
                               </td>
                               <td className="rv-date-cell">
                                 {v.challan_updated_at ? new Date(v.challan_updated_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : <span style={{ color: '#cbd5e1' }}>—</span>}
-                              </td>
+                              </td> */}
                               <td style={{ textAlign: 'center' }}>
                                 {status === 'ACTIVE'
                                   ? <span className="client-status-pill active">Active</span>
