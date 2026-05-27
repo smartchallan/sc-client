@@ -15,6 +15,8 @@ const DEFAULT_SETTINGS = {
   sendEmailNotification: false,
   sendSmsNotification: false,
   sendMarketingCommunication: false,
+  vehicleReportEnabled: false,
+  vehicleReportLimit: 0,
 };
 
 const SETTING_CATEGORIES = {
@@ -137,6 +139,8 @@ export default function ClientSettingsSidebar({ open, onClose, client }) {
             sendEmailNotification: opts.send_email_notification === '1' || opts.send_email_notification === 1,
             sendSmsNotification: opts.send_sms_notification === '1' || opts.send_sms_notification === 1,
             sendMarketingCommunication: opts.send_marketing_communication === '1' || opts.send_marketing_communication === 1,
+            vehicleReportEnabled: opts.vehicle_report_enabled === '1' || opts.vehicle_report_enabled === 1,
+            vehicleReportLimit: parseInt(opts.vehicle_report_limit || '0', 10) || 0,
           });
         } else {
           setSettings(DEFAULT_SETTINGS);
@@ -166,6 +170,8 @@ export default function ClientSettingsSidebar({ open, onClose, client }) {
     send_email_notification: s.sendEmailNotification ? 1 : 0,
     send_sms_notification: s.sendSmsNotification ? 1 : 0,
     send_marketing_communication: s.sendMarketingCommunication ? 1 : 0,
+    vehicle_report_enabled: s.vehicleReportEnabled ? 1 : 0,
+    vehicle_report_limit: s.vehicleReportLimit || 0,
   });
 
   // Call /useroptions POST on toggle change
@@ -346,10 +352,10 @@ export default function ClientSettingsSidebar({ open, onClose, client }) {
                       onClick={() => handleToggle(key)}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <i 
-                          className={icon} 
-                          style={{ 
-                            fontSize: 18, 
+                        <i
+                          className={icon}
+                          style={{
+                            fontSize: 18,
                             color: settings[key] ? '#2e7d32' : '#666'
                           }}
                         ></i>
@@ -391,6 +397,75 @@ export default function ClientSettingsSidebar({ open, onClose, client }) {
                 </div>
               </div>
             ))}
+
+            {/* Vehicle Report Feature */}
+            <div style={{ marginBottom: 28 }}>
+              <h3 style={{
+                fontSize: 15, fontWeight: 700, color: '#1565c0',
+                marginBottom: 12, paddingBottom: 8,
+                borderBottom: '2px solid #e3f2fd',
+                display: 'flex', alignItems: 'center', gap: 8
+              }}>
+                <i className="ri-file-search-line" /> Vehicle Report
+              </h3>
+              <div
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  background: settings.vehicleReportEnabled ? '#e8f5e9' : '#fff',
+                  border: `1.5px solid ${settings.vehicleReportEnabled ? '#66bb6a' : '#e0e0e0'}`,
+                  borderRadius: 8, cursor: 'pointer', transition: 'all 0.2s',
+                  boxShadow: settings.vehicleReportEnabled ? '0 2px 8px rgba(102,187,106,0.2)' : 'none',
+                  marginBottom: 10,
+                }}
+                onClick={() => handleToggle('vehicleReportEnabled')}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <i className="ri-file-search-line" style={{ fontSize: 18, color: settings.vehicleReportEnabled ? '#2e7d32' : '#666' }}></i>
+                  <span style={{ fontSize: 14, fontWeight: settings.vehicleReportEnabled ? 600 : 500, color: settings.vehicleReportEnabled ? '#2e7d32' : '#333' }}>
+                    Enable Vehicle Report
+                  </span>
+                </div>
+                <div style={{ position: 'relative', width: 44, height: 24, background: settings.vehicleReportEnabled ? '#4caf50' : '#ccc', borderRadius: 12, transition: 'background 0.3s' }}>
+                  <div style={{ position: 'absolute', top: 2, left: settings.vehicleReportEnabled ? 22 : 2, width: 20, height: 20, background: '#fff', borderRadius: '50%', transition: 'left 0.3s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                </div>
+              </div>
+
+              {settings.vehicleReportEnabled && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#f0f7ff', border: '1px solid #bfdbfe', borderRadius: 8 }}>
+                  <label style={{ fontSize: 13, color: '#1e3a8a', whiteSpace: 'nowrap', fontWeight: 600 }}>
+                    Max reports (0 = unlimited):
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={settings.vehicleReportLimit}
+                    onChange={(e) => {
+                      const val = Math.max(0, parseInt(e.target.value || '0', 10));
+                      setSettings(prev => ({ ...prev, vehicleReportLimit: val }));
+                    }}
+                    onBlur={async (e) => {
+                      const val = Math.max(0, parseInt(e.target.value || '0', 10));
+                      const updated = { ...settings, vehicleReportLimit: val };
+                      setSettings(updated);
+                      if (!client) return;
+                      const clientId = client.id || client._id;
+                      try {
+                        const res = await fetch(`${API_ROOT}/useroptions`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ user_id: clientId, user_role: 'client', settings: mapSettingsToApi(updated) }),
+                        });
+                        const d = await res.json().catch(() => ({}));
+                        if (res.ok) toast.success(d.message || 'Limit updated');
+                        else toast.error(d.message || 'Failed to update limit');
+                      } catch { toast.error('Failed to update limit'); }
+                    }}
+                    style={{ width: 80, padding: '6px 10px', border: '1.5px solid #93c5fd', borderRadius: 6, fontSize: 14 }}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
