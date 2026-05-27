@@ -86,9 +86,9 @@ function pct(days, totalDays = 365) {
 const CSS = `
 @page { size: A4; margin: 0; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Segoe UI', Arial, sans-serif; background: #e8edf2; color: #1e293b; font-size: 13px; }
-.page { width: 794px; min-height: 1123px; background: #fff; margin: 20px auto; position: relative; overflow: hidden; box-shadow: 0 8px 40px rgba(0,0,0,0.14); page-break-after: always; display: flex; flex-direction: column; }
-@media print { body { background: white; } .page { margin: 0; box-shadow: none; width: 100%; } }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; color: #1e293b; font-size: 13px; }
+.page { width: 100%; min-height: 100vh; background: #fff; margin: 0 0 12px 0; position: relative; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08); page-break-after: always; display: flex; flex-direction: column; }
+@media print { @page { size: A4; margin: 0; } body { background: white; } .page { margin: 0; box-shadow: none; min-height: 1123px; } }
 
 .hdr { background: linear-gradient(135deg, #0a2463 0%, #1565c0 55%, #1976d2 100%); padding: 12px 32px; display: flex; justify-content: space-between; align-items: center; color: white; }
 .brand-logo { height: 36px; width: auto; background: white; border-radius: 5px; padding: 3px 8px; }

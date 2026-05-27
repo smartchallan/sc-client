@@ -71,7 +71,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
     // Check add_clients permission for showing Add Client menu
     const userOptions = userObj?.user_options || userObj?.user?.user_options || {};
     hasAddClientsPermission = userOptions.add_clients === "1" || userOptions.add_clients === 1;
-    hasVehicleReportPermission = userOptions.vehicle_report_enabled === "1" || userOptions.vehicle_report_enabled === 1;
+    hasVehicleReportPermission = !isParentAccount && (userOptions.vehicle_report_enabled === "1" || userOptions.vehicle_report_enabled === 1);
     // Final decision to show client management UI (selectors, My Clients page, etc.)
     // Show client pages only if user actually has clients OR is a parent account
     // Having add_clients permission alone is not enough to show client management UI
