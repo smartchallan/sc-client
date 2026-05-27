@@ -15,6 +15,8 @@ const DEFAULT_SETTINGS = {
   sendEmailNotification: false,
   sendSmsNotification: false,
   sendMarketingCommunication: false,
+  vehicleReportEnabled: false,
+  vehicleReportLimit: 0,
 };
 
 export default function ClientSettings() {
@@ -76,6 +78,8 @@ export default function ClientSettings() {
             sendEmailNotification: opts.send_email_notification === '1' || opts.send_email_notification === 1,
             sendSmsNotification: opts.send_sms_notification === '1' || opts.send_sms_notification === 1,
             sendMarketingCommunication: opts.send_marketing_communication === '1' || opts.send_marketing_communication === 1,
+            vehicleReportEnabled: opts.vehicle_report_enabled === '1' || opts.vehicle_report_enabled === 1,
+            vehicleReportLimit: parseInt(opts.vehicle_report_limit || '0', 10) || 0,
           });
           setShowPermissions(true);
         } else {
@@ -104,22 +108,21 @@ export default function ClientSettings() {
     send_email_notification: s.sendEmailNotification ? 1 : 0,
     send_sms_notification: s.sendSmsNotification ? 1 : 0,
     send_marketing_communication: s.sendMarketingCommunication ? 1 : 0,
+    vehicle_report_enabled: s.vehicleReportEnabled ? 1 : 0,
+    vehicle_report_limit: s.vehicleReportLimit || 0,
   });
 
-  // Call /useroptions POST on checkbox change
-  const handleCheckboxChange = (key) => (e) => {
-    const updated = { ...settings, [key]: e.target.checked };
-    setSettings(updated);
+  const saveSettings = (updated) => {
     if (!selectedClientId) return;
     const payload = {
       user_id: selectedClientId,
       user_role: 'client',
-      settings: mapSettingsToApi(updated)
+      settings: mapSettingsToApi(updated),
     };
     fetch(`${API_ROOT}/useroptions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     })
       .then(async res => {
         const d = await res.json().catch(() => ({}));
@@ -130,6 +133,12 @@ export default function ClientSettings() {
         }
       })
       .catch(() => toast.error('Failed to update settings'));
+  };
+
+  const handleCheckboxChange = (key) => (e) => {
+    const updated = { ...settings, [key]: e.target.checked };
+    setSettings(updated);
+    saveSettings(updated);
   };
 
   return (
@@ -200,6 +209,50 @@ export default function ClientSettings() {
                 <input type="checkbox" checked={!!settings.sendMarketingCommunication} onChange={handleCheckboxChange('sendMarketingCommunication')} />
                 <span>Send Marketing Communication</span>
               </label>
+            </div>
+          </div>
+        )}
+
+        {/* Vehicle Report Feature */}
+        {showPermissions && (
+          <div style={{ marginTop: 24, width: '100%', padding: '18px 20px', background: '#f0f7ff', border: '1.5px solid #bfdbfe', borderRadius: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <i className="ri-file-search-line" style={{ fontSize: 20, color: '#2563eb' }}></i>
+              <label style={{ fontWeight: 700, color: '#1e3a8a', fontSize: 15 }}>Vehicle Report Feature</label>
+            </div>
+            <p style={{ fontSize: 13, color: '#475569', marginBottom: 14 }}>
+              Allow this client to generate detailed vehicle history reports (RTO + Challan data). Set a limit of 0 for unlimited reports.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={!!settings.vehicleReportEnabled}
+                  onChange={handleCheckboxChange('vehicleReportEnabled')}
+                />
+                <span style={{ fontWeight: 600 }}>Enable Vehicle Report</span>
+              </label>
+              {settings.vehicleReportEnabled && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <label style={{ fontSize: 13, color: '#334155', whiteSpace: 'nowrap' }}>Max reports (0 = unlimited):</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={settings.vehicleReportLimit}
+                    onChange={(e) => {
+                      const val = Math.max(0, parseInt(e.target.value || '0', 10));
+                      setSettings(prev => ({ ...prev, vehicleReportLimit: val }));
+                    }}
+                    onBlur={(e) => {
+                      const val = Math.max(0, parseInt(e.target.value || '0', 10));
+                      const updated = { ...settings, vehicleReportLimit: val };
+                      setSettings(updated);
+                      saveSettings(updated);
+                    }}
+                    style={{ width: 80, padding: '5px 10px', border: '1.5px solid #93c5fd', borderRadius: 6, fontSize: 14, fontFamily: 'inherit', outline: 'none' }}
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}

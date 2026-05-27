@@ -731,6 +731,7 @@ import RightSidebar from "./RightSidebar";
 
 const DriverVerification = lazy(() => import("./DriverVerification"));
 const LazyVehicleFastag = lazy(() => import("./VehicleFastag"));
+const LazyVehicleReport = lazy(() => import("./VehicleReport"));
 
 function ClientDashboard() {
   // --- Network stats for client management accounts ---
@@ -2619,6 +2620,7 @@ function ClientDashboard() {
                     : activeMenu === 'Billing' ? 'My Billing'
                     : activeMenu === 'Settings' ? 'Settings'
                     : activeMenu === 'Notifications' ? 'Notification Center'
+                    : activeMenu === 'Vehicle Report' ? 'Vehicle Report'
                     : activeMenu}
                 </h2>
               </div>
@@ -4155,6 +4157,11 @@ function ClientDashboard() {
         {activeMenu === "Fastag Details" && !showClientPages && (
           <Suspense fallback={<div>Loading...</div>}>
             <LazyVehicleFastag />
+          </Suspense>
+        )}
+        {activeMenu === "Vehicle Report" && (
+          <Suspense fallback={<div>Loading...</div>}>
+            <LazyVehicleReport />
           </Suspense>
         )}
       {/* Quick Actions Ribbon Pull - visible on every page */}

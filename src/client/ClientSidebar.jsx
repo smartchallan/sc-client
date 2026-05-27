@@ -43,6 +43,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
   let userRole = "client";
   let showClientPages = false;
   let hasAddClientsPermission = false;
+  let hasVehicleReportPermission = false;
   let userObj = null;
   try {
     userObj = JSON.parse(localStorage.getItem("sc_user"));
@@ -70,6 +71,7 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
     // Check add_clients permission for showing Add Client menu
     const userOptions = userObj?.user_options || userObj?.user?.user_options || {};
     hasAddClientsPermission = userOptions.add_clients === "1" || userOptions.add_clients === 1;
+    hasVehicleReportPermission = userOptions.vehicle_report_enabled === "1" || userOptions.vehicle_report_enabled === 1;
     // Final decision to show client management UI (selectors, My Clients page, etc.)
     // Show client pages only if user actually has clients OR is a parent account
     // Having add_clients permission alone is not enough to show client management UI
@@ -106,6 +108,10 @@ function ClientSidebar({ onMenuClick, activeMenu, sidebarOpen, onToggleSidebar }
     ] : []),
     { icon: "ri-add-circle-line", label: "Register Vehicle" },
     // { icon: "ri-money-rupee-circle-line", label: "My Billing" },
+    // Vehicle Report: visible only when dealer has granted permission
+    ...(hasVehicleReportPermission ? [
+      { icon: "ri-file-search-line", label: "Vehicle Report" },
+    ] : []),
     { icon: "ri-user-settings-line", label: "Profile" },
     { icon: "ri-palette-line", label: "Settings" },
     // Conditionally include Activity Tracker only when showClientPages is true
