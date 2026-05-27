@@ -1,27 +1,28 @@
 /**
  * generateVehicleReportHTML
  * Builds a print-ready HTML string for the Vehicle History Report.
- * Handles partial data gracefully (RTO not available, no challans, etc.).
+ * All sections and pages are conditional on available data.
  */
 
-// ── Date helpers ──────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function fmt(val) {
-  if (!val || val === 'NA' || val === 'N/A' || val === '—') return '—';
-  return String(val);
+  if (val === null || val === undefined) return '—';
+  const s = String(val).trim();
+  if (!s || s === 'NA' || s === 'N/A' || s === 'null' || s === 'undefined') return '—';
+  return s;
+}
+
+function hasVal(val) {
+  const v = fmt(val);
+  return v !== '—';
 }
 
 function daysUntil(dateStr) {
-  if (!dateStr || dateStr === '—') return null;
-  const formats = [
-    /(\d{2})-([A-Za-z]{3})-(\d{4})/,
-    /(\d{4})-(\d{2})-(\d{2})/,
-    /(\d{2})-(\d{2})-(\d{4})/,
-  ];
+  if (!hasVal(dateStr)) return null;
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return null;
-  const diff = Math.ceil((d - Date.now()) / 86400000);
-  return diff;
+  return Math.ceil((d - Date.now()) / 86400000);
 }
 
 function expiryClass(days) {
@@ -32,7 +33,7 @@ function expiryClass(days) {
 }
 
 function fmtDate(dateStr) {
-  if (!dateStr || dateStr === 'NA') return '—';
+  if (!hasVal(dateStr)) return '—';
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -45,6 +46,12 @@ function ownerSuffix(n) {
   if (num === 2) return '2nd';
   if (num === 3) return '3rd';
   return `${num}th`;
+}
+
+function pct(days, totalDays = 365) {
+  if (days === null) return 0;
+  if (days <= 0) return 0;
+  return Math.min(100, Math.round((days / totalDays) * 100));
 }
 
 function calcHealthScore(vd, pendingCount) {
@@ -75,13 +82,25 @@ function grade(score) {
   return 'F';
 }
 
-function pct(days, totalDays = 365) {
-  if (days === null) return 0;
-  if (days <= 0) return 0;
-  return Math.min(100, Math.round((days / totalDays) * 100));
+// Renders an info card — returns '' if value is empty so blank cards don't appear
+function icard(label, value, cls = '', style = '') {
+  if (!hasVal(value)) return '';
+  return `<div class="icard"${style ? ` style="${style}"` : ''}><div class="icard-lbl">${label}</div><div class="icard-val${cls ? ' '+cls : ''}">${value}</div></div>`;
 }
 
-// ── CSS (inlined) ─────────────────────────────────────────────────────────────
+// Renders a table row — returns '' if value is empty
+function srow(label, value, valCls = '') {
+  if (!hasVal(value)) return '';
+  return `<div class="srow"><div class="srow-lbl">${label}</div><div class="srow-val${valCls ? ' '+valCls : ''}">${value}</div></div>`;
+}
+
+// Wraps a stbl block — returns '' if rows is empty string
+function stbl(headerIcon, title, rows) {
+  if (!rows || !rows.trim()) return '';
+  return `<div class="stbl"><div class="stbl-hdr">${headerIcon} ${title}</div>${rows}</div>`;
+}
+
+// ── CSS ───────────────────────────────────────────────────────────────────────
 
 const CSS = `
 @page { size: A4; margin: 0; }
@@ -89,6 +108,10 @@ const CSS = `
 body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; color: #1e293b; font-size: 13px; }
 .page { width: 100%; min-height: 100vh; background: #fff; margin: 0 0 12px 0; position: relative; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08); page-break-after: always; display: flex; flex-direction: column; }
 @media print { @page { size: A4; margin: 0; } body { background: white; } .page { margin: 0; box-shadow: none; min-height: 1123px; } }
+
+.print-bar { background:#1e3a8a; color:white; padding:8px 24px; display:flex; align-items:center; justify-content:space-between; font-size:12px; }
+.print-bar button { background:#fff; color:#1e3a8a; border:none; border-radius:6px; padding:5px 16px; font-size:12px; font-weight:700; cursor:pointer; }
+@media print { .print-bar { display:none; } }
 
 .hdr { background: linear-gradient(135deg, #0a2463 0%, #1565c0 55%, #1976d2 100%); padding: 12px 32px; display: flex; justify-content: space-between; align-items: center; color: white; }
 .brand-logo { height: 36px; width: auto; background: white; border-radius: 5px; padding: 3px 8px; }
@@ -112,7 +135,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; color: #
 .owner-count-badge { display:flex; flex-direction:column; align-items:center; background:rgba(239,68,68,0.25); border:2px solid rgba(239,68,68,0.6); border-radius:10px; padding:8px 16px; text-align:center; }
 .owner-count-num { font-size:26px; font-weight:900; color:#fca5a5; line-height:1; }
 .owner-count-lbl { font-size:10px; opacity:0.8; text-transform:uppercase; letter-spacing:0.6px; margin-top:2px; }
-.hero-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:9px; }
+.hero-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:9px; }
 .hero-card { background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22); border-radius:11px; padding:11px; text-align:center; }
 .hero-card.warn-card { background:rgba(239,68,68,0.2); border-color:rgba(239,68,68,0.5); }
 .hero-card .ic { font-size:22px; margin-bottom:4px; }
@@ -159,7 +182,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; color: #
 .verdict.warn-v p { color:#92400e; }
 .verdict.ok-v p { color:#33691e; }
 
-.metrics { background:#0d47a1; padding:12px 32px; display:flex; justify-content:space-around; }
+.metrics { background:#0d47a1; padding:12px 32px; display:flex; justify-content:space-around; flex-wrap:wrap; gap:8px; }
 .met { text-align:center; color:white; }
 .met-v { font-size:15px; font-weight:700; }
 .met-v.red { color:#fca5a5; }
@@ -168,6 +191,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; color: #
 .cs { padding:18px 32px; }
 
 .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-bottom:16px; }
+.info-grid.col3 { grid-template-columns:repeat(3,1fr); }
 .icard { background:#f8fafc; border-radius:10px; padding:11px 13px; border:1px solid #e2e8f0; }
 .icard-lbl { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.7px; color:#64748b; margin-bottom:4px; }
 .icard-val { font-size:13px; font-weight:600; color:#1e293b; }
@@ -209,9 +233,8 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; color: #
 .oh-status { display:inline-flex; align-items:center; gap:3px; padding:2px 9px; border-radius:20px; font-size:9px; font-weight:700; }
 .oh-current { background:#e8f5e9; color:#2e7d32; }
 .oh-previous { background:#f1f5f9; color:#64748b; }
-.oh-dealer { background:#e3f2fd; color:#1565c0; }
 
-.spec-grid8 { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px; }
+.spec-grid8 { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; margin-bottom:16px; }
 .spec-card { border-radius:11px; padding:13px 10px; text-align:center; border-bottom:3px solid #1565c0; background:linear-gradient(135deg,#e3f2fd,#bbdefb); }
 .spec-card.g { background:linear-gradient(135deg,#e8f5e9,#c8e6c9); border-bottom-color:#2e7d32; }
 .spec-card.o { background:linear-gradient(135deg,#fff3e0,#ffe0b2); border-bottom-color:#ef6c00; }
@@ -231,7 +254,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; color: #
 .srow-val { font-size:11px; font-weight:600; color:#1e293b; }
 .srow-val.red { color:#c62828; }
 
-.comp-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:11px; margin-bottom:16px; }
+.comp-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:11px; margin-bottom:16px; }
 .comp-card { border-radius:11px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.07); }
 .comp-hdr { padding:10px 12px; display:flex; align-items:center; gap:8px; font-weight:700; font-size:12px; color:white; }
 .comp-hdr.active { background:linear-gradient(90deg,#2e7d32,#43a047); }
@@ -252,13 +275,16 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; color: #
 .vbar-days.red { color:#c62828; font-weight:600; }
 
 .challan-card { border-radius:11px; overflow:hidden; border:2px solid #e53935; box-shadow:0 4px 16px rgba(229,57,53,0.15); margin-bottom:12px; }
+.challan-card.disposed-card { border-color:#43a047; box-shadow:0 4px 16px rgba(67,160,71,0.12); }
 .challan-header { background:linear-gradient(90deg,#b71c1c,#e53935); color:white; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; }
+.challan-header.disposed-hdr { background:linear-gradient(90deg,#2e7d32,#43a047); }
 .challan-header-left h3 { font-size:13px; font-weight:800; }
 .challan-header-left p { font-size:10px; opacity:0.85; margin-top:2px; }
 .challan-status-pill { background:#ff8f00; border-radius:7px; padding:5px 12px; font-size:11px; font-weight:700; letter-spacing:0.5px; }
-.challan-status-pill.disposed { background:#2e7d32; }
+.challan-status-pill.disposed { background:#fff; color:#2e7d32; }
 .challan-body { background:white; padding:14px 16px; }
-.challan-meta { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px; }
+.challan-meta { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; margin-bottom:12px; }
+.cm-item { }
 .cm-label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.6px; color:#64748b; margin-bottom:2px; }
 .cm-value { font-size:12px; font-weight:600; color:#1e293b; }
 .cm-value.red { color:#c62828; }
@@ -283,12 +309,12 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; color: #
 .alert h4 { font-size:11px; font-weight:700; margin-bottom:2px; }
 .alert p { font-size:10px; color:#546e7a; }
 
-.fin-hero { background:linear-gradient(135deg,#1a237e,#283593); padding:22px 32px; color:white; display:flex; justify-content:space-between; align-items:center; }
+.fin-hero { background:linear-gradient(135deg,#1a237e,#283593); padding:22px 32px; color:white; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; }
 .fin-amt { font-size:30px; font-weight:800; color:#fbbf24; }
 .fin-lbl { font-size:11px; opacity:0.78; margin-bottom:4px; }
 .fin-sub { font-size:10px; opacity:0.55; }
 
-.big-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:11px; margin-bottom:14px; }
+.big-stats { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:11px; margin-bottom:14px; }
 .bstat { background:linear-gradient(135deg,#e3f2fd,#bbdefb); border-radius:11px; padding:14px; text-align:center; border-top:4px solid #1565c0; }
 .bstat.y { background:linear-gradient(135deg,#fffde7,#fff9c4); border-top-color:#f59e0b; }
 .bstat.r { background:linear-gradient(135deg,#ffebee,#ffcdd2); border-top-color:#c62828; }
@@ -315,46 +341,85 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; color: #
 
 .disclaimer { font-size:9px; color:#94a3b8; line-height:1.65; padding:10px 32px; border-top:1px solid #f1f5f9; font-style:italic; }
 
-.na-box { background:#f1f5f9; border:2px dashed #cbd5e1; border-radius:11px; padding:20px; text-align:center; color:#94a3b8; margin:10px 0; }
-.na-box .na-ic { font-size:30px; margin-bottom:6px; }
-.na-box .na-txt { font-size:12px; font-weight:600; margin-bottom:4px; }
-.na-box .na-sub { font-size:10px; }
+.na-box { background:#f1f5f9; border:2px dashed #cbd5e1; border-radius:11px; padding:24px; text-align:center; color:#94a3b8; margin:10px 0; }
+.na-box .na-ic { font-size:32px; margin-bottom:8px; }
+.na-box .na-txt { font-size:13px; font-weight:700; margin-bottom:4px; color:#64748b; }
+.na-box .na-sub { font-size:11px; }
 `;
 
 // ── Section builders ──────────────────────────────────────────────────────────
 
-function notAvailableBox(icon, title, subtitle) {
+function naBox(icon, title, subtitle) {
   return `<div class="na-box"><div class="na-ic">${icon}</div><div class="na-txt">${title}</div><div class="na-sub">${subtitle}</div></div>`;
 }
 
-function header(logoUrl, titleRight, dateStr) {
+function pageHeader(logoUrl, titleRight, dateStr) {
   const logoTag = logoUrl
-    ? `<img src="${logoUrl}" alt="Logo" class="brand-logo" />`
+    ? `<img src="${logoUrl}" alt="Logo" class="brand-logo" onerror="this.style.display='none'" />`
     : `<div style="font-size:18px;font-weight:900;color:white;letter-spacing:1px;">SMARTCHALLAN</div>`;
-  return `<div class="hdr"><div class="brand">${logoTag}</div><div class="hdr-meta"><strong>${titleRight}</strong>${dateStr}</div></div>`;
+  return `<div class="hdr"><div>${logoTag}</div><div class="hdr-meta"><strong>${titleRight}</strong>${dateStr}</div></div>`;
 }
 
-function footer(page, total) {
-  return `<div class="ftr"><div>© ${new Date().getFullYear()} SmartChallan · Powered by Maavin Technologies · Data Source: Vahan / RTO</div><div style="display:flex;align-items:center;gap:6px;"><span>Page</span><div class="pg-num">${page}</div><span>of ${total}</span></div></div>`;
+function pageFooter(page, total) {
+  return `<div class="ftr"><div>© ${new Date().getFullYear()} SmartChallan · Powered by Maavin Technologies · Data Source: Vahan / eChallan (ULIP)</div><div style="display:flex;align-items:center;gap:6px;"><span>Page</span><div class="pg-num">${page}</div><span>of ${total}</span></div></div>`;
+}
+
+function challanCard(c, idx) {
+  const isPending = c._type === 'pending' || String(c.challan_status || '').toLowerCase() !== 'disposed';
+  const offences = Array.isArray(c.offence_details) ? c.offence_details : (c.offence_details ? [c.offence_details] : []);
+
+  const metaItems = [
+    hasVal(c.challan_date_time) ? `<div class="cm-item"><div class="cm-label">📅 Date &amp; Time</div><div class="cm-value">${c.challan_date_time}</div></div>` : '',
+    hasVal(c.challan_place) ? `<div class="cm-item"><div class="cm-label">📍 Location</div><div class="cm-value">${c.challan_place}</div></div>` : '',
+    hasVal(c.fine_imposed) ? `<div class="cm-item"><div class="cm-label">💰 Fine</div><div class="cm-value ${isPending ? 'red' : ''}">₹ ${parseFloat(c.fine_imposed).toLocaleString('en-IN')}</div></div>` : '',
+    hasVal(c.name_of_violator || c.driver_name) ? `<div class="cm-item"><div class="cm-label">👤 Violator</div><div class="cm-value">${c.name_of_violator || c.driver_name}</div></div>` : '',
+    hasVal(c.rto_distric_name || c.state_code) ? `<div class="cm-item"><div class="cm-label">⚖️ RTO District</div><div class="cm-value">${c.rto_distric_name || c.state_code}</div></div>` : '',
+    hasVal(c.receipt_no) ? `<div class="cm-item"><div class="cm-label">🧾 Receipt No.</div><div class="cm-value">${c.receipt_no}</div></div>` : '',
+  ].filter(Boolean).join('');
+
+  const offenceSection = offences.length > 0
+    ? `<div class="offence-list"><h4>⚠ Offences Recorded</h4>${offences.map(o => `<div class="offence-item"><span class="offence-act">${typeof o === 'object' ? (o.act_section || 'Act') : 'Offence'}</span><span class="offence-name">${typeof o === 'object' ? (o.offence_name || JSON.stringify(o)) : String(o)}</span></div>`).join('')}</div>`
+    : (hasVal(c.remark) ? `<div class="offence-list"><h4>⚠ Remark</h4><div class="offence-item"><span class="offence-name">${c.remark}</span></div></div>` : '');
+
+  const courtSection = hasVal(c.court_name)
+    ? `<div style="background:#f8fafc;border-radius:7px;padding:9px 12px;border:1px solid #e2e8f0;margin-top:10px;font-size:11px;"><strong>⚖️ ${c.court_name}</strong>${hasVal(c.court_address) ? ' · ' + c.court_address : ''}</div>`
+    : '';
+
+  return `<div class="challan-card${isPending ? '' : ' disposed-card'}">
+    <div class="challan-header${isPending ? '' : ' disposed-hdr'}">
+      <div class="challan-header-left">
+        <h3>🧾 Challan #${idx + 1}${hasVal(c.challan_no) ? ' — ' + c.challan_no : ''}</h3>
+        ${hasVal(c.department) ? `<p>${c.department}</p>` : ''}
+      </div>
+      <div class="challan-status-pill${isPending ? '' : ' disposed'}">${isPending ? '⏳ PENDING' : '✅ DISPOSED'}</div>
+    </div>
+    <div class="challan-body">
+      ${metaItems ? `<div class="challan-meta">${metaItems}</div>` : ''}
+      ${offenceSection}
+      ${courtSection}
+    </div>
+  </div>`;
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
-export function generateVehicleReportHTML({ vehicleNumber, rtoData, challanData, rtoStatus, challanStatus, generatedAt, expiresAt, logoUrl }) {
+export function generateVehicleReportHTML({
+  vehicleNumber, rtoData, challanData, rtoStatus, challanStatus,
+  generatedAt, expiresAt, logoUrl, autoPrint = false,
+}) {
   const now = generatedAt ? new Date(generatedAt) : new Date();
   const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
-  const totalPages = 5;
 
-  // ── Extract RTO fields ────────────────────────────────────────────────────
+  // ── Extract RTO fields ──────────────────────────────────────────────────────
   const hasRTO = rtoStatus === 'success' && rtoData;
   const vd = hasRTO
-    ? (rtoData.VehicleDetails || rtoData.vehicleDetails || rtoData.VehicleDetails || rtoData || {})
+    ? (rtoData.VehicleDetails || rtoData.vehicleDetails || rtoData || {})
     : {};
 
-  const regNo = fmt(vd.rc_regn_no) !== '—' ? fmt(vd.rc_regn_no) : vehicleNumber;
+  const regNo = hasVal(vd.rc_regn_no) ? fmt(vd.rc_regn_no) : vehicleNumber;
   const ownerName = fmt(vd.rc_owner_name);
   const ownerSr = fmt(vd.rc_owner_sr);
-  const ownerLabel = ownerSuffix(ownerSr !== '—' ? ownerSr : '1');
+  const ownerLabel = hasVal(ownerSr) ? ownerSuffix(ownerSr) : '—';
   const maker = fmt(vd.rc_maker_desc);
   const model = fmt(vd.rc_maker_model);
   const fuelType = fmt(vd.rc_fuel_desc);
@@ -384,77 +449,140 @@ export function generateVehicleReportHTML({ vehicleNumber, rtoData, challanData,
   const taxUpto = fmtDate(vd.rc_tax_upto);
   const registeredAt = fmt(vd.rc_registered_at || vd.rc_off_cd);
   const presentAddress = fmt(vd.rc_present_address);
+  const mfgYear = (vd.rc_regn_dt && !isNaN(new Date(vd.rc_regn_dt).getFullYear())) ? new Date(vd.rc_regn_dt).getFullYear() : null;
 
-  // Mfg year from reg date
-  const mfgYear = vd.rc_regn_dt ? new Date(vd.rc_regn_dt).getFullYear() || '—' : '—';
-
-  // ── Extract Challan fields ────────────────────────────────────────────────
-  const hasChallan = (challanStatus === 'success' || challanStatus === 'no_challans') && challanData;
-  const pendingArr = hasChallan ? (Array.isArray(challanData.Pending_data) ? challanData.Pending_data : (challanData.Pending_data ? [challanData.Pending_data] : [])) : [];
-  const disposedArr = hasChallan ? (Array.isArray(challanData.Disposed_data) ? challanData.Disposed_data : (challanData.Disposed_data ? [challanData.Disposed_data] : [])) : [];
+  // ── Extract Challan fields ──────────────────────────────────────────────────
+  const hasChallanData = challanStatus === 'success' || challanStatus === 'no_challans';
+  const pendingArr = hasChallanData && challanData
+    ? (Array.isArray(challanData.Pending_data) ? challanData.Pending_data : (challanData.Pending_data ? [challanData.Pending_data] : []))
+    : [];
+  const disposedArr = hasChallanData && challanData
+    ? (Array.isArray(challanData.Disposed_data) ? challanData.Disposed_data : (challanData.Disposed_data ? [challanData.Disposed_data] : []))
+    : [];
   const pendingCount = pendingArr.length;
   const disposedCount = disposedArr.length;
   const totalFine = pendingArr.reduce((s, c) => s + (parseFloat(c.fine_imposed) || 0), 0);
+  const challanCards = [
+    ...pendingArr.map(c => ({ ...c, _type: 'pending' })),
+    ...disposedArr.map(c => ({ ...c, _type: 'disposed' })),
+  ];
 
-  // ── Health score ─────────────────────────────────────────────────────────
-  const healthScore = hasRTO ? calcHealthScore(vd, pendingCount) : 0;
-  const healthGrade = grade(healthScore);
-  const scoreLabel = healthScore >= 80 ? 'Excellent' : healthScore >= 65 ? 'Good' : healthScore >= 50 ? 'Needs Attention' : 'Poor';
+  // ── Health score ────────────────────────────────────────────────────────────
+  const healthScore = hasRTO ? calcHealthScore(vd, pendingCount) : null;
+  const healthGrade = healthScore !== null ? grade(healthScore) : '—';
+  const scoreLabel = healthScore === null ? '—'
+    : healthScore >= 80 ? 'Excellent'
+    : healthScore >= 65 ? 'Good'
+    : healthScore >= 50 ? 'Needs Attention' : 'Poor';
 
-  // ── Days calculations ─────────────────────────────────────────────────────
   const insurDays = daysUntil(vd.rc_insurance_upto);
   const puccDays = daysUntil(vd.rc_pucc_upto);
   const fitDays = daysUntil(vd.rc_fit_upto);
   const taxDays = daysUntil(vd.rc_tax_upto);
-
   const insurClass = expiryClass(insurDays);
   const puccClass = expiryClass(puccDays);
+  const loanOk = !hasVal(financer) || financer.toUpperCase() === 'NA' || financer.toUpperCase() === 'NONE';
+  const blOk = !hasVal(blacklist) || blacklist.toUpperCase().includes('NOT');
 
-  // ── PAGE 1: Summary ──────────────────────────────────────────────────────
-  const vehicleTitle = (maker !== '—' && model !== '—') ? `${maker} ${model}` : vehicleNumber;
-  const vehicleSub = [fuelType, bodyType, mfgYear !== '—' ? String(mfgYear) : '', color].filter(v => v && v !== '—').join(' · ');
+  // ── Determine which pages to render ────────────────────────────────────────
+  const showPage2 = hasRTO;
+  const showPage3 = hasRTO;
+  const showPage4 = hasRTO || hasChallanData;
+  const showPage5 = hasRTO;
 
-  const criticalBanner = insurClass === 'warning' && insurDays !== null
-    ? `<div class="critical-banner"><div class="cb-icon">🚨</div><div class="cb-text"><strong>CRITICAL: Insurance Expires in ${insurDays} Days — Immediate Action Required</strong><span>${insuranceComp !== '—' ? insuranceComp : 'Insurance'} expires on ${insuranceUpto}. Driving without valid insurance is a legal offence under Motor Vehicles Act.</span></div><div class="cb-tag">⚠ ACT NOW</div></div>`
-    : (insurClass === 'expired'
-      ? `<div class="critical-banner"><div class="cb-icon">🚨</div><div class="cb-text"><strong>CRITICAL: Insurance Has Expired — Vehicle Not Insured</strong><span>Insurance expired on ${insuranceUpto}. Driving an uninsured vehicle is an offence under Section 146 of the Motor Vehicles Act.</span></div><div class="cb-tag">EXPIRED</div></div>`
-      : '');
+  let pageNum = 0;
+  const pageNums = {
+    p1: ++pageNum,
+    p2: showPage2 ? ++pageNum : null,
+    p3: showPage3 ? ++pageNum : null,
+    p4: showPage4 ? ++pageNum : null,
+    p5: showPage5 ? ++pageNum : null,
+  };
+  const totalPages = pageNum;
 
-  const insurCardClass = insurClass === 'warning' || insurClass === 'expired' ? 'warn-card' : '';
-  const insurCardVal = insurDays !== null ? (insurDays < 0 ? 'EXPIRED' : `${insurDays} DAYS`) : (insuranceUpto !== '—' ? insuranceUpto : 'N/A');
-  const insurCardColor = insurClass !== 'valid' ? 'red' : '';
+  // Print bar shown at top of screen (hidden in print)
+  const printBar = `<div class="print-bar"><span>Vehicle History Report — ${regNo} &nbsp;|&nbsp; Generated ${dateStr}</span><button onclick="window.print()">🖨 Print / Save as PDF</button></div>`;
 
-  const scoreRingBg = `conic-gradient(#fbbf24 0% ${healthScore}%, rgba(255,255,255,0.14) ${healthScore}% 100%)`;
+  // ── PAGE 1: Summary ─────────────────────────────────────────────────────────
+  const vehicleTitle = (hasVal(maker) && hasVal(model)) ? `${maker} ${model}` : vehicleNumber;
+  const vehicleSub = [fuelType, bodyType, mfgYear ? String(mfgYear) : null, color].filter(v => v && hasVal(v)).join(' · ');
 
-  // Check items
-  const rcOk = rcStatus && rcStatus !== '—' && rcStatus.toUpperCase() !== 'INACTIVE';
-  const blOk = blacklist && (blacklist.toUpperCase() === 'NOT_BLACKLISTED' || blacklist.toUpperCase().includes('NOT') || blacklist === '—');
-  const loanOk = !financer || financer === '—' || financer.toUpperCase() === 'NA' || financer.toUpperCase() === 'NONE';
+  const criticalBanner = (hasRTO && insurClass === 'warning' && insurDays !== null)
+    ? `<div class="critical-banner"><div class="cb-icon">🚨</div><div class="cb-text"><strong>Insurance Expires in ${insurDays} Days — Action Required</strong><span>${hasVal(insuranceComp) ? insuranceComp : 'Insurance'} expires on ${insuranceUpto}.</span></div><div class="cb-tag">ACT NOW</div></div>`
+    : (hasRTO && insurClass === 'expired')
+    ? `<div class="critical-banner"><div class="cb-icon">🚨</div><div class="cb-text"><strong>Insurance Expired — Vehicle Not Insured</strong><span>Expired on ${insuranceUpto}. Driving an uninsured vehicle is an offence.</span></div><div class="cb-tag">EXPIRED</div></div>`
+    : '';
+
+  // Hero grid cards — only show cards with meaningful values
+  const heroCards = [
+    hasRTO && insurDays !== null
+      ? `<div class="hero-card ${insurClass !== 'valid' ? 'warn-card' : ''}"><div class="ic">🛡️</div><div class="val ${insurClass !== 'valid' ? 'red' : ''}">${insurDays < 0 ? 'EXPIRED' : `${insurDays}d`}</div><div class="lbl">Insurance</div></div>`
+      : '',
+    hasRTO && hasVal(rcStatus)
+      ? `<div class="hero-card"><div class="ic">✅</div><div class="val">${rcStatus}</div><div class="lbl">RC Status</div></div>`
+      : '',
+    hasVal(fuelType)
+      ? `<div class="hero-card"><div class="ic">⛽</div><div class="val">${fuelType.toUpperCase()}</div><div class="lbl">Fuel</div></div>`
+      : '',
+    mfgYear
+      ? `<div class="hero-card"><div class="ic">📅</div><div class="val">${mfgYear}</div><div class="lbl">Mfg. Year</div></div>`
+      : '',
+    hasChallanData
+      ? `<div class="hero-card ${pendingCount > 0 ? 'warn-card' : ''}"><div class="ic">🧾</div><div class="val ${pendingCount > 0 ? 'red' : ''}">${pendingCount > 0 ? pendingCount : 'None'}</div><div class="lbl">Pending Challans</div></div>`
+      : '',
+  ].filter(Boolean).join('');
+
+  const scoreRingBg = healthScore !== null
+    ? `conic-gradient(#fbbf24 0% ${healthScore}%, rgba(255,255,255,0.14) ${healthScore}% 100%)`
+    : 'rgba(255,255,255,0.1)';
+
+  // Health check items — only if hasRTO
+  const checkItems = hasRTO ? `
+    <div class="chk ${insurClass === 'valid' ? '' : (insurClass === 'warning' ? 'warn' : 'danger')}"><div class="ci">🛡️</div><div class="chk-txt"><div class="chk-t">Insurance</div><div class="chk-s">Expires ${insuranceUpto}</div></div><div class="chk-badge ${insurClass === 'valid' ? 'ok' : (insurClass === 'warning' ? 'warn' : 'red')}">${insurClass === 'valid' ? 'VALID' : (insurClass === 'warning' ? 'EXPIRING' : 'EXPIRED')}</div></div>
+    ${hasVal(puccUpto) ? `<div class="chk ${puccClass !== 'valid' ? 'warn' : ''}"><div class="ci">🌿</div><div class="chk-txt"><div class="chk-t">PUCC</div><div class="chk-s">Valid till ${puccUpto}</div></div><div class="chk-badge ${puccClass === 'valid' ? 'ok' : 'warn'}">${puccClass === 'valid' ? 'VALID' : 'CHECK'}</div></div>` : ''}
+    ${hasVal(rcStatus) ? `<div class="chk"><div class="ci">📋</div><div class="chk-txt"><div class="chk-t">RC Certificate</div><div class="chk-s">${rcStatus}</div></div><div class="chk-badge ok">ACTIVE</div></div>` : ''}
+    ${hasVal(taxUpto) ? `<div class="chk"><div class="ci">💰</div><div class="chk-txt"><div class="chk-t">Road Tax</div><div class="chk-s">Valid till ${taxUpto}</div></div><div class="chk-badge ok">PAID</div></div>` : ''}
+    <div class="chk ${loanOk ? '' : 'warn'}"><div class="ci">🏦</div><div class="chk-txt"><div class="chk-t">Financer / Loan</div><div class="chk-s">${loanOk ? 'No active loan on record' : financer}</div></div><div class="chk-badge ${loanOk ? 'ok' : 'warn'}">${loanOk ? 'CLEAR' : 'CHECK'}</div></div>
+    <div class="chk ${blOk ? '' : 'danger'}"><div class="ci">🚫</div><div class="chk-txt"><div class="chk-t">Blacklist</div><div class="chk-s">${blOk ? 'No adverse records' : blacklist}</div></div><div class="chk-badge ${blOk ? 'ok' : 'red'}">${blOk ? 'CLEAR' : 'LISTED'}</div></div>
+    ${hasChallanData ? (pendingCount > 0
+      ? `<div class="chk danger" style="grid-column:1/-1;"><div class="ci">🧾</div><div class="chk-txt"><div class="chk-t">${pendingCount} Pending Challan${pendingCount > 1 ? 's' : ''} — ₹${totalFine.toLocaleString('en-IN')}</div><div class="chk-s">${pendingArr.map(c => c.challan_no).filter(Boolean).join(' · ')}</div></div><div class="chk-badge red">PENDING</div></div>`
+      : `<div class="chk" style="grid-column:1/-1;"><div class="ci">🧾</div><div class="chk-txt"><div class="chk-t">No Pending Challans</div><div class="chk-s">Clean record</div></div><div class="chk-badge ok">CLEAR</div></div>`)
+    : ''}
+  ` : '';
+
+  const verdictSection = hasRTO ? `
+    <div class="verdict ${pendingCount > 0 || insurClass !== 'valid' ? 'warn-v' : 'ok-v'}">
+      <div class="verdict-icon">${pendingCount > 0 || insurClass !== 'valid' ? '⚠️' : '✅'}</div>
+      <div>
+        <h3>${pendingCount > 0 || insurClass !== 'valid' ? 'Review Recommended' : 'Vehicle Appears Clean'}</h3>
+        <p>This <strong>${vehicleTitle}</strong>${hasVal(ownerLabel) ? ` — <strong>${ownerLabel} owner</strong>` : ''}.${insurClass !== 'valid' ? ` Insurance is <strong>${insurClass === 'expired' ? 'expired' : 'expiring soon'}</strong> (${insuranceUpto}).` : ' Insurance is valid.'} ${pendingCount > 0 ? `<strong>${pendingCount} pending challan${pendingCount > 1 ? 's' : ''}</strong> totalling ₹${totalFine.toLocaleString('en-IN')}.` : 'No pending challans.'}</p>
+      </div>
+    </div>` : '';
+
+  const metricsItems = [
+    hasRTO && insurDays !== null ? `<div class="met"><div class="met-v ${insurClass !== 'valid' ? 'red' : ''}">${insurDays < 0 ? 'Expired' : `${insurDays}d`}</div><div class="met-l">Insurance Left</div></div>` : '',
+    hasVal(ownerLabel) ? `<div class="met"><div class="met-v">${ownerLabel}</div><div class="met-l">Owner</div></div>` : '',
+    hasChallanData ? `<div class="met"><div class="met-v ${pendingCount > 0 ? 'red' : ''}">${pendingCount > 0 ? pendingCount + ' Pending' : 'None'}</div><div class="met-l">Challans</div></div>` : '',
+    hasChallanData && totalFine > 0 ? `<div class="met"><div class="met-v red">₹${totalFine.toLocaleString('en-IN')}</div><div class="met-l">Fine Due</div></div>` : '',
+    hasRTO && hasVal(cubicCap) ? `<div class="met"><div class="met-v">${cubicCap} cc</div><div class="met-l">Engine</div></div>` : '',
+    hasRTO && hasVal(saleAmt) && saleAmt !== '0' ? `<div class="met"><div class="met-v">₹${parseFloat(saleAmt).toLocaleString('en-IN')}</div><div class="met-l">Sale Value</div></div>` : '',
+  ].filter(Boolean).join('');
 
   const page1 = `
 <div class="page">
-  ${header(logoUrl, `Report ID: SC-${regNo}-${now.getFullYear()}`, dateStr)}
+  ${pageHeader(logoUrl, `Report — ${regNo}`, dateStr)}
   ${criticalBanner}
   <div class="hero">
-    <div class="report-pill">🔍 &nbsp;Vehicle History Report</div>
+    <div class="report-pill">🔍 Vehicle History Report</div>
     <div class="hero-top">
       <div>
         <div class="veh-name">${vehicleTitle}</div>
-        <div class="veh-sub">${vehicleSub || 'Vehicle details from RTO database'}</div>
-        <div class="reg-plate">🚗 &nbsp;${regNo}</div>
+        ${vehicleSub ? `<div class="veh-sub">${vehicleSub}</div>` : ''}
+        <div class="reg-plate">🚗 ${regNo}</div>
       </div>
-      <div class="owner-count-badge">
-        <div class="owner-count-num">${ownerLabel}</div>
-        <div class="owner-count-lbl">Owner</div>
-        <div style="font-size:9px;opacity:0.7;margin-top:3px;">${ownerSr !== '—' && parseInt(ownerSr) > 1 ? (parseInt(ownerSr)-1)+' prev. owners' : 'First owner'}</div>
-      </div>
+      ${hasVal(ownerLabel) ? `<div class="owner-count-badge"><div class="owner-count-num">${ownerLabel}</div><div class="owner-count-lbl">Owner</div></div>` : ''}
     </div>
-    <div class="hero-grid">
-      <div class="hero-card ${insurCardClass}"><div class="ic">🛡️</div><div class="val ${insurCardColor}">${insurCardVal}</div><div class="lbl">Insurance</div></div>
-      <div class="hero-card"><div class="ic">✅</div><div class="val">${rcStatus !== '—' ? rcStatus : 'N/A'}</div><div class="lbl">RC Status</div></div>
-      <div class="hero-card"><div class="ic">⛽</div><div class="val">${fuelType !== '—' ? fuelType.toUpperCase() : 'N/A'}</div><div class="lbl">Fuel Type</div></div>
-      <div class="hero-card"><div class="ic">📅</div><div class="val">${mfgYear !== '—' ? mfgYear : 'N/A'}</div><div class="lbl">Mfg. Year</div></div>
-    </div>
+    ${heroCards ? `<div class="hero-grid">${heroCards}</div>` : ''}
   </div>
   ${hasRTO ? `
   <div class="score-wrap">
@@ -464,300 +592,293 @@ export function generateVehicleReportHTML({ vehicleNumber, rtoData, challanData,
         <div class="score-inner"><div class="score-num">${healthScore}</div></div>
       </div>
       <div class="score-title">${scoreLabel}</div>
-      <div class="score-sub">${insurClass !== 'valid' ? 'Insurance critical · ' : ''}${ownerSr !== '—' && parseInt(ownerSr) >= 3 ? ownerLabel+' owner · ' : ''}${normsDesc !== '—' ? normsDesc : ''}</div>
       <div class="grade-chip">Grade: ${healthGrade}</div>
     </div>
-    <div class="checks-grid">
-      <div class="chk ${insurClass === 'valid' ? '' : (insurClass === 'warning' ? 'warn' : 'danger')}"><div class="ci">🛡️</div><div class="chk-txt"><div class="chk-t">Insurance</div><div class="chk-s">Expires ${insuranceUpto}</div></div><div class="chk-badge ${insurClass === 'valid' ? 'ok' : (insurClass === 'warning' ? 'warn' : 'red')}">${insurClass === 'valid' ? 'VALID' : (insurClass === 'warning' ? 'EXPIRING' : 'EXPIRED')}</div></div>
-      <div class="chk ${puccClass !== 'valid' ? 'warn' : ''}"><div class="ci">🌿</div><div class="chk-txt"><div class="chk-t">PUCC Certificate</div><div class="chk-s">Valid till ${puccUpto}</div></div><div class="chk-badge ${puccClass === 'valid' ? 'ok' : 'warn'}">${puccClass === 'valid' ? 'VALID' : 'CHECK'}</div></div>
-      <div class="chk"><div class="ci">📋</div><div class="chk-txt"><div class="chk-t">RC Certificate</div><div class="chk-s">${rcStatus !== '—' ? rcStatus : 'Active'}</div></div><div class="chk-badge ok">ACTIVE</div></div>
-      <div class="chk"><div class="ci">💰</div><div class="chk-txt"><div class="chk-t">Road Tax</div><div class="chk-s">Valid till ${taxUpto}</div></div><div class="chk-badge ok">PAID</div></div>
-      <div class="chk ${loanOk ? '' : 'warn'}"><div class="ci">🏦</div><div class="chk-txt"><div class="chk-t">Financer / Loan</div><div class="chk-s">${loanOk ? 'No active loan on record' : financer}</div></div><div class="chk-badge ${loanOk ? 'ok' : 'warn'}">${loanOk ? 'CLEAR' : 'CHECK'}</div></div>
-      <div class="chk ${blOk ? '' : 'danger'}"><div class="ci">🚫</div><div class="chk-txt"><div class="chk-t">Blacklist Status</div><div class="chk-s">${blOk ? 'No adverse records' : blacklist}</div></div><div class="chk-badge ${blOk ? 'ok' : 'red'}">${blOk ? 'CLEAR' : 'LISTED'}</div></div>
-      ${pendingCount > 0 ? `<div class="chk danger" style="grid-column:1/-1;"><div class="ci">🧾</div><div class="chk-txt"><div class="chk-t">${pendingCount} Pending Challan${pendingCount > 1 ? 's' : ''} — ₹${totalFine.toLocaleString('en-IN')} Total Fine</div><div class="chk-s">${pendingArr.map(c => c.challan_no || '').filter(Boolean).join(' · ')}</div></div><div class="chk-badge red">PENDING</div></div>` : `<div class="chk" style="grid-column:1/-1;"><div class="ci">🧾</div><div class="chk-txt"><div class="chk-t">No Pending Challans</div><div class="chk-s">${challanStatus === 'no_challans' ? 'No challans issued on this vehicle' : challanStatus === 'failed' ? 'Challan data unavailable' : 'Clean record'}</div></div><div class="chk-badge ok">CLEAR</div></div>`}
-    </div>
+    <div class="checks-grid">${checkItems}</div>
   </div>
-  <div class="verdict ${pendingCount > 0 || insurClass !== 'valid' ? 'warn-v' : 'ok-v'}">
-    <div class="verdict-icon">${pendingCount > 0 || insurClass !== 'valid' ? '⚠️' : '✅'}</div>
-    <div>
-      <h3>${pendingCount > 0 || insurClass !== 'valid' ? 'Review Recommended — Verify Before Purchase' : 'Vehicle Appears Clean — Verify Physical Condition'}</h3>
-      <p>This <strong>${vehicleTitle}</strong> is currently with its <strong>${ownerLabel} owner</strong>.${insurClass !== 'valid' ? ` Insurance is <strong>${insurClass === 'expired' ? 'expired' : 'expiring soon'}</strong> (${insuranceUpto}).` : ' Insurance is valid.'} ${pendingCount > 0 ? `There ${pendingCount === 1 ? 'is' : 'are'} <strong>${pendingCount} pending challan${pendingCount > 1 ? 's' : ''}</strong> totalling ₹${totalFine.toLocaleString('en-IN')}.` : 'No pending challans found.'} A physical inspection is always recommended.</p>
-    </div>
+  ${verdictSection}
+  ${metricsItems ? `<div class="metrics">${metricsItems}</div>` : ''}
+  ` : `
+  <div class="cs">
+    ${naBox('🚗', 'RTO Data Not Available', `Registration details for ${vehicleNumber} could not be fetched from the RTO database.`)}
+    ${hasChallanData && challanCards.length > 0 ? `
+      <div style="margin-top:16px;">
+        <div class="sec-hdr" style="margin:0 -32px 14px;padding:11px 32px;">🧾 Challan Summary</div>
+        <div class="checks-grid">
+          <div class="chk ${pendingCount > 0 ? 'danger' : ''}"><div class="ci">⏳</div><div class="chk-txt"><div class="chk-t">${pendingCount} Pending</div><div class="chk-s">₹${totalFine.toLocaleString('en-IN')} due</div></div><div class="chk-badge ${pendingCount > 0 ? 'red' : 'ok'}">${pendingCount > 0 ? 'ACTION' : 'CLEAR'}</div></div>
+          <div class="chk"><div class="ci">✅</div><div class="chk-txt"><div class="chk-t">${disposedCount} Disposed</div><div class="chk-s">Resolved challans</div></div><div class="chk-badge ok">DONE</div></div>
+        </div>
+      </div>` : (hasChallanData ? `<div style="margin-top:12px;">${naBox('🧾', 'No Challans Found', `${vehicleNumber} has no challan records on file.`)}</div>` : `<div style="margin-top:12px;">${naBox('🧾', 'Challan Data Not Available', 'Could not fetch challan records at this time.')}</div>`)}
   </div>
-  <div class="metrics">
-    <div class="met"><div class="met-v ${insurClass !== 'valid' ? 'red' : ''}">${insurDays !== null ? (insurDays < 0 ? 'Expired' : `${insurDays} Days`) : 'N/A'}</div><div class="met-l">Insurance Left</div></div>
-    <div class="met"><div class="met-v">${ownerLabel}</div><div class="met-l">Owner Count</div></div>
-    <div class="met"><div class="met-v ${pendingCount > 0 ? 'red' : ''}">${pendingCount > 0 ? pendingCount+' Pending' : 'None'}</div><div class="met-l">Challans</div></div>
-    <div class="met"><div class="met-v ${pendingCount > 0 ? 'red' : ''}">₹${totalFine > 0 ? totalFine.toLocaleString('en-IN') : '0'}</div><div class="met-l">Fine Due</div></div>
-    <div class="met"><div class="met-v">${cubicCap !== '—' ? cubicCap+' cc' : normsDesc !== '—' ? normsDesc : 'N/A'}</div><div class="met-l">Engine</div></div>
-    <div class="met"><div class="met-v">${saleAmt !== '—' && saleAmt !== '0' ? '₹'+parseFloat(saleAmt).toLocaleString('en-IN') : 'N/A'}</div><div class="met-l">Sale Value</div></div>
-  </div>
-  ` : notAvailableBox('🚗', 'RTO Data Not Available', `Vehicle details for ${vehicleNumber} could not be fetched from the RTO database at this time.`)}
-  ${footer(1, totalPages)}
+  `}
+  ${pageFooter(pageNums.p1, totalPages)}
 </div>`;
 
-  // ── PAGE 2: Ownership & Registration ─────────────────────────────────────
-  const ownerNum = parseInt(ownerSr, 10) || 1;
-  const ownerColors = ['on-1','on-2','on-3','on-4','on-5'];
-  const ownerRows = hasRTO ? Array.from({ length: ownerNum }, (_, i) => {
-    const isLast = i === ownerNum - 1;
-    const num = i + 1;
-    const colorCls = ownerColors[Math.min(i, 4)];
-    const nameDisplay = isLast ? ownerName : `Owner ${num}`;
-    return `<tr class="${isLast ? 'current-owner' : 'prev-owner'}">
-      <td><div class="owner-num ${colorCls}">${num}</div></td>
-      <td><div class="owner-name-cell"><div><div class="owner-name-text" style="${isLast ? 'color:#1b5e20;' : ''}">${nameDisplay}</div><div class="owner-type-lbl" style="${isLast ? 'color:#2e7d32;font-weight:600;' : ''}">${isLast ? `${ownerSuffix(num)} owner — Current Owner` : `${ownerSuffix(num)} owner`}</div></div></div></td>
-      <td style="font-size:11px;color:#475569;">${registeredAt !== '—' ? registeredAt : '—'}</td>
-      <td><span class="badge badge-b">${regNo.substring(0,2)}</span></td>
-      <td><span class="oh-status ${isLast ? 'oh-current' : 'oh-previous'}">${isLast ? '✅ Current' : '👤 Previous'}</span></td>
-    </tr>`;
-  }).join('') : '';
+  // ── PAGE 2: Ownership & Registration ────────────────────────────────────────
+  let page2 = '';
+  if (showPage2) {
+    const ownerNum = parseInt(ownerSr, 10) || 1;
+    const ownerColors = ['on-1', 'on-2', 'on-3', 'on-4', 'on-5'];
+    const ownerRows = Array.from({ length: ownerNum }, (_, i) => {
+      const isLast = i === ownerNum - 1;
+      const num = i + 1;
+      const colorCls = ownerColors[Math.min(i, 4)];
+      const nameDisplay = isLast ? (hasVal(ownerName) ? ownerName : 'Current Owner') : `Owner ${num}`;
+      return `<tr class="${isLast ? 'current-owner' : 'prev-owner'}">
+        <td><div class="owner-num ${colorCls}">${num}</div></td>
+        <td><div><div class="owner-name-text" style="${isLast ? 'color:#1b5e20;' : ''}">${nameDisplay}</div><div class="owner-type-lbl">${ownerSuffix(num)} owner${isLast ? ' — Current' : ''}</div></div></td>
+        <td style="font-size:11px;color:#475569;">${hasVal(registeredAt) ? registeredAt : '—'}</td>
+        <td><span class="badge badge-b">${regNo.substring(0, 2)}</span></td>
+        <td><span class="oh-status ${isLast ? 'oh-current' : 'oh-previous'}">${isLast ? '✅ Current' : '👤 Previous'}</span></td>
+      </tr>`;
+    }).join('');
 
-  const page2 = `
+    const regInfoRows = [
+      icard('🔢 Registration No.', regNo, 'blue'),
+      icard('📅 Registration Date', regDate),
+      icard('🏛️ Registered At', registeredAt),
+      icard('✅ RC Status', hasVal(rcStatus) ? `<span class="badge badge-g">● ${rcStatus}</span>` : null),
+      icard('🏦 Financer', loanOk ? '<span style="color:#2e7d32;">None (Loan Cleared)</span>' : `<span style="color:#c62828;">${financer}</span>`),
+      icard('📍 Address', hasVal(presentAddress) ? `<span style="font-size:11px;">${presentAddress}</span>` : null),
+    ].filter(Boolean).join('');
+
+    page2 = `
 <div class="page">
-  ${header(logoUrl, `${regNo} — Ownership History`, dateStr)}
-  <div class="sec-hdr">👥 Ownership History${hasRTO ? ` — ${ownerLabel} Owner` : ''}</div>
+  ${pageHeader(logoUrl, `${regNo} — Ownership & Registration`, dateStr)}
+  <div class="sec-hdr">👥 Ownership History — ${ownerLabel} Owner</div>
   <div class="cs">
-    ${hasRTO ? `
     <div class="owner-summary">
       <div class="os-card ${ownerNum >= 4 ? 'red' : ownerNum >= 2 ? 'orange' : 'blue'}">
-        <div class="os-icon">👥</div><div class="os-val">${ownerNum}</div><div class="os-lbl">Total Owners on Record</div>
+        <div class="os-icon">👥</div><div class="os-val">${ownerNum}</div><div class="os-lbl">Total Owners</div>
       </div>
-      <div class="os-card blue">
-        <div class="os-icon">📅</div><div class="os-val">${regDate}</div><div class="os-lbl">Registration Date</div>
-      </div>
-      <div class="os-card blue">
-        <div class="os-icon">🏛️</div><div class="os-val" style="font-size:14px;">${registeredAt !== '—' ? registeredAt : 'RTO Office'}</div><div class="os-lbl">Registered At</div>
-      </div>
+      ${hasVal(regDate) ? `<div class="os-card blue"><div class="os-icon">📅</div><div class="os-val" style="font-size:14px;">${regDate}</div><div class="os-lbl">Registration Date</div></div>` : ''}
+      ${hasVal(registeredAt) ? `<div class="os-card blue"><div class="os-icon">🏛️</div><div class="os-val" style="font-size:14px;">${registeredAt}</div><div class="os-lbl">Registered At</div></div>` : ''}
     </div>
     <table class="oh-table" style="margin-bottom:16px;">
       <thead><tr><th style="width:44px;">#</th><th>Owner</th><th>RTO</th><th>State</th><th>Status</th></tr></thead>
       <tbody>${ownerRows}</tbody>
     </table>
-    ${ownerNum >= 3 ? `<div class="alert warn"><div class="alert-ic">⚠️</div><div><h4>Multiple Ownership — Buyer Advisory</h4><p>A vehicle with ${ownerNum} owners may indicate frequent reselling. We recommend a certified pre-purchase inspection before any transaction.</p></div></div>` : ''}
-    ` : notAvailableBox('👥', 'Ownership History Not Available', 'RTO data could not be fetched. Ownership history is unavailable.')}
+    ${ownerNum >= 3 ? `<div class="alert warn"><div class="alert-ic">⚠️</div><div><h4>Multiple Ownership — Buyer Advisory</h4><p>This vehicle has ${ownerNum} owners. We recommend a certified pre-purchase inspection.</p></div></div>` : ''}
   </div>
+  ${regInfoRows ? `
   <div class="sec-hdr">📋 Registration Details</div>
   <div class="cs" style="padding-top:14px;padding-bottom:10px;">
-    ${hasRTO ? `
-    <div class="info-grid" style="grid-template-columns:repeat(3,1fr);">
-      <div class="icard"><div class="icard-lbl">🔢 Registration No.</div><div class="icard-val blue">${regNo}</div></div>
-      <div class="icard"><div class="icard-lbl">📅 Registration Date</div><div class="icard-val">${regDate}</div></div>
-      <div class="icard"><div class="icard-lbl">🏛️ Registered At</div><div class="icard-val">${registeredAt}</div></div>
-      <div class="icard"><div class="icard-lbl">✅ RC Status</div><div class="icard-val"><span class="badge badge-g">● ${rcStatus !== '—' ? rcStatus : 'ACTIVE'}</span></div></div>
-      <div class="icard"><div class="icard-lbl">🏦 Financer</div><div class="icard-val ${loanOk ? 'green' : 'red'}">${loanOk ? 'None (Loan Cleared)' : financer}</div></div>
-      <div class="icard"><div class="icard-lbl">📍 Address</div><div class="icard-val" style="font-size:11px;">${presentAddress !== '—' ? presentAddress : '—'}</div></div>
-    </div>` : notAvailableBox('📋', 'Registration Details Not Available', 'RTO database did not return registration information.')}
-  </div>
-  ${footer(2, totalPages)}
+    <div class="info-grid col3">${regInfoRows}</div>
+  </div>` : ''}
+  ${pageFooter(pageNums.p2, totalPages)}
 </div>`;
-
-  // ── PAGE 3: Specifications ────────────────────────────────────────────────
-  const page3 = `
-<div class="page">
-  ${header(logoUrl, `${regNo} — Vehicle Specifications`, dateStr)}
-  <div class="sec-hdr">⚙️ Vehicle Specifications &amp; Technical Data</div>
-  <div class="cs">
-    ${hasRTO ? `
-    <div class="spec-grid8">
-      <div class="spec-card"><div class="spec-ic">🔧</div><div class="spec-lbl">Engine</div><div class="spec-val">${cubicCap !== '—' ? cubicCap : '—'}</div><div class="spec-unit">cc</div></div>
-      <div class="spec-card g"><div class="spec-ic">🔩</div><div class="spec-lbl">Cylinders</div><div class="spec-val">${cylinders !== '—' ? cylinders : '—'}</div><div class="spec-unit">In-Line</div></div>
-      <div class="spec-card o"><div class="spec-ic">💺</div><div class="spec-lbl">Seating</div><div class="spec-val">${seatCap !== '—' ? seatCap : '—'}</div><div class="spec-unit">Persons</div></div>
-      <div class="spec-card p"><div class="spec-ic">⚖️</div><div class="spec-lbl">Unladen Wt.</div><div class="spec-val">${unldWt !== '—' ? unldWt : '—'}</div><div class="spec-unit">kg</div></div>
-      <div class="spec-card"><div class="spec-ic">🚛</div><div class="spec-lbl">Gross Wt.</div><div class="spec-val">${gvw !== '—' ? gvw : '—'}</div><div class="spec-unit">kg</div></div>
-      <div class="spec-card g"><div class="spec-ic">⛽</div><div class="spec-lbl">Fuel</div><div class="spec-val" style="font-size:11px;">${fuelType !== '—' ? fuelType.toUpperCase() : '—'}</div><div class="spec-unit">Type</div></div>
-      <div class="spec-card o"><div class="spec-ic">🏷️</div><div class="spec-lbl">Body Type</div><div class="spec-val" style="font-size:11px;">${bodyType !== '—' ? bodyType.toUpperCase() : '—'}</div><div class="spec-unit">Category</div></div>
-      <div class="spec-card p"><div class="spec-ic">🌱</div><div class="spec-lbl">Emission</div><div class="spec-val" style="font-size:11px;">${normsDesc !== '—' ? normsDesc.toUpperCase() : '—'}</div><div class="spec-unit">Norm</div></div>
-    </div>
-    <div class="two-col">
-      <div class="stbl">
-        <div class="stbl-hdr">🔧 Engine &amp; Performance</div>
-        <div class="srow"><div class="srow-lbl">Manufacturer</div><div class="srow-val">${maker}</div></div>
-        <div class="srow"><div class="srow-lbl">Model</div><div class="srow-val">${model}</div></div>
-        <div class="srow"><div class="srow-lbl">Engine Capacity</div><div class="srow-val">${cubicCap !== '—' ? cubicCap+' cc' : '—'}</div></div>
-        <div class="srow"><div class="srow-lbl">Cylinders</div><div class="srow-val">${cylinders}</div></div>
-        <div class="srow"><div class="srow-lbl">Fuel Type</div><div class="srow-val">${fuelType}</div></div>
-        <div class="srow"><div class="srow-lbl">Engine No.</div><div class="srow-val" style="font-family:monospace;font-size:10px;">${engineNo}</div></div>
-        <div class="srow"><div class="srow-lbl">Emission Norm</div><div class="srow-val ${normsDesc && (normsDesc.includes('III') || normsDesc.includes('II') || normsDesc.includes('I')) ? 'red' : ''}">${normsDesc}</div></div>
-        <div class="srow"><div class="srow-lbl">Mfg. Year</div><div class="srow-val">${mfgYear}</div></div>
-      </div>
-      <div class="stbl">
-        <div class="stbl-hdr">🚗 Physical &amp; Classification</div>
-        <div class="srow"><div class="srow-lbl">Body Type</div><div class="srow-val">${bodyType}</div></div>
-        <div class="srow"><div class="srow-lbl">Vehicle Class</div><div class="srow-val">${vehicleClass}</div></div>
-        <div class="srow"><div class="srow-lbl">Unladen Weight</div><div class="srow-val">${unldWt !== '—' ? unldWt+' kg' : '—'}</div></div>
-        <div class="srow"><div class="srow-lbl">Gross Vehicle Wt.</div><div class="srow-val">${gvw !== '—' ? gvw+' kg' : '—'}</div></div>
-        <div class="srow"><div class="srow-lbl">Seating Capacity</div><div class="srow-val">${seatCap !== '—' ? seatCap+' Persons' : '—'}</div></div>
-        <div class="srow"><div class="srow-lbl">Colour</div><div class="srow-val">${color}</div></div>
-        <div class="srow"><div class="srow-lbl">Tax Mode</div><div class="srow-val">${taxMode}</div></div>
-        <div class="srow"><div class="srow-lbl">Chassis No.</div><div class="srow-val" style="font-family:monospace;font-size:10px;">${chassisNo}</div></div>
-      </div>
-    </div>
-    ` : notAvailableBox('⚙️', 'Technical Specifications Not Available', 'RTO data could not be fetched. Vehicle specifications are unavailable.')}
-  </div>
-  ${footer(3, totalPages)}
-</div>`;
-
-  // ── PAGE 4: Legal & Compliance ────────────────────────────────────────────
-  const challanCards = [...pendingArr.map(c => ({ ...c, _type: 'pending' })), ...disposedArr.map(c => ({ ...c, _type: 'disposed' }))];
-
-  function challanCard(c, idx) {
-    const isPending = c._type === 'pending' || String(c.challan_status || '').toLowerCase() !== 'disposed';
-    const offences = Array.isArray(c.offence_details) ? c.offence_details : (c.offence_details ? [c.offence_details] : []);
-    return `<div class="challan-card">
-      <div class="challan-header">
-        <div class="challan-header-left">
-          <h3>🧾 Challan #${idx+1}${c.challan_no ? ' — ' + c.challan_no : ''}</h3>
-          <p>${c.challan_date_time || ''} ${c.challan_place ? ' · ' + c.challan_place : ''} ${c.department ? ' · Dept: ' + c.department : ''}</p>
-        </div>
-        <div class="challan-status-pill${isPending ? '' : ' disposed'}">${isPending ? '⏳ PENDING' : '✅ DISPOSED'}</div>
-      </div>
-      <div class="challan-body">
-        <div class="challan-meta">
-          <div class="cm-item"><div class="cm-label">📅 Date &amp; Time</div><div class="cm-value">${c.challan_date_time || '—'}</div></div>
-          <div class="cm-item"><div class="cm-label">📍 Location</div><div class="cm-value">${c.challan_place || '—'}</div></div>
-          <div class="cm-item"><div class="cm-label">💰 Fine Imposed</div><div class="cm-value ${isPending ? 'red' : ''}">₹ ${c.fine_imposed ? parseFloat(c.fine_imposed).toLocaleString('en-IN') : '—'}</div></div>
-          <div class="cm-item"><div class="cm-label">👤 Violator</div><div class="cm-value">${c.name_of_violator || c.driver_name || '—'}</div></div>
-          <div class="cm-item"><div class="cm-label">🏛️ Status</div><div class="cm-value ${isPending ? 'red' : ''}">${isPending ? 'PENDING' : 'DISPOSED'}</div></div>
-          <div class="cm-item"><div class="cm-label">⚖️ RTO District</div><div class="cm-value">${c.rto_distric_name || c.state_code || '—'}</div></div>
-        </div>
-        ${offences.length > 0 ? `<div class="offence-list"><h4>⚠ Offences Recorded</h4>${offences.map(o => `<div class="offence-item"><span class="offence-act">${typeof o === 'object' ? (o.act_section || 'Act') : 'Offence'}</span><span class="offence-name">${typeof o === 'object' ? (o.offence_name || JSON.stringify(o)) : String(o)}</span></div>`).join('')}</div>` : (c.remark ? `<div class="offence-list"><h4>⚠ Remark</h4><div class="offence-item"><span class="offence-name">${c.remark}</span></div></div>` : '')}
-        ${c.court_name ? `<div style="background:#f8fafc;border-radius:7px;padding:9px 12px;border:1px solid #e2e8f0;margin-top:10px;font-size:11px;"><strong>⚖️ ${c.court_name}</strong>${c.court_address ? ' · ' + c.court_address : ''}</div>` : ''}
-      </div>
-    </div>`;
   }
 
-  const page4 = `
-<div class="page">
-  ${header(logoUrl, `${regNo} — Legal &amp; Compliance`, dateStr)}
-  <div class="sec-hdr ${pendingCount > 0 || insurClass !== 'valid' ? 'danger' : ''}">🚨 Legal &amp; Compliance Status${pendingCount > 0 || insurClass !== 'valid' ? ' — Action Required' : ' — All Clear'}</div>
-  <div class="cs">
-    ${hasRTO ? `
-    <div class="comp-grid">
-      <div class="comp-card">
-        <div class="comp-hdr ${insurClass === 'valid' ? 'active' : 'danger'}"><div class="comp-ic">🛡️</div><div><div>Insurance</div><div class="comp-status-lbl">${insurClass === 'valid' ? '● Valid' : insurClass === 'warning' ? `🚨 ${insurDays} days left` : '❌ Expired'}</div></div></div>
-        <div class="comp-body">
-          <div class="comp-lbl">Company</div><div class="comp-val" style="font-size:11px;">${insuranceComp}</div>
-          <div class="comp-lbl">Policy No.</div><div class="comp-val sm">${insurancePolicyNo}</div>
-          <div class="comp-lbl">Expires</div><div class="comp-val ${insurClass !== 'valid' ? 'red' : ''}">${insuranceUpto}</div>
-          <div class="vbar"><div class="vbar-fill ${insurClass !== 'valid' ? 'red' : ''}" style="width:${pct(insurDays)}%;"></div></div>
-          <div class="vbar-days ${insurClass !== 'valid' ? 'red' : ''}">${insurDays !== null ? (insurDays < 0 ? `⚠ Expired ${Math.abs(insurDays)} days ago` : `${insurDays} days remaining`) : '—'}</div>
-        </div>
-      </div>
-      <div class="comp-card">
-        <div class="comp-hdr ${puccClass === 'valid' ? 'active' : 'warn'}"><div class="comp-ic">🌿</div><div><div>PUCC Certificate</div><div class="comp-status-lbl">${puccClass === 'valid' ? '● Valid' : '⚠ Check'}</div></div></div>
-        <div class="comp-body">
-          <div class="comp-lbl">PUCC No.</div><div class="comp-val sm">${puccNo}</div>
-          <div class="comp-lbl">Valid Upto</div><div class="comp-val">${puccUpto}</div>
-          <div class="vbar"><div class="vbar-fill ${puccClass !== 'valid' ? 'orange' : ''}" style="width:${pct(puccDays, 180)}%;"></div></div>
-          <div class="vbar-days ${puccClass !== 'valid' ? 'red' : ''}">${puccDays !== null ? (puccDays < 0 ? `⚠ Expired` : `~${puccDays} days remaining`) : '—'}</div>
-        </div>
-      </div>
-      <div class="comp-card">
-        <div class="comp-hdr active"><div class="comp-ic">📋</div><div><div>RC Certificate</div><div class="comp-status-lbl">● ${rcStatus !== '—' ? rcStatus : 'Active'}</div></div></div>
-        <div class="comp-body">
-          <div class="comp-lbl">Registration No.</div><div class="comp-val" style="font-size:14px;letter-spacing:1px;">${regNo}</div>
-          <div class="comp-lbl">RTO</div><div class="comp-val">${registeredAt}</div>
-          <div class="comp-lbl">Status</div><div class="comp-val">${rcStatus !== '—' ? rcStatus : 'ACTIVE'}</div>
-          <div class="vbar"><div class="vbar-fill" style="width:80%;"></div></div>
-        </div>
-      </div>
-      <div class="comp-card">
-        <div class="comp-hdr active"><div class="comp-ic">💰</div><div><div>Road Tax</div><div class="comp-status-lbl">● Paid</div></div></div>
-        <div class="comp-body">
-          <div class="comp-lbl">Tax Mode</div><div class="comp-val">${taxMode !== '—' ? taxMode : 'N/A'}</div>
-          <div class="comp-lbl">Valid Upto</div><div class="comp-val">${taxUpto}</div>
-          <div class="vbar"><div class="vbar-fill" style="width:${pct(taxDays)}%;"></div></div>
-          <div class="vbar-days">${taxDays !== null ? `~${taxDays} days remaining` : '—'}</div>
-        </div>
-      </div>
-      <div class="comp-card">
-        <div class="comp-hdr active"><div class="comp-ic">🔧</div><div><div>Fitness Certificate</div><div class="comp-status-lbl">● Valid</div></div></div>
-        <div class="comp-body">
-          <div class="comp-lbl">Fitness Upto</div><div class="comp-val">${fitUpto}</div>
-          <div class="vbar"><div class="vbar-fill" style="width:${pct(fitDays)}%;"></div></div>
-          <div class="vbar-days">${fitDays !== null ? `~${fitDays} days remaining` : '—'}</div>
-        </div>
-      </div>
-      <div class="comp-card">
-        <div class="comp-hdr ${blOk ? 'active' : 'danger'}"><div class="comp-ic">🚫</div><div><div>Blacklist Status</div><div class="comp-status-lbl">${blOk ? '● Clear' : '❌ Check'}</div></div></div>
-        <div class="comp-body">
-          <div class="comp-lbl">Status</div><div class="comp-val ${blOk ? '' : 'red'}">${blacklist !== '—' ? blacklist : (blOk ? 'NOT BLACKLISTED' : 'CHECK WITH RTO')}</div>
-        </div>
-      </div>
-    </div>
-    ` : notAvailableBox('📋', 'Compliance Data Not Available', 'RTO data could not be fetched.')}
-    ${hasChallan ? (challanCards.length > 0 ? challanCards.map((c, i) => challanCard(c, i)).join('') : `<div class="bl-banner"><div class="bl-ic">🏆</div><div class="bl-text" style="flex:1;"><h3>No Challans Found — Clean Record</h3><p>${regNo} has no pending or disposed challans on record.</p></div><div class="bl-tag">✓ CLEAN</div></div>`) : notAvailableBox('🧾', 'Challan Data Not Available', 'Challan records could not be fetched from the eChallan system.')}
-    ${insurClass === 'warning' ? `<div class="alert danger"><div class="alert-ic">🚨</div><div><h4>URGENT: Insurance Renewal Due in ${insurDays} Days — ${insuranceUpto}</h4><p>Renew insurance immediately to avoid legal penalties under Section 146 of the Motor Vehicles Act.</p></div></div>` : ''}
-    ${puccClass !== 'valid' && puccDays !== null ? `<div class="alert warn"><div class="alert-ic">⚠️</div><div><h4>PUCC Renewal Required</h4><p>Pollution Under Control Certificate ${puccDays < 0 ? 'has expired' : `expires on ${puccUpto}`}. Schedule a PUCC check at an authorised testing centre.</p></div></div>` : ''}
-  </div>
-  ${footer(4, totalPages)}
-</div>`;
+  // ── PAGE 3: Specifications ───────────────────────────────────────────────────
+  let page3 = '';
+  if (showPage3) {
+    const specCards = [
+      hasVal(cubicCap) ? `<div class="spec-card"><div class="spec-ic">🔧</div><div class="spec-lbl">Engine</div><div class="spec-val">${cubicCap}</div><div class="spec-unit">cc</div></div>` : '',
+      hasVal(cylinders) ? `<div class="spec-card g"><div class="spec-ic">🔩</div><div class="spec-lbl">Cylinders</div><div class="spec-val">${cylinders}</div><div class="spec-unit">In-Line</div></div>` : '',
+      hasVal(seatCap) ? `<div class="spec-card o"><div class="spec-ic">💺</div><div class="spec-lbl">Seating</div><div class="spec-val">${seatCap}</div><div class="spec-unit">Persons</div></div>` : '',
+      hasVal(unldWt) ? `<div class="spec-card p"><div class="spec-ic">⚖️</div><div class="spec-lbl">Unladen Wt.</div><div class="spec-val">${unldWt}</div><div class="spec-unit">kg</div></div>` : '',
+      hasVal(gvw) ? `<div class="spec-card"><div class="spec-ic">🚛</div><div class="spec-lbl">Gross Wt.</div><div class="spec-val">${gvw}</div><div class="spec-unit">kg</div></div>` : '',
+      hasVal(fuelType) ? `<div class="spec-card g"><div class="spec-ic">⛽</div><div class="spec-lbl">Fuel</div><div class="spec-val" style="font-size:11px;">${fuelType.toUpperCase()}</div><div class="spec-unit">Type</div></div>` : '',
+      hasVal(bodyType) ? `<div class="spec-card o"><div class="spec-ic">🏷️</div><div class="spec-lbl">Body</div><div class="spec-val" style="font-size:11px;">${bodyType.toUpperCase()}</div><div class="spec-unit">Type</div></div>` : '',
+      hasVal(normsDesc) ? `<div class="spec-card p"><div class="spec-ic">🌱</div><div class="spec-lbl">Emission</div><div class="spec-val" style="font-size:11px;">${normsDesc.toUpperCase()}</div><div class="spec-unit">Norm</div></div>` : '',
+    ].filter(Boolean).join('');
 
-  // ── PAGE 5: Financial & Summary ───────────────────────────────────────────
-  const page5 = `
+    const engineRows = [
+      srow('Manufacturer', maker),
+      srow('Model', model),
+      srow('Engine Capacity', hasVal(cubicCap) ? cubicCap + ' cc' : null),
+      srow('Cylinders', cylinders),
+      srow('Fuel Type', fuelType),
+      srow('Engine No.', engineNo),
+      srow('Emission Norm', normsDesc, (hasVal(normsDesc) && (normsDesc.includes('III') || normsDesc.includes('II') || normsDesc.includes('I'))) ? 'red' : ''),
+      srow('Mfg. Year', mfgYear ? String(mfgYear) : null),
+    ].filter(Boolean).join('');
+
+    const physicalRows = [
+      srow('Body Type', bodyType),
+      srow('Vehicle Class', vehicleClass),
+      srow('Unladen Weight', hasVal(unldWt) ? unldWt + ' kg' : null),
+      srow('Gross Vehicle Wt.', hasVal(gvw) ? gvw + ' kg' : null),
+      srow('Seating Capacity', hasVal(seatCap) ? seatCap + ' Persons' : null),
+      srow('Colour', color),
+      srow('Tax Mode', taxMode),
+      srow('Chassis No.', chassisNo),
+    ].filter(Boolean).join('');
+
+    const identityRows = [
+      srow('Registration No.', regNo),
+      srow('Chassis No.', chassisNo),
+      srow('Engine No.', engineNo),
+    ].filter(Boolean).join('');
+
+    const hasTwoColContent = engineRows || physicalRows;
+
+    page3 = `
 <div class="page">
-  ${header(logoUrl, `${regNo} — Financial Details &amp; Summary`, dateStr)}
+  ${pageHeader(logoUrl, `${regNo} — Specifications`, dateStr)}
+  <div class="sec-hdr">⚙️ Vehicle Specifications &amp; Technical Data</div>
+  <div class="cs">
+    ${specCards ? `<div class="spec-grid8">${specCards}</div>` : naBox('⚙️', 'Technical Data Not Available', 'Specification data was not returned by the RTO database.')}
+    ${hasTwoColContent ? `<div class="two-col">
+      ${stbl('🔧', 'Engine &amp; Performance', engineRows)}
+      ${stbl('🚗', 'Physical &amp; Classification', physicalRows)}
+    </div>` : ''}
+    ${identityRows ? stbl('🔑', 'Identity Numbers', identityRows) : ''}
+  </div>
+  ${pageFooter(pageNums.p3, totalPages)}
+</div>`;
+  }
+
+  // ── PAGE 4: Legal & Compliance ───────────────────────────────────────────────
+  let page4 = '';
+  if (showPage4) {
+    const compCards = hasRTO ? [
+      // Insurance — only if we have some data
+      (hasVal(insuranceUpto) || hasVal(insuranceComp)) ? `
+        <div class="comp-card">
+          <div class="comp-hdr ${insurClass === 'valid' ? 'active' : 'danger'}"><div class="comp-ic">🛡️</div><div><div>Insurance</div><div class="comp-status-lbl">${insurClass === 'valid' ? '● Valid' : insurClass === 'warning' ? `🚨 ${insurDays}d left` : '❌ Expired'}</div></div></div>
+          <div class="comp-body">
+            ${hasVal(insuranceComp) ? `<div class="comp-lbl">Company</div><div class="comp-val" style="font-size:11px;">${insuranceComp}</div>` : ''}
+            ${hasVal(insurancePolicyNo) ? `<div class="comp-lbl">Policy No.</div><div class="comp-val sm">${insurancePolicyNo}</div>` : ''}
+            ${hasVal(insuranceUpto) ? `<div class="comp-lbl">Expires</div><div class="comp-val ${insurClass !== 'valid' ? 'red' : ''}">${insuranceUpto}</div>` : ''}
+            <div class="vbar"><div class="vbar-fill ${insurClass !== 'valid' ? 'red' : ''}" style="width:${pct(insurDays)}%;"></div></div>
+            <div class="vbar-days ${insurClass !== 'valid' ? 'red' : ''}">${insurDays !== null ? (insurDays < 0 ? `Expired ${Math.abs(insurDays)} days ago` : `${insurDays} days left`) : 'N/A'}</div>
+          </div>
+        </div>` : '',
+      // PUCC — only if data exists
+      hasVal(puccUpto) ? `
+        <div class="comp-card">
+          <div class="comp-hdr ${puccClass === 'valid' ? 'active' : 'warn'}"><div class="comp-ic">🌿</div><div><div>PUCC</div><div class="comp-status-lbl">${puccClass === 'valid' ? '● Valid' : '⚠ Check'}</div></div></div>
+          <div class="comp-body">
+            ${hasVal(puccNo) ? `<div class="comp-lbl">PUCC No.</div><div class="comp-val sm">${puccNo}</div>` : ''}
+            <div class="comp-lbl">Valid Upto</div><div class="comp-val">${puccUpto}</div>
+            <div class="vbar"><div class="vbar-fill ${puccClass !== 'valid' ? 'orange' : ''}" style="width:${pct(puccDays, 180)}%;"></div></div>
+            <div class="vbar-days ${puccClass !== 'valid' ? 'red' : ''}">${puccDays !== null ? (puccDays < 0 ? 'Expired' : `~${puccDays} days left`) : '—'}</div>
+          </div>
+        </div>` : '',
+      // RC — only if status present
+      hasVal(rcStatus) ? `
+        <div class="comp-card">
+          <div class="comp-hdr active"><div class="comp-ic">📋</div><div><div>RC Certificate</div><div class="comp-status-lbl">● ${rcStatus}</div></div></div>
+          <div class="comp-body">
+            <div class="comp-lbl">Registration No.</div><div class="comp-val" style="font-size:13px;letter-spacing:1px;">${regNo}</div>
+            ${hasVal(registeredAt) ? `<div class="comp-lbl">RTO</div><div class="comp-val">${registeredAt}</div>` : ''}
+            <div class="vbar"><div class="vbar-fill" style="width:80%;"></div></div>
+          </div>
+        </div>` : '',
+      // Road Tax — only if data exists
+      hasVal(taxUpto) ? `
+        <div class="comp-card">
+          <div class="comp-hdr active"><div class="comp-ic">💰</div><div><div>Road Tax</div><div class="comp-status-lbl">● Paid</div></div></div>
+          <div class="comp-body">
+            ${hasVal(taxMode) ? `<div class="comp-lbl">Tax Mode</div><div class="comp-val">${taxMode}</div>` : ''}
+            <div class="comp-lbl">Valid Upto</div><div class="comp-val">${taxUpto}</div>
+            <div class="vbar"><div class="vbar-fill" style="width:${pct(taxDays)}%;"></div></div>
+            <div class="vbar-days">${taxDays !== null ? `~${taxDays} days left` : '—'}</div>
+          </div>
+        </div>` : '',
+      // Fitness — only if data exists
+      hasVal(fitUpto) ? `
+        <div class="comp-card">
+          <div class="comp-hdr active"><div class="comp-ic">🔧</div><div><div>Fitness Certificate</div><div class="comp-status-lbl">● Valid</div></div></div>
+          <div class="comp-body">
+            <div class="comp-lbl">Fitness Upto</div><div class="comp-val">${fitUpto}</div>
+            <div class="vbar"><div class="vbar-fill" style="width:${pct(fitDays)}%;"></div></div>
+            <div class="vbar-days">${fitDays !== null ? `~${fitDays} days left` : '—'}</div>
+          </div>
+        </div>` : '',
+      // Blacklist — only if status present
+      hasVal(blacklist) ? `
+        <div class="comp-card">
+          <div class="comp-hdr ${blOk ? 'active' : 'danger'}"><div class="comp-ic">🚫</div><div><div>Blacklist</div><div class="comp-status-lbl">${blOk ? '● Clear' : '❌ Check'}</div></div></div>
+          <div class="comp-body">
+            <div class="comp-lbl">Status</div><div class="comp-val ${blOk ? '' : 'red'}">${blacklist}</div>
+          </div>
+        </div>` : '',
+    ].filter(Boolean).join('') : '';
+
+    const challanSection = hasChallanData
+      ? (challanCards.length > 0
+        ? challanCards.map((c, i) => challanCard(c, i)).join('')
+        : `<div class="bl-banner"><div class="bl-ic">🏆</div><div class="bl-text" style="flex:1;"><h3>No Challans Found — Clean Record</h3><p>${regNo} has no pending or disposed challans on record.</p></div><div class="bl-tag">✓ CLEAN</div></div>`)
+      : naBox('🧾', 'Challan Data Not Available', 'Challan records could not be fetched from the eChallan system at this time.');
+
+    const alerts = [
+      (hasRTO && insurClass === 'warning' && insurDays !== null) ? `<div class="alert danger"><div class="alert-ic">🚨</div><div><h4>Insurance Renewal Due in ${insurDays} Days — ${insuranceUpto}</h4><p>Renew insurance immediately to avoid legal penalties.</p></div></div>` : '',
+      (hasRTO && puccClass !== 'valid' && puccDays !== null) ? `<div class="alert warn"><div class="alert-ic">⚠️</div><div><h4>PUCC Renewal Required</h4><p>Pollution certificate ${puccDays < 0 ? 'has expired' : `expires on ${puccUpto}`}.</p></div></div>` : '',
+    ].filter(Boolean).join('');
+
+    const hasCompCards = compCards && compCards.trim();
+
+    page4 = `
+<div class="page">
+  ${pageHeader(logoUrl, `${regNo} — Legal &amp; Compliance`, dateStr)}
+  <div class="sec-hdr ${pendingCount > 0 || (hasRTO && insurClass !== 'valid') ? 'danger' : ''}">🚨 Legal &amp; Compliance Status</div>
+  <div class="cs">
+    ${hasRTO
+      ? (hasCompCards ? `<div class="comp-grid">${compCards}</div>` : naBox('📋', 'Compliance Data Not Available', 'No compliance information was returned by the RTO.'))
+      : naBox('📋', 'RTO Compliance Data Not Available', 'Registration data could not be fetched.')}
+    ${challanSection}
+    ${alerts}
+  </div>
+  ${pageFooter(pageNums.p4, totalPages)}
+</div>`;
+  }
+
+  // ── PAGE 5: Financial & Summary ──────────────────────────────────────────────
+  let page5 = '';
+  if (showPage5) {
+    const checklist = [
+      pendingCount > 0 ? `✦ <strong>Clear ${pendingCount} pending challan${pendingCount > 1 ? 's' : ''} — ₹${totalFine.toLocaleString('en-IN')}</strong>` : '',
+      (hasRTO && insurClass !== 'valid') ? `✦ <strong>${insurClass === 'expired' ? 'Renew Insurance immediately — already expired' : `Renew Insurance soon (expires ${insuranceUpto})`}</strong>` : '',
+      '✦ <strong>Physical inspection mandatory</strong> — verify engine/chassis numbers against RC',
+      '✦ <strong>Check for accident history</strong> — not included in RTO data',
+      !loanOk ? `✦ <strong>Obtain NOC from financer (${financer})</strong> before ownership transfer` : '✦ No active financer — <strong>no NOC needed from bank</strong>',
+      (hasRTO && puccClass !== 'valid' && puccDays !== null) ? `✦ <strong>PUCC renewal required</strong> — expires ${puccUpto}` : '',
+      '✦ <strong>Verify seller identity</strong> — match with RC ownership records',
+    ].filter(Boolean).join('<br>');
+
+    page5 = `
+<div class="page">
+  ${pageHeader(logoUrl, `${regNo} — Financial &amp; Summary`, dateStr)}
   <div class="fin-hero">
-    <div>
-      <div class="fin-lbl">Original Invoice / Purchase Value</div>
-      <div class="fin-amt">${saleAmt !== '—' && saleAmt !== '0' ? '₹ ' + parseFloat(saleAmt).toLocaleString('en-IN') : 'N/A'}</div>
-      <div class="fin-sub">As recorded in RTO registration data</div>
-    </div>
-    <div style="text-align:center;">
-      <div class="fin-lbl">Ownership</div>
-      <div style="font-size:22px;font-weight:700;color:${ownerNum >= 3 ? '#fca5a5' : '#fff'};">${ownerLabel} Owner</div>
-      <div class="fin-sub">${ownerNum > 1 ? ownerNum - 1 + ' previous owner(s)' : 'First owner'}</div>
-    </div>
-    <div style="text-align:center;">
-      <div class="fin-lbl">Vehicle Year</div>
-      <div style="font-size:22px;font-weight:700;color:#fff;">${mfgYear !== '—' ? mfgYear : 'N/A'}</div>
-      <div class="fin-sub">Registration: ${regDate}</div>
-    </div>
+    ${hasVal(saleAmt) && saleAmt !== '0' ? `<div><div class="fin-lbl">Purchase Value (at Registration)</div><div class="fin-amt">₹ ${parseFloat(saleAmt).toLocaleString('en-IN')}</div><div class="fin-sub">As recorded in RTO data</div></div>` : ''}
+    ${hasVal(ownerLabel) ? `<div style="text-align:center;"><div class="fin-lbl">Ownership</div><div style="font-size:22px;font-weight:700;color:${parseInt(ownerSr,10) >= 3 ? '#fca5a5' : '#fff'};">${ownerLabel} Owner</div><div class="fin-sub">${parseInt(ownerSr,10) > 1 ? (parseInt(ownerSr,10)-1)+' previous owner(s)' : 'First owner'}</div></div>` : ''}
+    ${mfgYear ? `<div style="text-align:center;"><div class="fin-lbl">Registration Year</div><div style="font-size:22px;font-weight:700;color:#fff;">${mfgYear}</div>${hasVal(regDate) ? `<div class="fin-sub">Registered: ${regDate}</div>` : ''}</div>` : ''}
   </div>
   <div class="cs" style="padding-bottom:8px;">
     <div class="big-stats">
-      <div class="bstat y"><div class="bstat-ic">📊</div><div class="bstat-val" style="color:#92400e;">${healthScore}/100</div><div class="bstat-lbl">Health Score — Grade ${healthGrade}</div></div>
-      <div class="bstat ${insurClass !== 'valid' ? 'r' : ''}"><div class="bstat-ic">🛡️</div><div class="bstat-val" style="${insurClass !== 'valid' ? 'color:#c62828;' : ''}">${insurDays !== null ? (insurDays < 0 ? 'Expired' : `${insurDays} Days`) : 'N/A'}</div><div class="bstat-lbl">Insurance Remaining</div></div>
-      <div class="bstat ${pendingCount > 0 ? 'r' : ''}"><div class="bstat-ic">🧾</div><div class="bstat-val" style="${pendingCount > 0 ? 'color:#c62828;' : ''}">${pendingCount > 0 ? '₹'+totalFine.toLocaleString('en-IN') : 'None'}</div><div class="bstat-lbl">${pendingCount > 0 ? 'Pending Challan Fine' : 'No Pending Challans'}</div></div>
+      ${healthScore !== null ? `<div class="bstat y"><div class="bstat-ic">📊</div><div class="bstat-val" style="color:#92400e;">${healthScore}/100</div><div class="bstat-lbl">Health Score — Grade ${healthGrade}</div></div>` : ''}
+      ${insurDays !== null ? `<div class="bstat ${insurClass !== 'valid' ? 'r' : ''}"><div class="bstat-ic">🛡️</div><div class="bstat-val" style="${insurClass !== 'valid' ? 'color:#c62828;' : ''}">${insurDays < 0 ? 'Expired' : `${insurDays} Days`}</div><div class="bstat-lbl">Insurance Left</div></div>` : ''}
+      ${hasChallanData ? `<div class="bstat ${pendingCount > 0 ? 'r' : ''}"><div class="bstat-ic">🧾</div><div class="bstat-val" style="${pendingCount > 0 ? 'color:#c62828;' : ''}">${pendingCount > 0 ? '₹'+totalFine.toLocaleString('en-IN') : 'None'}</div><div class="bstat-lbl">${pendingCount > 0 ? 'Pending Fine' : 'No Challans'}</div></div>` : ''}
     </div>
     <div class="ibox ibox-red">
       <div class="ibox-icon">🛒</div>
-      <div>
-        <h4>Buyer's Checklist Before Purchase</h4>
-        <p>
-          ${pendingCount > 0 ? `✦ <strong>Clear pending challan${pendingCount > 1 ? 's' : ''} of ₹${totalFine.toLocaleString('en-IN')}</strong><br>` : ''}
-          ${insurClass !== 'valid' ? `✦ <strong>${insurClass === 'expired' ? 'Renew Insurance immediately — already expired' : `Renew Insurance soon — expires ${insuranceUpto}`}</strong><br>` : ''}
-          ✦ <strong>Physical inspection mandatory</strong> — always verify engine/chassis numbers against RC<br>
-          ✦ <strong>Check for accident history</strong> — RTO data does not include accident records<br>
-          ${!loanOk ? `✦ <strong>Obtain NOC from financer</strong> (${financer}) before ownership transfer<br>` : '✦ <strong>No NOC needed from bank</strong> — no active financer on record<br>'}
-          ${puccClass !== 'valid' ? `✦ <strong>PUCC renewal required</strong> — expires ${puccUpto}<br>` : ''}
-          ✦ <strong>Verify seller's identity</strong> — match with RC ownership records
-        </p>
-      </div>
+      <div><h4>Buyer's Checklist Before Purchase</h4><p>${checklist}</p></div>
     </div>
-    <div class="sdiv"><span>Glossary of Terms</span></div>
+    <div class="sdiv"><span>Glossary</span></div>
     <div class="gloss">
-      <div class="gloss-title">📖 Glossary</div>
+      <div class="gloss-title">📖 Glossary of Terms</div>
       <div class="gloss-grid">
-        <div class="gloss-item"><div class="gloss-term">RC</div><div class="gloss-def">Registration Certificate — official vehicle registration document</div></div>
-        <div class="gloss-item"><div class="gloss-term">PUCC</div><div class="gloss-def">Pollution Under Control Certificate — mandatory emission check</div></div>
-        <div class="gloss-item"><div class="gloss-term">LMV</div><div class="gloss-def">Light Motor Vehicle — GVW under 7,500 kg</div></div>
-        <div class="gloss-item"><div class="gloss-term">NOC</div><div class="gloss-def">No Objection Certificate — required from financer for transfer</div></div>
-        <div class="gloss-item"><div class="gloss-term">GVW</div><div class="gloss-def">Gross Vehicle Weight — max operating weight incl. load</div></div>
-        <div class="gloss-item"><div class="gloss-term">RTO</div><div class="gloss-def">Regional Transport Office — vehicle registration authority</div></div>
-        <div class="gloss-item"><div class="gloss-term">ULIP</div><div class="gloss-def">Unified Logistics Interface Platform — Govt. data API</div></div>
-        <div class="gloss-item"><div class="gloss-term">N/A</div><div class="gloss-def">Not Available — data not returned from source database</div></div>
+        <div class="gloss-item"><div class="gloss-term">RC</div><div class="gloss-def">Registration Certificate</div></div>
+        <div class="gloss-item"><div class="gloss-term">PUCC</div><div class="gloss-def">Pollution Under Control Certificate</div></div>
+        <div class="gloss-item"><div class="gloss-term">NOC</div><div class="gloss-def">No Objection Certificate (from financer)</div></div>
+        <div class="gloss-item"><div class="gloss-term">GVW</div><div class="gloss-def">Gross Vehicle Weight (max operating weight)</div></div>
+        <div class="gloss-item"><div class="gloss-term">RTO</div><div class="gloss-def">Regional Transport Office</div></div>
+        <div class="gloss-item"><div class="gloss-term">ULIP</div><div class="gloss-def">Unified Logistics Interface Platform (Govt. API)</div></div>
       </div>
     </div>
   </div>
   <div class="disclaimer">
-    This report was generated on ${dateStr} and is valid until ${expiresAt ? new Date(expiresAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '30 days from generation'}. Data is sourced from Vahan / eChallan government databases via ULIP APIs. Some data fields may be masked due to privacy regulations. SmartChallan / Maavin Technologies is not responsible for inaccuracies or discrepancies. This report is for informational purposes only.
+    Generated on ${dateStr}. Valid until ${expiresAt ? new Date(expiresAt).toLocaleDateString('en-IN', { day:'2-digit', month:'long', year:'numeric' }) : '30 days'}. Data sourced from Vahan / eChallan via ULIP. Some fields may be masked per privacy regulations. SmartChallan / Maavin Technologies is not responsible for inaccuracies. For informational purposes only.
   </div>
-  ${footer(5, totalPages)}
+  ${pageFooter(pageNums.p5, totalPages)}
 </div>`;
+  }
 
-  // ── Assemble ──────────────────────────────────────────────────────────────
+  // ── Assemble ──────────────────────────────────────────────────────────────────
+  const autoPrintScript = autoPrint ? `<script>window.onload = function(){ setTimeout(function(){ window.print(); }, 400); };</script>` : '';
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -767,11 +888,13 @@ export function generateVehicleReportHTML({ vehicleNumber, rtoData, challanData,
 <style>${CSS}</style>
 </head>
 <body>
+${printBar}
 ${page1}
 ${page2}
 ${page3}
 ${page4}
 ${page5}
+${autoPrintScript}
 </body>
 </html>`;
 }

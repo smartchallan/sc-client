@@ -107,7 +107,7 @@ export default function VehicleReport() {
     }
   };
 
-  const handleViewReport = async (reportId) => {
+  const handleViewReport = async (reportId, autoPrint = false) => {
     setViewingId(reportId);
     try {
       const res = await fetch(`${API_ROOT}/vehiclereport/${reportId}`, {
@@ -124,6 +124,7 @@ export default function VehicleReport() {
           generatedAt: data.generated_at,
           expiresAt: data.expires_at,
           logoUrl,
+          autoPrint,
         });
         const win = window.open('', '_blank', 'width=900,height=700');
         if (win) {
@@ -320,9 +321,9 @@ export default function VehicleReport() {
                     </span>
 
                     <button
-                      onClick={() => handleViewReport(report.id)}
+                      onClick={() => handleViewReport(report.id, false)}
                       disabled={isViewing}
-                      title={isExpired ? 'View expired report' : 'View / Download PDF'}
+                      title="View report"
                       style={{
                         padding: '7px 14px',
                         background: isViewing ? '#93c5fd' : '#2563eb',
@@ -342,6 +343,27 @@ export default function VehicleReport() {
                       ) : (
                         <><i className="ri-eye-line"></i> View</>
                       )}
+                    </button>
+
+                    <button
+                      onClick={() => handleViewReport(report.id, true)}
+                      disabled={isViewing}
+                      title="Download as PDF"
+                      style={{
+                        padding: '7px 14px',
+                        background: isViewing ? '#d1fae5' : '#f0fdf4',
+                        color: isViewing ? '#6ee7b7' : '#15803d',
+                        border: '1.5px solid #bbf7d0',
+                        borderRadius: 8,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: isViewing ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
+                      }}
+                    >
+                      <i className="ri-download-line"></i> Download
                     </button>
                   </div>
                 </div>
