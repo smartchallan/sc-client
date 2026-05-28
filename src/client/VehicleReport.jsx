@@ -167,54 +167,64 @@ export default function VehicleReport() {
       styleEl.textContent =
         scopedCss +
         '\n#vr-pdf-wrap .print-bar { display: none !important; }' +
-        '\n#vr-pdf-wrap .page { width: 900px !important; min-height: unset !important; box-shadow: none !important; margin: 0 0 0 0 !important; border-radius: 0 !important; }';
+        '\n#vr-pdf-wrap .page { width: 794px !important; min-height: unset !important; box-shadow: none !important; margin: 0 !important; border-radius: 0 !important; page-break-after: auto !important; }';
       document.head.appendChild(styleEl);
 
       // Off-screen container rendered in the same document (avoids iframe blank capture)
       wrapper = document.createElement('div');
       wrapper.id = 'vr-pdf-wrap';
-      wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:900px;background:#fff;z-index:-1;';
+      wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:-1;';
       wrapper.innerHTML = bodyContent;
       document.body.appendChild(wrapper);
 
       // Give images and emoji time to render
       await new Promise(r => setTimeout(r, 700));
 
-      const totalHeight = wrapper.scrollHeight;
+      const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const margin = 22;
+      const availW = pageW - margin * 2;
+      const availH = pageH - margin * 2;
 
-      const canvas = await html2canvas(wrapper, {
-        scale: 1.5,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        width: 900,
-        height: totalHeight,
-        windowWidth: 900,
-        windowHeight: totalHeight,
-        scrollX: 0,
-        scrollY: 0,
-      });
+      // Capture each report page separately so PDF page breaks align to section
+      // boundaries — prevents content from overlapping across A4 cuts.
+      const pageEls = Array.from(wrapper.querySelectorAll('.page'));
+      let first = true;
+      for (const el of pageEls) {
+        const canvas = await html2canvas(el, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          width: el.offsetWidth,
+          height: el.offsetHeight,
+          windowWidth: 794,
+        });
 
-      // Cleanup before PDF generation
+        const imgData = canvas.toDataURL('image/jpeg', 0.92);
+
+        // Scale to fit within margins, keeping aspect ratio (fit by width,
+        // fall back to height if the page would be taller than one A4 sheet).
+        let drawW = availW;
+        let drawH = (canvas.height * drawW) / canvas.width;
+        if (drawH > availH) {
+          drawH = availH;
+          drawW = (canvas.width * drawH) / canvas.height;
+        }
+        const x = (pageW - drawW) / 2;
+        const y = margin;
+
+        if (!first) pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', x, y, drawW, drawH);
+        first = false;
+      }
+
+      // Cleanup
       document.head.removeChild(styleEl);
       document.body.removeChild(wrapper);
       styleEl = null;
       wrapper = null;
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.92);
-      const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const imgH = (canvas.height * pageW) / canvas.width;
-
-      let pos = 0;
-      let first = true;
-      while (pos < imgH) {
-        if (!first) pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, -pos, pageW, imgH);
-        pos += pageH;
-        first = false;
-      }
 
       pdf.save(`Vehicle-Report-${data.vehicle_number || vehicleNum}.pdf`);
     } catch (err) {
