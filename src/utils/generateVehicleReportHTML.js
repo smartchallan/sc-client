@@ -105,9 +105,9 @@ function stbl(headerIcon, title, rows) {
 const CSS = `
 @page { size: A4; margin: 0; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #1e293b; font-size: 13px; }
-.page { width: 100%; min-height: 100vh; background: #fff; margin: 0; position: relative; overflow: hidden; border-bottom: 2px solid #e2e8f0; page-break-after: always; display: flex; flex-direction: column; }
-@media print { @page { size: A4; margin: 0; } body { background: white; } .page { margin: 0; border-bottom: none; min-height: 1123px; } }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; color: #1e293b; font-size: 13px; }
+.page { width: 900px; margin: 20px auto; background: #fff; position: relative; overflow: hidden; box-shadow: 0 2px 16px rgba(0,0,0,0.10); border-radius: 4px; page-break-after: always; display: flex; flex-direction: column; }
+@media print { @page { size: A4; margin: 0; } body { background: white; } .page { width: 100%; margin: 0; box-shadow: none; border-radius: 0; min-height: 1123px; } }
 
 .print-bar { background:#1e3a8a; color:white; padding:8px 24px; display:flex; align-items:center; justify-content:space-between; font-size:12px; }
 .print-bar button { background:#fff; color:#1e3a8a; border:none; border-radius:6px; padding:5px 16px; font-size:12px; font-weight:700; cursor:pointer; }

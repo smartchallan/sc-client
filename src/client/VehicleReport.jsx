@@ -132,6 +132,8 @@ export default function VehicleReport() {
 
   const handleDownloadPdf = async (reportId, vehicleNum) => {
     setDownloadingId(reportId);
+    let styleEl = null;
+    let wrapper = null;
     try {
       const data = await fetchReportData(reportId);
       const html = generateVehicleReportHTML({
@@ -146,58 +148,72 @@ export default function VehicleReport() {
         autoPrint: false,
       });
 
-      // Render in a hidden iframe so full HTML (with <style> tags) is properly parsed
-      const iframe = document.createElement('iframe');
-      iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:1200px;height:10000px;border:none;visibility:hidden;';
-      document.body.appendChild(iframe);
-
-      await new Promise((resolve) => {
-        iframe.onload = resolve;
-        iframe.contentDocument.open();
-        iframe.contentDocument.write(html);
-        iframe.contentDocument.close();
-      });
-
-      // Wait for fonts and images to load
-      await new Promise(r => setTimeout(r, 1200));
+      // Extract CSS and body content from the full HTML string
+      const cssContent = (html.match(/<style>([\s\S]*?)<\/style>/) || [])[1] || '';
+      const bodyContent = (html.match(/<body>([\s\S]*?)<\/body>/s) || [])[1] || '';
 
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
         import('html2canvas'),
         import('jspdf'),
       ]);
 
-      const body = iframe.contentDocument.body;
-      const fullHeight = body.scrollHeight;
-      iframe.style.height = fullHeight + 'px';
+      // Inject report styles scoped to avoid affecting the app
+      // Scope the universal reset and body rule to the container
+      const scopedCss = cssContent
+        .replace('* { margin: 0; padding: 0; box-sizing: border-box; }', '#vr-pdf-wrap * { margin: 0; padding: 0; box-sizing: border-box; }')
+        .replace(/body\s*\{/, '#vr-pdf-wrap {');
 
-      const canvas = await html2canvas(body, {
+      styleEl = document.createElement('style');
+      styleEl.textContent =
+        scopedCss +
+        '\n#vr-pdf-wrap .print-bar { display: none !important; }' +
+        '\n#vr-pdf-wrap .page { width: 900px !important; min-height: unset !important; box-shadow: none !important; margin: 0 0 0 0 !important; border-radius: 0 !important; }';
+      document.head.appendChild(styleEl);
+
+      // Off-screen container rendered in the same document (avoids iframe blank capture)
+      wrapper = document.createElement('div');
+      wrapper.id = 'vr-pdf-wrap';
+      wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:900px;background:#fff;z-index:-1;';
+      wrapper.innerHTML = bodyContent;
+      document.body.appendChild(wrapper);
+
+      // Give images and emoji time to render
+      await new Promise(r => setTimeout(r, 700));
+
+      const totalHeight = wrapper.scrollHeight;
+
+      const canvas = await html2canvas(wrapper, {
         scale: 1.5,
         useCORS: true,
-        allowTaint: false,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: 900,
+        height: totalHeight,
+        windowWidth: 900,
+        windowHeight: totalHeight,
         scrollX: 0,
         scrollY: 0,
-        windowWidth: 1200,
-        windowHeight: fullHeight,
-        width: 1200,
-        height: fullHeight,
       });
 
-      document.body.removeChild(iframe);
+      // Cleanup before PDF generation
+      document.head.removeChild(styleEl);
+      document.body.removeChild(wrapper);
+      styleEl = null;
+      wrapper = null;
 
       const imgData = canvas.toDataURL('image/jpeg', 0.92);
       const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgW = pageWidth;
-      const imgH = (canvas.height * imgW) / canvas.width;
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgH = (canvas.height * pageW) / canvas.width;
 
-      let yOffset = 0;
-      let isFirst = true;
-      while (yOffset < imgH) {
-        if (!isFirst) pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, -yOffset, imgW, imgH);
-        yOffset += pageHeight;
-        isFirst = false;
+      let pos = 0;
+      let first = true;
+      while (pos < imgH) {
+        if (!first) pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, -pos, pageW, imgH);
+        pos += pageH;
+        first = false;
       }
 
       pdf.save(`Vehicle-Report-${data.vehicle_number || vehicleNum}.pdf`);
@@ -205,6 +221,9 @@ export default function VehicleReport() {
       console.error('PDF download error:', err);
       alert('Could not generate PDF. Please use View → Print → Save as PDF as an alternative.');
     } finally {
+      // Safety cleanup in case of error mid-way
+      if (styleEl && document.head.contains(styleEl)) document.head.removeChild(styleEl);
+      if (wrapper && document.body.contains(wrapper)) document.body.removeChild(wrapper);
       setDownloadingId(null);
     }
   };
