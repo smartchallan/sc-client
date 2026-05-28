@@ -104,7 +104,8 @@ function stbl(headerIcon, title, rows) {
 
 const CSS = `
 @page { size: A4; margin: 0; }
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+html, body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; color: #1e293b; font-size: 13px; }
 .page { width: 900px; margin: 20px auto; background: #fff; position: relative; overflow: hidden; box-shadow: 0 2px 16px rgba(0,0,0,0.10); border-radius: 4px; page-break-after: always; display: flex; flex-direction: column; }
 @media print { @page { size: A4; margin: 0; } body { background: white; } .page { width: 100%; margin: 0; box-shadow: none; border-radius: 0; min-height: 1123px; } }
@@ -877,7 +878,21 @@ export function generateVehicleReportHTML({
   }
 
   // ── Assemble ──────────────────────────────────────────────────────────────────
-  const autoPrintScript = autoPrint ? `<script>window.onload = function(){ setTimeout(function(){ window.print(); }, 400); };</script>` : '';
+  const autoPrintScript = autoPrint ? `<script>
+function vrWaitForImages(){
+  var imgs = Array.prototype.slice.call(document.images);
+  return Promise.all(imgs.map(function(img){
+    if (img.complete) return Promise.resolve();
+    return new Promise(function(res){ img.addEventListener('load', res); img.addEventListener('error', res); });
+  }));
+}
+window.addEventListener('load', function(){
+  var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+  Promise.all([vrWaitForImages(), fontsReady]).then(function(){
+    setTimeout(function(){ window.print(); }, 300);
+  });
+});
+</script>` : '';
 
   return `<!DOCTYPE html>
 <html lang="en">

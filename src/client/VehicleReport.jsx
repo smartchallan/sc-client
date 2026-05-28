@@ -370,10 +370,10 @@ export default function VehicleReport() {
                             <button
                               onClick={() => handleDownloadPdf(report.id)}
                               disabled={busy}
-                              title="Download PDF"
+                              title="Save as PDF (opens print dialog — choose 'Save as PDF')"
                               style={{ padding: '5px 12px', background: busy ? '#f1f5f9' : '#f0fdf4', color: busy ? '#94a3b8' : '#15803d', border: `1.5px solid ${busy ? '#e2e8f0' : '#bbf7d0'}`, borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}
                             >
-                              {isDownloading ? <><i className="ri-loader-4-line vr-spin" /> PDF…</> : <><i className="ri-download-line" /> PDF</>}
+                              {isDownloading ? <><i className="ri-loader-4-line vr-spin" /> PDF…</> : <><i className="ri-printer-line" /> Save PDF</>}
                             </button>
                           </div>
                         </td>
