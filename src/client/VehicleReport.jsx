@@ -130,12 +130,13 @@ export default function VehicleReport() {
     }
   };
 
-  const handleDownloadPdf = async (reportId, vehicleNum) => {
+  const handleDownloadPdf = async (reportId) => {
     setDownloadingId(reportId);
-    let styleEl = null;
-    let wrapper = null;
     try {
       const data = await fetchReportData(reportId);
+      // Use the browser's own print engine (same renderer as View) and trigger
+      // its native "Save as PDF". html2canvas cannot reproduce this template's
+      // gradients / conic-gradient / flex layout, so this is the reliable path.
       const html = generateVehicleReportHTML({
         vehicleNumber: data.vehicle_number,
         rtoData: data.rto_data,
@@ -145,95 +146,14 @@ export default function VehicleReport() {
         generatedAt: data.generated_at,
         expiresAt: data.expires_at,
         logoUrl,
-        autoPrint: false,
+        autoPrint: true,
       });
-
-      // Extract CSS and body content from the full HTML string
-      const cssContent = (html.match(/<style>([\s\S]*?)<\/style>/) || [])[1] || '';
-      const bodyContent = (html.match(/<body>([\s\S]*?)<\/body>/s) || [])[1] || '';
-
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import('html2canvas'),
-        import('jspdf'),
-      ]);
-
-      // Inject report styles scoped to avoid affecting the app
-      // Scope the universal reset and body rule to the container
-      const scopedCss = cssContent
-        .replace('* { margin: 0; padding: 0; box-sizing: border-box; }', '#vr-pdf-wrap * { margin: 0; padding: 0; box-sizing: border-box; }')
-        .replace(/body\s*\{/, '#vr-pdf-wrap {');
-
-      styleEl = document.createElement('style');
-      styleEl.textContent =
-        scopedCss +
-        '\n#vr-pdf-wrap .print-bar { display: none !important; }' +
-        '\n#vr-pdf-wrap .page { width: 794px !important; min-height: unset !important; box-shadow: none !important; margin: 0 !important; border-radius: 0 !important; page-break-after: auto !important; }';
-      document.head.appendChild(styleEl);
-
-      // Off-screen container rendered in the same document (avoids iframe blank capture)
-      wrapper = document.createElement('div');
-      wrapper.id = 'vr-pdf-wrap';
-      wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:-1;';
-      wrapper.innerHTML = bodyContent;
-      document.body.appendChild(wrapper);
-
-      // Give images and emoji time to render
-      await new Promise(r => setTimeout(r, 700));
-
-      const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const margin = 22;
-      const availW = pageW - margin * 2;
-      const availH = pageH - margin * 2;
-
-      // Capture each report page separately so PDF page breaks align to section
-      // boundaries — prevents content from overlapping across A4 cuts.
-      const pageEls = Array.from(wrapper.querySelectorAll('.page'));
-      let first = true;
-      for (const el of pageEls) {
-        const canvas = await html2canvas(el, {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: '#ffffff',
-          width: el.offsetWidth,
-          height: el.offsetHeight,
-          windowWidth: 794,
-        });
-
-        const imgData = canvas.toDataURL('image/jpeg', 0.92);
-
-        // Scale to fit within margins, keeping aspect ratio (fit by width,
-        // fall back to height if the page would be taller than one A4 sheet).
-        let drawW = availW;
-        let drawH = (canvas.height * drawW) / canvas.width;
-        if (drawH > availH) {
-          drawH = availH;
-          drawW = (canvas.width * drawH) / canvas.height;
-        }
-        const x = (pageW - drawW) / 2;
-        const y = margin;
-
-        if (!first) pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', x, y, drawW, drawH);
-        first = false;
-      }
-
-      // Cleanup
-      document.head.removeChild(styleEl);
-      document.body.removeChild(wrapper);
-      styleEl = null;
-      wrapper = null;
-
-      pdf.save(`Vehicle-Report-${data.vehicle_number || vehicleNum}.pdf`);
+      const win = window.open('', '_blank');
+      if (win) { win.document.open(); win.document.write(html); win.document.close(); }
+      else alert('Popup blocked. Please allow popups for this site, then try again.');
     } catch (err) {
-      console.error('PDF download error:', err);
-      alert('Could not generate PDF. Please use View → Print → Save as PDF as an alternative.');
+      alert(err.message || 'Network error loading report.');
     } finally {
-      // Safety cleanup in case of error mid-way
-      if (styleEl && document.head.contains(styleEl)) document.head.removeChild(styleEl);
-      if (wrapper && document.body.contains(wrapper)) document.body.removeChild(wrapper);
       setDownloadingId(null);
     }
   };
@@ -448,7 +368,7 @@ export default function VehicleReport() {
                               {isViewing ? <><i className="ri-loader-4-line vr-spin" /> …</> : <><i className="ri-eye-line" /> View</>}
                             </button>
                             <button
-                              onClick={() => handleDownloadPdf(report.id, report.vehicle_number)}
+                              onClick={() => handleDownloadPdf(report.id)}
                               disabled={busy}
                               title="Download PDF"
                               style={{ padding: '5px 12px', background: busy ? '#f1f5f9' : '#f0fdf4', color: busy ? '#94a3b8' : '#15803d', border: `1.5px solid ${busy ? '#e2e8f0' : '#bbf7d0'}`, borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}
