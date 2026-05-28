@@ -126,7 +126,7 @@ export default function VehicleReport() {
           logoUrl,
           autoPrint,
         });
-        const win = window.open('', '_blank', 'width=900,height=700');
+        const win = window.open('', '_blank');
         if (win) {
           win.document.open();
           win.document.write(html);
