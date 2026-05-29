@@ -362,7 +362,7 @@ function pageHeader(logoUrl, titleRight, dateStr) {
 }
 
 function pageFooter(page, total) {
-  return `<div class="ftr"><div>© ${new Date().getFullYear()} SmartChallan · Powered by Maavin Technologies · Data Source: Vahan / eChallan (ULIP)</div><div style="display:flex;align-items:center;gap:6px;"><span>Page</span><div class="pg-num">${page}</div><span>of ${total}</span></div></div>`;
+  return `<div class="ftr"><div>© ${new Date().getFullYear()} SmartChallan · Powered by Maavin Technologies · Data Source: Parivahan</div><div style="display:flex;align-items:center;gap:6px;"><span>Page</span><div class="pg-num">${page}</div><span>of ${total}</span></div></div>`;
 }
 
 function challanCard(c, idx) {

@@ -707,6 +707,7 @@ import LatestChallansTable from "./LatestChallansTable";
 import LoadingSkeleton from "./LoadingSkeleton";
 import TrafficLightLoader from "../assets/TrafficLightLoader";
 import QuickActionsRibbon from "./QuickActionsRibbon";
+import TopScrollbars from "./TopScrollbars";
 import VehicleRTOdataTable from "./VehicleRTOdata";
 import VehicleSummaryTable from "./VehicleSummaryTable";
 import MyFleetTable from "./MyFleetTable";
@@ -4164,6 +4165,8 @@ function ClientDashboard() {
             <LazyVehicleReport />
           </Suspense>
         )}
+      {/* Auto-attach synced top horizontal scrollbars to all data tables */}
+      <TopScrollbars />
       {/* Quick Actions Ribbon Pull - visible on every page */}
       {!(selectedChallan || selectedRtoData) && !showClientPages && (
         <QuickActionsRibbon

@@ -42,11 +42,15 @@ export function ChallanTableV2({
   const [visibleCount, setVisibleCount] = React.useState(DEFAULT_LIMIT);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [maxFineFilter, setMaxFineFilter] = React.useState(null);
-  const [challanTypeFilter, setChallanTypeFilter] = React.useState({ online: false, regCourt: false, virtualCourt: false });
+  const [challanTypeFilter, setChallanTypeFilter] = React.useState({ online: false, court: false });
   // Status filter: Pending / Disposed checkboxes (both unchecked = show all)
   const [statusFilter, setStatusFilter] = React.useState({ pending: false, disposed: false });
   const [showChallanTypeDropdown, setShowChallanTypeDropdown] = React.useState(false);
   const challanTypeDropdownRef = React.useRef(null);
+  const [showStatusDropdown, setShowStatusDropdown] = React.useState(false);
+  const statusDropdownRef = React.useRef(null);
+  const [showDateDropdown, setShowDateDropdown] = React.useState(false);
+  const dateDropdownRef = React.useRef(null);
   const [showFineDropdown, setShowFineDropdown] = React.useState(false);
   const fineDropdownRef = React.useRef(null);
   const [sortConfig, setSortConfig] = React.useState({ key: null, direction: "desc" });
@@ -115,7 +119,7 @@ export function ChallanTableV2({
       }, [filteredData]);
     };
 
-    const { online, regCourt, virtualCourt } = challanTypeFilter;
+    const { online, court } = challanTypeFilter;
     const { pending, disposed } = statusFilter;
 
     let result = data.filter((c) => {
@@ -140,35 +144,12 @@ export function ChallanTableV2({
         if (!Number.isNaN(fine) && fine > maxFineFilter) return false;
       }
 
-      if (online || regCourt || virtualCourt) {
+      if (online || court) {
+        // Court: sent_to_reg_court is truthy. Online: everything else.
         const regRaw = c.sent_to_reg_court ?? c.sent_to_court_on ?? c.sent_to_court;
-        const virtRaw = c.sent_to_virtual_court ?? c.sent_to_virtual;
-
-        const regFlag = normalizeCourtFlag(regRaw);
-        const virtFlag = normalizeCourtFlag(virtRaw);
-
-        let pass = false;
-        
-        // Online: not sent to any court
-        if (online && regFlag !== true && virtFlag !== true) {
-          pass = true;
-        }
-        
-        // Registered court only
-        if (regCourt && regFlag === true && !virtualCourt) {
-          pass = true;
-        }
-        
-        // Virtual court only
-        if (virtualCourt && virtFlag === true && !regCourt) {
-          pass = true;
-        }
-        
-        // Both registered and virtual
-        if (regCourt && virtualCourt && regFlag === true && virtFlag === true) {
-          pass = true;
-        }
-
+        const isCourt = normalizeCourtFlag(regRaw) === true;
+        const isOnline = !isCourt;
+        const pass = (online && isOnline) || (court && isCourt);
         if (!pass) return false;
       }
 
@@ -256,14 +237,20 @@ export function ChallanTableV2({
       if (fineDropdownRef.current && !fineDropdownRef.current.contains(event.target)) {
         setShowFineDropdown(false);
       }
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target)) {
+        setShowStatusDropdown(false);
+      }
+      if (dateDropdownRef.current && !dateDropdownRef.current.contains(event.target)) {
+        setShowDateDropdown(false);
+      }
     };
-    if (showChallanTypeDropdown || showFineDropdown) {
+    if (showChallanTypeDropdown || showFineDropdown || showStatusDropdown || showDateDropdown) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showChallanTypeDropdown, showFineDropdown]);
+  }, [showChallanTypeDropdown, showFineDropdown, showStatusDropdown, showDateDropdown]);
 
   return (
     <div className="vst-card">
@@ -347,22 +334,19 @@ export function ChallanTableV2({
           >
             <button
               type="button"
-              className={`vst-filter-trigger${(challanTypeFilter.online || challanTypeFilter.regCourt || challanTypeFilter.virtualCourt) ? ' vst-filter-trigger--active' : ''}${showChallanTypeDropdown ? ' vst-filter-trigger--open' : ''}`}
+              className={`vst-filter-trigger${(challanTypeFilter.online || challanTypeFilter.court) ? ' vst-filter-trigger--active' : ''}${showChallanTypeDropdown ? ' vst-filter-trigger--open' : ''}`}
               onClick={() => setShowChallanTypeDropdown((v) => !v)}
             >
               <i className="ri-git-branch-line vst-filter-trigger__icon"></i>
-              {(!challanTypeFilter.online &&
-              !challanTypeFilter.regCourt &&
-              !challanTypeFilter.virtualCourt)
+              {(!challanTypeFilter.online && !challanTypeFilter.court)
                 ? "Challan type"
                 : [
                     challanTypeFilter.online ? "Online" : null,
-                    challanTypeFilter.regCourt ? "Registered court" : null,
-                    challanTypeFilter.virtualCourt ? "Virtual court" : null,
+                    challanTypeFilter.court ? "Court" : null,
                   ].filter(Boolean).join(", ")}
-              {(challanTypeFilter.online || challanTypeFilter.regCourt || challanTypeFilter.virtualCourt) && (
+              {(challanTypeFilter.online || challanTypeFilter.court) && (
                 <span className="vst-filter-trigger__badge">
-                  {Number(!!challanTypeFilter.online) + Number(!!challanTypeFilter.regCourt) + Number(!!challanTypeFilter.virtualCourt)}
+                  {Number(!!challanTypeFilter.online) + Number(!!challanTypeFilter.court)}
                 </span>
               )}
               <i className="ri-arrow-down-s-line vst-filter-trigger__chevron"></i>
@@ -374,16 +358,12 @@ export function ChallanTableV2({
                   Online
                 </label>
                 <label className="vst-dropdown__option">
-                  <input type="checkbox" checked={challanTypeFilter.regCourt} onChange={(e) => setChallanTypeFilter((prev) => ({ ...prev, regCourt: e.target.checked }))} />
-                  Registered court
+                  <input type="checkbox" checked={challanTypeFilter.court} onChange={(e) => setChallanTypeFilter((prev) => ({ ...prev, court: e.target.checked }))} />
+                  Court
                 </label>
-                <label className="vst-dropdown__option">
-                  <input type="checkbox" checked={challanTypeFilter.virtualCourt} onChange={(e) => setChallanTypeFilter((prev) => ({ ...prev, virtualCourt: e.target.checked }))} />
-                  Virtual court
-                </label>
-                {(challanTypeFilter.online || challanTypeFilter.regCourt || challanTypeFilter.virtualCourt) && (
+                {(challanTypeFilter.online || challanTypeFilter.court) && (
                   <div className="vst-dropdown__footer">
-                    <button className="vst-dropdown__footer-btn" onClick={() => setChallanTypeFilter({ online: false, regCourt: false, virtualCourt: false })}>Reset</button>
+                    <button className="vst-dropdown__footer-btn" onClick={() => setChallanTypeFilter({ online: false, court: false })}>Reset</button>
                     <button className="vst-dropdown__footer-btn" onClick={() => setShowChallanTypeDropdown(false)}>Close</button>
                   </div>
                 )}
@@ -391,44 +371,95 @@ export function ChallanTableV2({
             )}
           </div>
 
-          {/* Status filter: Pending / Disposed toggles */}
-          <div className="vst-checkbox-group">
-            <label className={`vst-checkbox-label${statusFilter.pending ? ' vst-checkbox-label--checked' : ''}`}>
-              <input type="checkbox" checked={statusFilter.pending} onChange={() => setStatusFilter((prev) => ({ ...prev, pending: !prev.pending }))} />
-              <span>Pending</span>
-            </label>
-            <label className={`vst-checkbox-label${statusFilter.disposed ? ' vst-checkbox-label--checked' : ''}`}>
-              <input type="checkbox" checked={statusFilter.disposed} onChange={() => setStatusFilter((prev) => ({ ...prev, disposed: !prev.disposed }))} />
-              <span>Disposed</span>
-            </label>
+          {/* Status filter: Pending / Disposed dropdown */}
+          <div style={{ position: 'relative' }} ref={statusDropdownRef}>
+            <button
+              type="button"
+              className={`vst-filter-trigger${(statusFilter.pending || statusFilter.disposed) ? ' vst-filter-trigger--active' : ''}${showStatusDropdown ? ' vst-filter-trigger--open' : ''}`}
+              onClick={() => setShowStatusDropdown(v => !v)}
+            >
+              <i className="ri-file-list-3-line vst-filter-trigger__icon" />
+              {(!statusFilter.pending && !statusFilter.disposed)
+                ? 'Challan status'
+                : [statusFilter.pending ? 'Pending' : null, statusFilter.disposed ? 'Disposed' : null].filter(Boolean).join(', ')}
+              {(statusFilter.pending || statusFilter.disposed) && (
+                <span className="vst-filter-trigger__badge">
+                  {Number(!!statusFilter.pending) + Number(!!statusFilter.disposed)}
+                </span>
+              )}
+              <i className="ri-arrow-down-s-line vst-filter-trigger__chevron" />
+            </button>
+            {showStatusDropdown && (
+              <div className="vst-dropdown">
+                <label className="vst-dropdown__option">
+                  <input type="checkbox" checked={statusFilter.pending} onChange={() => setStatusFilter(prev => ({ ...prev, pending: !prev.pending }))} />
+                  Pending
+                </label>
+                <label className="vst-dropdown__option">
+                  <input type="checkbox" checked={statusFilter.disposed} onChange={() => setStatusFilter(prev => ({ ...prev, disposed: !prev.disposed }))} />
+                  Disposed
+                </label>
+                {(statusFilter.pending || statusFilter.disposed) && (
+                  <div className="vst-dropdown__footer">
+                    <button className="vst-dropdown__footer-btn" onClick={() => setStatusFilter({ pending: false, disposed: false })}>Reset</button>
+                    <button className="vst-dropdown__footer-btn" onClick={() => setShowStatusDropdown(false)}>Close</button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Date range filter */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <i className="ri-calendar-line" style={{ color: '#64748b', fontSize: 15 }} />
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={e => { setDateFrom(e.target.value); setVisibleCount(DEFAULT_LIMIT); }}
-              title="From date"
-              style={{ fontSize: 12, padding: '5px 8px', borderRadius: 6, border: '1px solid #e2e8f0', color: '#334155', background: '#fff', cursor: 'pointer' }}
-            />
-            <span style={{ color: '#94a3b8', fontSize: 12 }}>–</span>
-            <input
-              type="date"
-              value={dateTo}
-              min={dateFrom || undefined}
-              onChange={e => { setDateTo(e.target.value); setVisibleCount(DEFAULT_LIMIT); }}
-              title="To date"
-              style={{ fontSize: 12, padding: '5px 8px', borderRadius: 6, border: '1px solid #e2e8f0', color: '#334155', background: '#fff', cursor: 'pointer' }}
-            />
-            {(dateFrom || dateTo) && (
-              <button
-                type="button"
-                onClick={() => { setDateFrom(''); setDateTo(''); }}
-                title="Clear date filter"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 14, padding: '2px 4px' }}
-              >✕</button>
+          {/* Date range filter — single trigger, popover with two calendars */}
+          <div style={{ position: 'relative' }} ref={dateDropdownRef}>
+            <button
+              type="button"
+              className={`vst-filter-trigger${(dateFrom || dateTo) ? ' vst-filter-trigger--active' : ''}${showDateDropdown ? ' vst-filter-trigger--open' : ''}`}
+              onClick={() => setShowDateDropdown(v => !v)}
+            >
+              <i className="ri-calendar-line vst-filter-trigger__icon" />
+              {(() => {
+                if (!dateFrom && !dateTo) return 'Date range';
+                const fmt = (d) => {
+                  if (!d) return '—';
+                  const dt = new Date(d);
+                  if (isNaN(dt.getTime())) return d;
+                  return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+                };
+                return `${fmt(dateFrom)} – ${fmt(dateTo)}`;
+              })()}
+              {(dateFrom || dateTo) && (
+                <span className="vst-filter-trigger__badge">
+                  {Number(!!dateFrom) + Number(!!dateTo)}
+                </span>
+              )}
+              <i className="ri-arrow-down-s-line vst-filter-trigger__chevron" />
+            </button>
+            {showDateDropdown && (
+              <div className="vst-dropdown" style={{ minWidth: 240, padding: 12 }}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>From</label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  max={dateTo || undefined}
+                  onChange={e => { setDateFrom(e.target.value); setVisibleCount(DEFAULT_LIMIT); }}
+                  style={{ width: '100%', fontSize: 13, padding: '7px 10px', borderRadius: 6, border: '1px solid #e2e8f0', color: '#334155', background: '#fff', cursor: 'pointer', marginBottom: 10 }}
+                />
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>To</label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  min={dateFrom || undefined}
+                  onChange={e => { setDateTo(e.target.value); setVisibleCount(DEFAULT_LIMIT); }}
+                  style={{ width: '100%', fontSize: 13, padding: '7px 10px', borderRadius: 6, border: '1px solid #e2e8f0', color: '#334155', background: '#fff', cursor: 'pointer' }}
+                />
+                <div className="vst-dropdown__footer" style={{ marginTop: 10 }}>
+                  <button
+                    className="vst-dropdown__footer-btn"
+                    onClick={() => { setDateFrom(''); setDateTo(''); setVisibleCount(DEFAULT_LIMIT); }}
+                  >Reset</button>
+                  <button className="vst-dropdown__footer-btn" onClick={() => setShowDateDropdown(false)}>Close</button>
+                </div>
+              </div>
             )}
           </div>
 

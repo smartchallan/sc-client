@@ -23,7 +23,7 @@ const formatExpiry = (dateStr, useColor = true) => {
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import SelectShowMore from "./SelectShowMore";
 import ClientTreeDropdown from "../components/ClientTreeDropdown";
-import { FaSyncAlt, FaEye, FaUpload } from "react-icons/fa";
+import { FaSyncAlt, FaEye } from "react-icons/fa";
 import { FiDownloadCloud, FiPrinter } from "react-icons/fi";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
@@ -119,38 +119,7 @@ const buildPrintableTableHtml = () => {
   const table = printArea.querySelector('table');
   if (!table) return null;
 
-  const printTable = table.cloneNode(true);
-
-  try {
-    const uploadEnabled = import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true';
-    const columnsToRemove = uploadEnabled ? 1 : 0; // Remove Upload column if enabled; View column no longer exists
-
-    const theadRows = printTable.querySelectorAll('thead tr');
-    theadRows.forEach((tr, rowIndex) => {
-      const cells = tr.querySelectorAll('th');
-      if (cells.length >= columnsToRemove) {
-        // Remove the last header cell(s) (View and Upload columns) from all header rows for print/PDF
-        for (let i = 0; i < columnsToRemove; i++) {
-          tr.removeChild(cells[cells.length - 1 - i]);
-        }
-      }
-    });
-
-    const bodyRows = printTable.querySelectorAll('tbody tr');
-    bodyRows.forEach((tr) => {
-      const cells = tr.querySelectorAll('td');
-      if (cells.length >= columnsToRemove) {
-        // Remove the last cell(s) (View and Upload columns) from each body row
-        for (let i = 0; i < columnsToRemove; i++) {
-          tr.removeChild(cells[cells.length - 1 - i]);
-        }
-      }
-    });
-  } catch (e) {
-    // ignore and fall back to original clone
-  }
-
-  return printTable.outerHTML;
+  return table.cloneNode(true).outerHTML;
 };
 
 // Print table in a new window using branding header
@@ -473,8 +442,12 @@ export default function MyFleetTable({
   const [urgentRange, setUrgentRange] = useState(15); // days, default 15
   // Challan filter: pending/disposed
   const [challanTypes, setChallanTypes] = useState([]); // e.g. ['pending', 'disposed'] (checkboxes)
-  const [challanSources, setChallanSources] = useState([]); // e.g. ['online','registered','virtual'] (dropdown)
+  const [challanSources, setChallanSources] = useState([]); // e.g. ['online','court'] (dropdown)
   const [showChallanDropdown, setShowChallanDropdown] = useState(false);
+  const [showChallanStatusDropdown, setShowChallanStatusDropdown] = useState(false);
+  // Body type filter: multi-select dropdown of body type descriptions present in data
+  const [bodyTypes, setBodyTypes] = useState([]);
+  const [showBodyTypeDropdown, setShowBodyTypeDropdown] = useState(false);
 
   // Download format modal state
   const [showDownloadModal, setShowDownloadModal] = useState(false);
@@ -483,18 +456,39 @@ export default function MyFleetTable({
   // Upload document modal state
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedVehicleForUpload, setSelectedVehicleForUpload] = useState(null);
-  const [uploadFiles, setUploadFiles] = useState({
+  // Fixed standard documents + a hard-capped list of 2 user-named custom slots.
+  const EMPTY_UPLOAD_FILES = {
+    rc: null,
     insurance: null,
     pollution: null,
     roadTax: null,
     fitness: null,
-    permit: null
+    permit: null,
+    customDocs: [
+      { name: '', file: null },
+      { name: '', file: null },
+    ],
+  };
+  const [uploadFiles, setUploadFiles] = useState(EMPTY_UPLOAD_FILES);
+  const resetUploadFiles = () => setUploadFiles({
+    rc: null,
+    insurance: null,
+    pollution: null,
+    roadTax: null,
+    fitness: null,
+    permit: null,
+    customDocs: [
+      { name: '', file: null },
+      { name: '', file: null },
+    ],
   });
 
   // Refs for detecting clicks outside dropdowns
   const expiredDropdownRef = useRef(null);
   const urgentDropdownRef = useRef(null);
   const challanDropdownRef = useRef(null);
+  const challanStatusDropdownRef = useRef(null);
+  const bodyTypeDropdownRef = useRef(null);
 
   // Close dropdowns when clicking outside their area
   useEffect(() => {
@@ -507,6 +501,12 @@ export default function MyFleetTable({
       }
       if (challanDropdownRef.current && !challanDropdownRef.current.contains(event.target)) {
         setShowChallanDropdown(false);
+      }
+      if (challanStatusDropdownRef.current && !challanStatusDropdownRef.current.contains(event.target)) {
+        setShowChallanStatusDropdown(false);
+      }
+      if (bodyTypeDropdownRef.current && !bodyTypeDropdownRef.current.contains(event.target)) {
+        setShowBodyTypeDropdown(false);
       }
       if (colMenuRef.current && !colMenuRef.current.contains(event.target)) setColMenuOpen(false);
       if (actionMenuRowId !== null) {
@@ -558,6 +558,18 @@ export default function MyFleetTable({
     willUse: (filteredFleet?.length > 0) ? 'filteredFleet' : 'actualData'
   });
   
+  // Unique body type options from the source data (pre-filter, so users can
+  // always pick any value that exists in the fleet)
+  const bodyTypeOptions = useMemo(() => {
+    const src = (filteredFleet?.length > 0) ? filteredFleet : (actualData || []);
+    const set = new Set();
+    src.forEach(v => {
+      const bt = String(v.rc_body_type_desc || v.body_type_desc || v.body_type || '').trim();
+      if (bt) set.add(bt.toUpperCase());
+    });
+    return Array.from(set).sort();
+  }, [filteredFleet, actualData]);
+
   // Sort by selected column or registered_at DESC
   // Fix: Check if filteredFleet has items, not just if it exists (empty array is truthy!)
   let sortedAll = [...((filteredFleet?.length > 0) ? filteredFleet : (actualData || []))];
@@ -583,6 +595,16 @@ export default function MyFleetTable({
     sortedAll = sortedAll.filter(v =>
       (v.vehicle_number || "").toUpperCase().includes(vehicleNumberSearch.trim().toUpperCase())
     );
+  }
+  // Apply body type filter (multi). Compare case-insensitively against any of
+  // the known body-type fields used elsewhere in this file.
+  if (bodyTypes.length > 0) {
+    const selected = bodyTypes.map(t => String(t).trim().toUpperCase());
+    sortedAll = sortedAll.filter(v => {
+      const bt = String(v.rc_body_type_desc || v.body_type_desc || v.body_type || '').trim().toUpperCase();
+      if (!bt) return false;
+      return selected.includes(bt);
+    });
   }
   // Apply expired filter (multi)
   if (expiredTypes.length > 0) {
@@ -638,12 +660,10 @@ export default function MyFleetTable({
       };
 
       const getChallanType = (c) => {
+        // Court bucket: only when sent_to_reg_court is truthy.
+        // Everything else (online, virtual court, unknown) is treated as 'online'.
         const regRaw = c.sent_to_reg_court ?? c.sent_to_court_on ?? c.sent_to_court;
-        const virtRaw = c.sent_to_virtual_court ?? c.sent_to_virtual;
-        const regFlag = normalizeCourtFlag(regRaw);
-        const virtFlag = normalizeCourtFlag(virtRaw);
-        if (virtFlag === true) return 'virtual';
-        if (regFlag === true) return 'registered';
+        if (normalizeCourtFlag(regRaw) === true) return 'court';
         return 'online';
       };
 
@@ -784,6 +804,11 @@ export default function MyFleetTable({
                     <i className={(row.status || '').toUpperCase() === 'ACTIVE' ? 'ri-pause-circle-line' : 'ri-checkbox-circle-line'} />
                     {(row.status || '').toUpperCase() === 'ACTIVE' ? 'Deactivate' : 'Activate'}
                   </button>
+                  {import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' && (
+                    <button onClick={() => { setSelectedVehicleForUpload(row); setShowUploadModal(true); setActionMenuRowId(null); }}>
+                      <i className="ri-upload-cloud-2-line" /> Upload Documents
+                    </button>
+                  )}
                   <button className="vft-action-menu__item--danger" onClick={() => { onDelete?.(row); setActionMenuRowId(null); }}>
                     <i className="ri-delete-bin-6-line" /> Delete Vehicle
                   </button>
@@ -974,6 +999,47 @@ export default function MyFleetTable({
             />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Body type filter (multi-select) */}
+            <div style={{ position: 'relative' }} ref={bodyTypeDropdownRef}>
+              <button
+                className={`vst-filter-trigger${bodyTypes.length > 0 ? ' vst-filter-trigger--active' : ''}${showBodyTypeDropdown ? ' vst-filter-trigger--open' : ''}`}
+                onClick={() => setShowBodyTypeDropdown(v => !v)}
+              >
+                <i className="ri-truck-line vst-filter-trigger__icon" />
+                {bodyTypes.length === 0
+                  ? 'Body type'
+                  : (bodyTypes.length <= 2 ? bodyTypes.join(', ') : `${bodyTypes.length} selected`)}
+                {bodyTypes.length > 0 && (
+                  <span className="vst-filter-trigger__badge">{bodyTypes.length}</span>
+                )}
+                <i className="ri-arrow-down-s-line vst-filter-trigger__chevron" />
+              </button>
+              {showBodyTypeDropdown && (
+                <div className="vst-dropdown" style={{ maxHeight: 320, overflowY: 'auto' }}>
+                  {bodyTypeOptions.length === 0 ? (
+                    <div style={{ padding: '10px 12px', color: '#94a3b8', fontSize: 13 }}>
+                      No body types in current data
+                    </div>
+                  ) : bodyTypeOptions.map(type => (
+                    <label key={type} className="vst-dropdown__option">
+                      <input
+                        type="checkbox"
+                        checked={bodyTypes.includes(type)}
+                        onChange={e => {
+                          if (e.target.checked) setBodyTypes(prev => [...prev, type]);
+                          else setBodyTypes(prev => prev.filter(t => t !== type));
+                        }}
+                      />
+                      {type}
+                    </label>
+                  ))}
+                  <div className="vst-dropdown__footer">
+                    <button className="vst-dropdown__footer-btn" onClick={() => setBodyTypes([])}>Reset</button>
+                    <button className="vst-dropdown__footer-btn" onClick={() => setShowBodyTypeDropdown(false)}>Close</button>
+                  </div>
+                </div>
+              )}
+            </div>
             {/* Expired records filter */}
             <div style={{ position: 'relative' }} ref={expiredDropdownRef}>
               <button
@@ -1067,34 +1133,44 @@ export default function MyFleetTable({
                 </div>
               )}
             </div>
-            {/* Challan status checkboxes (Pending / Disposed) */}
-            <div className="vst-checkbox-group">
-              <label className={`vst-checkbox-label${challanTypes.includes('pending') ? ' vst-checkbox-label--checked' : ''}`}>
-                <input
-                  type="checkbox"
-                  checked={challanTypes.includes('pending')}
-                  onChange={e => {
-                    setExpiredTypes([]);
-                    setUrgentTypes([]);
-                    if (e.target.checked) setChallanTypes(prev => Array.from(new Set([...prev, 'pending'])));
-                    else setChallanTypes(prev => prev.filter(t => t !== 'pending'));
-                  }}
-                />
-                Pending
-              </label>
-              <label className={`vst-checkbox-label${challanTypes.includes('disposed') ? ' vst-checkbox-label--checked' : ''}`}>
-                <input
-                  type="checkbox"
-                  checked={challanTypes.includes('disposed')}
-                  onChange={e => {
-                    setExpiredTypes([]);
-                    setUrgentTypes([]);
-                    if (e.target.checked) setChallanTypes(prev => Array.from(new Set([...prev, 'disposed'])));
-                    else setChallanTypes(prev => prev.filter(t => t !== 'disposed'));
-                  }}
-                />
-                Disposed
-              </label>
+            {/* Challan status dropdown (Pending / Disposed) */}
+            <div style={{ position: 'relative' }} ref={challanStatusDropdownRef}>
+              <button
+                className={`vst-filter-trigger${challanTypes.length > 0 ? ' vst-filter-trigger--active' : ''}${showChallanStatusDropdown ? ' vst-filter-trigger--open' : ''}`}
+                onClick={() => setShowChallanStatusDropdown(v => !v)}
+              >
+                <i className="ri-file-list-3-line vst-filter-trigger__icon" />
+                {challanTypes.length === 0
+                  ? 'Challan status'
+                  : challanTypes.map(t => t === 'pending' ? 'Pending' : 'Disposed').join(', ')}
+                {challanTypes.length > 0 && (
+                  <span className="vst-filter-trigger__badge">{challanTypes.length}</span>
+                )}
+                <i className="ri-arrow-down-s-line vst-filter-trigger__chevron" />
+              </button>
+              {showChallanStatusDropdown && (
+                <div className="vst-dropdown">
+                  {['pending', 'disposed'].map(type => (
+                    <label key={type} className="vst-dropdown__option">
+                      <input
+                        type="checkbox"
+                        checked={challanTypes.includes(type)}
+                        onChange={e => {
+                          setExpiredTypes([]);
+                          setUrgentTypes([]);
+                          if (e.target.checked) setChallanTypes(prev => Array.from(new Set([...prev, type])));
+                          else setChallanTypes(prev => prev.filter(t => t !== type));
+                        }}
+                      />
+                      {type === 'pending' ? 'Pending' : 'Disposed'}
+                    </label>
+                  ))}
+                  <div className="vst-dropdown__footer">
+                    <button className="vst-dropdown__footer-btn" onClick={() => setChallanTypes([])}>Reset</button>
+                    <button className="vst-dropdown__footer-btn" onClick={() => setShowChallanStatusDropdown(false)}>Close</button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Challan type dropdown (Online / Registered Court / Virtual Court) */}
@@ -1104,7 +1180,7 @@ export default function MyFleetTable({
                 onClick={() => setShowChallanDropdown(v => !v)}
               >
                 <i className="ri-git-branch-line vst-filter-trigger__icon" />
-                {challanSources.length === 0 ? 'Challan type' : challanSources.map(t => t === 'online' ? 'Online' : t === 'registered' ? 'Reg. Court' : t === 'virtual' ? 'Virtual Court' : t).join(', ')}
+                {challanSources.length === 0 ? 'Challan type' : challanSources.map(t => t === 'online' ? 'Online' : t === 'court' ? 'Court' : t).join(', ')}
                 {challanSources.length > 0 && (
                   <span className="vst-filter-trigger__badge">{challanSources.length}</span>
                 )}
@@ -1112,7 +1188,7 @@ export default function MyFleetTable({
               </button>
               {showChallanDropdown && (
                 <div className="vst-dropdown">
-                  {['online', 'registered', 'virtual'].map(type => (
+                  {['online', 'court'].map(type => (
                     <label key={type} className="vst-dropdown__option">
                       <input
                         type="checkbox"
@@ -1121,7 +1197,7 @@ export default function MyFleetTable({
                           if (e.target.checked) setChallanSources(prev => [...prev, type]);
                           else setChallanSources(prev => prev.filter(t => t !== type));
                         }} />
-                      {type === 'online' ? 'Online' : type === 'registered' ? 'Registered Court' : 'Virtual Court'}
+                      {type === 'online' ? 'Online' : 'Court'}
                     </label>
                   ))}
                   <div className="vst-dropdown__footer">
@@ -1236,12 +1312,11 @@ export default function MyFleetTable({
                   </th>
                 );
               })}
-              {import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' && <th>Upload</th>}
             </tr>
           </thead>
           <tbody>
             {(() => {
-              const dynColSpan = colOrder.filter(k => visibleCols.has(k)).length + 1 + (import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' ? 1 : 0);
+              const dynColSpan = colOrder.filter(k => visibleCols.has(k)).length + 1;
               if (actualLoading) return <tr><td colSpan={dynColSpan}>Loading...</td></tr>;
               if (showClientPages && !selectedClientId) return <tr><td colSpan={dynColSpan} style={{ textAlign: 'center', padding: 24, color: '#666' }}>Please select a client from the dropdown above to view their vehicles.</td></tr>;
               if (sortedAll.length === 0) return <tr><td colSpan={dynColSpan}>No data found.</td></tr>;
@@ -1259,18 +1334,6 @@ export default function MyFleetTable({
                         {renderCell(row, colKey, rowId)}
                       </td>
                     ))}
-                    {import.meta.env.VITE_VEHICLE_DOCUMENT_UPLOAD_ENABLED === 'true' && (
-                      <td style={{ textAlign: 'center' }}>
-                        <button
-                          className="action-btn flat-btn"
-                          title="Upload Documents"
-                          style={{ fontSize: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          onClick={() => { setSelectedVehicleForUpload(row); setShowUploadModal(true); }}
-                        >
-                          <FaUpload style={{ fontSize: '1.2em' }} />
-                        </button>
-                      </td>
-                    )}
                   </tr>
                 );
               });
@@ -1340,26 +1403,27 @@ export default function MyFleetTable({
           // TODO: Implement file upload API call
           console.log('Uploading documents:', uploadFiles);
           setShowUploadModal(false);
-          setUploadFiles({
-            insurance: null,
-            pollution: null,
-            roadTax: null,
-            fitness: null,
-            permit: null
-          });
+          resetUploadFiles();
         }}
         onCancel={() => {
           setShowUploadModal(false);
-          setUploadFiles({
-            insurance: null,
-            pollution: null,
-            roadTax: null,
-            fitness: null,
-            permit: null
-          });
+          resetUploadFiles();
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontWeight: 600, fontSize: 14, color: '#333' }}>RC (Registration Certificate)</label>
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={(e) => setUploadFiles({ ...uploadFiles, rc: e.target.files[0] })}
+              style={{ padding: 6, border: '1px solid #ccc', borderRadius: 4 }}
+            />
+            {uploadFiles.rc && (
+              <span style={{ fontSize: 12, color: '#666' }}>Selected: {uploadFiles.rc.name}</span>
+            )}
+          </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <label style={{ fontWeight: 600, fontSize: 14, color: '#333' }}>Insurance Document</label>
             <input
@@ -1423,6 +1487,42 @@ export default function MyFleetTable({
             {uploadFiles.permit && (
               <span style={{ fontSize: 12, color: '#666' }}>Selected: {uploadFiles.permit.name}</span>
             )}
+          </div>
+
+          {/* Two user-named custom document slots (hard-capped at 2) */}
+          <div style={{ borderTop: '1px dashed #d0d7de', paddingTop: 12, marginTop: 4 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+              Other Documents <span style={{ fontWeight: 400, textTransform: 'none', color: '#94a3b8', letterSpacing: 0 }}>(up to 2 — name them yourself)</span>
+            </div>
+            {uploadFiles.customDocs.map((doc, idx) => (
+              <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: idx === 0 ? 12 : 0 }}>
+                <input
+                  type="text"
+                  value={doc.name}
+                  maxLength={50}
+                  placeholder={`Custom document ${idx + 1} name`}
+                  onChange={(e) => {
+                    const next = uploadFiles.customDocs.map((d, i) => i === idx ? { ...d, name: e.target.value } : d);
+                    setUploadFiles({ ...uploadFiles, customDocs: next });
+                  }}
+                  style={{ padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4, fontSize: 13 }}
+                />
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  disabled={!doc.name.trim()}
+                  title={!doc.name.trim() ? 'Enter a document name first' : ''}
+                  onChange={(e) => {
+                    const next = uploadFiles.customDocs.map((d, i) => i === idx ? { ...d, file: e.target.files[0] } : d);
+                    setUploadFiles({ ...uploadFiles, customDocs: next });
+                  }}
+                  style={{ padding: 6, border: '1px solid #ccc', borderRadius: 4, opacity: doc.name.trim() ? 1 : 0.55 }}
+                />
+                {doc.file && (
+                  <span style={{ fontSize: 12, color: '#666' }}>Selected: {doc.file.name}</span>
+                )}
+              </div>
+            ))}
           </div>
 
           <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
