@@ -625,12 +625,12 @@ export default function VehicleRTOdataTable({ clientId, onViewAll, selectedRtoDa
                     <input
                       type="range"
                       min={1}
-                      max={50}
+                      max={60}
                       value={urgentRange}
                       onChange={e => setUrgentRange(Number(e.target.value))}
                     />
                     <span className="vst-range-row__value">{urgentRange}</span>
-                    <span>(1-50)</span>
+                    <span>(1-60)</span>
                   </div>
                   <div className="vst-dropdown__footer">
                     <button className="vst-dropdown__footer-btn" onClick={() => { setUrgentTypes([]); setUrgentRange(15); }}>Reset</button>
