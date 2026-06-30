@@ -1123,7 +1123,7 @@ export default function MyFleetTable({
                   ))}
                   <div className="vst-range-row">
                     <span>Days:</span>
-                    <input type="range" min={1} max={50} value={urgentRange} onChange={e => setUrgentRange(Number(e.target.value))} />
+                    <input type="range" min={1} max={60} value={urgentRange} onChange={e => setUrgentRange(Number(e.target.value))} />
                     <span className="vst-range-row__value">{urgentRange}</span>
                   </div>
                   <div className="vst-dropdown__footer">
