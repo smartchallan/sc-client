@@ -98,6 +98,16 @@ export default function RegisterVehicle() {
   // Pagination state
   const [activeVehiclesLimit, setActiveVehiclesLimit] = useState(10);
   const [deletedVehiclesLimit, setDeletedVehiclesLimit] = useState(10);
+  // Last successful background-job run times (RTO + challan) for the table header strip
+  const [jobRuns, setJobRuns] = useState({ rto: null, challan: null });
+
+  // Readable timestamp for a job run ({ at, status }) — used in the header strip.
+  const formatJobTime = (run) => {
+    if (!run || !run.at) return 'Not yet run';
+    const d = new Date(run.at);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+  };
 
   const API_ROOT = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
   const REGISTER_ENDPOINT = "/uservehicle/register";
@@ -147,6 +157,19 @@ export default function RegisterVehicle() {
   useEffect(() => {
     const { client_id } = getUserIds();
     if (client_id) fetchVehicles(client_id);
+  }, []);
+
+  // Fetch last RTO / challan job run times for the header strip
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_ROOT}/joblastrun`);
+        const data = await res.json();
+        if (!cancelled && data) setJobRuns({ rto: data.rto || null, challan: data.challan || null });
+      } catch { /* non-critical: header strip just shows fallback */ }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   // Reset pagination when search or filter changes
@@ -707,7 +730,7 @@ export default function RegisterVehicle() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 8, padding: 3, gap: 2 }}>
-                {[['', 'All'], ['ACTIVE', 'Active'], ['INACTIVE', 'Inactive']].map(([val, label]) => (
+                {[['', 'All'], ['ACTIVE', 'Active']].map(([val, label]) => (
                   <button
                     key={val}
                     onClick={() => setStatusFilter(val)}
@@ -723,6 +746,21 @@ export default function RegisterVehicle() {
                 {sortDesc ? 'Newest' : 'Oldest'}
               </button>
             </div>
+          </div>
+
+          {/* Last data-refresh strip (driven by the RTO & challan background jobs) */}
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 18, padding: '10px 24px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9', fontSize: 12, color: '#64748b' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }} title="Last time the RTO data job ran">
+              <i className="ri-roadster-line" style={{ color: '#2563eb', fontSize: 14 }} />
+              <span style={{ color: '#94a3b8' }}>RTO data updated:</span>
+              <strong style={{ color: '#334155', fontWeight: 600 }}>{formatJobTime(jobRuns.rto)}</strong>
+            </span>
+            <span style={{ width: 1, height: 14, background: '#e2e8f0' }} />
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }} title="Last time the challan data job ran">
+              <i className="ri-file-list-3-line" style={{ color: '#dc2626', fontSize: 14 }} />
+              <span style={{ color: '#94a3b8' }}>Challans updated:</span>
+              <strong style={{ color: '#334155', fontWeight: 600 }}>{formatJobTime(jobRuns.challan)}</strong>
+            </span>
           </div>
 
           {/* Search bar */}
@@ -814,9 +852,7 @@ export default function RegisterVehicle() {
                               <td style={{ textAlign: 'center' }}>
                                 {status === 'ACTIVE'
                                   ? <span className="client-status-pill active">Active</span>
-                                  : status === 'INACTIVE'
-                                    ? <span className="client-status-pill inactive">Inactive</span>
-                                    : <span className="badge badge-gray">{status}</span>}
+                                  : <span className="badge badge-gray">{status}</span>}
                               </td>
                               <td className="rv-date-cell">
                                 {v.registered_at ? new Date(v.registered_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
@@ -826,10 +862,6 @@ export default function RegisterVehicle() {
                                   <button className="rv-icon-btn rv-icon-btn--data" disabled={dataLoadingId === v.vehicle_number} onClick={() => handleGetVehicleData(v.vehicle_number)} title="Fetch RTO & challan data">
                                     {dataLoadingId === v.vehicle_number ? <span className="loading-spinner rv-spinner-sm rv-spinner-dark" /> : <i className="ri-database-2-line" />}
                                   </button>
-                                  {status === 'INACTIVE'
-                                    ? <button className="rv-icon-btn rv-icon-btn--success" onClick={() => setModal({ open: true, action: 'activate', vehicle: v })} title="Activate"><i className="ri-checkbox-circle-line" /></button>
-                                    : <button className="rv-icon-btn rv-icon-btn--warn" onClick={() => setModal({ open: true, action: 'inactivate', vehicle: v })} title="Deactivate"><i className="ri-pause-circle-line" /></button>
-                                  }
                                   <button className="rv-icon-btn rv-icon-btn--danger" onClick={() => setModal({ open: true, action: 'delete', vehicle: v })} title="Delete"><i className="ri-delete-bin-6-line" /></button>
                                 </div>
                               </td>
@@ -999,19 +1031,15 @@ export default function RegisterVehicle() {
       <CustomModal
         open={modal.open}
         title={
-          modal.action === 'inactivate' ? 'Deactivate Vehicle?'
-            : modal.action === 'activate' ? 'Activate Vehicle?'
-              : modal.action === 'delete' ? 'Delete Vehicle?'
-                : modal.action === 'restore-info' ? 'Cannot Restore Vehicle'
-                  : ''
+          modal.action === 'delete' ? 'Delete Vehicle?'
+            : modal.action === 'restore-info' ? 'Cannot Restore Vehicle'
+              : ''
         }
         onConfirm={async () => {
           if (modal.action === 'restore-info') { setModal({ open: false, action: null, vehicle: null }); return; }
           if (!modal.vehicle) return setModal({ open: false, action: null, vehicle: null });
           let status = '';
-          if (modal.action === 'inactivate') status = 'inactive';
-          else if (modal.action === 'activate') status = 'active';
-          else if (modal.action === 'delete') status = 'delete';
+          if (modal.action === 'delete') status = 'delete';
           try {
             const res = await fetch(`${API_ROOT}/updatevehiclestatus`, {
               method: 'PUT',
@@ -1030,7 +1058,7 @@ export default function RegisterVehicle() {
           setModal({ open: false, action: null, vehicle: null });
         }}
         onCancel={() => setModal({ open: false, action: null, vehicle: null })}
-        confirmText={modal.action === 'delete' ? 'Delete' : modal.action === 'activate' ? 'Activate' : modal.action === 'restore-info' ? 'OK' : 'Deactivate'}
+        confirmText={modal.action === 'delete' ? 'Delete' : modal.action === 'restore-info' ? 'OK' : 'Confirm'}
         cancelText={modal.action === 'restore-info' ? null : 'Cancel'}
       >
         {modal.action === 'delete' && (

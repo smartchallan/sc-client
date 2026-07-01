@@ -813,7 +813,6 @@ function ClientDashboard() {
         const data = [];
         const colors = [];
         if (Object.prototype.hasOwnProperty.call(vs, 'active')) { labels.push('Active'); data.push(vs.active || 0); colors.push('#42a5f5'); }
-        if (Object.prototype.hasOwnProperty.call(vs, 'inactive')) { labels.push('Inactive'); data.push(vs.inactive || 0); colors.push('#ffa726'); }
         if (Object.prototype.hasOwnProperty.call(vs, 'deleted')) { labels.push('Deleted'); data.push(vs.deleted || 0); colors.push('#e15759'); }
         // Fallback: if no keys found, show zeroed Active slice
         if (labels.length === 0) { labels.push('Active'); data.push(0); colors.push('#42a5f5'); }
@@ -1541,10 +1540,10 @@ function ClientDashboard() {
       return;
     }
     // Vehicle status update API
-    if (["activate", "inactivate", "delete"].includes(modal.action)) {
+    if (["activate", "delete"].includes(modal.action)) {
       // setShowLoader(true); // Page loader disabled
       try {
-        const statusValue = modal.action === "activate" ? "active" : modal.action === "inactivate" ? "inactive" : "deleted";
+        const statusValue = modal.action === "activate" ? "active" : "delete";
         const res = await fetch(`${baseUrl}/updatevehiclestatus`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -1566,7 +1565,7 @@ function ClientDashboard() {
                 // Prefer API response for updated vehicle
                 if (data.updated_vehicle) return { ...v, ...data.updated_vehicle };
                 if (data.vehicle) return { ...v, ...data.vehicle };
-                return { ...v, status: statusValue.toUpperCase() };
+                return { ...v, status: statusValue === 'delete' ? 'DELETED' : statusValue.toUpperCase() };
               }
               return v;
             });
@@ -1886,26 +1885,21 @@ function ClientDashboard() {
           const { Chart, PieController, ArcElement, Tooltip, Legend } = chartjs;
           Chart.register(PieController, ArcElement, Tooltip, Legend);
           // Registered Vehicles (doughnut) - compute counts and draw interactive chart
-        let active = 0, inactive = 0, deleted = 0;
+        let active = 0, deleted = 0;
         if (clientData && Array.isArray(clientData.vehicles)) {
           clientData.vehicles.forEach(v => {
             const status = (v.status || '').toLowerCase();
             if (status === 'active') active++;
-            else if (status === 'inactive') inactive++;
             else if (status === 'deleted') deleted++;
           });
         }
         const ctxTotal = chartRefTotal.current.getContext('2d');
         if (window._clientTotalChart) window._clientTotalChart.destroy();
-        const totalData = [active, inactive, deleted];
+        const totalData = [active, deleted];
         // Create a purple radial gradient for the 'active' slice
         let purpleGradient = ctxTotal.createRadialGradient(60, 60, 10, 60, 60, 90);
         purpleGradient.addColorStop(0, '#ede9fe'); // light purple
         purpleGradient.addColorStop(1, '#a78bfa'); // soft purple
-        // Teal for 'inactive'
-        let tealGradient = ctxTotal.createRadialGradient(60, 60, 10, 60, 60, 90);
-        tealGradient.addColorStop(0, '#ccfbf1');
-        tealGradient.addColorStop(1, '#2dd4bf');
         // Amber for 'deleted'
         let amberGradient = ctxTotal.createRadialGradient(60, 60, 10, 60, 60, 90);
         amberGradient.addColorStop(0, '#fef3c7');
@@ -1913,10 +1907,10 @@ function ClientDashboard() {
         window._clientTotalChart = new Chart(ctxTotal, {
           type: 'pie',
           data: {
-            labels: ['Active', 'Inactive', 'Deleted'],
+            labels: ['Active', 'Deleted'],
             datasets: [{
               data: totalData,
-              backgroundColor: [purpleGradient, tealGradient, amberGradient],
+              backgroundColor: [purpleGradient, amberGradient],
             }],
           },
           options: {
@@ -3089,12 +3083,11 @@ function ClientDashboard() {
                 </div>
                 <div className="px-3 py-2.5 flex gap-1">
                   {(() => {
-                    const counts = { active: 0, inactive: 0, deleted: 0 };
+                    const counts = { active: 0, deleted: 0 };
                     if (clientData && Array.isArray(clientData.vehicles)) {
                       clientData.vehicles.forEach(v => {
                         const s = (v.status || '').toLowerCase();
                         if (s === 'active') counts.active++;
-                        else if (s === 'inactive') counts.inactive++;
                         else if (s === 'deleted') counts.deleted++;
                       });
                     }
@@ -3124,32 +3117,6 @@ function ClientDashboard() {
                       >
                         <div className="text-[16px] font-bold text-blue-600">{counts.active}</div>
                         <div className="text-[11px] text-slate-500 font-medium mt-0.5">Active</div>
-                      </div>,
-                      <div
-                        key="inact"
-                        className="flex-1 text-center py-1.5 rounded-md cursor-pointer hover:bg-amber-50 transition-colors"
-                        title="View inactive registered vehicles"
-                        onClick={() => {
-                          checkPermissionAndNavigate('Register Vehicle');
-                          setTimeout(() => {
-                            try {
-                              const section = document.getElementById('registered-vehicles-section');
-                              if (section) {
-                                const rect = section.getBoundingClientRect();
-                                const offset = rect.top + window.scrollY - 80;
-                                window.scrollTo({ top: offset < 0 ? 0 : offset, behavior: 'smooth' });
-                              }
-                              const select = document.querySelector('#registered-vehicles-section select.form-control');
-                              if (select) {
-                                select.value = 'INACTIVE';
-                                select.dispatchEvent(new Event('change', { bubbles: true }));
-                              }
-                            } catch (e) {}
-                          }, 300);
-                        }}
-                      >
-                        <div className="text-[16px] font-bold text-amber-600">{counts.inactive}</div>
-                        <div className="text-[11px] text-slate-500 font-medium mt-0.5">Inactive</div>
                       </div>,
                       <div
                         key="del"
@@ -3391,10 +3358,6 @@ function ClientDashboard() {
                         <div className="flex-1 bg-blue-50 rounded-lg p-3 border border-blue-100" title="Active vehicles">
                           <div className="text-2xl font-bold text-blue-600">{loadingNetworkStats ? '...' : networkStats && networkStats.vehicleStatus && typeof networkStats.vehicleStatus.active !== 'undefined' ? networkStats.vehicleStatus.active : 0}</div>
                           <div className="text-xs text-slate-600 mt-1">Active</div>
-                        </div>
-                        <div className="flex-1 bg-orange-50 rounded-lg p-3 border border-orange-100" title="Inactive vehicles">
-                          <div className="text-2xl font-bold text-orange-600">{loadingNetworkStats ? '...' : networkStats && networkStats.vehicleStatus && typeof networkStats.vehicleStatus.inactive !== 'undefined' ? networkStats.vehicleStatus.inactive : 0}</div>
-                          <div className="text-xs text-slate-600 mt-1">Inactive</div>
                         </div>
                         <div className="flex-1 bg-red-50 rounded-lg p-3 border border-red-100" title="Deleted vehicles">
                           <div className="text-2xl font-bold text-red-600">{loadingNetworkStats ? '...' : networkStats && networkStats.vehicleStatus && typeof networkStats.vehicleStatus.deleted !== 'undefined' ? networkStats.vehicleStatus.deleted : 0}</div>

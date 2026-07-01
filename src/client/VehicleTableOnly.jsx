@@ -95,7 +95,6 @@ export default function VehicleTableOnly() {
         >
           <option value="">All Status</option>
           <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
           <option value="DELETED">Deleted</option>
         </select>
       </div>
@@ -151,10 +150,7 @@ export default function VehicleTableOnly() {
               let status = (v.status || 'Not Available').toUpperCase();
               let statusColor = '#888';
               if (status === 'ACTIVE') statusColor = '#43e97b';
-              else if (status === 'INACTIVE') statusColor = '#ffa726';
               else if (status === 'DELETED') statusColor = '#e57373';
-              const handleInactivate = () => setModal({ open: true, action: 'inactivate', vehicle: v });
-              const handleActivate = () => setModal({ open: true, action: 'activate', vehicle: v });
               const handleDelete = () => setModal({ open: true, action: 'delete', vehicle: v });
               return (
                 <tr key={v.id || v._id || idx}>
@@ -183,11 +179,6 @@ export default function VehicleTableOnly() {
                     </button>
                   </td>
                   <td className="print-hide">
-                    {status === 'INACTIVE' ? (
-                      <span title="Activate Vehicle" style={{ cursor: 'pointer', marginRight: 12, fontSize: 18, color: '#43e97b' }} onClick={handleActivate} role="button" aria-label="Activate Vehicle"><i className="ri-checkbox-circle-line"></i></span>
-                    ) : (
-                      <span title="Inactivate Vehicle" style={{ cursor: 'pointer', marginRight: 12, fontSize: 18, color: '#ffa726' }} onClick={handleInactivate} role="button" aria-label="Inactivate Vehicle"><i className="ri-close-circle-line"></i></span>
-                    )}
                     <span title="Delete Vehicle" style={{ cursor: 'pointer', color: '#e57373', fontSize: 18 }} onClick={handleDelete} role="button" aria-label="Delete Vehicle"><i className="ri-delete-bin-6-line"></i></span>
                   </td>
                 </tr>
@@ -216,23 +207,18 @@ export default function VehicleTableOnly() {
       <CustomModal
         open={modal.open}
         title={
-          modal.action === 'inactivate' ? 'Are you sure you want to inactivate this vehicle?'
-          : modal.action === 'activate' ? 'Are you sure you want to activate this vehicle?'
-          : modal.action === 'delete' ? 'Are you sure you want to delete this vehicle?'
-          : modal.action === 'info' ? 'Vehicle Inactive'
+          modal.action === 'delete' ? 'Are you sure you want to delete this vehicle?'
           : modal.action === 'fetch' ? `API Response for ${modal.vehicle?.vehicle_number}`
           : ''
         }
         onConfirm={async () => {
-          if (modal.action === 'info' || modal.action === 'fetch') {
+          if (modal.action === 'fetch') {
             setModal({ open: false, action: null, vehicle: null });
             return;
           }
           if (!modal.vehicle) return setModal({ open: false, action: null, vehicle: null });
           let status = '';
-          if (modal.action === 'inactivate') status = 'inactive';
-          else if (modal.action === 'activate') status = 'active';
-          else if (modal.action === 'delete') status = 'delete';
+          if (modal.action === 'delete') status = 'delete';
           try {
             const res = await fetch(`${API_ROOT}/updatevehiclestatus`, {
               method: 'PUT',
@@ -252,14 +238,11 @@ export default function VehicleTableOnly() {
           setModal({ open: false, action: null, vehicle: null });
         }}
         onCancel={() => setModal({ open: false, action: null, vehicle: null })}
-        confirmText={modal.action === 'delete' ? 'Delete' : modal.action === 'activate' ? 'Activate' : modal.action === 'inactivate' ? 'Inactivate' : modal.action === 'info' || modal.action === 'fetch' ? 'OK' : 'Yes'}
-        cancelText={modal.action === 'info' || modal.action === 'fetch' ? null : 'Cancel'}
+        confirmText={modal.action === 'delete' ? 'Delete' : modal.action === 'fetch' ? 'OK' : 'Yes'}
+        cancelText={modal.action === 'fetch' ? null : 'Cancel'}
       >
         {modal.action === 'delete' && (
           <span style={{color:'red', fontWeight:600}}>This action is non-reversible.<br/>Your vehicle and all related data will be deleted permanently.</span>
-        )}
-        {modal.action === 'info' && (
-          <span style={{color:'#d35400', fontWeight:500}}>Please activate your vehicle first.</span>
         )}
         {modal.action === 'fetch' && (
           <pre style={{background:'#f5f5f5',padding:12,borderRadius:6,maxHeight:400,overflow:'auto',fontSize:13}}>{modal.message}</pre>
