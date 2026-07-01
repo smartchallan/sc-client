@@ -24,7 +24,24 @@ export default function MyClients() {
   const [billingModal, setBillingModal] = useState({ open: false, client: null, record: null });
   const [billingDate, setBillingDate] = useState('');
   const [billingSaving, setBillingSaving] = useState(false);
+  const [deletedDrawer, setDeletedDrawer] = useState({ open: false, client: null, vehicles: [], loading: false });
   const API_ROOT = import.meta.env.VITE_API_BASE_URL || '';
+
+  // Open the drawer and load this client's deleted vehicles (with deletion date)
+  const openDeletedDrawer = async (client) => {
+    setDeletedDrawer({ open: true, client, vehicles: [], loading: true });
+    try {
+      const res = await fetch(`${API_ROOT}/uservehicle?client_id=${client.id}`);
+      const data = await res.json().catch(() => ({}));
+      const list = Array.isArray(data) ? data : (Array.isArray(data.vehicles) ? data.vehicles : []);
+      const deleted = list
+        .filter(v => (v.status || '').toLowerCase() === 'deleted')
+        .sort((a, b) => new Date(b.deleted_at || b.updated_at || 0) - new Date(a.deleted_at || a.updated_at || 0));
+      setDeletedDrawer({ open: true, client, vehicles: deleted, loading: false });
+    } catch {
+      setDeletedDrawer({ open: true, client, vehicles: [], loading: false });
+    }
+  };
 
   // Strict: Clear search box when change password modal is opened (prevents autofill or indirect state sync)
   useEffect(() => {
@@ -514,6 +531,7 @@ export default function MyClients() {
               <th>Phone</th>
               <th>Address</th>
               {showNetworkVehiclesColumn && <th>Network Vehicles</th>}
+              {showNetworkVehiclesColumn && <th>Billable Vehicles</th>}
               <th>Registered On</th>
               <th>Billed Till</th>
               <th>Status</th>
@@ -524,7 +542,7 @@ export default function MyClients() {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={showNetworkVehiclesColumn ? 12 : 11} style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 20px' }}>
+                <td colSpan={showNetworkVehiclesColumn ? 13 : 11} style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 20px' }}>
                   {loading ? (
                     <span><i className="ri-loader-4-line" style={{ animation: 'spin 1s linear infinite', marginRight: 8 }}></i> Loading clients...</span>
                   ) : (
@@ -543,20 +561,58 @@ export default function MyClients() {
                 {showNetworkVehiclesColumn && (
                   <td style={{ textAlign: 'center', fontWeight: 600, color: '#1e293b' }}>
                     {(() => {
+                      const active = Number(c.active_count) || 0;
+                      const deleted = Number(c.deleted_count) || 0;
                       const net = Number(c.network_vehicle_count) || 0;
-                      const own = Number(c.vehicle_count) || 0;
-                      if (net === 0) return <span style={{ color: '#94a3b8', fontWeight: 400 }}>0</span>;
+                      if (active === 0 && deleted === 0) return <span style={{ color: '#94a3b8', fontWeight: 400 }}>0</span>;
+                      return (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} title={`Network total (incl. sub-clients): ${net}`}>
+                          <span
+                            title="Active vehicles"
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              padding: '2px 8px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                              background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0',
+                            }}
+                          >
+                            <i className="ri-car-line" style={{ fontSize: 11 }} />{active}
+                          </span>
+                          <button
+                            onClick={() => { if (deleted > 0) openDeletedDrawer(c); }}
+                            disabled={deleted === 0}
+                            title={deleted > 0 ? 'View deleted vehicles' : 'No deleted vehicles'}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              padding: '2px 8px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                              background: deleted > 0 ? '#fef2f2' : '#f8fafc',
+                              color: deleted > 0 ? '#dc2626' : '#94a3b8',
+                              border: `1px solid ${deleted > 0 ? '#fecaca' : '#e2e8f0'}`,
+                              cursor: deleted > 0 ? 'pointer' : 'default',
+                            }}
+                          >
+                            <i className="ri-delete-bin-6-line" style={{ fontSize: 11 }} />{deleted}
+                          </button>
+                        </div>
+                      );
+                    })()}
+                  </td>
+                )}
+                {showNetworkVehiclesColumn && (
+                  <td style={{ textAlign: 'center' }}>
+                    {(() => {
+                      const billable = Number(c.billable_count) || 0;
+                      const active = Number(c.active_count) || 0;
+                      const deletedThisMonth = Math.max(0, billable - active);
                       return (
                         <span
-                          title={`Own: ${own} • Network total: ${net}`}
+                          title={`Active (${active}) + deleted this month (${deletedThisMonth})`}
                           style={{
                             display: 'inline-flex', alignItems: 'center', gap: 4,
                             padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700,
                             background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe',
                           }}
                         >
-                          <i className="ri-car-line" style={{ fontSize: 11 }} />
-                          {net}
+                          <i className="ri-bill-line" style={{ fontSize: 11 }} />{billable}
                         </span>
                       );
                     })()}
@@ -798,6 +854,62 @@ export default function MyClients() {
                   <div style={{ fontFamily: 'monospace' }}>{selectedClient.id || selectedClient._id || '-'}</div>
                 </div>
               </div>
+            </div>
+          </div>
+        </RightSidebar>
+      )}
+
+      {/* Deleted Vehicles Sidebar */}
+      {deletedDrawer.open && (
+        <RightSidebar
+          open={true}
+          onClose={() => setDeletedDrawer({ open: false, client: null, vehicles: [], loading: false })}
+          title={`Deleted Vehicles: ${deletedDrawer.client?.name || ''}`}
+        >
+          <div className="sidebar-detail-content">
+            <div className="sidebar-detail-section">
+              <h3 className="sidebar-section-title">
+                {deletedDrawer.loading
+                  ? 'Loading…'
+                  : `${deletedDrawer.vehicles.length} deleted vehicle${deletedDrawer.vehicles.length !== 1 ? 's' : ''}`}
+              </h3>
+              {deletedDrawer.loading ? (
+                <div style={{ padding: '20px 0', color: '#64748b' }}>
+                  <i className="ri-loader-4-line" style={{ animation: 'spin 1s linear infinite', marginRight: 8 }} /> Loading deleted vehicles…
+                </div>
+              ) : deletedDrawer.vehicles.length === 0 ? (
+                <div style={{ padding: '20px 0', color: '#94a3b8' }}>
+                  <i className="ri-inbox-line" style={{ fontSize: 22, display: 'block', marginBottom: 8 }} /> No deleted vehicles for this client.
+                </div>
+              ) : (
+                <table className="vst-table" style={{ width: '100%' }}>
+                  <thead>
+                    <tr>
+                      <th className="vst-th--num">#</th>
+                      <th>Vehicle No.</th>
+                      <th>Deleted On</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {deletedDrawer.vehicles.map((v, i) => (
+                      <tr key={v.id || v._id || i} className="vst-row">
+                        <td className="vst-td--num">{i + 1}</td>
+                        <td style={{ fontWeight: 600, color: '#1e293b' }}>{v.vehicle_number || '—'}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            padding: '2px 8px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                            background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca',
+                          }}>
+                            <i className="ri-time-line" style={{ fontSize: 11 }} />
+                            {formatDate(v.deleted_at || v.updated_at)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </RightSidebar>
