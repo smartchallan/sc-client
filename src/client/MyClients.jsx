@@ -27,15 +27,40 @@ export default function MyClients() {
   const [deletedDrawer, setDeletedDrawer] = useState({ open: false, client: null, vehicles: [], loading: false });
   const API_ROOT = import.meta.env.VITE_API_BASE_URL || '';
 
-  // Open the drawer and load this client's deleted vehicles (with deletion date)
+  // Open the drawer and load deleted vehicles for this client AND its whole
+  // sub-network (nth level) — matching the aggregated deleted count in the row.
   const openDeletedDrawer = async (client) => {
     setDeletedDrawer({ open: true, client, vehicles: [], loading: true });
     try {
-      const res = await fetch(`${API_ROOT}/uservehicle?client_id=${client.id}`);
-      const data = await res.json().catch(() => ({}));
-      const list = Array.isArray(data) ? data : (Array.isArray(data.vehicles) ? data.vehicles : []);
-      const deleted = list
-        .filter(v => (v.status || '').toLowerCase() === 'deleted')
+      // Collect the clicked client + all descendant client ids from the loaded network.
+      const byParent = new Map();
+      clients.forEach(c => {
+        if (!byParent.has(c.parent_id)) byParent.set(c.parent_id, []);
+        byParent.get(c.parent_id).push(c);
+      });
+      const nameById = new Map(clients.map(c => [c.id, c.name]));
+      const ids = [];
+      const seen = new Set();
+      const stack = [client.id];
+      while (stack.length) {
+        const id = stack.pop();
+        if (seen.has(id)) continue;
+        seen.add(id);
+        ids.push(id);
+        (byParent.get(id) || []).forEach(ch => stack.push(ch.id));
+      }
+      // Fetch each client's vehicles in parallel and keep the deleted ones.
+      const results = await Promise.all(ids.map(async (id) => {
+        try {
+          const res = await fetch(`${API_ROOT}/uservehicle?client_id=${id}`);
+          const data = await res.json().catch(() => ({}));
+          const list = Array.isArray(data) ? data : (Array.isArray(data.vehicles) ? data.vehicles : []);
+          return list
+            .filter(v => (v.status || '').toLowerCase() === 'deleted')
+            .map(v => ({ ...v, _ownerName: nameById.get(id) || '' }));
+        } catch { return []; }
+      }));
+      const deleted = results.flat()
         .sort((a, b) => new Date(b.deleted_at || b.updated_at || 0) - new Date(a.deleted_at || a.updated_at || 0));
       setDeletedDrawer({ open: true, client, vehicles: deleted, loading: false });
     } catch {
@@ -301,7 +326,12 @@ export default function MyClients() {
   });
 
   // Account-level vehicle totals across the currently-filtered clients.
+  // Each row's counts are aggregated across that client's whole sub-network, so
+  // summing every filtered row would double-count nested clients. We sum only the
+  // "roots" of the filtered set (rows whose parent isn't also in the filtered set).
+  const filteredIds = new Set(filtered.map(c => c.id));
   const vehicleTotals = filtered.reduce((acc, c) => {
+    if (filteredIds.has(c.parent_id)) return acc;
     acc.active += Number(c.active_count) || 0;
     acc.deleted += Number(c.deleted_count) || 0;
     acc.billable += Number(c.billable_count) || 0;
@@ -927,7 +957,14 @@ export default function MyClients() {
                     {deletedDrawer.vehicles.map((v, i) => (
                       <tr key={v.id || v._id || i} style={{ borderTop: '1px solid #f1f5f9' }}>
                         <td style={{ padding: '8px 4px', color: '#94a3b8', fontSize: 13, verticalAlign: 'middle' }}>{i + 1}</td>
-                        <td style={{ padding: '8px 4px', fontWeight: 600, color: '#1e293b', fontSize: 13, wordBreak: 'break-word', verticalAlign: 'middle' }}>{v.vehicle_number || '—'}</td>
+                        <td style={{ padding: '8px 4px', fontWeight: 600, color: '#1e293b', fontSize: 13, wordBreak: 'break-word', verticalAlign: 'middle' }}>
+                          {v.vehicle_number || '—'}
+                          {v._ownerName && v._ownerName !== deletedDrawer.client?.name && (
+                            <div style={{ fontSize: 11, fontWeight: 400, color: '#94a3b8', marginTop: 2 }}>
+                              <i className="ri-user-line" style={{ fontSize: 10, marginRight: 3 }} />{v._ownerName}
+                            </div>
+                          )}
+                        </td>
                         <td style={{ padding: '8px 4px', verticalAlign: 'middle' }}>
                           <span style={{
                             display: 'inline-flex', alignItems: 'center', gap: 4,
