@@ -300,6 +300,15 @@ export default function MyClients() {
     return true;
   });
 
+  // Account-level vehicle totals across the currently-filtered clients.
+  const vehicleTotals = filtered.reduce((acc, c) => {
+    acc.active += Number(c.active_count) || 0;
+    acc.deleted += Number(c.deleted_count) || 0;
+    acc.billable += Number(c.billable_count) || 0;
+    return acc;
+  }, { active: 0, deleted: 0, billable: 0 });
+  const filtersApplied = !!(search || statusFilter !== 'all' || stateFilter !== 'all' || cityFilter !== 'all' || dealerFilter !== 'all');
+
   const formatAddress = (client) => {
     const meta = client.user_meta || client.userMeta || {};
     const parts = [
@@ -518,6 +527,30 @@ export default function MyClients() {
           </button>
         </div>
       </div>
+
+      {/* Account-level vehicle totals (reflects the active filters) */}
+      {showNetworkVehiclesColumn && (
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', margin: '0 0 14px' }}>
+          {[
+            { label: 'Active Vehicles', value: vehicleTotals.active, icon: 'ri-car-line', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+            { label: 'Deleted Vehicles', value: vehicleTotals.deleted, icon: 'ri-delete-bin-6-line', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+            { label: 'Billable Vehicles', value: vehicleTotals.billable, icon: 'ri-bill-line', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+          ].map(s => (
+            <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderRadius: 12, background: s.bg, border: `1px solid ${s.border}`, minWidth: 175 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 9, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color, flexShrink: 0 }}>
+                <i className={s.icon} style={{ fontSize: 18 }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                <div style={{ fontSize: 11, color: '#64748b', marginTop: 3 }}>{s.label}</div>
+              </div>
+            </div>
+          ))}
+          <div style={{ color: '#94a3b8', fontSize: 12, paddingLeft: 2 }}>
+            Across {filtered.length} client{filtered.length !== 1 ? 's' : ''}{filtersApplied ? ' (filtered)' : ''}
+          </div>
+        </div>
+      )}
 
       {/* Table — using vst-table classes matching My Fleet */}
       <div className="vst-table-wrap">
@@ -882,24 +915,24 @@ export default function MyClients() {
                   <i className="ri-inbox-line" style={{ fontSize: 22, display: 'block', marginBottom: 8 }} /> No deleted vehicles for this client.
                 </div>
               ) : (
-                <table className="vst-table" style={{ width: '100%' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                   <thead>
-                    <tr>
-                      <th className="vst-th--num">#</th>
-                      <th>Vehicle No.</th>
-                      <th>Deleted On</th>
+                    <tr style={{ textAlign: 'left', color: '#64748b' }}>
+                      <th style={{ width: 30, padding: '6px 4px', fontSize: 12, fontWeight: 600 }}>#</th>
+                      <th style={{ padding: '6px 4px', fontSize: 12, fontWeight: 600 }}>Vehicle No.</th>
+                      <th style={{ width: 130, padding: '6px 4px', fontSize: 12, fontWeight: 600 }}>Deleted On</th>
                     </tr>
                   </thead>
                   <tbody>
                     {deletedDrawer.vehicles.map((v, i) => (
-                      <tr key={v.id || v._id || i} className="vst-row">
-                        <td className="vst-td--num">{i + 1}</td>
-                        <td style={{ fontWeight: 600, color: '#1e293b' }}>{v.vehicle_number || '—'}</td>
-                        <td style={{ whiteSpace: 'nowrap' }}>
+                      <tr key={v.id || v._id || i} style={{ borderTop: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '8px 4px', color: '#94a3b8', fontSize: 13, verticalAlign: 'middle' }}>{i + 1}</td>
+                        <td style={{ padding: '8px 4px', fontWeight: 600, color: '#1e293b', fontSize: 13, wordBreak: 'break-word', verticalAlign: 'middle' }}>{v.vehicle_number || '—'}</td>
+                        <td style={{ padding: '8px 4px', verticalAlign: 'middle' }}>
                           <span style={{
                             display: 'inline-flex', alignItems: 'center', gap: 4,
-                            padding: '2px 8px', borderRadius: 20, fontSize: 12, fontWeight: 600,
-                            background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca',
+                            padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                            background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', whiteSpace: 'nowrap',
                           }}>
                             <i className="ri-time-line" style={{ fontSize: 11 }} />
                             {formatDate(v.deleted_at || v.updated_at)}
